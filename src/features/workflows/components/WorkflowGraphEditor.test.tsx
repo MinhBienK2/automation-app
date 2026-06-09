@@ -358,6 +358,138 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
+  test("inserts real subflow nodes from the Add Subflow picker", async () => {
+    const subflowGraph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: {},
+          ports: nodePorts("start"),
+          group_id: null,
+        },
+        {
+          id: "login-open",
+          node_type: "action",
+          label: "Open Login",
+          position: { x: 220, y: 20 },
+          config: { type: "navigate", config: { url: "https://login.test" } },
+          ports: nodePorts("action"),
+          group_id: null,
+        },
+        {
+          id: "login-fill",
+          node_type: "action",
+          label: "Fill Login",
+          position: { x: 440, y: 80 },
+          config: { type: "input_text", config: { text: "qa@example.test" } },
+          ports: nodePorts("action"),
+          group_id: null,
+        },
+      ],
+      edges: [
+        {
+          id: "edge-start-login-open",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "login-open",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+        {
+          id: "edge-login-open-login-fill",
+          source_node_id: "login-open",
+          source_port: "out",
+          target_node_id: "login-fill",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      list_subflows: [
+        {
+          id: "subflow-login",
+          project_id: "project-1",
+          name: "Login",
+          description: "Reusable login path",
+          tags: [],
+          used_by_count: 2,
+          created_at: "2026-05-27T00:00:00.000Z",
+          updated_at: "2026-05-27T00:00:00.000Z",
+        },
+      ],
+      get_subflow_graph: subflowGraph,
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Subflow" }));
+    const subflowPicker = await screen.findByRole("dialog", { name: "Choose a subflow" });
+    await userEvent.click(within(subflowPicker).getByRole("button", { name: "Insert nodes" }));
+    await userEvent.click(within(subflowPicker).getByRole("button", { name: /Login/ }));
+
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("get_subflow_graph", {
+        subflowId: "subflow-login",
+      });
+    });
+
+    expect(
+      within(editor).getByRole("button", { name: "Graph canvas node login-open" }),
+    ).toHaveTextContent("Open Login");
+    expect(
+      within(editor).getByRole("button", { name: "Graph canvas node login-fill" }),
+    ).toHaveTextContent("Fill Login");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const saveCall = workflowCommandCallMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          workflowId: "workflow-1",
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({
+                id: "login-open",
+                node_type: "action",
+                label: "Open Login",
+              }),
+              expect.objectContaining({
+                id: "login-fill",
+                node_type: "action",
+                label: "Fill Login",
+              }),
+            ]),
+            edges: expect.arrayContaining([
+              expect.objectContaining({
+                source_node_id: "login-open",
+                target_node_id: "login-fill",
+              }),
+            ]),
+          }),
+        }),
+      );
+      const savedGraph = saveCall?.[1]?.graph as WorkflowGraph | undefined;
+      expect(savedGraph?.nodes.some((node) => node.node_type === "call_subflow"))
+        .toBe(false);
+    });
+  });
+
   test("opens the called subflow detail from the inspector and returns to workflow detail", async () => {
     const subflow = loginSubflowSummary();
     const subflowGraph = workflowDetailScenario([sleepStep]).get_workflow_graph as WorkflowGraph;
@@ -624,7 +756,7 @@ describe("Workflow graph editor integration", () => {
       workflowGraphEditorSource.match(
         /getVisibleNodeInsertionPosition\(\s*currentGraph\.nodes\.length,/g,
       ),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
     expect(workflowGraphEditorSource).not.toContain(
       "x: 120 + currentGraph.nodes.length * 48",
     );

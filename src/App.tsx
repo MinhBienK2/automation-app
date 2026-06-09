@@ -1934,6 +1934,7 @@ function App() {
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={() => stopRun(detailRunSnapshot?.run_id ?? null)}
             onCreateSubflowFromSelection={createWorkflowSelectionSubflow}
+            onLoadSubflowGraph={getSubflowGraph}
             onOpenSubflowDetail={(subflowId) => {
               void openSubflowDetail(subflowId, {
                 type: "workflow-detail",

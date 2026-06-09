@@ -88,8 +88,13 @@
   drawer; closing the drawer clears the selection.
 - Users can add supported graph nodes from grouped canvas toolbar pickers. The toolbar shows icon controls for undo, redo, select mode, pan mode, fit view, auto arrange, arrange selection, and shortcuts, followed by New node, Add Action, Add Subflow, Add Logic, Add Variable, and Add End. Toolbar-created nodes are inserted near the center of the currently visible canvas view, with a small stagger to keep repeated additions reachable. Auto arrange repositions graph nodes through layered workflow layout into deterministic execution lanes, wrapping long main paths into left-to-right rows instead of one horizontal line, preserves same-column top-to-bottom order for nodes connected through ordered output or input ports, and can be undone. Arrange selection is available for multi-node selections, keeps unselected nodes fixed, and can be undone. There is no Add Output toolbar group; output-producing behavior comes from capture actions under Add Action. Add Variable exposes Set Variables and Set JSON Variables. Add End exposes End Success, End Failure, and Stop Workflow.
 - The workflow Add Subflow picker lists same-project subflows by name,
-  description, and usage count, then creates a configured Call Subflow node whose
-  canvas label starts as the subflow name. The workflow Add Logic palette
+  description, and usage count, and exposes an add-mode choice. Call Subflow
+  mode creates a configured Call Subflow node whose canvas label starts as the
+  subflow name and remains linked to the reusable subflow. Insert nodes mode
+  loads the selected subflow graph, skips its Start node, clones the real
+  non-start nodes plus their internal links into the workflow at the visible
+  insertion point with fresh ids on collision, selects the inserted nodes, and
+  leaves them independent from later subflow edits. The workflow Add Logic palette
   exposes Branching (If, Switch, Router, Random Choice, Merge), Loops (Repeat
   Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop), and
   Recovery (Retry). The subflow

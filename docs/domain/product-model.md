@@ -125,8 +125,11 @@ Users can:
   reusable subflows from the selected project's Subflows collection. Deletion is
   blocked when a subflow is referenced by workflows.
 - Add reusable subflows to workflow graphs from the dedicated Add Subflow
-  toolbar picker, map inputs into the subflow, and inspect usage warnings before
-  saving subflow changes.
+  toolbar picker either as one linked Call Subflow node or as copied real nodes
+  inserted into the workflow graph. Linked Call Subflow nodes can map inputs
+  into the subflow and keep usage warnings before saving subflow changes;
+  inserted nodes become independent workflow graph nodes with no live subflow
+  link.
 - Create a reusable subflow from selected workflow graph nodes. The creation
   dialog can either only persist the new subflow or persist it and replace the
   selected nodes with a configured Call Subflow node.

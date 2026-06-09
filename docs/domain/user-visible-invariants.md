@@ -158,10 +158,14 @@ Preserve these unless the task explicitly changes them.
 - The main graph toolbar exposes icon controls for undo, redo, select mode, pan mode, fit view, auto arrange, arrange selection, and shortcuts, plus New node, Add Action, Add Subflow, Add Logic, Add Variable, and Add End. Toolbar-created nodes appear near the center of the currently visible canvas view instead of a fixed graph origin. Auto arrange repositions nodes through layered workflow layout into deterministic execution lanes, wrapping long main paths into left-to-right rows so large graphs stay reachable, preserving same-column top-to-bottom order for nodes connected through ordered output or input ports, and is part of graph undo history. Arrange selection is available for multi-node selections, keeps unselected nodes fixed, and is also part of graph undo history. It does not expose Add Output.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
 - Add Subflow is visible only for workflow graphs. It opens a same-project
-  subflow picker and creates a configured Call Subflow node labeled with the
-  selected subflow name. Add Logic stays beginner-focused: Branching, Loops, and
-  Recovery/Retry are visible for workflow graphs. Branching includes If, Switch,
-  Router, and Merge. Subflow graphs hide Add Subflow.
+  subflow picker with an add-mode segmented control. `Call subflow` is the
+  default mode and creates a configured Call Subflow node labeled with the
+  selected subflow name. `Insert nodes` copies the selected subflow's real
+  non-start nodes and internal links into the workflow graph, selects the
+  inserted nodes, and does not create a live Call Subflow reference. Add Logic
+  stays beginner-focused: Branching, Loops, and Recovery/Retry are visible for
+  workflow graphs. Branching includes If, Switch, Router, and Merge. Subflow
+  graphs hide Add Subflow.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
 - Targetable action editors default Target locator type to XPath, while still allowing Test ID, Role, Label, Placeholder, Text, CSS, and Attribute locators.
 - Targetable single-target action editors expose Target source as an exclusive choice. Use locator shows target locator fields; Use Find Element ref hides locator fields and shows only Target ref so operators do not mistake locator visibility/text/index constraints as active while using a runtime ref.

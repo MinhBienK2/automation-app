@@ -28,6 +28,10 @@ export type ReplaceSelectionPlan =
   | { ok: true; graph: WorkflowGraph; selection: GraphSelection }
   | { ok: false; message: string };
 
+export type InsertSubflowNodesPlan =
+  | { ok: true; graph: WorkflowGraph; selection: GraphSelection }
+  | { ok: false; message: string };
+
 const graphNodeDimensions = {
   width: 160,
   height: 82,
@@ -224,6 +228,85 @@ export function replaceSelectionWithSubflowNode(
   };
 }
 
+export function insertSubflowGraphNodes(
+  graph: WorkflowGraph,
+  subflowGraph: WorkflowGraph,
+  insertionPosition: GraphPosition,
+): InsertSubflowNodesPlan {
+  const sourceNodes = subflowGraph.nodes.filter((node) => node.node_type !== "start");
+  if (sourceNodes.length === 0) {
+    return { ok: false, message: "Subflow has no nodes to insert." };
+  }
+  if (sourceNodes.some((node) => node.node_type === "call_subflow")) {
+    return {
+      ok: false,
+      message: "Nested Call Subflow nodes cannot be inserted from a subflow.",
+    };
+  }
+
+  const minX = Math.min(...sourceNodes.map((node) => node.position.x));
+  const minY = Math.min(...sourceNodes.map((node) => node.position.y));
+  const sourceNodeIds = new Set(sourceNodes.map((node) => node.id));
+  const existingNodeIds = new Set(graph.nodes.map((node) => node.id));
+  const nodeIdMap = new Map<string, string>();
+
+  const nodes = sourceNodes.map((node) => {
+    const id = uniqueGraphNodeId(node.id, existingNodeIds);
+    existingNodeIds.add(id);
+    nodeIdMap.set(node.id, id);
+
+    return {
+      ...cloneGraphNode(node),
+      id,
+      position: {
+        x: Math.round(insertionPosition.x + node.position.x - minX),
+        y: Math.round(insertionPosition.y + node.position.y - minY),
+      },
+    };
+  });
+
+  const existingEdgeIds = new Set(graph.edges.map((edge) => edge.id));
+  const edges = subflowGraph.edges.flatMap((edge) => {
+    if (
+      !sourceNodeIds.has(edge.source_node_id) ||
+      !sourceNodeIds.has(edge.target_node_id)
+    ) {
+      return [];
+    }
+    const sourceNodeId = nodeIdMap.get(edge.source_node_id);
+    const targetNodeId = nodeIdMap.get(edge.target_node_id);
+    if (!sourceNodeId || !targetNodeId) return [];
+
+    const id = uniqueGraphEdgeId(
+      graphEdgeId(sourceNodeId, edge.source_port, targetNodeId, edge.target_port),
+      existingEdgeIds,
+    );
+    existingEdgeIds.add(id);
+
+    return [
+      {
+        ...cloneGraphEdge(edge),
+        id,
+        source_node_id: sourceNodeId,
+        target_node_id: targetNodeId,
+      },
+    ];
+  });
+
+  return {
+    ok: true,
+    graph: {
+      ...graph,
+      nodes: [...graph.nodes, ...nodes],
+      edges: [...graph.edges, ...edges],
+    },
+    selection: {
+      nodeIds: nodes.map((node) => node.id),
+      edgeIds: edges.map((edge) => edge.id),
+    },
+  };
+}
+
 export function cloneGraphEdgeDelay(delay: GraphEdgeDelay | null): GraphEdgeDelay | null {
   return delay ? { ...delay } : null;
 }
@@ -320,4 +403,13 @@ function uniqueGraphEdgeId(baseId: string, existingIds: Set<string>) {
     nextId = `${baseId}-${index}`;
   }
   return nextId;
+}
+
+function graphEdgeId(
+  sourceNodeId: string,
+  sourcePort: string,
+  targetNodeId: string,
+  targetPort: string,
+) {
+  return `edge-${sourceNodeId}-${sourcePort}-${targetNodeId}-${targetPort}`;
 }

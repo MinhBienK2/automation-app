@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type {
   ActionType,
@@ -89,17 +89,24 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
 type SubflowNodePaletteProps = {
   open: boolean;
   subflows: SubflowSummary[];
+  error?: string | null;
+  isSelecting?: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectSubflow: (subflow: SubflowSummary) => void;
+  onSelectSubflow: (subflow: SubflowSummary, mode: SubflowAddMode) => void;
 };
+
+export type SubflowAddMode = "call_node" | "insert_nodes";
 
 export function SubflowNodePalette({
   open,
   subflows,
+  error = null,
+  isSelecting = false,
   onOpenChange,
   onSelectSubflow,
 }: SubflowNodePaletteProps) {
   const [query, setQuery] = useState("");
+  const [addMode, setAddMode] = useState<SubflowAddMode>("call_node");
   const normalizedQuery = query.trim().toLowerCase();
   const visibleSubflows = useMemo(() => {
     if (!normalizedQuery) return subflows;
@@ -113,7 +120,15 @@ export function SubflowNodePalette({
 
   function resetPalette() {
     setQuery("");
+    setAddMode("call_node");
   }
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      setAddMode("call_node");
+    }
+  }, [open]);
 
   return (
     <Dialog
@@ -128,9 +143,27 @@ export function SubflowNodePalette({
           <p className="eyebrow">Add Subflow</p>
           <DialogTitle>Choose a subflow</DialogTitle>
           <DialogDescription>
-            Select a reusable graph path from this project and add it as a configured subflow node.
+            Select a reusable graph path from this project and choose how it should be added.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="field">
+          <span>Add mode</span>
+          <SegmentedControl
+            ariaLabel="Subflow add mode"
+            value={addMode}
+            onValueChange={setAddMode}
+            options={[
+              { label: "Call subflow", value: "call_node" },
+              { label: "Insert nodes", value: "insert_nodes" },
+            ]}
+          />
+          <small className="muted">
+            {addMode === "call_node"
+              ? "Adds one reusable Call Subflow node linked to the source subflow."
+              : "Copies the subflow nodes into this workflow without a live subflow link."}
+          </small>
+        </div>
 
         <Input
           aria-label="Search subflows"
@@ -138,6 +171,12 @@ export function SubflowNodePalette({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
+
+        {error ? (
+          <p className="graph-subflow-create-error" role="alert">
+            {error}
+          </p>
+        ) : null}
 
         <div className="subflow-picker-results" aria-label="Subflow results">
           {visibleSubflows.length === 0 ? (
@@ -155,9 +194,10 @@ export function SubflowNodePalette({
                 key={subflow.id}
                 type="button"
                 variant="ghost"
+                disabled={isSelecting}
                 onClick={() => {
-                  onSelectSubflow(subflow);
-                  resetPalette();
+                  onSelectSubflow(subflow, addMode);
+                  if (addMode === "call_node") resetPalette();
                 }}
               >
                 <span>{subflow.name}</span>

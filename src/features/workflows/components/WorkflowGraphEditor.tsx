@@ -54,14 +54,17 @@ import {
 } from "../lib/graphEditorCommands";
 import { layoutWorkflowGraph } from "../lib/graphLayout";
 import type { GraphNodeHelpLanguage } from "../lib/graphNodeHelpContent";
-import { cloneGraphEdgeDelay } from "../lib/subflowSelection";
+import {
+  cloneGraphEdgeDelay,
+  insertSubflowGraphNodes,
+} from "../lib/subflowSelection";
 import { getVisibleNodeInsertionPosition } from "../lib/nodeInsertionPosition";
 import {
   edgeKindForFlowSource,
   edgePortsExist,
   replacePortEdge,
 } from "../lib/graphEditorEdges";
-import { actionLabels } from "../../../lib/workflowUi";
+import { actionLabels, commandMessage } from "../../../lib/workflowUi";
 import { WorkflowGraphEdge, WorkflowGraphNode } from "./WorkflowGraphCanvasParts";
 import { WorkflowGraphInspector } from "./WorkflowGraphInspector";
 import { WorkflowGraphEditorDialogs } from "./WorkflowGraphEditorDialogs";
@@ -74,6 +77,7 @@ import {
   LinkContextMenu,
   NodeContextMenu,
   NodeHelpDialog,
+  type SubflowAddMode,
   SubflowNodePalette,
 } from "./WorkflowGraphPalettes";
 import { WorkflowGraphToolbar } from "./WorkflowGraphToolbar";
@@ -90,6 +94,7 @@ type WorkflowGraphEditorProps = {
     name: string;
     graph: WorkflowGraph;
   }) => Promise<Pick<Subflow, "id" | "name">>;
+  onLoadSubflowGraph?: (subflowId: string) => Promise<WorkflowGraph>;
   onRunGraph?: () => void;
   onSelectedNodeChange?: (nodeId: string | null) => void;
   onOpenSubflowDetail?: (subflowId: string) => void;
@@ -122,6 +127,7 @@ export function WorkflowGraphEditor({
   defaultEdgeDelay = null,
   onChange,
   onCreateSubflowFromSelection,
+  onLoadSubflowGraph,
   onRunGraph,
   onSelectedNodeChange,
   onOpenSubflowDetail,
@@ -156,6 +162,8 @@ export function WorkflowGraphEditor({
   const [isShortcutGuideOpen, setIsShortcutGuideOpen] = useState(false);
   const [isArrangingGraph, setIsArrangingGraph] = useState(false);
   const [arrangeError, setArrangeError] = useState<string | null>(null);
+  const [subflowInsertError, setSubflowInsertError] = useState<string | null>(null);
+  const [isInsertingSubflowNodes, setIsInsertingSubflowNodes] = useState(false);
   const [isToolbarPanMode, setIsToolbarPanMode] = useState(false);
   const [isSpacePanActive, setIsSpacePanActive] = useState(false);
   const isPanMode = isToolbarPanMode || isSpacePanActive;
@@ -441,7 +449,11 @@ export function WorkflowGraphEditor({
     setIsActionPaletteOpen(false);
   }
 
-  function addSubflowNode(subflow: SubflowSummary) {
+  function addSubflowNode(subflow: SubflowSummary, mode: SubflowAddMode = "call_node") {
+    if (mode === "insert_nodes") {
+      void insertSubflowNodes(subflow);
+      return;
+    }
     const currentGraph = graphRef.current;
     const node = {
       ...createDefaultGraphNode(
@@ -464,6 +476,38 @@ export function WorkflowGraphEditor({
       { nodeIds: [node.id], edgeIds: [] },
     );
     setIsSubflowPaletteOpen(false);
+  }
+
+  async function insertSubflowNodes(subflow: SubflowSummary) {
+    if (!onLoadSubflowGraph) {
+      setSubflowInsertError("Subflow graph loading is not available.");
+      return;
+    }
+    setSubflowInsertError(null);
+    setIsInsertingSubflowNodes(true);
+    try {
+      const subflowGraph = await onLoadSubflowGraph(subflow.id);
+      const currentGraph = graphRef.current;
+      const plan = insertSubflowGraphNodes(
+        currentGraph,
+        subflowGraph,
+        getVisibleNodeInsertionPosition(
+          currentGraph.nodes.length,
+          reactFlowInstance,
+          graphCanvasRef.current,
+        ),
+      );
+      if (!plan.ok) {
+        setSubflowInsertError(plan.message);
+        return;
+      }
+      commitGraphChange(plan.graph, plan.selection);
+      setIsSubflowPaletteOpen(false);
+    } catch (error) {
+      setSubflowInsertError(commandMessage(error));
+    } finally {
+      setIsInsertingSubflowNodes(false);
+    }
   }
 
   function updateNode(nextNode: GraphNode) {
@@ -963,7 +1007,12 @@ export function WorkflowGraphEditor({
       <SubflowNodePalette
         open={isSubflowPaletteOpen}
         subflows={subflowOptions}
-        onOpenChange={setIsSubflowPaletteOpen}
+        error={subflowInsertError}
+        isSelecting={isInsertingSubflowNodes}
+        onOpenChange={(open) => {
+          setIsSubflowPaletteOpen(open);
+          if (open) setSubflowInsertError(null);
+        }}
         onSelectSubflow={addSubflowNode}
       />
       <GraphNodePalette
