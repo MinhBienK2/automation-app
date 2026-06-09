@@ -39,8 +39,12 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   update/reset command handling and environment-list refresh callbacks used by
   `App.tsx`.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, graph
-  autosave, environment readiness diagnostics, guarded maintenance commands,
-  orphaned-profile cleanup confirmation, and graph shortcut guidance.
+  autosave, searchable XPath cookbook help, environment readiness diagnostics,
+  guarded maintenance commands, orphaned-profile cleanup confirmation, and graph
+  shortcut guidance.
+- `src/features/settings/components/XPathCookbook.tsx`: searchable App
+  Settings XPath locator cookbook with grouped recipes, examples, avoid notes,
+  iframe guidance, fallback guidance, and debug checklist content.
 - `src/features/settings/useSettingsDiagnostics.ts`: app settings diagnostics
   and maintenance command state for CloakBrowser readiness, install checks, and
   orphaned profile cleanup.
@@ -251,12 +255,13 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - App Settings navigation state in the app shell/sidebar, plus app-level graph
-  autosave, diagnostics refresh, CloakBrowser install/check, and orphaned
-  inactive profile cleanup command state. Orphaned inactive profile cleanup uses
-  a destructive in-app confirmation before invoking the backend command. App
-  Settings displays environment readiness from sanitized diagnostics and does not expose raw
-  binary/cache/profile/font paths. Project identity control state belongs to
-  the selected project's Settings collection.
+  autosave, searchable XPath cookbook help, diagnostics refresh, CloakBrowser
+  install/check, and orphaned inactive profile cleanup command state. Orphaned
+  inactive profile cleanup uses a destructive in-app confirmation before
+  invoking the backend command. App Settings displays environment readiness from
+  sanitized diagnostics and does not expose raw binary/cache/profile/font paths.
+  Project identity control state belongs to the selected project's Settings
+  collection.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
 - Evidence navigation state in the app shell/sidebar, Evidence query/detail
   state, and Overview-to-Evidence handoff state.

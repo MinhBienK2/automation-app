@@ -183,7 +183,8 @@ Users can:
   to related Evidence or Workflow Settings.
 - Open App Settings to inspect sanitized environment readiness, trigger a
   guarded CloakBrowser binary install/check, clean up orphaned inactive browser
-  profiles, control graph autosave, and view graph shortcut guidance.
+  profiles, control graph autosave, search XPath cookbook locator recipes, and
+  view graph shortcut guidance.
 
 ## Current Source Files
 

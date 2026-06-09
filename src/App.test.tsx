@@ -134,6 +134,32 @@ describe("App settings and graph autosave", () => {
     ).toHaveAttribute("aria-checked", "false");
   });
 
+  test("shows searchable XPath cookbook help in app settings", async () => {
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
+
+    const cookbook = await screen.findByRole("region", { name: "XPath cookbook" });
+    expect(
+      within(cookbook).getByRole("heading", { name: "XPath cookbook" }),
+    ).toBeInTheDocument();
+    expect(within(cookbook).getByText("//button[normalize-space(.)='Save']"))
+      .toBeInTheDocument();
+
+    const search = within(cookbook).getByRole("textbox", {
+      name: "Search XPath recipes",
+    });
+    await userEvent.type(search, "iframe");
+
+    expect(within(cookbook).getByText("Iframe target")).toBeInTheDocument();
+    expect(within(cookbook).getByText("Target XPath: //input[@name='cardNumber']"))
+      .toBeInTheDocument();
+    expect(within(cookbook).queryByText("Button by exact text"))
+      .not.toBeInTheDocument();
+  });
+
   test("shows grouped project identity controls in the project settings tab", async () => {
     const project = {
       id: "project-1",
