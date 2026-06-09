@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { Blocks, Copy, Search, Workflow } from "lucide-react";
 import type {
   ActionType,
   GraphNode,
@@ -97,6 +98,29 @@ type SubflowNodePaletteProps = {
 
 export type SubflowAddMode = "call_node" | "insert_nodes";
 
+const subflowAddModeCards: Array<{
+  value: SubflowAddMode;
+  label: string;
+  detail: string;
+  badge: string;
+  Icon: typeof Blocks;
+}> = [
+  {
+    value: "call_node",
+    label: "Call subflow",
+    detail: "Linked reusable node",
+    badge: "Default",
+    Icon: Blocks,
+  },
+  {
+    value: "insert_nodes",
+    label: "Insert nodes",
+    detail: "Editable copied nodes",
+    badge: "Copy",
+    Icon: Copy,
+  },
+];
+
 export function SubflowNodePalette({
   open,
   subflows,
@@ -147,30 +171,49 @@ export function SubflowNodePalette({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="field">
-          <span>Add mode</span>
-          <SegmentedControl
-            ariaLabel="Subflow add mode"
-            value={addMode}
-            onValueChange={setAddMode}
-            options={[
-              { label: "Call subflow", value: "call_node" },
-              { label: "Insert nodes", value: "insert_nodes" },
-            ]}
-          />
-          <small className="muted">
-            {addMode === "call_node"
-              ? "Adds one reusable Call Subflow node linked to the source subflow."
-              : "Copies the subflow nodes into this workflow without a live subflow link."}
-          </small>
+        <div className="subflow-mode-grid" role="group" aria-label="Subflow add mode">
+          {subflowAddModeCards.map(({ value, label, detail, badge, Icon }) => {
+            const active = addMode === value;
+            return (
+              <Button
+                aria-pressed={active}
+                className={
+                  active
+                    ? "subflow-mode-card subflow-mode-card-active"
+                    : "subflow-mode-card"
+                }
+                key={value}
+                type="button"
+                variant="ghost"
+                onClick={() => setAddMode(value)}
+              >
+                <span className="subflow-mode-icon" aria-hidden="true">
+                  <Icon />
+                </span>
+                <span className="subflow-mode-copy">
+                  <span>{label}</span>
+                  <small>{detail}</small>
+                </span>
+                <span className="subflow-mode-badge">{badge}</span>
+              </Button>
+            );
+          })}
         </div>
 
-        <Input
-          aria-label="Search subflows"
-          placeholder="Search subflows..."
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <div className="subflow-picker-search-row">
+          <div className="subflow-picker-search">
+            <Search aria-hidden="true" />
+            <Input
+              aria-label="Search subflows"
+              placeholder="Search subflows..."
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <span className="subflow-picker-count">
+            {visibleSubflows.length} {visibleSubflows.length === 1 ? "match" : "matches"}
+          </span>
+        </div>
 
         {error ? (
           <p className="graph-subflow-create-error" role="alert">
@@ -200,12 +243,20 @@ export function SubflowNodePalette({
                   if (addMode === "call_node") resetPalette();
                 }}
               >
-                <span>{subflow.name}</span>
-                <small>
-                  {[subflow.description, `${subflow.used_by_count} ${subflow.used_by_count === 1 ? "workflow" : "workflows"}`]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </small>
+                <span className="subflow-picker-result-icon" aria-hidden="true">
+                  <Workflow />
+                </span>
+                <span className="subflow-picker-result-main">
+                  <span className="subflow-picker-result-title">{subflow.name}</span>
+                  <small>
+                    {[subflow.description, `${subflow.used_by_count} ${subflow.used_by_count === 1 ? "workflow" : "workflows"}`]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </small>
+                </span>
+                <span className="subflow-picker-result-action">
+                  {addMode === "call_node" ? "Add call node" : "Insert nodes"}
+                </span>
               </Button>
             ))
           )}

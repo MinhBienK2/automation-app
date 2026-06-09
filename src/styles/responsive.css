@@ -137,6 +137,19 @@
     grid-template-columns: 1fr;
   }
 
+  .subflow-mode-grid,
+  .subflow-picker-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .subflow-picker-result {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .subflow-picker-result-action {
+    grid-column: 2;
+  }
+
   .action-category-list {
     display: flex;
     overflow-x: auto;

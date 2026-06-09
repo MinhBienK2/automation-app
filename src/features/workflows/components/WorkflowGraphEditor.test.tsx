@@ -317,6 +317,17 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(within(editor).getByRole("button", { name: "Add Subflow" }));
     const subflowPicker = await screen.findByRole("dialog", { name: "Choose a subflow" });
     expect(within(subflowPicker).getByLabelText("Search subflows")).toBeInTheDocument();
+    expect(subflowPicker.querySelector(".subflow-mode-grid")).toBeInTheDocument();
+    expect(
+      within(subflowPicker).getByRole("button", { name: /Call subflow/ }),
+    ).toHaveClass("subflow-mode-card-active");
+    expect(subflowPicker.querySelector(".subflow-picker-search-row")).toBeInTheDocument();
+    expect(subflowPicker.querySelector(".subflow-picker-count")).toHaveTextContent("1 match");
+    expect(
+      within(subflowPicker).getByRole("button", { name: /Login/ }).querySelector(
+        ".subflow-picker-result-action",
+      ),
+    ).toHaveTextContent("Add call node");
     await userEvent.click(within(subflowPicker).getByRole("button", { name: /Login/ }));
 
     const subflowNodeButton = within(editor).getByRole("button", {
@@ -437,7 +448,7 @@ describe("Workflow graph editor integration", () => {
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Subflow" }));
     const subflowPicker = await screen.findByRole("dialog", { name: "Choose a subflow" });
-    await userEvent.click(within(subflowPicker).getByRole("button", { name: "Insert nodes" }));
+    await userEvent.click(within(subflowPicker).getByRole("button", { name: /Insert nodes/ }));
     await userEvent.click(within(subflowPicker).getByRole("button", { name: /Login/ }));
 
     await waitFor(() => {
