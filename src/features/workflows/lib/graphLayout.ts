@@ -59,9 +59,10 @@ export async function layoutWorkflowGraph(
   }
 
   const elkPositions = await runElkLayoutForGraph(graph);
-  const positions = usesWrappedMainRows(graph)
+  const positionsBeforePortOrder = usesWrappedMainRows(graph)
     ? fullGraphPositions(graph)
     : normalizeElkPositions(elkPositions);
+  const positions = applyPortOrderToPositions(graph, positionsBeforePortOrder);
   return {
     graph: {
       ...graph,
@@ -106,9 +107,13 @@ function layoutSelectedNodes(
       (edge) => selected.has(edge.source_node_id) && selected.has(edge.target_node_id),
     ),
   };
-  const selectedPositions = usesWrappedMainRows(selectedGraph)
+  const selectedPositionsBeforePortOrder = usesWrappedMainRows(selectedGraph)
     ? fullGraphPositions(selectedGraph)
     : normalizeElkPositions(elkPositions);
+  const selectedPositions = applyPortOrderToPositions(
+    selectedGraph,
+    selectedPositionsBeforePortOrder,
+  );
   const selectedPositionValues = [...selectedPositions.values()];
   const selectedMinX = Math.min(...selectedPositionValues.map((position) => position.x));
   const selectedMinY = Math.min(...selectedPositionValues.map((position) => position.y));
@@ -207,6 +212,158 @@ function normalizeElkPositions(positions: Map<string, GraphPosition>) {
       },
     ]),
   );
+}
+
+function applyPortOrderToPositions(
+  graph: WorkflowGraph,
+  positions: Map<string, GraphPosition>,
+) {
+  const constraints = portOrderConstraintsByColumn(graph, positions);
+  if (constraints.size === 0) return positions;
+
+  const nextPositions = new Map(positions);
+  for (const columnConstraints of constraints.values()) {
+    const nodeIds = [...new Set(columnConstraints.flatMap(([above, below]) => [above, below]))];
+    const yValues = nodeIds
+      .map((nodeId) => positions.get(nodeId)?.y)
+      .filter((value): value is number => typeof value === "number")
+      .sort((left, right) => left - right);
+    const orderedNodeIds = topologicalPortOrder(nodeIds, columnConstraints, positions);
+
+    orderedNodeIds.forEach((nodeId, index) => {
+      const position = nextPositions.get(nodeId);
+      const y = yValues[index];
+      if (!position || y == null) return;
+      nextPositions.set(nodeId, { ...position, y });
+    });
+  }
+
+  return nextPositions;
+}
+
+function portOrderConstraintsByColumn(
+  graph: WorkflowGraph,
+  positions: Map<string, GraphPosition>,
+) {
+  const constraints = new Map<string, Array<[string, string]>>();
+  const edgesBySourcePort = new Map<string, GraphEdge[]>();
+  const edgesByTargetPort = new Map<string, GraphEdge[]>();
+
+  for (const edge of graph.edges) {
+    const sourceKey = edgeSourcePortKey(edge.source_node_id, edge.source_port);
+    edgesBySourcePort.set(sourceKey, [
+      ...(edgesBySourcePort.get(sourceKey) ?? []),
+      edge,
+    ]);
+    const targetKey = edgeTargetPortKey(edge.target_node_id, edge.target_port);
+    edgesByTargetPort.set(targetKey, [
+      ...(edgesByTargetPort.get(targetKey) ?? []),
+      edge,
+    ]);
+  }
+  for (const edges of [...edgesBySourcePort.values(), ...edgesByTargetPort.values()]) {
+    edges.sort((left, right) => left.id.localeCompare(right.id));
+  }
+
+  for (const node of graph.nodes) {
+    const outputTargets = orderedOutputPortIds(node).flatMap((portId) =>
+      (edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? [])
+        .map((edge) => edge.target_node_id),
+    );
+    addColumnConstraints(outputTargets, positions, constraints);
+
+    const inputSources = orderedInputPortIds(node).flatMap((portId) =>
+      (edgesByTargetPort.get(edgeTargetPortKey(node.id, portId)) ?? [])
+        .map((edge) => edge.source_node_id),
+    );
+    addColumnConstraints(inputSources, positions, constraints);
+  }
+
+  return constraints;
+}
+
+function addColumnConstraints(
+  orderedNodeIds: string[],
+  positions: Map<string, GraphPosition>,
+  constraints: Map<string, Array<[string, string]>>,
+) {
+  const seen = new Set<string>();
+  const uniqueNodeIds = orderedNodeIds.filter((nodeId) => {
+    if (seen.has(nodeId)) return false;
+    seen.add(nodeId);
+    return true;
+  });
+
+  for (let index = 0; index < uniqueNodeIds.length - 1; index += 1) {
+    const above = uniqueNodeIds[index];
+    const below = uniqueNodeIds[index + 1];
+    if (!above || !below) continue;
+    const aboveColumn = columnKey(positions.get(above));
+    const belowColumn = columnKey(positions.get(below));
+    if (!aboveColumn || aboveColumn !== belowColumn) continue;
+    constraints.set(aboveColumn, [...(constraints.get(aboveColumn) ?? []), [above, below]]);
+  }
+}
+
+function topologicalPortOrder(
+  nodeIds: string[],
+  constraints: Array<[string, string]>,
+  positions: Map<string, GraphPosition>,
+) {
+  const nodeIdSet = new Set(nodeIds);
+  const baselineOrder = [...nodeIds].sort((left, right) =>
+    comparePositionOrder(left, right, positions),
+  );
+  const outgoing = new Map<string, Set<string>>();
+  const incomingCounts = new Map(nodeIds.map((nodeId) => [nodeId, 0]));
+
+  for (const [above, below] of constraints) {
+    if (!nodeIdSet.has(above) || !nodeIdSet.has(below) || above === below) continue;
+    const next = outgoing.get(above) ?? new Set<string>();
+    if (next.has(below)) continue;
+    next.add(below);
+    outgoing.set(above, next);
+    incomingCounts.set(below, (incomingCounts.get(below) ?? 0) + 1);
+  }
+
+  const ready = baselineOrder.filter((nodeId) => (incomingCounts.get(nodeId) ?? 0) === 0);
+  const ordered: string[] = [];
+  while (ready.length > 0) {
+    ready.sort((left, right) => comparePositionOrder(left, right, positions));
+    const nodeId = ready.shift();
+    if (!nodeId) continue;
+    ordered.push(nodeId);
+    for (const nextNodeId of outgoing.get(nodeId) ?? []) {
+      incomingCounts.set(nextNodeId, (incomingCounts.get(nextNodeId) ?? 0) - 1);
+      if ((incomingCounts.get(nextNodeId) ?? 0) === 0) {
+        ready.push(nextNodeId);
+      }
+    }
+  }
+
+  if (ordered.length === nodeIds.length) return ordered;
+
+  const orderedSet = new Set(ordered);
+  return [
+    ...ordered,
+    ...baselineOrder.filter((nodeId) => !orderedSet.has(nodeId)),
+  ];
+}
+
+function comparePositionOrder(
+  left: string,
+  right: string,
+  positions: Map<string, GraphPosition>,
+) {
+  const leftPosition = positions.get(left);
+  const rightPosition = positions.get(right);
+  const yDiff = (leftPosition?.y ?? 0) - (rightPosition?.y ?? 0);
+  if (yDiff !== 0) return yDiff;
+  return left.localeCompare(right);
+}
+
+function columnKey(position?: GraphPosition) {
+  return position ? String(Math.round(position.x)) : null;
 }
 
 function toElkGraph(graph: WorkflowGraph, selectedNodeIds?: Set<string>): ElkNode {
@@ -344,6 +501,10 @@ function edgeSourcePortKey(sourceNodeId: string, sourcePort: string) {
   return `${sourceNodeId}\u0000${sourcePort}`;
 }
 
+function edgeTargetPortKey(targetNodeId: string, targetPort: string) {
+  return `${targetNodeId}\u0000${targetPort}`;
+}
+
 function orderedOutputPortIds(node: GraphNode) {
   const outputPortIds = node.ports
     .filter((port) => port.direction === "output")
@@ -353,6 +514,12 @@ function orderedOutputPortIds(node: GraphNode) {
     ...preferred.filter((portId) => outputPortIds.includes(portId)),
     ...outputPortIds.filter((portId) => !preferred.includes(portId)),
   ];
+}
+
+function orderedInputPortIds(node: GraphNode) {
+  return node.ports
+    .filter((port) => port.direction === "input")
+    .map((port) => port.id);
 }
 
 function preferredOutputPortOrder(node: GraphNode) {

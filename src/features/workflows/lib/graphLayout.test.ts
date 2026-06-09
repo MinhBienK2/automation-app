@@ -36,6 +36,27 @@ describe("workflow graph layout", () => {
     expect(positions.get("after-merge")?.x).toBeGreaterThan(positions.get("merge-1")?.x ?? 0);
   });
 
+  test("orders output targets top-to-bottom by source port order", async () => {
+    const graph = switchFanoutWorkflowGraph();
+
+    const result = await layoutWorkflowGraph(graph, { type: "full" });
+    const positions = positionsByNode(result.graph);
+
+    expect(positions.get("case-1")?.y).toBeLessThan(positions.get("case-2")?.y ?? 0);
+    expect(positions.get("case-2")?.y).toBeLessThan(positions.get("done")?.y ?? 0);
+  });
+
+  test("orders input sources top-to-bottom by target port order", async () => {
+    const graph = multiInputWorkflowGraph();
+
+    const result = await layoutWorkflowGraph(graph, { type: "full" });
+    const positions = positionsByNode(result.graph);
+
+    expect(positions.get("source-first")?.y).toBeLessThan(
+      positions.get("source-second")?.y ?? 0,
+    );
+  });
+
   test("selection layout moves only selected nodes", async () => {
     const graph = linearWorkflowGraph(5);
 
@@ -127,6 +148,61 @@ function ifMergeWorkflowGraph(): WorkflowGraph {
   };
 }
 
+function switchFanoutWorkflowGraph(): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      graphNode("start", "start", { x: 600, y: 200 }),
+      {
+        ...graphNode("switch-1", "switch", { x: 400, y: 120 }),
+        ports: [
+          { id: "in", label: "In", direction: "input" },
+          { id: "case_1", label: "Case 1", direction: "output" },
+          { id: "case_2", label: "Case 2", direction: "output" },
+          { id: "done", label: "Done", direction: "output" },
+        ],
+      },
+      actionNode("case-1", { x: 120, y: 480 }),
+      actionNode("case-2", { x: 220, y: -120 }),
+      actionNode("done", { x: -120, y: 160 }),
+    ],
+    edges: [
+      edge("edge-start-switch", "start", "out", "switch-1"),
+      edge("edge-switch-done", "switch-1", "done", "done"),
+      edge("edge-switch-case-2", "switch-1", "case_2", "case-2"),
+      edge("edge-switch-case-1", "switch-1", "case_1", "case-1"),
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function multiInputWorkflowGraph(): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      graphNode("start", "start", { x: 600, y: 200 }),
+      graphNode("if-1", "if", { x: 400, y: 120 }),
+      actionNode("source-second", { x: 120, y: 480 }),
+      actionNode("source-first", { x: 220, y: -120 }),
+      {
+        ...actionNode("join", { x: -120, y: 160 }),
+        ports: [
+          { id: "first", label: "First", direction: "input" },
+          { id: "second", label: "Second", direction: "input" },
+          { id: "out", label: "Out", direction: "output" },
+        ],
+      },
+    ],
+    edges: [
+      edge("edge-start-if", "start", "out", "if-1"),
+      edge("edge-if-source-second", "if-1", "true", "source-second"),
+      edgeToPort("edge-source-second-join", "source-second", "out", "join", "second"),
+      edgeToPort("edge-source-first-join", "source-first", "out", "join", "first"),
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
 function actionNode(id: string, position: { x: number; y: number }): GraphNode {
   return graphNode(id, "action", position);
 }
@@ -153,5 +229,18 @@ function edge(id: string, source: string, sourcePort: string, target: string) {
     target_port: "in",
     label: sourcePort,
     condition: null,
+  };
+}
+
+function edgeToPort(
+  id: string,
+  source: string,
+  sourcePort: string,
+  target: string,
+  targetPort: string,
+) {
+  return {
+    ...edge(id, source, sourcePort, target),
+    target_port: targetPort,
   };
 }
