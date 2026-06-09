@@ -72,8 +72,8 @@ import {
 } from "./features/workflows/lib/workflowSettings";
 import {
   cloneWorkflowSettings,
-  graphEditableContentKey,
   graphSaveStatusLabel,
+  hasEditableGraphChange,
   idleRunStateWithRetainedSession,
   isWorkflowSettings,
   latestRunForWorkflow,
@@ -965,8 +965,7 @@ function App() {
   }
 
   function changeSubflowGraph(nextGraph: WorkflowGraph) {
-    const hasEditableChange =
-      graphEditableContentKey(selectedSubflowGraph) !== graphEditableContentKey(nextGraph);
+    const hasEditableChange = hasEditableGraphChange(selectedSubflowGraph, nextGraph);
     setSelectedSubflowGraph(nextGraph);
     if (!hasEditableChange) return;
     setSubflowGraphSaveStatus("unsaved");
@@ -1545,8 +1544,7 @@ function App() {
   }
 
   const changeWorkflowGraph = useCallback((nextGraph: WorkflowGraph) => {
-    const hasEditableChange =
-      graphEditableContentKey(workflowGraph) !== graphEditableContentKey(nextGraph);
+    const hasEditableChange = hasEditableGraphChange(workflowGraph, nextGraph);
     setWorkflowGraph(nextGraph);
     if (!hasEditableChange) return;
     setGraphIssuesNeedRecheck((current) => current || graphIssues.length > 0);

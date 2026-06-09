@@ -6,6 +6,7 @@ import {
   formatMaintenanceBytes,
   graphEditableContentKey,
   graphSaveStatusLabel,
+  hasEditableGraphChange,
   latestRunForWorkflow,
   readGraphAutosaveEnabled,
   settingsSaveStatuses,
@@ -45,6 +46,28 @@ describe("appState helpers", () => {
         migration_notes: [],
       }),
     );
+  });
+
+  test("detects editable graph changes without treating viewport-only updates as edits", () => {
+    expect(hasEditableGraphChange(graph, { ...graph, viewport: { x: 12, y: 24, zoom: 0.8 } }))
+      .toBe(false);
+    expect(hasEditableGraphChange(graph, { ...graph, nodes: [...graph.nodes] })).toBe(false);
+    expect(
+      hasEditableGraphChange(graph, {
+        ...graph,
+        nodes: [
+          {
+            id: "node-1",
+            node_type: "action",
+            label: "Node",
+            position: { x: 0, y: 0 },
+            config: null,
+            ports: [],
+            group_id: null,
+          },
+        ],
+      }),
+    ).toBe(true);
   });
 
   test("selects the latest run snapshot for a workflow", () => {

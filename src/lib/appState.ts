@@ -59,6 +59,28 @@ export function graphEditableContentKey(graph: WorkflowGraph | null) {
   });
 }
 
+export function hasEditableGraphChange(
+  currentGraph: WorkflowGraph | null,
+  nextGraph: WorkflowGraph | null,
+) {
+  if (currentGraph === nextGraph) return false;
+  if (!currentGraph || !nextGraph) {
+    return graphEditableContentKey(currentGraph) !== graphEditableContentKey(nextGraph);
+  }
+  const sameMigrationNotes =
+    currentGraph.migration_notes === nextGraph.migration_notes ||
+    (!currentGraph.migration_notes && !nextGraph.migration_notes);
+  if (
+    currentGraph.version === nextGraph.version &&
+    currentGraph.nodes === nextGraph.nodes &&
+    currentGraph.edges === nextGraph.edges &&
+    sameMigrationNotes
+  ) {
+    return false;
+  }
+  return graphEditableContentKey(currentGraph) !== graphEditableContentKey(nextGraph);
+}
+
 export function latestRunSnapshot(snapshots: WorkflowRunSnapshot[]) {
   return [...snapshots].sort((left, right) =>
     right.started_at.localeCompare(left.started_at),

@@ -7,6 +7,7 @@ import type {
 } from "../../../types/workflow";
 import type { GraphSelection } from "../lib/graphEditorCommands";
 import {
+  applyReactFlowGraphState,
   callSubflowIdFromNode,
   graphIssuesByNode,
   toReactFlowGraph,
@@ -97,9 +98,13 @@ export function useWorkflowGraphDerivedState({
       ),
     [validationIssues],
   );
+  const baseFlowGraph = useMemo(
+    () => toReactFlowGraph(graph),
+    [graph],
+  );
   const flowGraph = useMemo(
     () =>
-      toReactFlowGraph(graph, {
+      applyReactFlowGraphState(baseFlowGraph, {
         selectedNodeIds: new Set(selection.nodeIds),
         runningNodeId: runState.current_step_id,
         completedNodeIds,
@@ -109,7 +114,7 @@ export function useWorkflowGraphDerivedState({
         selectedEdgeIds: new Set(selection.edgeIds),
       }),
     [
-      graph,
+      baseFlowGraph,
       selection.edgeIds,
       selection.nodeIds,
       runState.current_step_id,

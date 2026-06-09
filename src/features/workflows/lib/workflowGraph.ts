@@ -1,6 +1,7 @@
 import type {
   ActionConfig,
   ActionType,
+  GraphEdge,
   GraphEdgeDelay,
   GraphNode,
   GraphNodeType,
@@ -16,7 +17,7 @@ import type { Edge, Node, Viewport } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import { actionLabels } from "../../../lib/workflowUi";
 import {
-  classifyWorkflowGraphEdge,
+  classifyWorkflowGraphEdgeFromSource,
   type WorkflowGraphEdgeKind,
 } from "./graphLayout";
 import { objectConfig } from "./configUtils";
@@ -175,32 +176,30 @@ export function toReactFlowGraph(
 ): WorkflowReactFlowGraph {
   const edgeOrders = graphEdgeOrders(graph);
   const nodeLabels = new Map(graph.nodes.map((node) => [node.id, node.label]));
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
 
-  return {
+  const baseFlowGraph: WorkflowReactFlowGraph = {
     nodes: graph.nodes.map((node) => ({
       id: node.id,
       type: "workflow",
       position: node.position,
       initialHeight: graphNodeHeightForPorts(node.ports),
       initialWidth: graphNodeWidth,
-      selected: state.selectedNodeIds?.has(node.id) ?? state.selectedNodeId === node.id,
+      selected: false,
       data: {
         label: node.label,
         kindLabel: graphCanvasNodeKindLabel(node),
         metaLabel: graphCanvasNodeMetaLabel(node),
         nodeType: node.node_type,
         ports: node.ports,
-        status: graphNodeStatus(node.id, state),
-        hasIssue: state.issueNodeIds?.has(node.id) ?? false,
+        status: "idle",
+        hasIssue: false,
       },
     })),
     edges: graph.edges.map((edge) => {
-      const hasIssue = state.issueEdgeIds?.has(edge.id) ?? false;
-      const isSelected =
-        state.selectedEdgeIds?.has(edge.id) ?? state.selectedEdgeId === edge.id;
-      const status = graphEdgeStatus(edge, state, hasIssue, isSelected);
+      const status = "idle";
       const stroke = graphEdgeStrokeForStatus(status);
-      const kind = classifyWorkflowGraphEdge(graph, edge);
+      const kind = classifyWorkflowGraphEdgeFromSource(nodeById.get(edge.source_node_id), edge);
 
       return {
         id: edge.id,
@@ -212,7 +211,7 @@ export function toReactFlowGraph(
         label: edgeOrders.get(edge.id)
           ? String(edgeOrders.get(edge.id))
           : edge.label ?? edge.source_port,
-        selected: isSelected,
+        selected: false,
         ariaLabel: edgeOrders.get(edge.id)
           ? `Step ${edgeOrders.get(edge.id)}: ${
               nodeLabels.get(edge.source_node_id) ?? edge.source_node_id
@@ -222,15 +221,7 @@ export function toReactFlowGraph(
           : `${nodeLabels.get(edge.source_node_id) ?? edge.source_node_id} to ${
               nodeLabels.get(edge.target_node_id) ?? edge.target_node_id
             } via ${edge.label ?? edge.source_port}`,
-        className: [
-          "graph-edge",
-          `graph-edge-${kind}`,
-          hasIssue ? "graph-edge-has-issue" : "",
-          status === "failed" ? "graph-edge-failed" : "",
-          status === "running" ? "graph-edge-running" : "",
-          status === "completed" ? "graph-edge-completed" : "",
-          isSelected ? "graph-edge-selected" : "",
-        ].filter(Boolean).join(" "),
+        className: ["graph-edge", `graph-edge-${kind}`].join(" "),
         interactionWidth: 20,
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -238,10 +229,10 @@ export function toReactFlowGraph(
         },
         style: {
           stroke,
-          strokeWidth: isSelected ? 3.5 : hasIssue ? 2.75 : 2.5,
+          strokeWidth: 2.5,
         },
         data: {
-          hasIssue,
+          hasIssue: false,
           status,
           kind,
           delay: edge.delay ?? null,
@@ -251,6 +242,125 @@ export function toReactFlowGraph(
     }),
     viewport: graph.viewport,
   };
+
+  return isIdleReactFlowGraphState(state)
+    ? baseFlowGraph
+    : applyReactFlowGraphState(baseFlowGraph, state);
+}
+
+export function applyReactFlowGraphState(
+  flowGraph: WorkflowReactFlowGraph,
+  state: ReactFlowGraphState = {},
+): WorkflowReactFlowGraph {
+  let changed = false;
+  const nodes = flowGraph.nodes.map((node) => {
+    const selected =
+      state.selectedNodeIds?.has(node.id) ?? state.selectedNodeId === node.id;
+    const status = graphNodeStatus(node.id, state);
+    const hasIssue = state.issueNodeIds?.has(node.id) ?? false;
+    if (
+      node.selected === selected &&
+      node.data.status === status &&
+      node.data.hasIssue === hasIssue
+    ) {
+      return node;
+    }
+    changed = true;
+    return {
+      ...node,
+      selected,
+      data: {
+        ...node.data,
+        status,
+        hasIssue,
+      },
+    };
+  });
+  const edges = flowGraph.edges.map((edge) => {
+    const nextEdge = applyReactFlowEdgeState(edge, state);
+    if (nextEdge !== edge) changed = true;
+    return nextEdge;
+  });
+
+  if (!changed) return flowGraph;
+  return {
+    ...flowGraph,
+    nodes,
+    edges,
+  };
+}
+
+function applyReactFlowEdgeState(
+  edge: WorkflowFlowEdge,
+  state: ReactFlowGraphState,
+): WorkflowFlowEdge {
+  const hasIssue = state.issueEdgeIds?.has(edge.id) ?? false;
+  const isSelected =
+    state.selectedEdgeIds?.has(edge.id) ?? state.selectedEdgeId === edge.id;
+  const status = graphEdgeStatusForTarget(
+    edge.target,
+    state,
+    hasIssue,
+    isSelected,
+  );
+  const stroke = graphEdgeStrokeForStatus(status);
+  const strokeWidth = isSelected ? 3.5 : hasIssue ? 2.75 : 2.5;
+  const kind = edge.data?.kind ?? "main";
+  const className = [
+    "graph-edge",
+    `graph-edge-${kind}`,
+    hasIssue ? "graph-edge-has-issue" : "",
+    status === "failed" ? "graph-edge-failed" : "",
+    status === "running" ? "graph-edge-running" : "",
+    status === "completed" ? "graph-edge-completed" : "",
+    isSelected ? "graph-edge-selected" : "",
+  ].filter(Boolean).join(" ");
+
+  if (
+    edge.selected === isSelected &&
+    edge.className === className &&
+    reactFlowEdgeMarkerColor(edge) === stroke &&
+    edge.style?.stroke === stroke &&
+    edge.style?.strokeWidth === strokeWidth &&
+    edge.data?.hasIssue === hasIssue &&
+    edge.data?.status === status
+  ) {
+    return edge;
+  }
+
+  return {
+    ...edge,
+    selected: isSelected,
+    className,
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      color: stroke,
+    },
+    style: {
+      stroke,
+      strokeWidth,
+    },
+    data: {
+      ...edge.data,
+      kind,
+      hasIssue,
+      status,
+    },
+  };
+}
+
+function isIdleReactFlowGraphState(state: ReactFlowGraphState) {
+  return (
+    !state.selectedNodeId &&
+    !state.selectedEdgeId &&
+    !state.runningNodeId &&
+    !state.failedNodeId &&
+    !state.selectedNodeIds?.size &&
+    !state.selectedEdgeIds?.size &&
+    !state.completedNodeIds?.size &&
+    !state.issueNodeIds?.size &&
+    !state.issueEdgeIds?.size
+  );
 }
 
 function graphEdgeOrders(graph: WorkflowGraph) {
@@ -260,10 +370,12 @@ function graphEdgeOrders(graph: WorkflowGraph) {
   const visitedNodeIds = new Set<string>();
   graph.edges.forEach((edge) => {
     const key = edgeSourcePortKey(edge.source_node_id, edge.source_port);
-    edgesBySourcePort.set(key, [
-      ...(edgesBySourcePort.get(key) ?? []),
-      edge,
-    ]);
+    const edgesForPort = edgesBySourcePort.get(key);
+    if (edgesForPort) {
+      edgesForPort.push(edge);
+    } else {
+      edgesBySourcePort.set(key, [edge]);
+    }
   });
 
   for (const edges of edgesBySourcePort.values()) {
@@ -416,22 +528,63 @@ export function mergeReactFlowNodeRuntimeState(
     const canPreserveMeasuredDimensions =
       node.initialHeight === previousNode.initialHeight &&
       node.initialWidth === previousNode.initialWidth;
-
-    return {
+    const dragging = previousNode.dragging ?? node.dragging;
+    const height = canPreserveMeasuredDimensions
+      ? node.height ?? previousNode.height
+      : node.height;
+    const measured = canPreserveMeasuredDimensions
+      ? node.measured ?? previousNode.measured
+      : node.measured;
+    const resizing = previousNode.resizing ?? node.resizing;
+    const width = canPreserveMeasuredDimensions
+      ? node.width ?? previousNode.width
+      : node.width;
+    const nextNode = {
       ...node,
-      dragging: previousNode.dragging ?? node.dragging,
-      height: canPreserveMeasuredDimensions
-        ? node.height ?? previousNode.height
-        : node.height,
-      measured: canPreserveMeasuredDimensions
-        ? node.measured ?? previousNode.measured
-        : node.measured,
-      resizing: previousNode.resizing ?? node.resizing,
-      width: canPreserveMeasuredDimensions
-        ? node.width ?? previousNode.width
-        : node.width,
+      ...(dragging !== undefined ? { dragging } : {}),
+      ...(height !== undefined ? { height } : {}),
+      ...(measured !== undefined ? { measured } : {}),
+      ...(resizing !== undefined ? { resizing } : {}),
+      ...(width !== undefined ? { width } : {}),
     };
+
+    return workflowFlowNodesEqual(previousNode, nextNode) ? previousNode : nextNode;
   });
+}
+
+function workflowFlowNodesEqual(
+  left: WorkflowFlowNode,
+  right: WorkflowFlowNode,
+) {
+  return (
+    left.id === right.id &&
+    left.type === right.type &&
+    left.position === right.position &&
+    left.initialHeight === right.initialHeight &&
+    left.initialWidth === right.initialWidth &&
+    left.selected === right.selected &&
+    workflowFlowNodeDataEqual(left.data, right.data) &&
+    left.dragging === right.dragging &&
+    left.height === right.height &&
+    left.measured === right.measured &&
+    left.resizing === right.resizing &&
+    left.width === right.width
+  );
+}
+
+function workflowFlowNodeDataEqual(
+  left: WorkflowFlowNode["data"],
+  right: WorkflowFlowNode["data"],
+) {
+  return (
+    left.label === right.label &&
+    left.kindLabel === right.kindLabel &&
+    left.metaLabel === right.metaLabel &&
+    left.nodeType === right.nodeType &&
+    left.ports === right.ports &&
+    left.status === right.status &&
+    left.hasIssue === right.hasIssue
+  );
 }
 
 export function fromReactFlowGraph(
@@ -446,13 +599,17 @@ export function fromReactFlowGraph(
 
   return {
     ...graph,
-    nodes: graph.nodes.map((node) => ({
-      ...node,
-      position: nodePositions.get(node.id) ?? node.position,
-    })),
+    nodes: graph.nodes.map((node) => {
+      const position = nodePositions.get(node.id) ?? node.position;
+      if (position.x === node.position.x && position.y === node.position.y) return node;
+      return {
+        ...node,
+        position,
+      };
+    }),
     edges: edges.map((edge) => {
       const existingEdge = graphEdges.get(edge.id);
-      return {
+      const nextEdge: GraphEdge = {
         id: edge.id,
         source_node_id: edge.source,
         source_port: edge.sourceHandle ?? "out",
@@ -466,8 +623,9 @@ export function fromReactFlowGraph(
         condition: existingEdge?.condition ?? null,
         delay: existingEdge?.delay ?? graphEdgeDelayFromData(edge.data?.delay),
       };
+      return graphEdgesEqual(existingEdge, nextEdge) ? existingEdge : nextEdge;
     }).filter(
-      (edge) =>
+      (edge): edge is GraphEdge =>
         graphNodes.has(edge.source_node_id) &&
         graphNodes.has(edge.target_node_id),
     ),
@@ -477,6 +635,29 @@ export function fromReactFlowGraph(
       zoom: viewport.zoom,
     },
   };
+}
+
+function reactFlowEdgeMarkerColor(edge: WorkflowFlowEdge) {
+  const markerEnd = edge.markerEnd;
+  if (!markerEnd || typeof markerEnd !== "object") return undefined;
+  return markerEnd.color;
+}
+
+function graphEdgesEqual(
+  left: GraphEdge | undefined,
+  right: GraphEdge,
+): left is GraphEdge {
+  if (!left) return false;
+  return (
+    left.id === right.id &&
+    left.source_node_id === right.source_node_id &&
+    left.source_port === right.source_port &&
+    left.target_node_id === right.target_node_id &&
+    left.target_port === right.target_port &&
+    (left.label ?? null) === (right.label ?? null) &&
+    (left.condition ?? null) === (right.condition ?? null) &&
+    (left.delay ?? null) === (right.delay ?? null)
+  );
 }
 
 function graphEdgeDelayLabel(delay: GraphEdgeDelay | null) {
@@ -623,21 +804,21 @@ function graphNodeStatus(
   return "idle";
 }
 
-function graphEdgeStatus(
-  edge: WorkflowGraph["edges"][number],
+function graphEdgeStatusForTarget(
+  targetNodeId: string,
   state: ReactFlowGraphState,
   hasIssue: boolean,
   isSelected: boolean,
 ): WorkflowFlowEdgeStatus {
-  if (state.failedNodeId && edge.target_node_id === state.failedNodeId) {
+  if (state.failedNodeId && targetNodeId === state.failedNodeId) {
     return "failed";
   }
   if (hasIssue) return "issue";
-  if (state.runningNodeId && edge.target_node_id === state.runningNodeId) {
+  if (state.runningNodeId && targetNodeId === state.runningNodeId) {
     return "running";
   }
   if (isSelected) return "selected";
-  if (state.completedNodeIds?.has(edge.target_node_id)) return "completed";
+  if (state.completedNodeIds?.has(targetNodeId)) return "completed";
   return "idle";
 }
 

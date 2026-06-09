@@ -80,6 +80,13 @@ export function classifyWorkflowGraphEdge(
   edge: GraphEdge,
 ): WorkflowGraphEdgeKind {
   const source = graph.nodes.find((node) => node.id === edge.source_node_id);
+  return classifyWorkflowGraphEdgeFromSource(source, edge);
+}
+
+export function classifyWorkflowGraphEdgeFromSource(
+  source: GraphNode | undefined,
+  edge: GraphEdge,
+): WorkflowGraphEdgeKind {
   if (!source) return "main";
 
   if (isLoopPort(source, edge.source_port)) return "loop";

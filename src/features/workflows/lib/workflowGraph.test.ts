@@ -1,9 +1,10 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type { GraphNode, GraphNodeType, WorkflowGraph, WorkflowStep } from "../../../types/workflow";
 import {
   createDefaultGraphNode,
   fromReactFlowGraph,
   graphIssuesByNode,
+  applyReactFlowGraphState,
   linearGraphFromSteps,
   mergeReactFlowNodeRuntimeState,
   nodePorts,
@@ -436,6 +437,15 @@ describe("workflow graph helpers", () => {
     expect(() => toReactFlowGraph(graph)).not.toThrow();
   });
 
+  test("indexes graph nodes instead of scanning nodes for every edge", () => {
+    const graph = largeLinearGraph(25);
+    const findSpy = vi.spyOn(graph.nodes, "find");
+
+    toReactFlowGraph(graph);
+
+    expect(findSpy).toHaveBeenCalledTimes(1);
+  });
+
   test("marks selected graph edges with distinct stroke and marker styling", () => {
     const graph = linearGraphFromSteps([waitStep]);
 
@@ -685,6 +695,61 @@ describe("workflow graph helpers", () => {
         height: 74,
         dragging: true,
       }),
+    );
+  });
+
+  test("applies graph runtime state while preserving unchanged React Flow object identities", () => {
+    const graph = linearGraphFromSteps([waitStep]);
+    const baseFlow = toReactFlowGraph(graph);
+
+    expect(applyReactFlowGraphState(baseFlow, {
+      selectedNodeIds: new Set(),
+      selectedEdgeIds: new Set(),
+    })).toBe(baseFlow);
+
+    const selectedNodeFlow = applyReactFlowGraphState(baseFlow, {
+      selectedNodeId: "step-wait",
+    });
+    const startNode = baseFlow.nodes.find((node) => node.id === "start");
+    const selectedNode = baseFlow.nodes.find((node) => node.id === "step-wait");
+
+    expect(selectedNodeFlow.nodes.find((node) => node.id === "start")).toBe(startNode);
+    expect(selectedNodeFlow.nodes.find((node) => node.id === "step-wait")).not.toBe(
+      selectedNode,
+    );
+    expect(selectedNodeFlow.edges[0]).toBe(baseFlow.edges[0]);
+
+    const selectedEdgeFlow = applyReactFlowGraphState(baseFlow, {
+      selectedEdgeId: "edge-start-step-wait",
+    });
+
+    expect(selectedEdgeFlow.nodes[0]).toBe(baseFlow.nodes[0]);
+    expect(selectedEdgeFlow.edges[0]).not.toBe(baseFlow.edges[0]);
+  });
+
+  test("preserves unchanged graph objects when syncing React Flow state", () => {
+    const graph = linearGraphFromSteps([waitStep]);
+    const flow = toReactFlowGraph(graph);
+
+    const nextGraph = fromReactFlowGraph(graph, flow.nodes, flow.edges, graph.viewport);
+
+    expect(nextGraph.nodes[0]).toBe(graph.nodes[0]);
+    expect(nextGraph.edges[0]).toBe(graph.edges[0]);
+  });
+
+  test("preserves unchanged React Flow node identities when merging runtime state", () => {
+    const graph = linearGraphFromSteps([waitStep]);
+    const previousFlow = toReactFlowGraph(graph);
+    const nextFlow = toReactFlowGraph(graph, { selectedNodeId: "step-wait" });
+
+    const mergedNodes = mergeReactFlowNodeRuntimeState(
+      nextFlow.nodes,
+      previousFlow.nodes,
+    );
+
+    expect(mergedNodes.find((node) => node.id === "start")).toBe(previousFlow.nodes[0]);
+    expect(mergedNodes.find((node) => node.id === "step-wait")).not.toBe(
+      previousFlow.nodes[1],
     );
   });
 
