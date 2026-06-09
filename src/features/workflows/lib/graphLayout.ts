@@ -54,7 +54,10 @@ export async function layoutWorkflowGraph(
   const positionsBeforePortOrder = usesWrappedMainRows(graph)
     ? fullGraphPositions(graph)
     : normalizeElkPositions(elkPositions);
-  const positions = applyPortOrderToPositions(graph, positionsBeforePortOrder);
+  const positions = alignBranchLanePositions(
+    graph,
+    applyPortOrderToPositions(graph, positionsBeforePortOrder),
+  );
   return {
     graph: {
       ...graph,
@@ -229,6 +232,124 @@ function applyPortOrderToPositions(
   return nextPositions;
 }
 
+function alignBranchLanePositions(
+  graph: WorkflowGraph,
+  positions: Map<string, GraphPosition>,
+) {
+  const branchLaneY = branchLaneYByNodeId(graph, positions);
+  if (branchLaneY.size === 0) return positions;
+
+  const nodeHeights = new Map(
+    graph.nodes.map((node) => [node.id, graphNodeHeightForPorts(node.ports)]),
+  );
+  const nodeIdsByColumn = new Map<string, string[]>();
+  for (const node of graph.nodes) {
+    const column = columnKey(positions.get(node.id));
+    if (!column) continue;
+    nodeIdsByColumn.set(column, [...(nodeIdsByColumn.get(column) ?? []), node.id]);
+  }
+
+  const nextPositions = new Map(positions);
+  for (const nodeIds of nodeIdsByColumn.values()) {
+    if (!nodeIds.some((nodeId) => branchLaneY.has(nodeId))) continue;
+
+    const orderedNodeIds = [...nodeIds].sort((left, right) => {
+      const leftY = branchLaneY.get(left) ?? positions.get(left)?.y ?? 0;
+      const rightY = branchLaneY.get(right) ?? positions.get(right)?.y ?? 0;
+      const desiredDiff = leftY - rightY;
+      if (desiredDiff !== 0) return desiredDiff;
+      return comparePositionOrder(left, right, positions);
+    });
+
+    let previousBottom: number | null = null;
+    for (const nodeId of orderedNodeIds) {
+      const position = nextPositions.get(nodeId);
+      if (!position) continue;
+      const desiredY = branchLaneY.get(nodeId) ?? positions.get(nodeId)?.y ?? 0;
+      const y = Math.round(
+        previousBottom == null
+          ? desiredY
+          : Math.max(desiredY, previousBottom + layoutRowVerticalGap),
+      );
+      nextPositions.set(nodeId, { ...position, y });
+      previousBottom = y + (nodeHeights.get(nodeId) ?? graphNodeMinHeight);
+    }
+  }
+
+  return nextPositions;
+}
+
+function branchLaneYByNodeId(
+  graph: WorkflowGraph,
+  positions: Map<string, GraphPosition>,
+) {
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const edgesBySourcePort = new Map<string, GraphEdge[]>();
+  const incomingCounts = new Map<string, number>();
+
+  for (const edge of graph.edges) {
+    const key = edgeSourcePortKey(edge.source_node_id, edge.source_port);
+    edgesBySourcePort.set(key, [...(edgesBySourcePort.get(key) ?? []), edge]);
+    incomingCounts.set(edge.target_node_id, (incomingCounts.get(edge.target_node_id) ?? 0) + 1);
+  }
+  for (const edges of edgesBySourcePort.values()) {
+    edges.sort((left, right) => left.id.localeCompare(right.id));
+  }
+
+  const laneY = new Map<string, number>();
+  const queue: string[] = [];
+  const assignLaneY = (nodeId: string, y: number) => {
+    if ((incomingCounts.get(nodeId) ?? 0) > 1) return;
+    const currentY = laneY.get(nodeId);
+    if (currentY != null && currentY <= y) return;
+    laneY.set(nodeId, y);
+    queue.push(nodeId);
+  };
+
+  for (const node of graph.nodes) {
+    for (const portId of branchLaneOutputPortIds(node)) {
+      for (const edge of edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? []) {
+        const targetY = positions.get(edge.target_node_id)?.y;
+        if (targetY == null) continue;
+        assignLaneY(edge.target_node_id, targetY);
+      }
+    }
+  }
+
+  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+    const nodeId = queue[queueIndex];
+    if (!nodeId) continue;
+    const node = nodeById.get(nodeId);
+    const y = laneY.get(nodeId);
+    if (!node || y == null) continue;
+    for (const edge of linearLaneOutputEdges(node, edgesBySourcePort)) {
+      assignLaneY(edge.target_node_id, y);
+    }
+  }
+
+  return laneY;
+}
+
+function linearLaneOutputEdges(
+  node: GraphNode,
+  edgesBySourcePort: Map<string, GraphEdge[]>,
+) {
+  const edges = orderedOutputPortIds(node).flatMap((portId) =>
+    edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? [],
+  );
+  if (edges.length !== 1) return [];
+  const edge = edges[0];
+  if (!edge) return [];
+  if (
+    isBranchPort(node, edge.source_port) ||
+    isLoopPort(node, edge.source_port) ||
+    isRecoveryPort(node, edge.source_port)
+  ) {
+    return [];
+  }
+  return [edge];
+}
+
 function portOrderConstraintsByColumn(
   graph: WorkflowGraph,
   positions: Map<string, GraphPosition>,
@@ -267,7 +388,83 @@ function portOrderConstraintsByColumn(
     addColumnConstraints(inputSources, positions, constraints);
   }
 
+  addBranchLaneConstraints(graph, positions, constraints, edgesBySourcePort);
+
   return constraints;
+}
+
+function addBranchLaneConstraints(
+  graph: WorkflowGraph,
+  positions: Map<string, GraphPosition>,
+  constraints: Map<string, Array<[string, string]>>,
+  edgesBySourcePort: Map<string, GraphEdge[]>,
+) {
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const incomingCounts = new Map<string, number>();
+  for (const edge of graph.edges) {
+    incomingCounts.set(edge.target_node_id, (incomingCounts.get(edge.target_node_id) ?? 0) + 1);
+  }
+
+  const laneRanks = new Map<string, number>();
+  const queue: string[] = [];
+  const assignLaneRank = (nodeId: string, rank: number) => {
+    if ((incomingCounts.get(nodeId) ?? 0) > 1) return;
+    const currentRank = laneRanks.get(nodeId);
+    if (currentRank != null && currentRank <= rank) return;
+    laneRanks.set(nodeId, rank);
+    queue.push(nodeId);
+  };
+
+  for (const node of graph.nodes) {
+    const branchTargets = branchLaneOutputPortIds(node).flatMap((portId) =>
+      (edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? [])
+        .map((edge) => edge.target_node_id),
+    );
+    branchTargets.forEach((targetNodeId, index) => assignLaneRank(targetNodeId, index));
+  }
+
+  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+    const nodeId = queue[queueIndex];
+    if (!nodeId) continue;
+    const node = nodeById.get(nodeId);
+    const rank = laneRanks.get(nodeId);
+    if (!node || rank == null) continue;
+    for (const portId of sameLaneOutputPortIds(node)) {
+      for (const edge of edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? []) {
+        assignLaneRank(edge.target_node_id, rank);
+      }
+    }
+  }
+
+  const rankedNodeIdsByColumn = new Map<string, string[]>();
+  for (const [nodeId] of laneRanks) {
+    const column = columnKey(positions.get(nodeId));
+    if (!column) continue;
+    rankedNodeIdsByColumn.set(column, [...(rankedNodeIdsByColumn.get(column) ?? []), nodeId]);
+  }
+
+  for (const nodeIds of rankedNodeIdsByColumn.values()) {
+    addColumnConstraints(
+      [...nodeIds].sort((left, right) => {
+        const rankDiff = (laneRanks.get(left) ?? 0) - (laneRanks.get(right) ?? 0);
+        if (rankDiff !== 0) return rankDiff;
+        return comparePositionOrder(left, right, positions);
+      }),
+      positions,
+      constraints,
+    );
+  }
+}
+
+function branchLaneOutputPortIds(node: GraphNode) {
+  return orderedOutputPortIds(node).filter((portId) =>
+    isBranchPort(node, portId) || isRecoveryPort(node, portId),
+  );
+}
+
+function sameLaneOutputPortIds(node: GraphNode) {
+  const branchPortCount = branchLaneOutputPortIds(node).length;
+  return branchPortCount > 1 ? [] : orderedOutputPortIds(node);
 }
 
 function addColumnConstraints(
@@ -624,8 +821,9 @@ function isContinuationPort(node: GraphNode, portId: string) {
 
 function isBranchPort(node: GraphNode, portId: string) {
   if (node.node_type === "if") return portId === "true" || portId === "false";
-  if (node.node_type === "switch" || node.node_type === "router" || node.node_type === "random_choice") {
+  if (node.node_type === "switch" || node.node_type === "router") {
     return portId === "default" || portId.startsWith("case_");
   }
+  if (node.node_type === "random_choice") return portId.startsWith("choice_");
   return node.node_type === "fallback" && portId === "primary";
 }

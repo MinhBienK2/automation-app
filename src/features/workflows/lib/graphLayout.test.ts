@@ -71,6 +71,46 @@ describe("workflow graph layout", () => {
     expect(positions.get("case-2")?.y).toBeLessThan(positions.get("done")?.y ?? 0);
   });
 
+  test("keeps branch continuations in their source port lanes", async () => {
+    const graph = copyOfMainRandomChoiceContinuationGraph();
+
+    const result = await layoutWorkflowGraph(graph);
+    const positions = positionsByNode(result.graph);
+
+    expect(positions.get("node-call_subflow-1780929859993")?.y).toBe(0);
+    expect(positions.get("node-call_subflow-1780929859993-copy-2")?.y).toBe(162);
+    expect(positions.get("node-call_subflow-1780932688283-copy")?.x)
+      .toBeGreaterThan(positions.get("node-call_subflow-1780929859993")?.x ?? 0);
+    expect(positions.get("node-call_subflow-1780932688283-copy")?.y)
+      .toBe(positions.get("node-call_subflow-1780929859993")?.y);
+    expect(positions.get("node-call_subflow-1780932688283-copy-copy")?.y)
+      .toBe(positions.get("node-call_subflow-1780929859993-copy-2")?.y);
+  });
+
+  test("keeps deep branch continuations in their inherited branch lane", async () => {
+    const graph = copyOfMainRandomChoiceContinuationGraph();
+    graph.nodes.push(
+      callSubflowNode("branch-like-third", "Lướt video tiktok", { x: 1184, y: 972 }),
+      callSubflowNode("branch-dwell-third", "Xem video tiktok 15 - 20s", { x: 1184, y: 1134 }),
+      callSubflowNode("branch-scroll-third", "Lướt comment", { x: 1184, y: 1296 }),
+    );
+    graph.edges.push(
+      edge("edge-b1-c1", "node-call_subflow-1780932688283-copy", "out", "branch-like-third"),
+      edge("edge-b2-c2", "node-call_subflow-1780932688283-copy-copy", "out", "branch-dwell-third"),
+      edge("edge-b3-c3", "node-call_subflow-1780929859993-copy-2-copy-copy", "out", "branch-scroll-third"),
+    );
+
+    const result = await layoutWorkflowGraph(graph);
+    const positions = positionsByNode(result.graph);
+
+    expect(positions.get("branch-like-third")?.y)
+      .toBe(positions.get("node-call_subflow-1780929859993")?.y);
+    expect(positions.get("branch-dwell-third")?.y)
+      .toBe(positions.get("node-call_subflow-1780929859993-copy-2")?.y);
+    expect(positions.get("branch-scroll-third")?.y)
+      .toBe(positions.get("node-call_subflow-1780929859993-copy-2-copy-copy")?.y);
+  });
+
   test("orders input sources top-to-bottom by target port order", async () => {
     const graph = multiInputWorkflowGraph();
 
@@ -207,6 +247,87 @@ function multiInputWorkflowGraph(): WorkflowGraph {
       edgeToPort("edge-source-first-join", "source-first", "out", "join", "first"),
     ],
     viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function copyOfMainRandomChoiceContinuationGraph(): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      graphNode("start", "start", { x: 0, y: 0 }),
+      {
+        ...graphNode("choose-behavior", "random_choice", { x: 296, y: 355 }),
+        label: "Random TikTok behavior",
+        config: {
+          choices: [
+            { id: "like", label: "Maybe like visible video", weight: 1 },
+            { id: "dwell", label: "Just watch/read", weight: 1 },
+            { id: "scroll", label: "Scroll to next video", weight: 1 },
+            { id: "choice_1780678579846", label: "Choice 4", weight: 1 },
+            { id: "choice_1780935838568", label: "Choice 5", weight: 1 },
+            { id: "choice_1780935840672", label: "Choice 6", weight: 1 },
+            { id: "choice_1780938373844", label: "Choice 7", weight: 1 },
+          ],
+          output_name: "random_choice",
+        },
+        ports: [
+          { id: "in", label: "In", direction: "input" },
+          { id: "choice_like", label: "Maybe like visible video", direction: "output" },
+          { id: "choice_dwell", label: "Just watch/read", direction: "output" },
+          { id: "choice_scroll", label: "Scroll to next video", direction: "output" },
+          { id: "choice_choice_1780678579846", label: "Choice 4", direction: "output" },
+          { id: "choice_choice_1780935838568", label: "Choice 5", direction: "output" },
+          { id: "choice_choice_1780935840672", label: "Choice 6", direction: "output" },
+          { id: "choice_choice_1780938373844", label: "Choice 7", direction: "output" },
+          { id: "done", label: "Done", direction: "output" },
+        ],
+      },
+      callSubflowNode("node-call_subflow-1780929859993", "Xem video tiktok 15 - 20s", { x: 592, y: 0 }),
+      callSubflowNode("node-call_subflow-1780929859993-copy-2", "Xem video tiktok 15 - 20s", { x: 592, y: 162 }),
+      callSubflowNode("node-call_subflow-1780932688283-copy-copy-copy", "Like video tiktok", { x: 592, y: 324 }),
+      callSubflowNode("node-call_subflow-1780932688283-copy-copy-copy-copy", "Like video tiktok", { x: 592, y: 486 }),
+      callSubflowNode("node-call_subflow-1780932830594", "comment video tiktok", { x: 592, y: 663 }),
+      graphNode("node-repeat_times-1780937351330", "repeat_times", { x: 592, y: 825 }),
+      callSubflowNode("node-call_subflow-1780932830594-copy", "comment video tiktok", { x: 592, y: 1134 }),
+      callSubflowNode("node-call_subflow-1780929859993-copy-2-copy-copy", "Xem video tiktok 15 - 20s", { x: 888, y: 0 }),
+      callSubflowNode("node-call_subflow-1780929859993-copy", "Xem video tiktok 15 - 20s", { x: 888, y: 162 }),
+      callSubflowNode("node-call_subflow-1780938428230-copy", "Lướt video tiktok", { x: 888, y: 324 }),
+      callSubflowNode("node-call_subflow-1780938428230-copy-copy", "Lướt video tiktok", { x: 888, y: 486 }),
+      callSubflowNode("node-call_subflow-1780937680973", "Lướt comment", { x: 888, y: 648 }),
+      callSubflowNode("node-call_subflow-1780938428230", "Lướt video tiktok", { x: 888, y: 810 }),
+      callSubflowNode("node-call_subflow-1780932688283-copy", "Like video tiktok", { x: 888, y: 972 }),
+      callSubflowNode("node-call_subflow-1780932688283-copy-copy", "Like video tiktok", { x: 888, y: 1134 }),
+    ],
+    edges: [
+      edge("edge-start-choice", "start", "out", "choose-behavior"),
+      edge("edge-choose-like", "choose-behavior", "choice_like", "node-call_subflow-1780929859993"),
+      edge("edge-choose-dwell", "choose-behavior", "choice_dwell", "node-call_subflow-1780929859993-copy-2"),
+      edge("edge-choose-scroll", "choose-behavior", "choice_scroll", "node-call_subflow-1780932688283-copy-copy-copy"),
+      edge("edge-choose-choice-4", "choose-behavior", "choice_choice_1780678579846", "node-call_subflow-1780932688283-copy-copy-copy-copy"),
+      edge("edge-choose-choice-5", "choose-behavior", "choice_choice_1780935838568", "node-call_subflow-1780932830594"),
+      edge("edge-choose-choice-6", "choose-behavior", "choice_choice_1780935840672", "node-repeat_times-1780937351330"),
+      edge("edge-choose-choice-7", "choose-behavior", "choice_choice_1780938373844", "node-call_subflow-1780932830594-copy"),
+      edge("edge-a1-b1", "node-call_subflow-1780929859993", "out", "node-call_subflow-1780932688283-copy"),
+      edge("edge-a2-b2", "node-call_subflow-1780929859993-copy-2", "out", "node-call_subflow-1780932688283-copy-copy"),
+      edge("edge-a3-b3", "node-call_subflow-1780932688283-copy-copy-copy", "out", "node-call_subflow-1780929859993-copy-2-copy-copy"),
+      edge("edge-a4-b4", "node-call_subflow-1780932688283-copy-copy-copy-copy", "out", "node-call_subflow-1780938428230-copy"),
+      edge("edge-a5-b5", "node-call_subflow-1780932830594", "out", "node-call_subflow-1780938428230-copy-copy"),
+      edge("edge-repeat-loop", "node-repeat_times-1780937351330", "loop", "node-call_subflow-1780937680973"),
+      edge("edge-repeat-done", "node-repeat_times-1780937351330", "done", "node-call_subflow-1780938428230"),
+      edge("edge-a7-b7", "node-call_subflow-1780932830594-copy", "out", "node-call_subflow-1780929859993-copy"),
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function callSubflowNode(
+  id: string,
+  label: string,
+  position: { x: number; y: number },
+): GraphNode {
+  return {
+    ...graphNode(id, "call_subflow", position),
+    label,
   };
 }
 

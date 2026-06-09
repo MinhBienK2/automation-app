@@ -206,7 +206,11 @@ Preserve these unless the task explicitly changes them.
   identify the node, but full configuration details remain in the inspector.
   Nodes expand vertically when one side has many ports so branch handles do not
   overlap. Loaded saved graphs and auto arrange must leave lower same-column
-  nodes enough vertical clearance for those port-aware node heights.
+  nodes enough vertical clearance for those port-aware node heights. Auto
+  arrange must keep downstream single-output continuation chains in the lane of
+  the branch target they inherit, rather than filling open rows from unrelated
+  branches. Multi-output control blocks such as loop body plus done paths remain
+  separate control-flow lanes.
 - Selecting a graph link clears node selection and shows link-scoped actions, including none/fixed/random link wait editing. Selecting a node clears link selection and shows node-scoped inspector content.
 - Selected non-start graph nodes expose a Node name field in the inspector. Renaming updates the node label used on the canvas, saved graph, compiled step labels, run traces, and node-linked error context without changing the node type or config.
 - Multi-selecting graph nodes or links shows a selection summary with bulk duplicate, copy, delete, and workflow-only Create subflow actions when nodes are selected. Bulk edits never delete, copy, paste, or duplicate the `start` node. Duplicate and paste create fresh ids and only preserve internal links inside the selected/copied fragment. Create subflow from selection asks for a subflow name and exposes `Chỉ tạo` and `Tạo và thay thế`; the first option leaves the workflow graph unchanged, while the second replaces the selected nodes with a configured Call Subflow node only when the selection has one clear entry, no more than one external incoming and outgoing link, and no selected node that branches both inside and outside the selection.
