@@ -5,6 +5,7 @@ import {
   classifyWorkflowGraphEdge,
   layoutWorkflowGraph,
 } from "./graphLayout";
+import { graphNodeHeightForPorts } from "./graphNodeDimensions";
 
 describe("workflow graph layout", () => {
   test("wraps long main paths into deterministic left-to-right rows", async () => {
@@ -20,6 +21,30 @@ describe("workflow graph layout", () => {
     expect(positions.get("node-17")).toEqual({ x: 260, y: 360 });
     expect(result.graph.edges).toEqual(graph.edges);
     expect(result.graph.viewport).toEqual(graph.viewport);
+  });
+
+  test("keeps wrapped rows below port-heavy nodes", async () => {
+    const graph = linearWorkflowGraph(10);
+    const tallPorts = [
+      { id: "in", label: "In", direction: "input" as const },
+      ...Array.from({ length: 6 }, (_, index) => ({
+        id: `point_${index + 1}`,
+        label: `Point ${index + 1}`,
+        direction: "output" as const,
+      })),
+      { id: "out", label: "Out", direction: "output" as const },
+    ];
+    graph.nodes[1] = {
+      ...graph.nodes[1],
+      ports: tallPorts,
+    };
+
+    const result = await layoutWorkflowGraph(graph);
+    const positions = positionsByNode(result.graph);
+    const tallNodeBottom = (positions.get("node-1")?.y ?? 0) + graphNodeHeightForPorts(tallPorts);
+
+    expect(positions.get("node-9")?.x).toBe(positions.get("node-1")?.x);
+    expect(positions.get("node-9")?.y).toBeGreaterThanOrEqual(tallNodeBottom + 24);
   });
 
   test("keeps branch and continuation work on separate lanes", async () => {

@@ -6,7 +6,11 @@ import type {
   GraphPosition,
   WorkflowGraph,
 } from "../../../types/workflow";
-import { graphNodeHeightForPorts, graphNodeWidth } from "./graphNodeDimensions";
+import {
+  graphNodeHeightForPorts,
+  graphNodeMinHeight,
+  graphNodeWidth,
+} from "./graphNodeDimensions";
 
 export type WorkflowGraphEdgeKind =
   | "main"
@@ -24,6 +28,8 @@ const layoutColumnGap = 260;
 const layoutRowGap = 120;
 const layoutLaneGap = 180;
 const layoutColumnsPerRow = 8;
+const layoutRowVerticalGap = Math.max(0, layoutRowGap - graphNodeMinHeight);
+const layoutLaneVerticalGap = Math.max(0, layoutLaneGap - graphNodeMinHeight);
 
 const elk = new ELK({
   defaultLayoutOptions: {
@@ -110,20 +116,56 @@ function fullGraphPositions(graph: WorkflowGraph) {
     );
   }
 
+  const nodeHeights = new Map(
+    graph.nodes.map((node) => [node.id, graphNodeHeightForPorts(node.ports)]),
+  );
+  const laneIndexes = [
+    ...new Set([...columns.keys()].map((column) => layoutLaneForColumn(column))),
+  ].sort((left, right) => left - right);
+  const laneTopOffsets = new Map<number, number>();
+  let nextLaneTop = 0;
+  for (const lane of laneIndexes) {
+    laneTopOffsets.set(lane, nextLaneTop);
+    const laneHeight = Math.max(
+      0,
+      ...[...columns]
+        .filter(([column]) => layoutLaneForColumn(column) === lane)
+        .map(([, nodeIds]) => nodeColumnHeight(nodeIds, nodeHeights)),
+    );
+    nextLaneTop += laneHeight + layoutLaneVerticalGap;
+  }
+
   const positions = new Map<string, GraphPosition>();
   for (const [column, nodeIds] of columns) {
-    nodeIds.forEach((nodeId, row) => {
-      const lane = column <= 0 ? 0 : Math.floor((column - 1) / layoutColumnsPerRow);
-      const columnInLane = column <= 0 ? 0 : (column - 1) % layoutColumnsPerRow;
-      const displayColumn = column <= 0 ? 0 : columnInLane + 1;
+    const lane = layoutLaneForColumn(column);
+    const displayColumn = layoutDisplayColumn(column);
+    let rowTop = laneTopOffsets.get(lane) ?? 0;
+    nodeIds.forEach((nodeId) => {
       positions.set(nodeId, {
         x: displayColumn * layoutColumnGap,
-        y: lane * layoutLaneGap + row * layoutRowGap,
+        y: rowTop,
       });
+      rowTop += (nodeHeights.get(nodeId) ?? graphNodeMinHeight) + layoutRowVerticalGap;
     });
   }
 
   return positions;
+}
+
+function layoutLaneForColumn(column: number) {
+  return column <= 0 ? 0 : Math.floor((column - 1) / layoutColumnsPerRow);
+}
+
+function layoutDisplayColumn(column: number) {
+  if (column <= 0) return 0;
+  return ((column - 1) % layoutColumnsPerRow) + 1;
+}
+
+function nodeColumnHeight(nodeIds: string[], nodeHeights: Map<string, number>) {
+  return nodeIds.reduce((height, nodeId, index) => {
+    const rowGap = index === 0 ? 0 : layoutRowVerticalGap;
+    return height + rowGap + (nodeHeights.get(nodeId) ?? graphNodeMinHeight);
+  }, 0);
 }
 
 async function runElkLayoutForGraph(
