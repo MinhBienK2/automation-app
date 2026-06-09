@@ -285,11 +285,29 @@ const actionValidators = createActionValidatorMap({
   extract_input_value: (config) => validateDataCaptureConfig(config.config),
   extract_table: (config) => validateDataCaptureConfig(config.config),
   extract_list: (config) => validateDataCaptureConfig(config.config),
+  extract_regex_matches: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
+      requiredActionString(config.config.pattern, "pattern", "Regex pattern is required"),
+      regexPatternValidation(config.config.pattern, config.config.flags),
+      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+    ),
   take_screenshot: (config) =>
     safeArtifactNameValidation(
       config.config.path,
       "path",
       "Screenshot path must be a safe artifact name",
+    ),
+  write_text_file: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
+      requiredActionString(config.config.path, "path", "Text file path is required"),
+      safeArtifactNameValidation(
+        config.config.path,
+        "path",
+        "Text file path must be a safe artifact name",
+      ),
+      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
     ),
   go_back: () => null,
   go_forward: () => null,
@@ -852,6 +870,19 @@ function statusValidation(value: number | null | undefined, field: string, messa
   return value == null || (Number.isInteger(value) && value >= 100 && value <= 599)
     ? null
     : validationError(field, message);
+}
+
+function regexPatternValidation(pattern: string, flags: string | null | undefined) {
+  const normalizedFlags = flags?.trim() || "g";
+  if (!/^[dgimsuvy]*$/.test(normalizedFlags)) {
+    return validationError("flags", "Regex flags are invalid");
+  }
+  try {
+    new RegExp(pattern, normalizedFlags);
+    return null;
+  } catch {
+    return validationError("pattern", "Regex pattern is invalid");
+  }
 }
 
 function safeArtifactNameValidation(

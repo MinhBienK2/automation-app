@@ -503,6 +503,8 @@ Evidence items are derived from persisted run outputs and run steps rather than
 a separate projection table. Supported item kinds are `screenshot`, `download`,
 `browser_identity`, `action_trace`, and `evidence_manifest`. File artifact items
 carry only safe run-scoped relative paths such as `runs/<run_id>/screenshots/...`;
+text-file artifacts produced by `write_text_file` are represented as download
+artifacts under the same run evidence boundary.
 artifact preview/reveal/export commands accept evidence ids and revalidate path
 containment in the Electron backend. Historical identity fields come from the
 run-time settings snapshot and sanitized `browser_identity` output, not the
@@ -560,6 +562,7 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `call_subflow` project-local subflow reference, input mapping, and optional
   output prefix metadata.
 - `wait` duration/condition waits and `random_wait` min/max duration waits.
+- Capture actions that read page targets or prior outputs, including text/list/table extraction, regex match extraction from output values, screenshots, downloads, and text-file evidence artifacts.
 - `stop_workflow`, `set_variable`, `set_json_variables`, `transform_variable`, `assert_output`, `domain_allowlist`, `end_success`, and `end_failure`.
 
 The main graph toolbar exposes beginner-facing authoring groups: New node, Add

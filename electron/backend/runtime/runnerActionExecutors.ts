@@ -370,6 +370,18 @@ export function createRunnerActionExecutors(
         await deps.locatorForAction(runtime, action.config),
       );
     },
+    extract_regex_matches: async (action) => {
+      const source = outputValueToText(runtime.outputs[action.config.source_name]);
+      const regex = regexFromActionConfig(action.config.pattern, action.config.flags);
+      const matches = Array.from(source.matchAll(regex), (match) => match[0]).filter(Boolean);
+      const existing = action.config.append
+        ? outputValueToList(runtime.outputs[action.config.output_name])
+        : [];
+      const nextValues = [...existing, ...matches];
+      runtime.outputs[action.config.output_name] = action.config.dedupe
+        ? dedupeStrings(nextValues)
+        : nextValues;
+    },
     extract_table: async (action) => {
       runtime.outputs[action.config.output_name] = await extractTable(
         await deps.locatorForAction(runtime, action.config),
@@ -395,6 +407,33 @@ export function createRunnerActionExecutors(
         relativePath: artifact.relativePath,
       });
       if (action.config.output_name) runtime.outputs[action.config.output_name] = artifact.relativePath;
+    },
+    write_text_file: async (action) => {
+      const text = outputValueToText(
+        runtime.outputs[action.config.source_name],
+        action.config.separator ?? "\n",
+      );
+      const content = action.config.include_trailing_newline === false || !text
+        ? text
+        : `${text}\n`;
+      const artifact = resolveEvidenceArtifact({
+        evidenceDir: deps.appPaths.evidenceDir,
+        runId: runtime.runId,
+        kind: "downloads",
+        stepNumber: runtime.currentStepNumber,
+        nodeId: runtime.currentStepId,
+        requestedName: action.config.path,
+        fallbackName: "text-output",
+        extension: ".txt",
+      });
+      await fs.mkdir(path.dirname(artifact.absolutePath), { recursive: true });
+      await fs.writeFile(artifact.absolutePath, content, "utf8");
+      deps.recordEvidence(runtime, {
+        actionType: action.type,
+        artifactKind: "download",
+        relativePath: artifact.relativePath,
+      });
+      runtime.outputs[action.config.output_name] = artifact.relativePath;
     },
     go_back: async () => {
       await runtime.page.goBack?.();
@@ -711,4 +750,48 @@ export function createRunnerActionExecutors(
       runtime.outputs[action.config.key] = action.config.value;
     },
   });
+}
+
+function outputValueToText(value: unknown, separator = "\n"): string {
+  if (Array.isArray(value)) {
+    return value.map((item) => outputValueToText(item, separator)).join(separator);
+  }
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value, null, 2);
+}
+
+function outputValueToList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((item) => outputValueToText(item));
+  if (value == null || value === "") return [];
+  return [outputValueToText(value)];
+}
+
+function regexFromActionConfig(pattern: string, flags: string | null | undefined) {
+  const normalizedFlags = normalizeRegexFlags(flags);
+  try {
+    return new RegExp(pattern, normalizedFlags);
+  } catch {
+    throw new Error("Regex pattern is invalid");
+  }
+}
+
+function normalizeRegexFlags(flags: string | null | undefined) {
+  const raw = flags?.trim() || "g";
+  const uniqueFlags = Array.from(new Set(raw.split("")));
+  if (!uniqueFlags.includes("g")) uniqueFlags.push("g");
+  return uniqueFlags.join("");
+}
+
+function dedupeStrings(values: string[]) {
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const value of values) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      deduped.push(value);
+    }
+  }
+  return deduped;
 }

@@ -428,7 +428,9 @@ const outputActionTypes = new Set<ActionType>([
   "extract_input_value",
   "extract_table",
   "extract_list",
+  "extract_regex_matches",
   "take_screenshot",
+  "write_text_file",
   "wait_for_download",
   "execute_js",
 ]);
@@ -453,6 +455,8 @@ function outputNameForAction(actionType: ActionType) {
       return "screenshot_path";
     case "wait_for_download":
       return "download_path";
+    case "write_text_file":
+      return "text_file_path";
     case "execute_js":
       return "js_result";
     default:

@@ -32,7 +32,9 @@ export type ActionType =
   | "extract_input_value"
   | "extract_table"
   | "extract_list"
+  | "extract_regex_matches"
   | "take_screenshot"
+  | "write_text_file"
   | "go_back"
   | "go_forward"
   | "reload"
@@ -649,11 +651,32 @@ export type ActionConfig =
       config: DataCaptureElementConfig;
     }
   | {
+      type: "extract_regex_matches";
+      config: {
+        source_name: string;
+        pattern: string;
+        flags?: string | null;
+        output_name: string;
+        append?: boolean | null;
+        dedupe?: boolean | null;
+      };
+    }
+  | {
       type: "take_screenshot";
       config: {
         path: string;
         output_name?: string | null;
         full_page: boolean;
+      };
+    }
+  | {
+      type: "write_text_file";
+      config: {
+        source_name: string;
+        path: string;
+        output_name: string;
+        separator?: string | null;
+        include_trailing_newline?: boolean | null;
       };
     }
   | { type: "go_back"; config: Record<string, never> }

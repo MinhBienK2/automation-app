@@ -3,6 +3,7 @@ import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
+import { SwitchField } from "../../../components/ui/switch";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
@@ -22,6 +23,73 @@ export function CaptureActionFields({
     case "extract_table":
     case "extract_list":
       return <DataCaptureFields config={config} onChange={onChange} />;
+    case "extract_regex_matches":
+      return (
+        <>
+          <ActionConfigFieldGroup title="Regex source">
+            <Label>
+              Source output
+              <Input
+                value={config.config.source_name}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "source_name", event.currentTarget.value),
+                  )
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Regex pattern">
+            <Label>
+              Pattern
+              <Input
+                value={config.config.pattern}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "pattern", event.currentTarget.value),
+                  )
+                }
+              />
+            </Label>
+            <Label>
+              Flags
+              <Input
+                value={config.config.flags ?? "g"}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "flags", event.currentTarget.value))
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Regex output">
+            <Label>
+              Output name
+              <Input
+                value={config.config.output_name}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "output_name", event.currentTarget.value),
+                  )
+                }
+              />
+            </Label>
+            <SwitchField
+              checked={config.config.append !== false}
+              label="Append"
+              onCheckedChange={(checked) =>
+                onChange(updateActionConfigField(config, "append", String(checked)))
+              }
+            />
+            <SwitchField
+              checked={config.config.dedupe !== false}
+              label="Dedupe"
+              onCheckedChange={(checked) =>
+                onChange(updateActionConfigField(config, "dedupe", String(checked)))
+              }
+            />
+          </ActionConfigFieldGroup>
+        </>
+      );
     case "extract_attribute":
       return (
         <>
@@ -84,6 +152,76 @@ export function CaptureActionFields({
           </ActionConfigFieldGroup>
         </>
       );
+    case "write_text_file":
+      return (
+        <>
+          <ActionConfigFieldGroup title="Text source">
+            <Label>
+              Source output
+              <Input
+                value={config.config.source_name}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "source_name", event.currentTarget.value),
+                  )
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Text artifact">
+            <Label>
+              Path
+              <Input
+                value={config.config.path}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "path", event.currentTarget.value))
+                }
+              />
+            </Label>
+            <Label>
+              Separator
+              <Input
+                value={formatSeparatorInput(config.config.separator ?? "\n")}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(
+                      config,
+                      "separator",
+                      parseSeparatorInput(event.currentTarget.value),
+                    ),
+                  )
+                }
+              />
+            </Label>
+            <SwitchField
+              checked={config.config.include_trailing_newline !== false}
+              label="Trailing newline"
+              onCheckedChange={(checked) =>
+                onChange(
+                  updateActionConfigField(
+                    config,
+                    "include_trailing_newline",
+                    String(checked),
+                  ),
+                )
+              }
+            />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Text file output">
+            <Label>
+              Output name
+              <Input
+                value={config.config.output_name}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "output_name", event.currentTarget.value),
+                  )
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
+        </>
+      );
 
     default:
       return null;
@@ -130,4 +268,16 @@ function DataCaptureFields({
       </ActionConfigFieldGroup>
     </>
   );
+}
+
+function formatSeparatorInput(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+}
+
+function parseSeparatorInput(value: string) {
+  return value
+    .replace(/\\\\/g, "\u0000")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\u0000/g, "\\");
 }

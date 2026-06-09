@@ -8,11 +8,14 @@ export type ActionConfigField =
   | "condition"
   | "content_type"
   | "delay_ms"
+  | "dedupe"
   | "direction"
   | "domain"
   | "duration_ms"
   | "files"
+  | "flags"
   | "iframe_xpath"
+  | "include_trailing_newline"
   | "index"
   | "items"
   | "item_name"
@@ -29,13 +32,17 @@ export type ActionConfigField =
   | "option_text"
   | "origin"
   | "output_name"
+  | "append"
   | "path"
+  | "pattern"
   | "pixels"
   | "prompt_text"
   | "reason"
   | "script"
   | "scroll_style"
   | "seconds"
+  | "separator"
+  | "source_name"
   | "status"
   | "source_xpath"
   | "state"
@@ -141,10 +148,14 @@ export function updateActionConfigField(
     case "extract_table":
     case "extract_list":
       return updateDataCaptureConfigField(config, field, value);
+    case "extract_regex_matches":
+      return updateExtractRegexMatchesConfigField(config, field, value);
     case "extract_attribute":
       return updateExtractAttributeConfigField(config, field, value);
     case "take_screenshot":
       return updateTakeScreenshotConfigField(config, field, value);
+    case "write_text_file":
+      return updateWriteTextFileConfigField(config, field, value);
     case "go_back":
     case "go_forward":
     case "reload":
@@ -803,6 +814,18 @@ function updateDataCaptureConfigField(
   return { type: config.type, config: { ...config.config, [field]: value } };
 }
 
+function updateExtractRegexMatchesConfigField(
+  config: Extract<ActionConfig, { type: "extract_regex_matches" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "append" || field === "dedupe") {
+    return { type: "extract_regex_matches", config: { ...config.config, [field]: value === "true" } };
+  }
+
+  return { type: "extract_regex_matches", config: { ...config.config, [field]: value } };
+}
+
 function updateExtractAttributeConfigField(
   config: Extract<ActionConfig, { type: "extract_attribute" }>,
   field: ActionConfigField,
@@ -845,6 +868,21 @@ function updateTakeScreenshotConfigField(
   }
 
   return { type: "take_screenshot", config: { ...config.config, [field]: value } };
+}
+
+function updateWriteTextFileConfigField(
+  config: Extract<ActionConfig, { type: "write_text_file" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "include_trailing_newline") {
+    return {
+      type: "write_text_file",
+      config: { ...config.config, include_trailing_newline: value === "true" },
+    };
+  }
+
+  return { type: "write_text_file", config: { ...config.config, [field]: value } };
 }
 
 function updateWaitForDownloadConfigField(

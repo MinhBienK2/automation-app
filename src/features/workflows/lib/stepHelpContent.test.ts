@@ -81,7 +81,9 @@ describe("step help content", () => {
       "extract_input_value",
       "extract_table",
       "extract_list",
+      "extract_regex_matches",
       "take_screenshot",
+      "write_text_file",
       "wait_for_download",
       "execute_js",
     ] as const) {

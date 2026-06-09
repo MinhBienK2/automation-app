@@ -136,6 +136,18 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: { target: null, output_name: actionType.replace("extract_", "") },
       } as ActionConfig;
+    case "extract_regex_matches":
+      return {
+        type: actionType,
+        config: {
+          source_name: "text",
+          pattern: "",
+          flags: "g",
+          output_name: "matches",
+          append: true,
+          dedupe: true,
+        },
+      };
     case "extract_attribute":
       return {
         type: actionType,
@@ -149,6 +161,17 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return {
         type: actionType,
         config: { path: "", output_name: "screenshot_path", full_page: false },
+      };
+    case "write_text_file":
+      return {
+        type: actionType,
+        config: {
+          source_name: "matches",
+          path: "output.txt",
+          output_name: "text_file_path",
+          separator: "\n",
+          include_trailing_newline: true,
+        },
       };
     case "go_back":
     case "go_forward":

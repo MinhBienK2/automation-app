@@ -540,6 +540,107 @@ describe("ActionConfigEditor", () => {
     expect(within(outputGroup).getByLabelText("Output name")).toHaveValue("player_shot");
   });
 
+  test("edits regex extraction source, pattern, and output options", async () => {
+    const onChange = vi.fn();
+    const config: ActionConfig = {
+      type: "extract_regex_matches",
+      config: {
+        source_name: "post_text",
+        pattern: "@[A-Za-z0-9._-]+",
+        flags: "gi",
+        output_name: "handles",
+        append: true,
+        dedupe: true,
+      },
+    };
+
+    function Harness() {
+      const [currentConfig, setCurrentConfig] = useState(config);
+      return (
+        <ActionConfigEditor
+          config={currentConfig}
+          onChange={(nextConfig) => {
+            setCurrentConfig(nextConfig);
+            onChange(nextConfig);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    const sourceGroup = screen.getByRole("group", { name: "Regex source" });
+    const patternGroup = screen.getByRole("group", { name: "Regex pattern" });
+    const outputGroup = screen.getByRole("group", { name: "Regex output" });
+
+    await userEvent.clear(within(sourceGroup).getByLabelText("Source output"));
+    await userEvent.type(within(sourceGroup).getByLabelText("Source output"), "comment_text");
+    await userEvent.clear(within(patternGroup).getByLabelText("Pattern"));
+    await userEvent.type(within(patternGroup).getByLabelText("Pattern"), "tiktok\\.com/@\\w+");
+    await userEvent.click(within(outputGroup).getByRole("switch", { name: "Append" }));
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "extract_regex_matches",
+      config: {
+        source_name: "comment_text",
+        pattern: "tiktok\\.com/@\\w+",
+        flags: "gi",
+        output_name: "handles",
+        append: false,
+        dedupe: true,
+      },
+    });
+  });
+
+  test("edits text file artifact config with visible escaped newline separator", async () => {
+    const onChange = vi.fn();
+    const config: ActionConfig = {
+      type: "write_text_file",
+      config: {
+        source_name: "handles",
+        path: "handles.txt",
+        output_name: "handles_file",
+        separator: "\n",
+        include_trailing_newline: true,
+      },
+    };
+
+    function Harness() {
+      const [currentConfig, setCurrentConfig] = useState(config);
+      return (
+        <ActionConfigEditor
+          config={currentConfig}
+          onChange={(nextConfig) => {
+            setCurrentConfig(nextConfig);
+            onChange(nextConfig);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    const artifactGroup = screen.getByRole("group", { name: "Text artifact" });
+    expect(within(artifactGroup).getByLabelText("Separator")).toHaveValue("\\n");
+
+    await userEvent.clear(within(artifactGroup).getByLabelText("Path"));
+    await userEvent.type(within(artifactGroup).getByLabelText("Path"), "tiktok-usernames.txt");
+    await userEvent.clear(within(artifactGroup).getByLabelText("Separator"));
+    await userEvent.type(within(artifactGroup).getByLabelText("Separator"), ", ");
+    await userEvent.click(within(artifactGroup).getByRole("switch", { name: "Trailing newline" }));
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "write_text_file",
+      config: {
+        source_name: "handles",
+        path: "tiktok-usernames.txt",
+        output_name: "handles_file",
+        separator: ", ",
+        include_trailing_newline: false,
+      },
+    });
+  });
+
   test("Set Viewport editor omits launch-time device shape controls", () => {
     render(
       <ActionConfigEditor

@@ -294,10 +294,14 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "extract_table":
     case "extract_list":
       return [...targetSourceFields, "Output name"];
+    case "extract_regex_matches":
+      return ["Source output", "Pattern", "Flags", "Output name", "Append", "Dedupe"];
     case "extract_attribute":
       return [...targetSourceFields, "Output name", "Attribute"];
     case "take_screenshot":
       return ["Path", "Output name", "Full page"];
+    case "write_text_file":
+      return ["Source output", "Path", "Separator", "Trailing newline", "Output name"];
     case "go_back":
     case "go_forward":
     case "reload":

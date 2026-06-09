@@ -41,7 +41,9 @@ type PhaseOneActionType =
   | "extract_input_value"
   | "extract_table"
   | "extract_list"
+  | "extract_regex_matches"
   | "take_screenshot"
+  | "write_text_file"
   | "go_back"
   | "go_forward"
   | "reload"
@@ -499,6 +501,38 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   ),
   extract_table: elementHelp("Extract Table", "capture table rows", "lấy bảng", "output"),
   extract_list: elementHelp("Extract List", "capture list items", "lấy danh sách", "output"),
+  extract_regex_matches: {
+    vi: {
+      title: "Trợ giúp Extract Regex Matches",
+      summary: "Đọc một output đã có, lấy các đoạn khớp regex, rồi lưu danh sách match vào output mới hoặc output hiện có.",
+      useWhen: ["Dùng sau Extract Text hoặc Extract List khi cần lọc URL, username, mã đơn, hoặc token từ text đã capture."],
+      fields: [
+        { name: "Source output", description: "Tên output đầu vào cần đọc, ví dụ post_text hoặc comment_text." },
+        { name: "Pattern", description: "Regex dùng để tìm các match trong Source output." },
+        { name: "Flags", description: "Regex flags như g, i, m; g sẽ được dùng để lấy nhiều match." },
+        { name: "Output name", description: "Tên output lưu danh sách match." },
+        { name: "Append", description: "Bật để thêm match vào danh sách output hiện có thay vì ghi đè." },
+        { name: "Dedupe", description: "Bật để giữ mỗi match một lần trong danh sách output." },
+      ],
+      examples: ["Source output: comment_text, Pattern: @[A-Za-z0-9._-]+, Output name: tiktok_targets"],
+      commonMistakes: ["Pattern sai cú pháp sẽ làm validation fail.", "Tắt Append trong loop sẽ chỉ giữ kết quả vòng lặp cuối."],
+    },
+    en: {
+      title: "Extract Regex Matches Help",
+      summary: "Read an existing output, collect regex matches, and save the matches into a new or existing output.",
+      useWhen: ["Use after Extract Text or Extract List when you need URLs, usernames, order ids, or tokens from captured text."],
+      fields: [
+        { name: "Source output", description: "Input output name to read, such as post_text or comment_text." },
+        { name: "Pattern", description: "Regex pattern used to find matches in the source output." },
+        { name: "Flags", description: "Regex flags such as g, i, m; g is used so multiple matches can be collected." },
+        { name: "Output name", description: "Output name that stores the match list." },
+        { name: "Append", description: "Enable to add matches to an existing output list instead of replacing it." },
+        { name: "Dedupe", description: "Enable to keep each matched value once in the output list." },
+      ],
+      examples: ["Source output: comment_text, Pattern: @[A-Za-z0-9._-]+, Output name: tiktok_targets"],
+      commonMistakes: ["Invalid regex syntax fails validation.", "Turning Append off inside a loop keeps only the last loop result."],
+    },
+  },
   go_back: elementHelp("Go Back", "go back in browser history", "quay lại trang trước", "history"),
   go_forward: elementHelp("Go Forward", "go forward in browser history", "đi tới trang sau", "history"),
   reload: elementHelp("Reload", "reload the current tab", "tải lại tab hiện tại", "browser"),
@@ -513,6 +547,36 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
     "chờ file tải xong",
     "download",
   ),
+  write_text_file: {
+    vi: {
+      title: "Trợ giúp Write Text File",
+      summary: "Ghi một output thành file text trong thư mục evidence của run và lưu đường dẫn artifact vào output.",
+      useWhen: ["Dùng ở cuối workflow để xuất danh sách URL, username, log ngắn, hoặc dữ liệu đã capture."],
+      fields: [
+        { name: "Source output", description: "Tên output cần ghi ra file." },
+        { name: "Path", description: "Tên file artifact an toàn, ví dụ tiktok-usernames.txt." },
+        { name: "Separator", description: "Ký tự nối các item khi Source output là array; dùng \\n cho mỗi item một dòng." },
+        { name: "Trailing newline", description: "Bật để thêm newline cuối file." },
+        { name: "Output name", description: "Tên output lưu đường dẫn relative của file evidence." },
+      ],
+      examples: ["Source output: tiktok_targets, Path: tiktok-usernames.txt, Output name: tiktok_username_file"],
+      commonMistakes: ["Path chỉ là tên file artifact, không phải đường dẫn filesystem.", "Source output trống sẽ tạo file rỗng."],
+    },
+    en: {
+      title: "Write Text File Help",
+      summary: "Write an output as a text file inside the run evidence directory and store the artifact path in an output.",
+      useWhen: ["Use at the end of a workflow to export captured URLs, usernames, short logs, or collected data."],
+      fields: [
+        { name: "Source output", description: "Output name to write into the file." },
+        { name: "Path", description: "Safe artifact file name, for example tiktok-usernames.txt." },
+        { name: "Separator", description: "String used between array items; use \\n for one item per line." },
+        { name: "Trailing newline", description: "Enable to append a final newline to the file." },
+        { name: "Output name", description: "Output name that stores the evidence-relative file path." },
+      ],
+      examples: ["Source output: tiktok_targets, Path: tiktok-usernames.txt, Output name: tiktok_username_file"],
+      commonMistakes: ["Path is only an artifact file name, not a filesystem path.", "An empty source output creates an empty file."],
+    },
+  },
   set_variable: elementHelp("Set Variables", "save reusable values", "lưu biến", "variable"),
   set_json_variables: elementHelp(
     "Set JSON Variables",

@@ -182,6 +182,10 @@ export function actionConfigSummary(action: ActionConfig): string | null {
     case "extract_table":
     case "extract_list":
       return withSuffix(elementTargetSummary(action.config), `Output ${action.config.output_name}`);
+    case "extract_regex_matches":
+      return compactSummary(
+        `Output ${action.config.source_name} -> ${action.config.output_name} | Pattern ${action.config.pattern}`,
+      );
     case "extract_attribute":
       return withSuffix(
         elementTargetSummary(action.config),
@@ -258,6 +262,10 @@ export function actionConfigSummary(action: ActionConfig): string | null {
       return action.config.output_name
         ? `Output ${action.config.output_name}`
         : compactSummary(action.config.path);
+    case "write_text_file":
+      return compactSummary(
+        `Output ${action.config.source_name} -> ${action.config.output_name} | Path ${action.config.path}`,
+      );
     case "wait_for_download":
       return `Output ${action.config.output_name}`;
     case "execute_js":
@@ -403,6 +411,7 @@ export function summarizeOutputChanges(
 
 export function actionTraceMode(action: ActionConfig): ActionTrace["mode"] {
   if (action.type === "graph_noop" || action.type === "router_condition") return "manual";
+  if (action.type === "write_text_file") return "observer";
   if (action.type === "find_element") return "observer";
   if (action.type.startsWith("extract") || action.type.startsWith("assert")) return "observer";
   if (runnerCapabilityForAction(action) === "direct_dom" || action.type === "set_variable") {
@@ -424,7 +433,11 @@ export function actionEvidenceModel(
   if (action.type === "find_element" || action.type.startsWith("extract") || action.type.startsWith("assert")) {
     return { evidence_categories: ["page_observation"] };
   }
-  if (action.type === "take_screenshot" || action.type === "wait_for_download") {
+  if (
+    action.type === "take_screenshot" ||
+    action.type === "write_text_file" ||
+    action.type === "wait_for_download"
+  ) {
     return { evidence_categories: ["generated_output"] };
   }
   if (action.type === "set_variable" || action.type === "set_json_variables") {
