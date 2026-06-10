@@ -220,11 +220,13 @@ export class BrowserSessionManager {
     settings: WorkflowSettings;
     retainedSessionWorkflowId?: string | null;
   }) {
+    const profileName = retainedProfileKey(request.settings);
     if (request.retainedSessionWorkflowId !== undefined) {
-      await this.closeRetainedSession(
-        request.retainedSessionWorkflowId ?? null,
-        retainedProfileKey(request.settings),
-      );
+      if (profileName) {
+        await this.closeRetainedSessionsForProfile(profileName);
+      } else {
+        await this.closeRetainedSession(request.retainedSessionWorkflowId ?? null, null);
+      }
     } else {
       await this.closeRetainedContext();
     }
@@ -275,6 +277,14 @@ export class BrowserSessionManager {
     if (!session) return;
     await session.context.close();
     this.retainedSessions.delete(key);
+  }
+
+  private async closeRetainedSessionsForProfile(profileName: string) {
+    for (const [key, session] of [...this.retainedSessions]) {
+      if (session.profileName !== profileName) continue;
+      await session.context.close();
+      this.retainedSessions.delete(key);
+    }
   }
 
   forgetContext(context: BrowserDriverContext) {

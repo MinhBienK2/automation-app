@@ -295,6 +295,7 @@ Preserve these unless the task explicitly changes them.
 - Headed CloakBrowser runs on Linux fail with a clear display prerequisite message when no `DISPLAY` or `WAYLAND_DISPLAY` is configured.
 - Domain allowlist graph nodes become a run-scope navigation policy. Disallowed Navigate/Open New Tab URLs fail after template rendering and before browser navigation.
 - Browser profile directories persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Creating and selecting a different browser profile is how operators move to a new identity/storage bundle.
+- Starting a workflow with a persistent browser profile closes any retained browser session that already owns the same profile directory before launching the new browser, even when that retained session belongs to another workflow.
 - Missing Workflow Settings rows return lazy v2 defaults.
 - Stop returns a stopped state immediately for the targeted run id; active workflow/profile ownership clears after the runner finishes cancellation.
 - Different workflows can run concurrently when they do not share a persistent browser profile. Same-workflow runs, shared persistent-profile runs, and batch conflicts are rejected with readable command errors.

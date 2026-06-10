@@ -69,7 +69,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
   command that delegates to the runner/session manager after command-level
   active-run/profile guards pass. This clears retained in-memory context state
   only and does not delete persistent browser profile data.
-- Starting a fresh run closes only a retained session that conflicts with the same workflow/profile before CloakBrowser launches, so persistent profile directories are not reused while an older browser process still owns the profile lock. Retained sessions for unrelated workflow/profile pairs remain available for inspection.
+- Starting a fresh persistent-profile run closes any retained session that already owns the same profile directory before CloakBrowser launches, so persistent profile directories are not reused while an older browser process still owns the profile lock. Retained sessions for other profile directories remain available for inspection.
 - Run-from-selected is the exception to the relaunch rule: it keeps the retained context/page alive and runs the selected-node sub-plan against that page. Depending on Run Policy scope, the sub-plan may stop after the selected node or continue downstream. If the operator closed the browser manually, the runner clears retained metadata and reports that no reusable browser session is available.
 - Browser launch settings come from the workflow's selected project browser profile.
   `browser_launch.headless` switches CloakBrowser between headed and headless

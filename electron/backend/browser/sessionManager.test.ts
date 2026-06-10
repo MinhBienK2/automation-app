@@ -444,6 +444,34 @@ describe("BrowserSessionManager", () => {
       reason: "No retained browser session",
     });
   });
+
+  test("closes a retained session with the same persistent profile before another workflow launches", async () => {
+    const retained = new FakeContext();
+    const next = new FakeContext();
+    const driver = createFakeDriver(retained, next);
+    const manager = new BrowserSessionManager({
+      appPaths: await createTempAppPaths(),
+      driver,
+    });
+    const settings = makeSettings({
+      browser_launch: { session_mode: "persistent_profile", profile_dir: "shared-profile" },
+    });
+
+    const firstLaunch = await manager.launchFreshSession({
+      settings,
+      retainedSessionWorkflowId: "workflow-1",
+    });
+    manager.retainSession(firstLaunch.context, firstLaunch.page, "workflow-1", "shared-profile");
+
+    await manager.launchFreshSession({
+      settings,
+      retainedSessionWorkflowId: "workflow-2",
+    });
+
+    expect(retained.closed).toBe(true);
+    expect(next.closed).toBe(false);
+    expect(manager.hasReusableRetainedSession("workflow-1", "shared-profile")).toBe(false);
+  });
 });
 
 function makeSettings(overrides: Partial<WorkflowSettings> = {}): WorkflowSettings {
