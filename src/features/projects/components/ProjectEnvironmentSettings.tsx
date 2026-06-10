@@ -14,7 +14,6 @@ import { SettingsFieldGroup } from "../../../components/ui/settings-field-group"
 import type {
   Project,
   ProjectEnvironment,
-  ProjectEnvironmentInput,
 } from "../../../types/workflow";
 
 type ProjectEnvironmentSettingsProps = {
@@ -28,10 +27,6 @@ type ProjectEnvironmentSettingsProps = {
   onDuplicateProject: (projectId: string) => Promise<void>;
   onExportProjectPackage: (projectId: string) => Promise<void>;
   onDeleteProject: (projectId: string) => Promise<void>;
-  onUpdateProjectEnvironment: (
-    environmentId: string,
-    input: Partial<ProjectEnvironmentInput>,
-  ) => Promise<void>;
   onResetProjectEnvironmentBrowserIdentity: (
     environmentId: string,
   ) => Promise<void>;
@@ -45,7 +40,6 @@ export function ProjectEnvironmentSettings({
   onDuplicateProject,
   onExportProjectPackage,
   onDeleteProject,
-  onUpdateProjectEnvironment,
   onResetProjectEnvironmentBrowserIdentity,
 }: ProjectEnvironmentSettingsProps) {
   const projectSession =
@@ -54,20 +48,17 @@ export function ProjectEnvironmentSettings({
     null;
   const browserLaunch = projectSession?.browser_launch ?? null;
   const [projectNameDraft, setProjectNameDraft] = useState(project?.name ?? "");
-  const [seedDraft, setSeedDraft] = useState(browserLaunch?.fingerprint_seed ?? "");
   const [localError, setLocalError] = useState("");
   const [savingProject, setSavingProject] = useState(false);
   const [duplicatingProject, setDuplicatingProject] = useState(false);
   const [exportingProject, setExportingProject] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
-  const [savingSeed, setSavingSeed] = useState(false);
   const [regeneratingIdentity, setRegeneratingIdentity] = useState(false);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const savedProjectName = project?.name ?? "";
   const savedSeed = browserLaunch?.fingerprint_seed ?? "";
   const projectNameChanged = projectNameDraft.trim() !== savedProjectName;
-  const seedChanged = seedDraft.trim() !== savedSeed;
 
   useEffect(() => {
     setProjectNameDraft(savedProjectName);
@@ -75,7 +66,6 @@ export function ProjectEnvironmentSettings({
   }, [project?.id, savedProjectName]);
 
   useEffect(() => {
-    setSeedDraft(savedSeed);
     setLocalError("");
   }, [projectSession?.id, savedSeed]);
 
@@ -129,30 +119,6 @@ export function ProjectEnvironmentSettings({
       setDeleteDialogOpen(false);
     } finally {
       setDeletingProject(false);
-    }
-  }
-
-  async function saveFingerprintSeed() {
-    if (!projectSession || !browserLaunch) return;
-    const nextSeed = seedDraft.trim();
-    if (!nextSeed) {
-      setLocalError("Fingerprint seed is required.");
-      return;
-    }
-    setLocalError("");
-    setSavingSeed(true);
-    try {
-      await onUpdateProjectEnvironment(projectSession.id, {
-        name: projectSession.name,
-        description: projectSession.description,
-        is_default: projectSession.is_default,
-        browser_launch: {
-          ...browserLaunch,
-          fingerprint_seed: nextSeed,
-        },
-      });
-    } finally {
-      setSavingSeed(false);
     }
   }
 
@@ -263,11 +229,14 @@ export function ProjectEnvironmentSettings({
           <Input
             aria-label="Fingerprint seed"
             className="project-session-code"
-            value={seedDraft}
-            disabled={!browserLaunch || savingSeed || regeneratingIdentity}
-            onChange={(event) => setSeedDraft(event.target.value)}
+            value={savedSeed}
+            disabled={!browserLaunch || regeneratingIdentity}
+            readOnly
           />
         </label>
+        <p className="workflow-settings-hint settings-field-group-wide">
+          Fingerprint seed is regenerated with the browser identity.
+        </p>
 
         <div className="field project-session-value-row">
           <span>Identity</span>
@@ -280,21 +249,11 @@ export function ProjectEnvironmentSettings({
           <Button
             type="button"
             size="sm"
-            onClick={() => {
-              void saveFingerprintSeed();
-            }}
-            disabled={!browserLaunch || !seedChanged || savingSeed || regeneratingIdentity}
-          >
-            Save fingerprint seed
-          </Button>
-          <Button
-            type="button"
-            size="sm"
             variant="secondary"
             onClick={() => {
               setRegenerateDialogOpen(true);
             }}
-            disabled={!projectSession || savingSeed || regeneratingIdentity}
+            disabled={!projectSession || regeneratingIdentity}
           >
             Regenerate identity
           </Button>

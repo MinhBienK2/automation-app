@@ -44,9 +44,11 @@
   validation before a run row exists write sanitized operational attention for
   Overview. Scheduled validation failures continue to use schedule events and
   are not duplicated into operational attention rows.
-- `run_workflow` loads Workflow Settings and the workflow's selected Project
-  Environment before starting the runner. Settings validation and run
-  validation happen before browser launch.
+- `run_workflow` loads Workflow Settings and the workflow's selected browser
+  session row before starting the runner. That row may be the project saved
+  session, a private workflow session, or a same-project session shared with
+  another workflow. Settings validation and run validation happen before browser
+  launch.
 - Environment initial variables from Workflow Settings compile into setup
   actions before graph actions. Browser Launch settings are resolved from the
   selected project saved session or private workflow session before the runner
@@ -148,7 +150,7 @@
   screen-size overrides. In-run Set Viewport can still change runtime viewport
   later.
 - Real headed CloakBrowser launches on Linux require `DISPLAY` or `WAYLAND_DISPLAY`; otherwise the runner fails with a clear startup prerequisite error before starting Chromium.
-- Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the identity fingerprint seed stable. Confirmed project identity regeneration replaces the project saved-session profile key and deletes the old unshared local profile directory. Confirmed project deletion removes only unshared local profile directories for sessions contained by that project after active-run and retained-session guards pass.
+- Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the selected session identity fingerprint seed stable. Linking a workflow to another session reuses that session's profile/fingerprint bundle; forking creates a new selected session identity without copying local browser storage. Confirmed project identity regeneration replaces the project saved-session profile key and deletes the old unshared local profile directory. Confirmed project deletion removes only unshared local profile directories for sessions contained by that project after active-run and retained-session guards pass.
 - `browser_identity` run evidence records CloakBrowser wrapper/binary version, binary installed status, fingerprint seed hash, configured fingerprint font hash when available, sanitized selected persona metadata and rationale, timezone/locale source, GeoIP/supported WebRTC policy, active advanced override names such as `fingerprint_fonts_dir`, and configured humanization status/preset. Package export redacts proxy passwords, proxy URL credentials, and local fingerprint font directories.
 - Final run outputs include `__evidence_model`, a per-output category/limit/redaction manifest. It preserves structured action traces and generated artifact metadata while redacting sensitive arbitrary page-observation outputs and limiting oversized strings, arrays, and objects. `execute_js` remains available for authorized testing, can be disabled per workflow through Run Policy, and its traces carry explicit direct-DOM audit tags when allowed.
 

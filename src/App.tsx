@@ -30,6 +30,7 @@ import {
   duplicateSubflow as duplicateSubflowCommand,
   duplicateProject as duplicateProjectCommand,
   duplicateWorkflow as duplicateWorkflowCommand,
+  forkWorkflowSession as forkWorkflowSessionCommand,
   generateRecordingDraft,
   getSubflow,
   getSubflowGraph,
@@ -51,6 +52,7 @@ import {
   saveSubflowGraph,
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
+  setWorkflowEnvironment as setWorkflowEnvironmentCommand,
   startRecordingSession,
   stopRecordingSession,
   stopRun as stopRunCommand,
@@ -70,6 +72,7 @@ import {
   defaultWorkflowSettings,
   withWorkflowSettingsDefaults,
 } from "./features/workflows/lib/workflowSettings";
+import { buildWorkflowSessionOptions } from "./features/workflows/lib/workflowSessionOptions";
 import {
   cloneWorkflowSettings,
   graphSaveStatusLabel,
@@ -111,6 +114,7 @@ import type {
   Subflow,
   SubflowSummary,
   SubflowUsage,
+  Workflow,
   WorkflowCreateOptions,
   WorkflowGraph,
   WorkflowDetail,
@@ -158,6 +162,8 @@ function App() {
     useState<WorkflowSettings | null>(null);
   const [workflowSettingsSavedSnapshot, setWorkflowSettingsSavedSnapshot] =
     useState<WorkflowSettings | null>(null);
+  const [workflowSettingsEnvironmentId, setWorkflowSettingsEnvironmentId] =
+    useState<string | null>(null);
   const [workflowSettingsDialogOpen, setWorkflowSettingsDialogOpen] =
     useState(false);
   const [workflowSettingsActiveSection, setWorkflowSettingsActiveSection] =
@@ -249,7 +255,6 @@ function App() {
     cleanupSettingsBrowserProfiles,
   } = useSettingsDiagnostics();
   const {
-    updateProjectEnvironment,
     resetProjectEnvironmentBrowserIdentity,
   } = useProjectEnvironmentActions({
     setAppError,
@@ -668,6 +673,7 @@ function App() {
         setDetail(null);
         setWorkflowGraph(null);
         setWorkflowSettings(null);
+        setWorkflowSettingsEnvironmentId(null);
         setSelectedGraphNodeId(null);
         setGraphIssues([]);
         setGraphIssuesNeedRecheck(false);
@@ -677,6 +683,7 @@ function App() {
 
       setSelectedWorkflowId(id);
       setDetail(loaded);
+      setWorkflowSettingsEnvironmentId(loaded.workflow.environment_id ?? null);
       const workflowProjectId = loaded.workflow.project_id ?? currentProjectId();
       if (workflowProjectId) {
         setSelectedProjectId(workflowProjectId);
@@ -1185,6 +1192,102 @@ function App() {
     }
   }
 
+  function applyWorkflowEnvironmentUpdate(
+    updatedWorkflow: Workflow,
+    environmentId: string | null,
+  ) {
+    setWorkflowSettingsEnvironmentId(environmentId);
+    setDetail((current) =>
+      current && current.workflow.id === updatedWorkflow.id
+        ? {
+            ...current,
+            workflow: {
+              ...current.workflow,
+              project_id: updatedWorkflow.project_id ?? current.workflow.project_id,
+              environment_id: environmentId,
+            },
+          }
+        : current,
+    );
+  }
+
+  async function reloadWorkflowSettings(workflowId: string) {
+    const loadedSettings = await getWorkflowSettings(workflowId);
+    const workflowRef =
+      detail?.workflow.id === workflowId
+        ? detail.workflow
+        : workflows.find((workflow) => workflow.id === workflowId);
+    const normalizedSettings = withWorkflowSettingsDefaults(loadedSettings, {
+      workflowId,
+      workflowName:
+        workflowRef?.name ??
+        workflowSettings?.general.name ??
+        loadedSettings.general?.name ??
+        "Workflow",
+      createdAt: workflowRef?.created_at ?? workflowSettings?.created_at,
+      updatedAt: workflowRef?.updated_at ?? workflowSettings?.updated_at,
+    });
+    setWorkflowSettings(normalizedSettings);
+    setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(normalizedSettings));
+    setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
+  }
+
+  async function refreshWorkflowSessionProjectState(updatedWorkflow: Workflow) {
+    const projectId =
+      updatedWorkflow.project_id ??
+      detail?.workflow.project_id ??
+      currentProjectId();
+    if (projectId) {
+      setProjectEnvironments(await listProjectEnvironments(projectId));
+    }
+    await loadWorkflows();
+  }
+
+  async function selectWorkflowSession(environmentId: string) {
+    if (!workflowSettings || workflowSettingsEnvironmentId === environmentId) return;
+    const saved = await persistDirtyWorkflowSettings();
+    if (!saved) return;
+    setAppError("");
+
+    try {
+      const updatedWorkflow = await setWorkflowEnvironmentCommand(
+        workflowSettings.workflow_id,
+        environmentId,
+      );
+      applyWorkflowEnvironmentUpdate(
+        updatedWorkflow,
+        updatedWorkflow.environment_id ?? environmentId,
+      );
+      await refreshWorkflowSessionProjectState(updatedWorkflow);
+      await reloadWorkflowSettings(workflowSettings.workflow_id);
+      showToast("Workflow session linked.");
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function forkWorkflowSession() {
+    if (!workflowSettings) return;
+    const saved = await persistDirtyWorkflowSettings();
+    if (!saved) return;
+    setAppError("");
+
+    try {
+      const updatedWorkflow = await forkWorkflowSessionCommand(
+        workflowSettings.workflow_id,
+      );
+      applyWorkflowEnvironmentUpdate(
+        updatedWorkflow,
+        updatedWorkflow.environment_id ?? null,
+      );
+      await refreshWorkflowSessionProjectState(updatedWorkflow);
+      await reloadWorkflowSettings(workflowSettings.workflow_id);
+      showToast("Workflow session forked.");
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
   async function runGraph() {
     if (!detail || !workflowGraph) return;
     setAppError("");
@@ -1573,6 +1676,15 @@ function App() {
   ) {
     setAppError("");
     setWorkflowSettingsActiveSection(section);
+    setWorkflowSettingsEnvironmentId(workflow.environment_id ?? null);
+    if (workflow.project_id) {
+      setSelectedProjectId(workflow.project_id);
+      try {
+        setProjectEnvironments(await listProjectEnvironments(workflow.project_id));
+      } catch {
+        // Keep the settings dialog usable if project metadata is temporarily unavailable.
+      }
+    }
 
     try {
       const loadedSettings = await getWorkflowSettings(workflow.id);
@@ -1600,6 +1712,7 @@ function App() {
 
   function openDetailWorkflowSettings(section: WorkflowSettingsSectionId) {
     if (!detail) return;
+    setWorkflowSettingsEnvironmentId(detail.workflow.environment_id ?? null);
     if (!workflowSettings) {
       const fallbackSettings = defaultWorkflowSettings({
         workflowId: detail.workflow.id,
@@ -1704,6 +1817,32 @@ function App() {
         (environment) => environment.project_id === selectedProject.id,
       )
     : projectEnvironments;
+  const cachedWorkflowSettingsWorkflow = workflowSettings
+    ? workflows.find((workflow) => workflow.id === workflowSettings.workflow_id)
+    : null;
+  const workflowSettingsActiveWorkflow = workflowSettings
+    ? {
+        id: workflowSettings.workflow_id,
+        name:
+          cachedWorkflowSettingsWorkflow?.name ??
+          (detail?.workflow.id === workflowSettings.workflow_id
+            ? detail.workflow.name
+            : workflowSettings.general.name),
+        environment_id:
+          workflowSettingsEnvironmentId ??
+          cachedWorkflowSettingsWorkflow?.environment_id ??
+          (detail?.workflow.id === workflowSettings.workflow_id
+            ? detail.workflow.environment_id
+            : null),
+      }
+    : null;
+  const workflowSessionOptions = workflowSettings
+    ? buildWorkflowSessionOptions({
+        activeWorkflow: workflowSettingsActiveWorkflow,
+        environments: projectEnvironments,
+        workflows,
+      })
+    : [];
 
   return (
     <AppShell
@@ -1850,7 +1989,6 @@ function App() {
               onDuplicateProject={duplicateProject}
               onExportProjectPackage={exportProjectPackageFile}
               onDeleteProject={deleteProject}
-              onUpdateProjectEnvironment={updateProjectEnvironment}
               onResetProjectEnvironmentBrowserIdentity={
                 resetProjectEnvironmentBrowserIdentity
               }
@@ -1995,6 +2133,10 @@ function App() {
         onSettingsChange={changeWorkflowSettings}
         onSaveSettings={persistWorkflowSettings}
         onResetBrowserIdentity={resetWorkflowBrowserIdentity}
+        sessionOptions={workflowSessionOptions}
+        selectedSessionEnvironmentId={workflowSettingsEnvironmentId}
+        onSelectWorkflowSession={selectWorkflowSession}
+        onForkWorkflowSession={forkWorkflowSession}
         onDiscardChanges={discardWorkflowSettingsChanges}
       />
       <UnsavedChangesDialog

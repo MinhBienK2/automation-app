@@ -86,6 +86,7 @@ export type WorkflowElectronBridge = {
     environmentId: string,
   ): Promise<ProjectEnvironment>;
   setWorkflowEnvironment(workflowId: string, environmentId: string): Promise<Workflow>;
+  forkWorkflowSession(workflowId: string): Promise<Workflow>;
   createSubflow(
     projectId: string,
     input: { name: string; description?: string | null },

@@ -129,6 +129,79 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).queryByLabelText("Allowed probe origins")).not.toBeInTheDocument();
   });
 
+  test("treats the selected session source as the editable browser identity unit", async () => {
+    const user = userEvent.setup();
+    const onSelectWorkflowSession = vi.fn();
+    const onForkWorkflowSession = vi.fn();
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    const loginSession = defaultWorkflowSettings({
+      workflowId: "workflow-login",
+      workflowName: "Login bootstrap",
+    }).browser_launch;
+
+    render(
+      <WorkflowSettingsDialog
+        activeSection="browser_launch"
+        hasUnsavedChanges={false}
+        open
+        settings={settings}
+        sessionOptions={[
+          {
+            environment_id: "environment-main",
+            name: "Project saved session",
+            description: "Default project browser session",
+            is_default: true,
+            workflow_ids: ["workflow-1"],
+            workflow_names: ["Checkout QA"],
+            browser_launch: settings.browser_launch,
+          },
+          {
+            environment_id: "environment-login",
+            name: "Login bootstrap session",
+            description: "Session owned by Login bootstrap",
+            is_default: false,
+            workflow_ids: ["workflow-login"],
+            workflow_names: ["Login bootstrap"],
+            browser_launch: {
+              ...loginSession,
+              identity_id: "bi_login",
+              display_name: "Login bootstrap identity",
+              profile_dir: "bi_login",
+              profile_name: "bi_login",
+              fingerprint_seed: "99887",
+            },
+          },
+        ]}
+        selectedSessionEnvironmentId="environment-main"
+        onActiveSectionChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onForkWorkflowSession={onForkWorkflowSession}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSelectWorkflowSession={onSelectWorkflowSession}
+        onSettingsChange={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const sourceSelect = within(dialog).getByLabelText("Session source");
+    expect(sourceSelect).toHaveValue("environment-main");
+    expect(within(dialog).getByText("Shared with Checkout QA")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("readonly");
+    expect(
+      within(dialog).getByText("Fingerprint seed is part of the selected browser session identity."),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(sourceSelect, "environment-login");
+    expect(onSelectWorkflowSession).toHaveBeenCalledWith("environment-login");
+
+    await user.click(within(dialog).getByRole("button", { name: "Fork current session" }));
+    expect(onForkWorkflowSession).toHaveBeenCalledTimes(1);
+  });
+
   test("groups graph live run and link wait defaults into reusable settings field groups", () => {
     const settings = defaultWorkflowSettings({
       workflowId: "workflow-1",

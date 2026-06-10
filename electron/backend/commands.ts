@@ -866,6 +866,58 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       };
     },
 
+    forkWorkflowSession(workflowId: string): Workflow {
+      const workflow = requireWorkflow(workflowId);
+      if (!workflow.project_id) {
+        throw commandError(
+          "Workflow must belong to a project before forking its browser session",
+          "workflowId",
+        );
+      }
+      const settings = getSettings(workflowId);
+      const identityId = createHighEntropyBrowserIdentityId();
+      const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
+        identityId,
+        usedFingerprintSeeds(workflowId),
+      );
+      const persistent = settings.browser_launch.session_mode === "persistent_profile";
+      const browserLaunch: WorkflowSettings["browser_launch"] = {
+        ...settings.browser_launch,
+        identity_id: identityId,
+        display_name: `${workflow.name} identity`,
+        profile_dir: identityId,
+        profile_name: persistent ? identityId : null,
+        fingerprint_seed: fingerprintSeed,
+      };
+      context.database.exec("BEGIN IMMEDIATE");
+      try {
+        const environment = repository.createProjectEnvironment(workflow.project_id, {
+          name: `${workflow.name} private session`,
+          description: "Forked browser identity and launch posture",
+          is_default: false,
+          browser_launch: browserLaunch,
+        });
+        repository.setWorkflowEnvironment(workflowId, environment.id);
+        saveSettings(workflowId, {
+          ...settings,
+          run_policy: {
+            ...settings.run_policy,
+            run_from_selected_enabled: false,
+          },
+          browser_launch: browserLaunch,
+        });
+        context.database.exec("COMMIT");
+        return {
+          ...summaryToWorkflow(requireWorkflow(workflowId)),
+          project_id: workflow.project_id,
+          environment_id: environment.id,
+        };
+      } catch (error) {
+        context.database.exec("ROLLBACK");
+        throw error;
+      }
+    },
+
     createSubflow(
       projectId: string,
       input: { name: string; description?: string | null },

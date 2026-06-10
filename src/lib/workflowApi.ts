@@ -100,6 +100,10 @@ export function setWorkflowEnvironment(workflowId: string, environmentId: string
   return bridge().setWorkflowEnvironment(workflowId, environmentId);
 }
 
+export function forkWorkflowSession(workflowId: string) {
+  return bridge().forkWorkflowSession(workflowId);
+}
+
 export function createSubflow(
   projectId: string,
   input: { name: string; description?: string | null },

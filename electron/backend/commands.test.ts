@@ -106,6 +106,7 @@ type ProjectWorkflowTestHandlers = {
   importProjectPackage(packageValue: ProjectPackage): TestProject;
   saveProjectPackageFile(packageValue: ProjectPackage): Promise<string | null>;
   setWorkflowEnvironment(workflowId: string, environmentId: string): ProjectWorkflow;
+  forkWorkflowSession(workflowId: string): ProjectWorkflow;
   createSubflow(projectId: string, input: { name: string; description?: string | null }): TestSubflow;
   updateSubflow(
     subflowId: string,
@@ -615,6 +616,90 @@ describe("Electron workflow command handlers", () => {
         }),
       }),
     );
+  });
+
+  test("forks a workflow session into a fresh identity bundle without copying storage", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const workflow = handlers.createWorkflow("Checkout E2E", {
+      environment: { mode: "isolated", name: "Checkout account" },
+    }) as ProjectWorkflow;
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    const sourceEnvironmentId = workflow.environment_id;
+    const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "fork-session-fonts-"));
+    tempRoots.push(fontsDir);
+    const customized = handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      run_policy: {
+        ...settings.run_policy,
+        run_from_selected_enabled: true,
+      },
+      browser_launch: {
+        ...settings.browser_launch,
+        display_name: "Checkout account",
+        proxy_enabled: true,
+        proxy_server: "http://proxy.local:8080",
+        proxy_username: "operator",
+        proxy_password: "secret",
+        proxy_bypass: ".internal.test",
+        timezone: "America/New_York",
+        locale: "en-US",
+        geoip: false,
+        fingerprint_fonts_dir: fontsDir,
+        humanize: false,
+        human_preset: "careful",
+        headless: true,
+      },
+    });
+
+    const forkedWorkflow = projectHandlers.forkWorkflowSession(workflow.id);
+    const forkedSettings = handlers.getWorkflowSettings(workflow.id);
+    const environments = projectHandlers.listProjectEnvironments(workflow.project_id);
+    const forkedEnvironment = environments.find(
+      (environment) => environment.id === forkedWorkflow.environment_id,
+    );
+
+    expect(forkedWorkflow.environment_id).not.toBe(sourceEnvironmentId);
+    expect(forkedEnvironment).toMatchObject({
+      project_id: workflow.project_id,
+      is_default: false,
+      name: "Checkout E2E private session",
+      description: "Forked browser identity and launch posture",
+    });
+    expect(forkedSettings.browser_launch).toMatchObject({
+      session_mode: "persistent_profile",
+      display_name: "Checkout E2E identity",
+      proxy_enabled: true,
+      proxy_server: "http://proxy.local:8080",
+      proxy_username: "operator",
+      proxy_password: "secret",
+      proxy_bypass: ".internal.test",
+      timezone: "America/New_York",
+      locale: "en-US",
+      geoip: false,
+      fingerprint_fonts_dir: fontsDir,
+      humanize: false,
+      human_preset: "careful",
+      headless: true,
+    });
+    expect(forkedSettings.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
+    expect(forkedSettings.browser_launch.profile_dir).toBe(
+      forkedSettings.browser_launch.identity_id,
+    );
+    expect(forkedSettings.browser_launch.profile_name).toBe(
+      forkedSettings.browser_launch.identity_id,
+    );
+    expect(forkedSettings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
+    expect(forkedSettings.browser_launch.identity_id).not.toBe(
+      customized.browser_launch.identity_id,
+    );
+    expect(forkedSettings.browser_launch.profile_dir).not.toBe(
+      customized.browser_launch.profile_dir,
+    );
+    expect(forkedSettings.browser_launch.fingerprint_seed).not.toBe(
+      customized.browser_launch.fingerprint_seed,
+    );
+    expect(forkedSettings.run_policy.run_from_selected_enabled).toBe(false);
   });
 
   test("persists subflows, reports workflow usage, duplicates safely, and blocks used deletion", async () => {

@@ -65,7 +65,6 @@ function renderProjectSettings() {
       onDuplicateProject={vi.fn()}
       onExportProjectPackage={vi.fn()}
       onDeleteProject={vi.fn()}
-      onUpdateProjectEnvironment={vi.fn()}
       onResetProjectEnvironmentBrowserIdentity={vi.fn()}
     />,
   );
@@ -85,5 +84,22 @@ describe("ProjectEnvironmentSettings", () => {
     })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save project name" }))
       .not.toBeInTheDocument();
+  });
+
+  test("shows the fingerprint seed as identity-managed instead of directly editable", () => {
+    renderProjectSettings();
+
+    const fingerprintGroup = screen.getByRole("group", { name: "Browser fingerprint" });
+    expect(within(fingerprintGroup).getByLabelText("Fingerprint seed"))
+      .toHaveAttribute("readonly");
+    expect(within(fingerprintGroup).queryByRole("button", {
+      name: "Save fingerprint seed",
+    })).not.toBeInTheDocument();
+    expect(within(fingerprintGroup).getByText(
+      "Fingerprint seed is regenerated with the browser identity.",
+    )).toBeInTheDocument();
+    expect(within(fingerprintGroup).getByRole("button", {
+      name: "Regenerate identity",
+    })).toBeInTheDocument();
   });
 });

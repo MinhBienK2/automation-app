@@ -28,7 +28,7 @@ export function useProjectEnvironmentActions({
     try {
       const updated = await updateProjectEnvironmentCommand(environmentId, input);
       setProjectEnvironments(await listProjectEnvironments(updated.project_id));
-      showToast("Fingerprint seed saved.");
+      showToast("Project session updated.");
     } catch (error) {
       setAppError(commandMessage(error));
     }

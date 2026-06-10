@@ -95,6 +95,13 @@ Node/Electron backend.
   through `updateProject`, `duplicateProject`, `exportProjectPackage`,
   `importProjectPackage`, and `deleteProject`, and project identity regeneration
   stays backend-owned through `resetProjectEnvironmentBrowserIdentity`.
+- Workflow browser session selection is command-owned through
+  `setWorkflowEnvironment` and `forkWorkflowSession`. `setWorkflowEnvironment`
+  points a workflow at an existing same-project session row and refreshes the
+  workflow's Browser Launch settings from that row. `forkWorkflowSession`
+  creates a private session row with a fresh backend-generated
+  identity/profile/fingerprint bundle, preserves non-storage launch posture,
+  disables Run from selected, and does not copy local browser storage.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.

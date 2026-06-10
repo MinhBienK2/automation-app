@@ -316,6 +316,14 @@ profile directories are retained.
 
 `resetProjectEnvironmentBrowserIdentity` is the command boundary for project saved-session identity rotation. After UI confirmation, it returns the updated project environment after replacing `identity_id`, persistent profile fields, and `fingerprint_seed`, while preserving non-storage Browser Launch preferences and deleting the old unshared local project profile directory.
 
+`setWorkflowEnvironment` links a workflow to an existing same-project
+`ProjectEnvironment` session row. `forkWorkflowSession` creates a new private
+session row for a workflow with a fresh backend-generated `identity_id`,
+`profile_dir`, persistent `profile_name` when enabled, and `fingerprint_seed`;
+it preserves non-storage Browser Launch preferences, disables
+`run_policy.run_from_selected_enabled`, does not copy local browser storage, and
+returns the updated `Workflow` with the new `environment_id`.
+
 `createProject` returns the created `Project` after trimming a non-empty
 project name and also persists that project's default saved session plus an
 initial draft workflow named `Main`. `updateProject` returns the updated

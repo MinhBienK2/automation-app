@@ -63,11 +63,15 @@ Electron/Node now owns the production persistence layer.
   updates the `subflows` row and touches `updated_at` without rewriting the
   graph JSON.
 - Project saved-session and private workflow-session Browser Launch settings
-  are stored in `project_environments.browser_launch_json`. Project Settings can
-  edit the saved fingerprint seed or ask the backend to regenerate the
-  environment identity/profile/seed in that JSON payload; confirmed regeneration
-  also removes the old unshared local project profile directory from
-  `browser-profiles`.
+  are stored in `project_environments.browser_launch_json`. Workflows point to
+  one of those rows through `workflows.environment_id`, so multiple workflows
+  can share one Browser Launch identity bundle. Project Settings shows the
+  saved fingerprint seed as identity-managed and can ask the backend to
+  regenerate the environment identity/profile/seed in that JSON payload;
+  confirmed regeneration also removes the old unshared local project profile
+  directory from `browser-profiles`. Forking a workflow session creates a new
+  project-environment row with fresh identity/profile/fingerprint values
+  without copying local browser storage.
 - Workflows without saved settings return lazy defaults based on workflow metadata.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Saving graph JSON touches the parent workflow `updated_at`.

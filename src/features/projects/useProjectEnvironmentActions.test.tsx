@@ -44,7 +44,7 @@ describe("useProjectEnvironmentActions", () => {
       browser_launch: browserLaunch(),
     });
     expect(setProjectEnvironments).toHaveBeenCalledWith([environment("environment-1")]);
-    expect(showToast).toHaveBeenCalledWith("Fingerprint seed saved.");
+    expect(showToast).toHaveBeenCalledWith("Project session updated.");
     expect(setAppError).toHaveBeenLastCalledWith("");
   });
 

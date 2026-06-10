@@ -50,6 +50,7 @@ string map.
 - `updateProjectEnvironment`
 - `resetProjectEnvironmentBrowserIdentity`
 - `setWorkflowEnvironment`
+- `forkWorkflowSession`
 - `createSubflow`
 - `listSubflows`
 - `getSubflow`
@@ -135,14 +136,22 @@ selection; omitted options use the project saved session by default. The
 renderer's create dialog exposes only reuse project saved session or create new
 workflow session, while older `existing` environment selections remain accepted
 at the command boundary for compatibility.
-`updateProjectEnvironment` lets Project Settings save a fingerprint seed change
-inside the selected session Browser Launch payload. `resetProjectEnvironmentBrowserIdentity(environmentId)`
+`updateProjectEnvironment` remains the project-session metadata/update command,
+but the product UI treats fingerprint seeds as identity-managed values rather
+than direct edits. `resetProjectEnvironmentBrowserIdentity(environmentId)`
 returns the updated project session after backend-generating a new identity id,
 profile fields, and deterministic fingerprint seed while preserving non-storage
 Browser Launch preferences and deleting the old unshared local project profile
 directory after UI confirmation. Subflow commands expose project-scoped
 reusable graphs, metadata rename through `updateSubflow`, usage queries,
 guarded deletion, and graph save/load.
+
+`setWorkflowEnvironment(workflowId, environmentId)` links a workflow to an
+existing same-project browser session row. `forkWorkflowSession(workflowId)`
+creates a new private browser session row for the workflow with a fresh
+backend-generated identity/profile/fingerprint bundle, preserves non-storage
+Browser Launch preferences, disables Run from selected, and does not copy local
+browser storage.
 
 `importWorkflowPackage(packageValue, options)` accepts the selected Flow and
 Settings sections plus optional `target_project_id`. When present, the backend

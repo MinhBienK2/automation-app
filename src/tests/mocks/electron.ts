@@ -22,6 +22,7 @@ const methodNames: BridgeMethodName[] = [
   "updateProjectEnvironment",
   "resetProjectEnvironmentBrowserIdentity",
   "setWorkflowEnvironment",
+  "forkWorkflowSession",
   "createSubflow",
   "listSubflows",
   "getSubflow",
@@ -318,6 +319,9 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   workflowBridgeMock.setWorkflowEnvironment.mockImplementation(
     (workflowId: string, environmentId: string) =>
       resolveCommand(commands, "set_workflow_environment", { workflowId, environmentId }),
+  );
+  workflowBridgeMock.forkWorkflowSession.mockImplementation((workflowId: string) =>
+    resolveCommand(commands, "fork_workflow_session", { workflowId }),
   );
   workflowBridgeMock.createSubflow.mockImplementation((projectId: string, input: unknown) =>
     resolveCommand(commands, "create_subflow", { projectId, input }),

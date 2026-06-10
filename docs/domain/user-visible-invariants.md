@@ -47,8 +47,8 @@ Preserve these unless the task explicitly changes them.
   Settings shows a `Project identity` heading, a
   `Project details` group with editable Project name, Save,
   Duplicate project, and Delete project, plus a `Browser fingerprint` group,
-  editable Fingerprint seed, read-only Identity, Save fingerprint seed, and
-  Regenerate identity without exposing a full Browser Launch editor. Duplicate
+  identity-managed Fingerprint seed, read-only Identity, and Regenerate
+  identity without a separate seed save path or full Browser Launch editor. Duplicate
   project creates and selects an independent project copy with copied workflows
   and subflows, remapped Call Subflow references, and fresh browser
   identities/profiles. Project Settings exposes Export project for the selected
@@ -105,10 +105,25 @@ Preserve these unless the task explicitly changes them.
   selected project saved session or private workflow session at run time.
   Per-workflow settings remain the UI surface for run policy, graph defaults,
   and initial variables.
+- Workflow Settings Browser Launch exposes a Session source select. Selecting a
+  source links the workflow to an existing project browser session, including
+  another same-project workflow's session, so multiple workflows can share the
+  same profile directory, fingerprint seed, and launch posture. Fork current
+  session creates a private browser session source for the workflow with a fresh
+  backend-generated identity/profile/fingerprint bundle while preserving
+  non-storage launch preferences.
 - Workflow Settings Run Policy exposes maximum workflow duration, browser retention, Allow Run JavaScript, and a grouped Run from selected control. When Run from selected is enabled, the group shows a scope select with `selected_only` for running only the selected node and `from_selected` for running from that node through the downstream main path. Batch concurrency, batch headless, and stop-on-first-failed-row values remain visible but disabled with a pause note until Batch Run UI is ready.
 - Workflow Settings Graph exposes the new link wait default for newly created graph links in one grouped control. It supports no default wait, fixed duration milliseconds, or random min/max milliseconds, and changing it must not rewrite existing links.
 - Workflow Settings Environment exposes initial variable values as typed rows for graph template/runtime context.
-- Workflow Settings Browser Launch exposes browser identity controls. Each workflow has a stable read-only `identity_id`, editable display name, fixed CloakBrowser fingerprint seed, stored persona metadata, and optional fingerprint fonts directory. Backend-generated identities use high-entropy `bi_<32 hex>` ids. `profile_dir` remains internal storage metadata and is not shown as a separate Browser Launch field. The seed is always visible in the dialog; renaming the display name does not change profile storage, persona, or the fingerprint seed.
+- Workflow Settings Browser Launch exposes browser identity controls. Each
+  selected session source has a stable read-only `identity_id`, editable display
+  name, read-only CloakBrowser fingerprint seed, stored persona metadata, and
+  optional fingerprint fonts directory. Backend-generated identities use
+  high-entropy `bi_<32 hex>` ids. `profile_dir` remains internal storage
+  metadata and is not shown as a separate Browser Launch field. The seed is
+  always visible in the dialog but is changed only through Reset identity or
+  Fork current session; renaming the display name does not change profile
+  storage, persona, or the fingerprint seed.
 - Workflow Settings Browser Launch exposes Reset identity as the browser identity rotation control. Reset uses an in-app confirmation dialog, saves pending settings before invoking the backend reset command, creates a new backend-generated identity id/profile directory/fingerprint seed, records a migration-note audit event, preserves non-storage preferences such as proxy, locale, and fingerprint fonts directory, and disables Run from selected in Run Policy until a fresh retained session exists.
 - Workflow Settings Browser Launch exposes a Reuse login session checkbox. Turning it on uses the identity's stable persistent browser profile; turning it off clears `profile_name` so the run uses temporary browser storage while keeping the same identity seed and disables Run from selected in Run Policy.
 - Workflow Settings Browser Launch exposes the selected session's proxy URL/credentials/bypass, timezone, locale, detected local machine timezone/locale, GeoIP, fingerprint fonts directory, a Humanize browser input toggle, a Humanize preset select with `default` and `careful`, and headless launch controls. New project saved sessions and private workflow sessions enable GeoIP by default so blank timezone/locale fields resolve from the current public or proxy exit IP; blank legacy location settings normalize back to GeoIP. Running with GeoIP off requires explicit timezone and locale values. A stored persona from the catalog binds viewport/window dimensions, OS/browser bucket, region rationale, font bundle metadata, and timing profile for identity context.

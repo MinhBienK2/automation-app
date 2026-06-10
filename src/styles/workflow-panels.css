@@ -450,6 +450,16 @@
   min-width: 0;
 }
 
+.workflow-session-source-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  min-width: 0;
+  color: #667d8d;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .settings-field-group-actions {
   display: flex;
   grid-column: 1 / -1;

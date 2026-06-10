@@ -66,16 +66,23 @@ Mission Control is an Electron desktop app for building and running browser auto
 - Workflow Settings is the per-workflow configuration aggregate for run policy,
   graph authoring defaults, browser launch/session selection, and initial
   environment variables.
-- The Browser Launch section is identity-oriented. New project saved sessions
-  and private workflow sessions automatically get a browser identity with a
-  stable `identity_id`, editable display name, stable `profile_dir`, fixed
-  CloakBrowser fingerprint seed, and a stored persona selected from
-  `src/lib/personaCatalog.ts`. The persona binds
+- The Browser Launch section is identity-oriented and starts from a selected
+  session source. Workflows can point at the same project saved session or
+  another same-project workflow's private session, which means they share one
+  browser identity bundle: `identity_id`, display name, `profile_dir`,
+  CloakBrowser fingerprint seed, persona, and launch posture. Forking creates a
+  private session source for the workflow with a fresh backend-generated
+  identity/profile/fingerprint bundle while preserving non-storage launch
+  preferences.
+- New project saved sessions and private workflow sessions automatically get a
+  browser identity with a stable `identity_id`, editable display name, stable
+  `profile_dir`, fixed CloakBrowser fingerprint seed, and a stored persona
+  selected from `src/lib/personaCatalog.ts`. The persona binds
   the OS/browser bucket, viewport/window dimensions, timezone/locale metadata,
   proxy/geo policy, WebRTC mode, font bundle metadata, and behavior timing
   profile so the identity is explainable and less clustered than one fixed
   desktop shape. Reuse login session only controls persistent storage; it does
-  not rotate the fingerprint identity. The section also owns proxy
+  not rotate or detach the fingerprint identity. The section also owns proxy
   server/credentials/bypass, timezone/locale/GeoIP, supported WebRTC IP policy
   values, the humanize toggle and `default`/`careful` preset, and
   headed/headless policy. New project saved sessions enable GeoIP by default so
