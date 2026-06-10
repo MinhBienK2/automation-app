@@ -20,6 +20,8 @@ const methodNames: BridgeMethodName[] = [
   "listProjectEnvironments",
   "createProjectEnvironment",
   "updateProjectEnvironment",
+  "deleteProjectEnvironment",
+  "setWorkflowProjectEnvironment",
   "resetProjectEnvironmentBrowserIdentity",
   "createSubflow",
   "listSubflows",
@@ -152,7 +154,7 @@ function defaultProjectEnvironments() {
     {
       id: "environment-1",
       project_id: "project-1",
-      name: "Project saved session",
+      name: "Project browser profile",
       description: "",
       is_default: true,
       browser_launch: null,
@@ -307,6 +309,16 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   workflowBridgeMock.updateProjectEnvironment.mockImplementation(
     (environmentId: string, input: unknown) =>
       resolveCommand(commands, "update_project_environment", { environmentId, input }),
+  );
+  workflowBridgeMock.deleteProjectEnvironment.mockImplementation((environmentId: string) =>
+    resolveCommand(commands, "delete_project_environment", { environmentId }),
+  );
+  workflowBridgeMock.setWorkflowProjectEnvironment.mockImplementation(
+    (workflowId: string, environmentId: string) =>
+      resolveCommand(commands, "set_workflow_project_environment", {
+        workflowId,
+        environmentId,
+      }),
   );
   workflowBridgeMock.resetProjectEnvironmentBrowserIdentity.mockImplementation(
     (environmentId: string) =>

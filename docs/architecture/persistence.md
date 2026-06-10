@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Persistence stores projects, project saved-session rows (in the compatibility
+Persistence stores projects, browser profile rows (in the compatibility
 `project_environments` table), workflows, reusable subflows,
 versioned workflow graph authoring data, per-workflow settings, schedules,
 schedule events, runs, run steps, and operational attention events in SQLite.
@@ -24,21 +24,21 @@ Electron/Node now owns the production persistence layer.
   document-shaped `workflows`, reusable `subflows`, queryable `runs` and
   `run_steps`, `workflow_schedules`, `workflow_schedule_events`, and
   `operational_attention_events`.
-- A default project named `Main` and default project saved session are created
-  for existing local data. Workflows store `project_id` and selected
-  `environment_id`; subflows and compatibility project-environment/session rows
+- A default project named `Main` and initial browser profile are created for
+  existing local data. Workflows store `project_id` and selected
+  `environment_id`; subflows and compatibility project-environment/profile rows
   store `project_id`.
 - Product-facing project creation writes the project row, default project
-  saved-session row, and a normal draft workflow named `Main` in one
+  browser-profile row, and a normal draft workflow named `Main` in one
   transaction.
 - Project rename updates the `projects` row. Product-facing project deletion
   deletes workflows for that project before deleting the project row so workflow
   run/schedule/attention cascades apply and no projectless workflow rows are
-  left behind; subflows and project-environment/session rows cascade from the
+  left behind; subflows and project-environment/profile rows cascade from the
   project row. Product-facing project duplication creates a new project, copies
   project environments, subflows, and workflows, remaps copied workflow Call
-  Subflow references to copied subflows, and stores fresh browser identity
-  values for copied sessions.
+  Subflow references to copied subflows, and stores regenerated storage values
+  for copied browser profiles.
 - `runs.source` stores durable run provenance as `manual` or `schedule`.
   Existing local rows are migrated by marking rows referenced by started
   schedule events as `schedule`; all other legacy rows become `manual`.
@@ -62,14 +62,14 @@ Electron/Node now owns the production persistence layer.
 - Updating subflow metadata, such as the name changed through Subflow Settings,
   updates the `subflows` row and touches `updated_at` without rewriting the
   graph JSON.
-- Project saved identities are stored in
-  `project_environments.browser_launch_json`. Workflow Browser Launch settings
-  are stored in each workflow's saved `settings_json`; workflows do not point
-  at project environment rows for runtime identity resolution. Project Settings
-  shows the saved fingerprint seed as identity-managed and can ask the backend
-  to regenerate the environment identity/profile/seed in that JSON payload;
-  confirmed regeneration also removes the old unshared local project profile
-  directory from `browser-profiles`.
+- Browser profiles are stored in `project_environments.browser_launch_json`.
+  Workflows point at the selected profile through `workflows.environment_id`, and
+  `getWorkflowSettings` overlays Browser Launch values from that profile for run
+  resolution. Legacy workflow Browser Launch saves are written back to the
+  selected profile so older command callers stay consistent with profile-owned
+  runtime identity. Project Settings can create, rename, and delete profile rows;
+  profile deletion removes the local browser profile directory after checking
+  workflow usage.
 - Workflows without saved settings return lazy defaults based on workflow metadata.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Saving graph JSON touches the parent workflow `updated_at`.
@@ -123,7 +123,7 @@ Electron/Node now owns the production persistence layer.
 - Serialization/deserialization of stored action config JSON.
 - Serialization/deserialization of stored workflow graph JSON.
 - Persistence of Workflow Settings rows.
-- Persistence of project rows, project saved-session rows, compatibility
+- Persistence of project rows, browser profile rows, compatibility
   project-environment rows, and subflow rows.
 - Persistence of workflow schedule rows and schedule event rows.
 - Persistence of operational attention rows and bounded operations read queries.

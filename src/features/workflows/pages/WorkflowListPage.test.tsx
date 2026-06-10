@@ -79,7 +79,7 @@ describe("Workflow list integration", () => {
       {
         id: "environment-default",
         project_id: project.id,
-        name: "Project saved session",
+        name: "Project browser profile",
         description: "",
         is_default: true,
         browser_launch: null,
@@ -119,7 +119,7 @@ describe("Workflow list integration", () => {
 
     await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Login flow");
     expect(within(dialog).queryByLabelText("Browser session")).not.toBeInTheDocument();
-    expect(within(dialog).queryByText("Use project saved session")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Use project browser profile")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("Create new workflow session")).not.toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 

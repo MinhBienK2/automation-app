@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { HelpCircle, Save, Settings } from "lucide-react";
 import type {
+  ProjectEnvironment,
   WorkflowSettings,
   WorkflowSettingsBrowserLaunch,
   WorkflowSettingsEnvironment,
@@ -39,13 +40,15 @@ type WorkflowSettingsDialogProps = {
   open: boolean;
   settings: WorkflowSettings | null;
   activeSection: WorkflowSettingsSectionId;
+  browserProfiles?: ProjectEnvironment[];
+  selectedBrowserProfileId?: string | null;
   error?: string;
   hasUnsavedChanges: boolean;
   onOpenChange: (open: boolean) => void;
   onActiveSectionChange: (section: WorkflowSettingsSectionId) => void;
+  onBrowserProfileChange?: (environmentId: string) => void;
   onSettingsChange: (settings: WorkflowSettings) => void;
   onSaveSettings: () => void | boolean | Promise<void | boolean>;
-  onResetBrowserIdentity?: () => void | Promise<void>;
   onDiscardChanges: () => void;
 };
 
@@ -53,13 +56,15 @@ export function WorkflowSettingsDialog({
   open,
   settings,
   activeSection,
+  browserProfiles = [],
+  selectedBrowserProfileId = null,
   error,
   hasUnsavedChanges,
   onOpenChange,
   onActiveSectionChange,
+  onBrowserProfileChange,
   onSettingsChange,
   onSaveSettings,
-  onResetBrowserIdentity,
   onDiscardChanges,
 }: WorkflowSettingsDialogProps) {
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
@@ -183,9 +188,9 @@ export function WorkflowSettingsDialog({
                 ) : null}
                 {activeSection === "browser_launch" ? (
                   <BrowserLaunchSettingsSection
-                    value={settings.browser_launch}
-                    onChange={(value) => updateSection("browser_launch", value)}
-                    onResetBrowserIdentity={onResetBrowserIdentity}
+                    browserProfiles={browserProfiles}
+                    selectedBrowserProfileId={selectedBrowserProfileId}
+                    onBrowserProfileChange={onBrowserProfileChange}
                   />
                 ) : null}
                 {activeSection === "graph_defaults" ? (
@@ -494,7 +499,7 @@ function RunPolicySettingsSection({
             description={
               canEnableRunFromSelected
                 ? "Show the Run from selected action when a matching browser session is retained."
-                : "Requires Reuse login session and Browser retention set to retain."
+                : "Requires a persistent browser profile and Browser retention set to retain."
             }
             onCheckedChange={(checked) =>
               onChange({
@@ -557,242 +562,50 @@ function RunPolicySettingsSection({
 }
 
 export function BrowserLaunchSettingsSection({
-  value,
-  onChange,
-  onResetBrowserIdentity,
+  browserProfiles,
+  selectedBrowserProfileId,
+  onBrowserProfileChange,
 }: {
-  value: WorkflowSettingsBrowserLaunch;
-  onChange: (value: WorkflowSettingsBrowserLaunch) => void;
-  onResetBrowserIdentity?: () => void | Promise<void>;
+  browserProfiles: ProjectEnvironment[];
+  selectedBrowserProfileId: string | null;
+  onBrowserProfileChange?: (environmentId: string) => void;
 }) {
-  const [resetIdentityOpen, setResetIdentityOpen] = useState(false);
-  const [resetIdentityPending, setResetIdentityPending] = useState(false);
-  const persistent = value.session_mode === "persistent_profile";
-  const localEnvironment = detectedLocalBrowserEnvironment();
-  const confirmResetIdentity = async () => {
-    if (!onResetBrowserIdentity) return;
-    setResetIdentityPending(true);
-    try {
-      await onResetBrowserIdentity();
-      setResetIdentityOpen(false);
-    } finally {
-      setResetIdentityPending(false);
-    }
-  };
+  const selectedProfile =
+    browserProfiles.find((profile) => profile.id === selectedBrowserProfileId) ??
+    browserProfiles[0] ??
+    null;
   return (
     <div className="settings-form-grid">
       <SettingsFieldGroup
-        title="Session & identity"
-        description="Persistent storage, browser identity, and operator controls for this launch environment."
-      >
-        <SwitchField
-          checked={persistent}
-          label="Reuse login session"
-          onCheckedChange={(checked) =>
-            onChange({
-              ...value,
-              session_mode: checked ? "persistent_profile" : "temporary",
-              profile_name: checked ? value.profile_dir : null,
-            })
-          }
-        />
-        <div className="workflow-settings-identity-row settings-field-group-wide">
-          <label className="field workflow-settings-identity-id-field">
-            <span>Identity id</span>
-            <Input value={value.identity_id} readOnly />
-          </label>
-          <label className="field workflow-settings-identity-name-field">
-            <span>Identity display name</span>
-            <Input
-              value={value.display_name}
-              onChange={(event) => onChange({ ...value, display_name: event.currentTarget.value })}
-            />
-          </label>
-        </div>
-        <label className="field">
-          <span>Fingerprint seed</span>
-          <Input
-            type="text"
-            value={value.fingerprint_seed}
-            readOnly
-          />
-        </label>
-        <p className="workflow-settings-hint settings-field-group-wide">
-          Fingerprint seed is part of this workflow's browser identity.
-        </p>
-        {onResetBrowserIdentity ? (
-          <div className="settings-field-group-actions">
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => setResetIdentityOpen(true)}
-            >
-              Reset identity
-            </Button>
-          </div>
-        ) : null}
-        <Dialog open={resetIdentityOpen} onOpenChange={setResetIdentityOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Reset browser identity</DialogTitle>
-              <DialogDescription>
-                This creates a new backend-generated identity id, profile
-                directory, and fingerprint seed. Existing proxy, location,
-                and font preferences are preserved.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="dialog-footer-actions">
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={resetIdentityPending}
-                onClick={() => setResetIdentityOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={resetIdentityPending}
-                onClick={() => {
-                  void confirmResetIdentity();
-                }}
-              >
-                Reset identity
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </SettingsFieldGroup>
-      <SettingsFieldGroup
-        title="Proxy"
-        description="Network route, credentials, and direct-connection bypasses used at browser launch."
-      >
-        <SwitchField
-          checked={value.proxy_enabled}
-          label="Use proxy"
-          onCheckedChange={(checked) => onChange({ ...value, proxy_enabled: checked })}
-        />
-        {value.proxy_enabled ? (
-          <>
-            <label className="field">
-              <span>Proxy server</span>
-              <Input
-                value={value.proxy_server ?? ""}
-                onChange={(event) => onChange({ ...value, proxy_server: nullableText(event.currentTarget.value) })}
-              />
-            </label>
-            <label className="field">
-              <span>Proxy username</span>
-              <Input
-                value={value.proxy_username ?? ""}
-                onChange={(event) => onChange({ ...value, proxy_username: nullableText(event.currentTarget.value) })}
-              />
-            </label>
-            <label className="field">
-              <span>Proxy password</span>
-              <Input
-                type="password"
-                value={value.proxy_password ?? ""}
-                onChange={(event) => onChange({ ...value, proxy_password: nullableText(event.currentTarget.value) })}
-              />
-            </label>
-            <label className="field">
-              <span>Proxy bypass</span>
-              <Input
-                placeholder=".internal.test, localhost, 127.0.0.1"
-                value={value.proxy_bypass ?? ""}
-                onChange={(event) => onChange({ ...value, proxy_bypass: nullableText(event.currentTarget.value) })}
-              />
-            </label>
-          </>
-        ) : null}
-      </SettingsFieldGroup>
-      <SettingsFieldGroup
-        title="Location"
-        description="Locale and proxy-derived geography used at browser launch."
-        footer={`Detected on this machine: ${localEnvironment.timezone} / ${localEnvironment.locale}`}
+        title="Browser Profile"
+        description="Select the project-managed browser profile used when this workflow runs."
       >
         <label className="field">
-          <span>Timezone</span>
-          <Input
-            placeholder={localEnvironment.timezone}
-            value={value.timezone ?? ""}
-            onChange={(event) => onChange({ ...value, timezone: nullableText(event.currentTarget.value) })}
-          />
-        </label>
-        <label className="field">
-          <span>Locale</span>
-          <Input
-            placeholder={localEnvironment.locale}
-            value={value.locale ?? ""}
-            onChange={(event) => onChange({ ...value, locale: nullableText(event.currentTarget.value) })}
-          />
-        </label>
-        <SwitchField
-          checked={Boolean(value.geoip)}
-          label="GeoIP location"
-          onCheckedChange={(checked) => onChange({ ...value, geoip: checked })}
-        />
-      </SettingsFieldGroup>
-      <SettingsFieldGroup
-        title="Fingerprint"
-        description="Optional managed font inventory for launch-time fingerprint coherence."
-      >
-        <label className="field settings-field-group-wide">
-          <span>Fingerprint fonts directory</span>
-          <Input
-            value={value.fingerprint_fonts_dir ?? ""}
-            onChange={(event) => onChange({ ...value, fingerprint_fonts_dir: nullableText(event.currentTarget.value) })}
-          />
-        </label>
-      </SettingsFieldGroup>
-      <SettingsFieldGroup
-        title="Humanization"
-        description="Controls for browser interaction timing and input behavior."
-      >
-        <SwitchField
-          checked={value.humanize !== false}
-          label="Humanize browser input"
-          onCheckedChange={(checked) => onChange({ ...value, humanize: checked })}
-        />
-        <label className="field">
-          <span>Humanize preset</span>
+          <span>Browser profile</span>
           <Select
-            value={value.human_preset ?? "default"}
-            onChange={(event) => {
-              const nextValue = event.currentTarget.value;
-              onChange({
-                ...value,
-                human_preset: nextValue === "careful" ? "careful" : "default",
-              });
-            }}
+            aria-label="Browser profile"
+            value={selectedProfile?.id ?? ""}
+            disabled={browserProfiles.length === 0 || !onBrowserProfileChange}
+            onChange={(event) => onBrowserProfileChange?.(event.currentTarget.value)}
           >
-            <option value="default">Default</option>
-            <option value="careful">Careful</option>
+            {browserProfiles.length === 0 ? (
+              <option value="">No profiles available</option>
+            ) : null}
+            {browserProfiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name}
+              </option>
+            ))}
           </Select>
         </label>
-      </SettingsFieldGroup>
-      <SettingsFieldGroup
-        title="Launch"
-        description="Final headed/headless launch mode."
-      >
-        <SwitchField
-          checked={value.headless}
-          label="Headless browser"
-          onCheckedChange={(checked) => onChange({ ...value, headless: checked })}
-        />
+        {selectedProfile ? (
+          <p className="workflow-settings-hint settings-field-group-wide">
+            Profile settings are managed in Project Settings.
+          </p>
+        ) : null}
       </SettingsFieldGroup>
     </div>
   );
-}
-
-function detectedLocalBrowserEnvironment() {
-  const options = Intl.DateTimeFormat().resolvedOptions();
-  return {
-    timezone: options.timeZone || "UTC",
-    locale: options.locale || "en-US",
-  };
 }
 
 function GraphDefaultsSettingsSection({
@@ -956,11 +769,6 @@ function NumberField({
       />
     </label>
   );
-}
-
-function nullableText(value: string) {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
 }
 
 function numberOrNull(value: string) {

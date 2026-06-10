@@ -100,6 +100,11 @@ type ProjectWorkflowTestHandlers = {
       is_default?: boolean;
     },
   ): TestProjectEnvironment;
+  deleteProjectEnvironment(environmentId: string): void;
+  setWorkflowProjectEnvironment(
+    workflowId: string,
+    environmentId: string,
+  ): ProjectWorkflow;
   resetProjectEnvironmentBrowserIdentity(environmentId: string): TestProjectEnvironment;
   exportProjectPackage(projectId: string): ProjectPackage;
   previewProjectPackage(packageValue: ProjectPackage): unknown;
@@ -150,7 +155,7 @@ describe("Electron workflow command handlers", () => {
       browser_launch: {
         session_mode: "persistent_profile",
         identity_id: expect.stringMatching(/^bi_/),
-        display_name: "Login flow identity",
+        display_name: "Project browser profile identity",
         persona_id: expect.any(String),
         persona: expect.objectContaining({
           behavioral_timing_profile: expect.any(String),
@@ -194,7 +199,7 @@ describe("Electron workflow command handlers", () => {
 
     const settings = handlers.getWorkflowSettings(created.id);
     expect(settings.browser_launch.profile_name).toBe(settings.browser_launch.profile_dir);
-    expect(settings.browser_launch.display_name).toBe("Login flow identity");
+    expect(settings.browser_launch.display_name).toBe("Project browser profile identity");
     const initialSeed = settings.browser_launch.fingerprint_seed;
     const saved = handlers.saveWorkflowSettings(created.id, {
       ...settings,
@@ -212,7 +217,7 @@ describe("Electron workflow command handlers", () => {
 
     expect(saved.general.name).toBe("Renamed flow");
     expect(saved.browser_launch.fingerprint_seed).toBe(initialSeed);
-    expect(saved.browser_launch.display_name).toBe("Login flow identity");
+    expect(saved.browser_launch.display_name).toBe("Project browser profile identity");
     expect(saved.browser_launch.humanize).toBe(false);
     expect(saved.browser_launch.human_preset).toBe("careful");
     expect(handlers.listWorkflows()[0]).toMatchObject({
@@ -238,7 +243,7 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.getWorkflow(created.id)).toBeNull();
   });
 
-  test("creates a default project saved session and uses it for new workflows by default", async () => {
+  test("creates an initial browser profile and assigns it to new workflows by default", async () => {
     const { handlers, database } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
 
@@ -254,8 +259,7 @@ describe("Electron workflow command handlers", () => {
     expect(environments).toEqual([
       expect.objectContaining({
         project_id: project.id,
-        name: "Project saved session",
-        is_default: true,
+        name: "Project browser profile",
       }),
     ]);
 
@@ -264,13 +268,18 @@ describe("Electron workflow command handlers", () => {
 
     expect(workflow).toMatchObject({
       project_id: project.id,
-      environment_id: null,
+      environment_id: environments[0].id,
     });
     expect(listRow).toMatchObject({
       project_id: project.id,
-      environment_id: null,
-      environment_name: null,
+      environment_id: environments[0].id,
+      environment_name: "Project browser profile",
     });
+    expect(handlers.getWorkflowSettings(workflow.id).browser_launch)
+      .toMatchObject({
+        identity_id: environments[0].browser_launch.identity_id,
+        fingerprint_seed: environments[0].browser_launch.fingerprint_seed,
+      });
   });
 
   test("renames, duplicates, and deletes projects from project settings", async () => {
@@ -421,8 +430,8 @@ describe("Electron workflow command handlers", () => {
     expect(importedProject.id).not.toBe(sourceProject.id);
     expect(importedWorkflow).toMatchObject({
       project_id: importedProject.id,
-      environment_id: null,
-      environment_name: null,
+      environment_id: expect.any(String),
+      environment_name: "Project browser profile",
     });
     expect(importedWorkflow?.id).not.toBe(sourceWorkflow.id);
     expect(importedSubflows).toHaveLength(1);
@@ -481,6 +490,7 @@ describe("Electron workflow command handlers", () => {
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
 
     const project = projectHandlers.createProject({ name: "Owned Staging" });
+    const [projectProfile] = projectHandlers.listProjectEnvironments(project.id);
     const projectWorkflows = handlers
       .listWorkflows()
       .filter((item) => item.project_id === project.id);
@@ -489,8 +499,8 @@ describe("Electron workflow command handlers", () => {
       expect.objectContaining({
         name: "Main",
         project_id: project.id,
-        environment_id: null,
-        environment_name: null,
+        environment_id: projectProfile.id,
+        environment_name: projectProfile.name,
       }),
     ]);
 
@@ -550,7 +560,7 @@ describe("Electron workflow command handlers", () => {
     await expect(fs.stat(oldProfilePath)).rejects.toThrow();
   });
 
-  test("workflow runs use workflow-owned browser launch settings instead of selected project environments", async () => {
+  test("workflow runs use the selected project browser profile", async () => {
     const runner = {
       run: vi.fn(async () => ({
         status: "success" as const,
@@ -570,7 +580,7 @@ describe("Electron workflow command handlers", () => {
     const project = projectHandlers.createProject({ name: "Owned Lab" });
     const projectId = project.id;
     const defaultEnvironment = projectHandlers.listProjectEnvironments(projectId)[0];
-    projectHandlers.createProjectEnvironment(projectId, {
+    const selectedProfile = projectHandlers.createProjectEnvironment(projectId, {
       name: "Proxy identity",
       description: "Project-level browser posture",
       browser_launch: {
@@ -585,6 +595,7 @@ describe("Electron workflow command handlers", () => {
     const workflow = handlers.createWorkflow("Environment run", {
       project_id: project.id,
     }) as ProjectWorkflow;
+    projectHandlers.setWorkflowProjectEnvironment(workflow.id, selectedProfile.id);
     handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
     await handlers.runWorkflow(workflow.id);
@@ -593,20 +604,52 @@ describe("Electron workflow command handlers", () => {
       expect.objectContaining({
         settings: expect.objectContaining({
           browser_launch: expect.objectContaining({
-            proxy_enabled: false,
-            proxy_server: null,
-            timezone: null,
-            locale: null,
-            headless: false,
+            identity_id: selectedProfile.browser_launch.identity_id,
+            fingerprint_seed: selectedProfile.browser_launch.fingerprint_seed,
+            proxy_enabled: true,
+            proxy_server: "http://proxy.internal:8080",
+            timezone: "Asia/Ho_Chi_Minh",
+            locale: "vi-VN",
+            headless: true,
           }),
         }),
       }),
     );
   });
 
-  test("does not expose workflow session link or fork commands", async () => {
+  test("rejects deleting a browser profile while workflows use it and deletes unused profile storage", async () => {
+    const { handlers, appPaths } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const project = projectHandlers.listProjects()[0];
+    const usedProfile = projectHandlers.listProjectEnvironments(project.id)[0];
+    const workflow = handlers.createWorkflow("Uses profile", {
+      project_id: project.id,
+    }) as ProjectWorkflow;
+    projectHandlers.setWorkflowProjectEnvironment(workflow.id, usedProfile.id);
+
+    expect(() => projectHandlers.deleteProjectEnvironment(usedProfile.id))
+      .toThrow("Browser profile is used by workflows");
+
+    const unusedProfile = projectHandlers.createProjectEnvironment(project.id, {
+      name: "Unused buyer",
+      description: "Delete me",
+    });
+    const profileDir = unusedProfile.browser_launch.profile_dir;
+    if (!profileDir) throw new Error("Expected profile directory");
+    const profilePath = path.join(appPaths.browserProfilesDir, profileDir);
+    await fs.mkdir(profilePath, { recursive: true });
+    await fs.writeFile(path.join(profilePath, "state.json"), "{}");
+
+    projectHandlers.deleteProjectEnvironment(unusedProfile.id);
+
+    expect(projectHandlers.listProjectEnvironments(project.id).map((item) => item.id))
+      .not.toContain(unusedProfile.id);
+    await expect(fs.stat(profilePath)).rejects.toThrow();
+  });
+
+  test("exposes workflow browser profile selection but not fork commands", async () => {
     const { handlers } = await createTestHandlers();
-    expect("setWorkflowEnvironment" in handlers).toBe(false);
+    expect("setWorkflowProjectEnvironment" in handlers).toBe(true);
     expect("forkWorkflowSession" in handlers).toBe(false);
   });
 
@@ -841,7 +884,7 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.listWorkflows().map((workflow) => workflow.id)).toEqual(initialIds);
   });
 
-  test("duplicates workflow with a fresh browser identity and session profile", async () => {
+  test("duplicates workflow with the same selected browser profile", async () => {
     const { handlers } = await createTestHandlers();
     const source = handlers.createWorkflow("Source");
     handlers.saveWorkflowGraph(source.id, runnableGraph());
@@ -854,7 +897,7 @@ describe("Electron workflow command handlers", () => {
         ...sourceSettings.general,
         description: "Owned staging login flow",
         tags: ["staging", "identity"],
-        notes: "Keep local credentials while making a fresh duplicate identity.",
+        notes: "Keep local credentials while duplicating the workflow.",
       },
       run_policy: {
         ...sourceSettings.run_policy,
@@ -898,7 +941,7 @@ describe("Electron workflow command handlers", () => {
       name: "Copy of Source",
       description: "Owned staging login flow",
       tags: ["staging", "identity"],
-      notes: "Keep local credentials while making a fresh duplicate identity.",
+      notes: "Keep local credentials while duplicating the workflow.",
     });
     expect(copiedSettings.run_policy).toMatchObject({
       browser_retention: "retain",
@@ -912,8 +955,8 @@ describe("Electron workflow command handlers", () => {
     ]);
     expect(copiedSettings.browser_launch).toMatchObject({
       session_mode: "persistent_profile",
-      display_name: "Copy of Source identity",
-      profile_name: copiedSettings.browser_launch.profile_dir,
+      display_name: savedSourceSettings.browser_launch.display_name,
+      profile_name: savedSourceSettings.browser_launch.profile_name,
       proxy_enabled: true,
       proxy_server: "http://proxy.local:8080",
       proxy_username: "operator",
@@ -925,17 +968,17 @@ describe("Electron workflow command handlers", () => {
       human_preset: "careful",
     });
     expect(copiedSettings.browser_launch.identity_id).toMatch(/^bi_/);
-    expect(copiedSettings.browser_launch.identity_id).not.toBe(
+    expect(copiedSettings.browser_launch.identity_id).toBe(
       savedSourceSettings.browser_launch.identity_id,
     );
-    expect(copiedSettings.browser_launch.profile_dir).not.toBe(
+    expect(copiedSettings.browser_launch.profile_dir).toBe(
       savedSourceSettings.browser_launch.profile_dir,
     );
-    expect(copiedSettings.browser_launch.profile_name).not.toBe(
+    expect(copiedSettings.browser_launch.profile_name).toBe(
       savedSourceSettings.browser_launch.profile_name,
     );
     expect(copiedSettings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
-    expect(copiedSettings.browser_launch.fingerprint_seed).not.toBe(
+    expect(copiedSettings.browser_launch.fingerprint_seed).toBe(
       savedSourceSettings.browser_launch.fingerprint_seed,
     );
   });
@@ -1448,6 +1491,7 @@ describe("Electron workflow command handlers", () => {
 
   test("reports missing and shared fingerprint font directories as actionable diagnostics", async () => {
     const { handlers, database } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
     const owner = handlers.createWorkflow("Font owner");
     const shared = handlers.createWorkflow("Font shared");
     const missing = handlers.createWorkflow("Font missing");
@@ -1457,8 +1501,14 @@ describe("Electron workflow command handlers", () => {
     await fs.writeFile(path.join(fontsDir, "NotoSans-Regular.otf"), "noto");
     await fs.writeFile(path.join(fontsDir, "CourierNew.ttf"), "courier");
     const ownerSettings = handlers.getWorkflowSettings(owner.id);
-    const sharedSettings = handlers.getWorkflowSettings(shared.id);
-    const missingSettings = handlers.getWorkflowSettings(missing.id);
+    const sharedProfile = projectHandlers.createProjectEnvironment(owner.project_id ?? "", {
+      name: "Shared font profile",
+    });
+    const missingProfile = projectHandlers.createProjectEnvironment(owner.project_id ?? "", {
+      name: "Missing font profile",
+    });
+    projectHandlers.setWorkflowProjectEnvironment(shared.id, sharedProfile.id);
+    projectHandlers.setWorkflowProjectEnvironment(missing.id, missingProfile.id);
     handlers.saveWorkflowSettings(owner.id, {
       ...ownerSettings,
       browser_launch: {
@@ -1466,24 +1516,20 @@ describe("Electron workflow command handlers", () => {
         fingerprint_fonts_dir: fontsDir,
       },
     });
-    handlers.saveWorkflowSettings(shared.id, {
-      ...sharedSettings,
+    projectHandlers.updateProjectEnvironment(sharedProfile.id, {
       browser_launch: {
-        ...sharedSettings.browser_launch,
+        ...sharedProfile.browser_launch,
         fingerprint_fonts_dir: fontsDir,
       },
     });
     database
-      .prepare("UPDATE workflows SET settings_json = ? WHERE id = ?")
+      .prepare("UPDATE project_environments SET browser_launch_json = ? WHERE id = ?")
       .run(
         JSON.stringify({
-          ...missingSettings,
-          browser_launch: {
-            ...missingSettings.browser_launch,
-            fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
-          },
+          ...missingProfile.browser_launch,
+          fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
         }),
-        missing.id,
+        missingProfile.id,
       );
 
     const diagnostics = await handlers.getCloakBrowserDiagnostics();
@@ -2192,12 +2238,13 @@ describe("Electron workflow command handlers", () => {
       .find((environment) => environment.id === targetDefaultEnvironment.id);
 
     expect(imported.workflow.project_id).toBe(targetProject.id);
-    expect(imported.workflow.environment_id).toBeNull();
+    expect(imported.workflow.environment_id).toEqual(expect.any(String));
+    expect(imported.workflow.environment_id).not.toBe(targetDefaultEnvironment.id);
     expect(handlers.listWorkflows().find((item) => item.id === imported.workflow.id))
       .toMatchObject({
         project_id: targetProject.id,
-        environment_id: null,
-        environment_name: null,
+        environment_id: imported.workflow.environment_id,
+        environment_name: "Imported into target (imported) browser profile",
       });
     expect(targetSavedSessionAfter?.browser_launch).toEqual(targetSavedSessionBefore);
     expect(handlers.getWorkflowSettings(imported.workflow.id).browser_launch)
@@ -3429,7 +3476,7 @@ describe("Electron workflow command handlers", () => {
       },
     });
     await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
-      message: "Run from selected requires Reuse login session to be enabled",
+      message: "Run from selected requires a persistent browser profile",
       field: "browser_launch.session_mode",
     });
 
@@ -5176,6 +5223,7 @@ describe("Electron workflow schedule commands", () => {
         },
       },
     });
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
     const runningWorkflow = handlers.createWorkflow("Running workflow");
     handlers.saveWorkflowGraph(runningWorkflow.id, runnableGraph());
     const scheduledWorkflow = handlers.createWorkflow("Scheduled workflow");
@@ -5194,17 +5242,11 @@ describe("Electron workflow schedule commands", () => {
       enabled: true,
       kind: { type: "once_at", timestamp: scheduledAt },
     });
-    const runningSettings = handlers.getWorkflowSettings(runningWorkflow.id);
-    const scheduledSettings = handlers.getWorkflowSettings(scheduledWorkflow.id);
-    handlers.saveWorkflowSettings(scheduledWorkflow.id, {
-      ...scheduledSettings,
-      browser_launch: {
-        ...scheduledSettings.browser_launch,
-        profile_dir: runningSettings.browser_launch.profile_dir,
-        profile_name: runningSettings.browser_launch.profile_name,
-      },
-    });
-    makeTemporary(handlers, isolatedWorkflow.id);
+    const isolatedProfile = projectHandlers.createProjectEnvironment(
+      isolatedWorkflow.project_id ?? "",
+      { name: "Isolated scheduler profile" },
+    );
+    projectHandlers.setWorkflowProjectEnvironment(isolatedWorkflow.id, isolatedProfile.id);
 
     const runPromise = handlers.runWorkflow(runningWorkflow.id);
     await waitFor(() => activeRunSignal !== null);

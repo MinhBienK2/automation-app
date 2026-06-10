@@ -1,7 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import { ProjectEnvironmentSettings } from "./ProjectEnvironmentSettings";
-import type { Project, ProjectEnvironment, WorkflowPersona } from "../../../types/workflow";
+import type { Project, ProjectEnvironment, WorkflowPersona, WorkflowSummary } from "../../../types/workflow";
 
 const project: Project = {
   id: "project-1",
@@ -33,13 +34,13 @@ const persona: WorkflowPersona = {
 const projectEnvironment: ProjectEnvironment = {
   id: "environment-1",
   project_id: project.id,
-  name: "Project saved session",
+  name: "Project browser profile",
   description: "Default project session",
   is_default: true,
   browser_launch: {
     session_mode: "persistent_profile",
     identity_id: "bi_1234567890abcdef1234567890abcdef",
-    display_name: "Project saved session",
+    display_name: "Project browser profile",
     persona_id: persona.id,
     persona,
     profile_dir: "project-main",
@@ -56,16 +57,34 @@ const projectEnvironment: ProjectEnvironment = {
 };
 
 function renderProjectSettings() {
+  const onCreateProjectEnvironment = vi.fn();
+  const onUpdateProjectEnvironment = vi.fn();
+  const onDeleteProjectEnvironment = vi.fn();
+  const workflows: WorkflowSummary[] = [
+    {
+      id: "workflow-1",
+      project_id: project.id,
+      environment_id: projectEnvironment.id,
+      environment_name: projectEnvironment.name,
+      name: "Checkout",
+      step_count: 0,
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
+    },
+  ];
   return render(
     <ProjectEnvironmentSettings
       project={project}
       projectEnvironments={[projectEnvironment]}
+      workflows={workflows}
       error=""
       onUpdateProject={vi.fn()}
       onDuplicateProject={vi.fn()}
       onExportProjectPackage={vi.fn()}
       onDeleteProject={vi.fn()}
-      onResetProjectEnvironmentBrowserIdentity={vi.fn()}
+      onCreateProjectEnvironment={onCreateProjectEnvironment}
+      onUpdateProjectEnvironment={onUpdateProjectEnvironment}
+      onDeleteProjectEnvironment={onDeleteProjectEnvironment}
     />,
   );
 }
@@ -86,20 +105,60 @@ describe("ProjectEnvironmentSettings", () => {
       .not.toBeInTheDocument();
   });
 
-  test("shows the fingerprint seed as identity-managed instead of directly editable", () => {
+  test("shows browser profiles without exposing identity regeneration", () => {
     renderProjectSettings();
 
-    const fingerprintGroup = screen.getByRole("group", { name: "Browser fingerprint" });
-    expect(within(fingerprintGroup).getByLabelText("Fingerprint seed"))
-      .toHaveAttribute("readonly");
-    expect(within(fingerprintGroup).queryByRole("button", {
-      name: "Save fingerprint seed",
-    })).not.toBeInTheDocument();
-    expect(within(fingerprintGroup).getByText(
-      "Fingerprint seed is regenerated with the browser identity.",
-    )).toBeInTheDocument();
-    expect(within(fingerprintGroup).getByRole("button", {
-      name: "Regenerate identity",
-    })).toBeInTheDocument();
+    const profileGroup = screen.getByRole("group", { name: "Browser Profiles" });
+    expect(within(profileGroup).getByDisplayValue("Project browser profile")).toBeInTheDocument();
+    expect(within(profileGroup).getByText("Used by 1 workflow")).toBeInTheDocument();
+    expect(within(profileGroup).queryByText(/Fingerprint seed/i)).not.toBeInTheDocument();
+    expect(within(profileGroup).queryByRole("button", { name: /Regenerate identity/i }))
+      .not.toBeInTheDocument();
+  });
+
+  test("creates, renames, and confirms profile deletion through callbacks", async () => {
+    const user = userEvent.setup();
+    const onCreateProjectEnvironment = vi.fn().mockResolvedValue(undefined);
+    const onUpdateProjectEnvironment = vi.fn().mockResolvedValue(undefined);
+    const onDeleteProjectEnvironment = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ProjectEnvironmentSettings
+        project={project}
+        projectEnvironments={[{ ...projectEnvironment, id: "unused-profile", name: "Unused profile" }]}
+        workflows={[]}
+        error=""
+        onUpdateProject={vi.fn()}
+        onDuplicateProject={vi.fn()}
+        onExportProjectPackage={vi.fn()}
+        onDeleteProject={vi.fn()}
+        onCreateProjectEnvironment={onCreateProjectEnvironment}
+        onUpdateProjectEnvironment={onUpdateProjectEnvironment}
+        onDeleteProjectEnvironment={onDeleteProjectEnvironment}
+      />,
+    );
+
+    const profileGroup = screen.getByRole("group", { name: "Browser Profiles" });
+    await user.click(within(profileGroup).getByRole("button", { name: "Add profile" }));
+    const createDialog = screen.getByRole("dialog", { name: "Add browser profile" });
+    await user.type(within(createDialog).getByLabelText("Profile name"), "Buyer A");
+    await user.click(within(createDialog).getByRole("button", { name: "Create profile" }));
+    expect(onCreateProjectEnvironment).toHaveBeenCalledWith(project.id, {
+      name: "Buyer A",
+      description: null,
+    });
+
+    await user.clear(within(profileGroup).getByLabelText("Profile name for Unused profile"));
+    await user.type(within(profileGroup).getByLabelText("Profile name for Unused profile"), "Buyer B");
+    await user.click(within(profileGroup).getByRole("button", { name: "Save profile name for Unused profile" }));
+    expect(onUpdateProjectEnvironment).toHaveBeenCalledWith("unused-profile", {
+      name: "Buyer B",
+    });
+
+    await user.click(within(profileGroup).getByRole("button", { name: "Delete profile Unused profile" }));
+    const confirmDialog = screen.getByRole("dialog", { name: "Delete browser profile" });
+    expect(within(confirmDialog).getByText("Do you want to delete this browser profile?"))
+      .toBeInTheDocument();
+    await user.click(within(confirmDialog).getByRole("button", { name: "Delete profile" }));
+    expect(onDeleteProjectEnvironment).toHaveBeenCalledWith("unused-profile");
   });
 });

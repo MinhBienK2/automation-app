@@ -45,26 +45,28 @@
   Overview. Scheduled validation failures continue to use schedule events and
   are not duplicated into operational attention rows.
 - `run_workflow` loads Workflow Settings before starting the runner. Browser
-  Launch values are read from the workflow's saved settings, not from a selected
-  project environment or another workflow. Settings validation and run
-  validation happen before browser launch.
+  Launch values are resolved from the workflow's selected project browser
+  profile. Settings validation, selected-profile validation, and run validation
+  happen before browser launch.
 - Environment initial variables from Workflow Settings compile into setup
 actions before graph actions. Browser Launch settings are resolved from the
-workflow settings before the runner launches the browser.
+selected browser profile before the runner launches the browser.
 - Graph settings affect authoring only; the runner executes the edge delays already saved on the graph.
 - Domain allowlist graph nodes are promoted into a run-scope `domain_policy`. The runner enforces that policy after template rendering and before `navigate` or `open_new_tab` can call the browser navigation API. Runtime `domain_allowlist` nodes remain available as in-flow assertions.
 - Run Policy `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
 - Run Policy `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
 - Run Policy `execute_js_enabled` defaults to enabled. When disabled, `execute_js` fails before script evaluation with a clear Run Policy error so lower-risk profiles can reject direct DOM scripting while keeping the action available for authorized workflows.
-- `run_workflow_from_node` requires Run Policy `run_from_selected_enabled`,
-  selected-session Browser Launch `persistent_profile`, Run Policy browser
+- `run_workflow_from_node` requires Run Policy `run_from_selected_enabled`, the
+  selected browser profile to use a persistent profile, Run Policy browser
   retention `retain`, and a retained session owned by the same workflow/profile
   directory. Temporary retained sessions are not eligible.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
 - `set_json_variables` renders its JSON text, requires a root object, and writes flattened keys into the browser output store.
 - `repeat_for_each` can use either a manual item list or an `array_variable` that points at an array in the browser output store. Missing or non-array variable sources fail the action before running the loop body.
 - `while_loop` and `repeat_until` honor configured timeouts as well as max-attempt guards. `repeat_until.timeout_steps` run when the predicate remains false after max attempts or timeout.
-- Browser identity, proxy, profile, and download behavior belong in Workflow Settings Browser Launch, not in in-run action nodes.
+- Browser identity, proxy, profile, and download behavior belong in project
+  browser profiles selected by Workflow Settings Browser Launch, not in in-run
+  action nodes.
 - `set_viewport` changes only runtime viewport width and height. Workflow Settings Browser Launch no longer exposes viewport width, viewport height, device scale factor, mobile mode, or touch capability controls.
 - Click, double click, hover, fill, select, checkbox, and drag/drop prefer CloakBrowser-patched locator/frame APIs so CloakBrowser owns supported humanization.
 - Runner action traces record compact action mode/status metadata. Failed traces also include a compact action summary when available, such as the target locator or output assertion, and inlined Call Subflow step ordinal metadata when present, so monitor/log views can distinguish repeated labels. Nested branch/body traces also record parent control node id, sequence order, timestamps, output summary, evidence summary, and failure reason when present. The runner also keeps an internal interaction capability map: CloakBrowser-native for supported element/page/frame APIs, CloakBrowser-assisted or custom human behavior for app-owned interaction timing such as scroll, and direct DOM for read/assert/storage or final fallback paths.
@@ -115,7 +117,10 @@ workflow settings before the runner launches the browser.
 
 ## Browser Sessions
 
-- Runner launches CloakBrowser Chromium through `BrowserWorkflowRunner`; `humanize` defaults to enabled and can be disabled from Workflow Settings Browser Launch. The `human_preset` setting maps to CloakBrowser `humanPreset` and supports `default` or `careful`.
+- Runner launches CloakBrowser Chromium through `BrowserWorkflowRunner`;
+  `humanize` defaults to enabled from the selected browser profile. The
+  `human_preset` setting maps to CloakBrowser `humanPreset` and supports
+  `default` or `careful`.
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
 - Browser sessions are retained after success, failure, and stop by the Electron runner unless retention settings or terminal configs request closure.
 - The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
@@ -125,13 +130,13 @@ workflow settings before the runner launches the browser.
   guarded command. This releases only the retained in-memory browser context;
   it does not remove the persistent profile directory, saved identity settings,
   cookies/login state, evidence files, or historical run rows.
-- The workflow's saved Browser Launch settings resolve the browser identity
-  before the browser starts. `BrowserSessionManager` maps persistent versus
+- The workflow's selected browser profile resolves the browser identity before
+  the browser starts. `BrowserSessionManager` maps persistent versus
   temporary storage, stable profile directory, fingerprint seed, fingerprint
   fonts directory, proxy server/bypass/credentials, explicit timezone/locale or
   local machine timezone/locale, GeoIP, supported WebRTC policy values,
   humanize toggle/preset, and headless mode into CloakBrowser launch options.
-  New workflow and project saved identities enable GeoIP by default, and blank legacy location
+  New browser profiles enable GeoIP by default, and blank legacy location
   settings normalize back to GeoIP, so CloakBrowser resolves blank
   timezone/locale fields from the current public or proxy exit IP. Running with
   GeoIP off requires explicit timezone and locale values. It also applies the
@@ -147,7 +152,13 @@ workflow settings before the runner launches the browser.
   screen-size overrides. In-run Set Viewport can still change runtime viewport
   later.
 - Real headed CloakBrowser launches on Linux require `DISPLAY` or `WAYLAND_DISPLAY`; otherwise the runner fails with a clear startup prerequisite error before starting Chromium.
-- Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the selected session identity fingerprint seed stable. Linking a workflow to another session reuses that session's profile/fingerprint bundle; forking creates a new selected session identity without copying local browser storage. Confirmed project identity regeneration replaces the project saved-session profile key and deletes the old unshared local profile directory. Confirmed project deletion removes only unshared local profile directories for sessions contained by that project after active-run and retained-session guards pass.
+- Persistent profile data is stored under the user's app data directory in
+  `automation-app/browser-profiles/<profile_dir>`, not under the OS temp
+  directory. Creating a new browser profile creates a new identity/profile/seed
+  bundle. Deleting an unused browser profile removes its local profile directory.
+  Confirmed project deletion removes only unshared local profile directories for
+  profiles contained by that project after active-run and retained-session guards
+  pass.
 - `browser_identity` run evidence records CloakBrowser wrapper/binary version, binary installed status, fingerprint seed hash, configured fingerprint font hash when available, sanitized selected persona metadata and rationale, timezone/locale source, GeoIP/supported WebRTC policy, active advanced override names such as `fingerprint_fonts_dir`, and configured humanization status/preset. Package export redacts proxy passwords, proxy URL credentials, and local fingerprint font directories.
 - Final run outputs include `__evidence_model`, a per-output category/limit/redaction manifest. It preserves structured action traces and generated artifact metadata while redacting sensitive arbitrary page-observation outputs and limiting oversized strings, arrays, and objects. `execute_js` remains available for authorized testing, can be disabled per workflow through Run Policy, and its traces carry explicit direct-DOM audit tags when allowed.
 

@@ -92,6 +92,17 @@ export function updateProjectEnvironment(
   return bridge().updateProjectEnvironment(environmentId, input);
 }
 
+export function deleteProjectEnvironment(environmentId: string) {
+  return bridge().deleteProjectEnvironment(environmentId);
+}
+
+export function setWorkflowProjectEnvironment(
+  workflowId: string,
+  environmentId: string,
+) {
+  return bridge().setWorkflowProjectEnvironment(workflowId, environmentId);
+}
+
 export function resetProjectEnvironmentBrowserIdentity(environmentId: string) {
   return bridge().resetProjectEnvironmentBrowserIdentity(environmentId);
 }

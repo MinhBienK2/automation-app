@@ -244,6 +244,29 @@ export class WorkflowRepository {
     return next;
   }
 
+  deleteProjectEnvironment(environmentId: string) {
+    this.database.prepare("DELETE FROM project_environments WHERE id = ?").run(environmentId);
+  }
+
+  listWorkflowsUsingEnvironment(environmentId: string): WorkflowSummary[] {
+    return this.database
+      .prepare(
+        `SELECT workflows.id,
+                workflows.project_id,
+                workflows.environment_id,
+                project_environments.name AS environment_name,
+                workflows.name,
+                workflows.created_at,
+                workflows.updated_at
+         FROM workflows
+         LEFT JOIN project_environments ON project_environments.id = workflows.environment_id
+         WHERE workflows.environment_id = ?
+         ORDER BY workflows.name ASC`,
+      )
+      .all(environmentId)
+      .map((row) => rowToSummary(row as WorkflowRow));
+  }
+
   createWorkflow(
     name: string,
     graph: WorkflowGraph,
@@ -336,6 +359,19 @@ export class WorkflowRepository {
         "UPDATE workflows SET project_id = ?, environment_id = NULL, updated_at = ? WHERE id = ?",
       )
       .run(projectId, now.toISOString(), id);
+  }
+
+  assignWorkflowProjectEnvironment(
+    id: string,
+    environmentId: string,
+    now = new Date(),
+  ): Workflow | null {
+    const workflow = this.getWorkflow(id)?.workflow ?? null;
+    if (!workflow) return null;
+    this.database
+      .prepare("UPDATE workflows SET environment_id = ?, updated_at = ? WHERE id = ?")
+      .run(environmentId, now.toISOString(), id);
+    return this.getWorkflow(id)?.workflow ?? null;
   }
 
   deleteWorkflow(id: string) {

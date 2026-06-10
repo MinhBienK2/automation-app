@@ -21,10 +21,10 @@
 Frontend and backend must agree on:
 
 - `Project`: `id`, `name`, optional description, default flag, timestamps.
-- `ProjectEnvironment`: compatibility DTO for project saved identities with
+- `ProjectEnvironment`: compatibility DTO for project browser profiles with
   `id`, `project_id`, `name`, optional
   description, `is_default`, `browser_launch`, and timestamps. The renderer
-  exposes the default row as a single project saved session rather than a full
+  exposes rows as Browser Profiles in Project Settings rather than a full
   Project Environment editor.
 - `WorkflowSummary`: `id`, `project_id`, `environment_id`, optional
   `environment_name`, `name`, `step_count`, `created_at`, `updated_at`.
@@ -77,10 +77,10 @@ Frontend and backend must agree on:
   and list/rotation limits.
 - `IdentityLabOverview`: backend-owned Identity Lab DTO with current managed
   identity summaries, selected detail, counts, and data warnings.
-- `ManagedIdentitySummary`: one workflow-owned current browser identity row
-  with workflow/identity refs, session/profile reuse, retained-session state,
-  configured posture summary, last matching run, recent failure count, and
-  warning badges.
+- `ManagedIdentitySummary`: one current browser identity row derived from a
+  workflow's selected project browser profile, with workflow/identity refs,
+  session/profile reuse, retained-session state, configured posture summary,
+  last matching run, recent failure count, and warning badges.
 - `IdentityLabDetail`: either a managed identity detail with configured
   posture, latest observed browser identity evidence, matching run/evidence
   summary, rotation history, sanitized diagnostics, and action availability,
@@ -112,9 +112,9 @@ Frontend and backend must agree on:
 
 ## Workflow Settings Shape
 
-Workflow Settings are persisted separately from graph JSON. Browser Launch
-inside Workflow Settings is the workflow-owned identity/posture used for
-workflow execution:
+Workflow Settings are persisted separately from graph JSON. A workflow's
+selected project browser profile supplies the Browser Launch identity/posture
+used for workflow execution:
 
 ```text
 {
@@ -184,14 +184,37 @@ workflow execution:
 }
 ```
 
-`identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. New and rotated backend-owned identities use high-entropy `bi_<32 hex>` ids. `fingerprint_seed` is generated when an identity is created, deterministically derived from the identity id for backend rotations, collision-probed against other saved workflow and project-session seeds, and reused until the operator resets the identity or edits a project saved-session seed. `profile_name` mirrors `profile_dir` for persistent-profile runs. `persona_id` selects a stable catalog persona, and `persona` stores the resolved OS/browser bucket, viewport/window dimensions, timezone/locale metadata, proxy/geo policy, WebRTC mode, font bundle metadata, account label/test account binding, and behavior timing profile for that workflow identity. `timezone` and `locale` are explicit operator overrides; new workflow defaults enable GeoIP, so blank values remain omitted and CloakBrowser resolves them from the current public or proxy exit IP. Blank legacy values also normalize back to GeoIP. To run with GeoIP disabled, the identity should carry explicit timezone and locale values. `src/lib/personaCatalog.ts` is the shared catalog source used by frontend defaults and backend normalization. `fingerprint_fonts_dir` is an optional local readable directory passed to CloakBrowser as the managed font inventory for the launch identity. New or lazy backend defaults use the repo-local `.local/cloakbrowser-fonts/linux` directory when it exists and is readable; an explicit saved `null` remains cleared, and persona font bundle paths are still used when selected persona defaults provide one and no explicit directory is set. Package export removes this local absolute path.
+Within a browser profile's `browser_launch`, `identity_id` and `profile_dir` are
+stable storage identifiers. New backend-owned identities use high-entropy
+`bi_<32 hex>` ids. `fingerprint_seed` is generated when a profile identity is
+created, collision-probed against other saved browser profile seeds, and reused
+for that profile. `profile_name` mirrors `profile_dir` for persistent-profile
+runs. `persona_id` selects a stable catalog persona, and `persona` stores the
+resolved OS/browser bucket, viewport/window dimensions, timezone/locale
+metadata, proxy/geo policy, WebRTC mode, font bundle metadata, account
+label/test account binding, and behavior timing profile for that profile
+identity. `timezone` and `locale` are explicit profile overrides; new profiles
+enable GeoIP, so blank values remain omitted and CloakBrowser resolves them from
+the current public or proxy exit IP. Blank legacy values also normalize back to
+GeoIP. To run with GeoIP disabled, the profile should carry explicit timezone
+and locale values. `src/lib/personaCatalog.ts` is the shared catalog source used
+by frontend defaults and backend normalization. `fingerprint_fonts_dir` is an
+optional local readable directory passed to CloakBrowser as the managed font
+inventory for the launch identity. New or lazy backend defaults use the
+repo-local `.local/cloakbrowser-fonts/linux` directory when it exists and is
+readable; an explicit saved `null` remains cleared, and persona font bundle paths
+are still used when selected persona defaults provide one and no explicit
+directory is set. Package export removes this local absolute path.
 
 Proxy credentials can be provided as URL credentials or separate
 username/password fields, but not both. Package export removes proxy passwords
 proxy URL credentials, and local fingerprint font directories. Raw Chromium
 argument text and ad hoc fingerprint override fields are not part of the public
 settings contract.
-CloakBrowser humanization defaults to `true` and is persisted as the Browser Launch `humanize` toggle. `human_preset` maps to CloakBrowser `humanPreset` and accepts `default` or `careful`, with invalid or missing persisted values normalized through the selected persona timing profile.
+CloakBrowser humanization defaults to `true` in browser profiles. `human_preset`
+maps to CloakBrowser `humanPreset` and accepts `default` or `careful`, with
+invalid or missing persisted values normalized through the selected persona
+timing profile.
 
 Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
@@ -311,26 +334,23 @@ workflow/profile. When `deleteBrowserProfile` is true, the backend removes only
 the deleting workflow's private profile directory; shared or active-session
 profile directories are retained.
 
-`resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy bypass, locale/timezone, humanization, and `fingerprint_fonts_dir` are preserved, `run_policy.run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
-
-`resetProjectEnvironmentBrowserIdentity` is the command boundary for project saved-session identity rotation. After UI confirmation, it returns the updated project environment after replacing `identity_id`, persistent profile fields, and `fingerprint_seed`, while preserving non-storage Browser Launch preferences and deleting the old unshared local project profile directory.
-
-Workflow Browser Launch settings are stored on `WorkflowSettings` and are not
-resolved from a selected `ProjectEnvironment` at run time. Creating, duplicating,
-or importing a workflow leaves `workflow.environment_id` null; project saved
-identities remain project-scoped settings data. Operator-triggered workflow
-identity rotation uses `resetWorkflowBrowserIdentity`.
+Legacy identity reset commands remain guarded backend compatibility commands, but
+the product UI gets new identities by creating project browser profiles. Browser
+Launch runtime values resolve from the workflow's selected `ProjectEnvironment`.
+Creating a workflow assigns a project browser profile; duplicating a workflow
+preserves the selected profile; importing a workflow package with Browser Launch
+creates a private imported profile for that workflow.
 
 `createProject` returns the created `Project` after trimming a non-empty
-project name and also persists that project's default saved session plus an
+project name and also persists that project's initial browser profile plus an
 initial draft workflow named `Main`. `updateProject` returns the updated
 `Project` after trimming non-empty project names. `duplicateProject` returns the newly created `Project` after copying
-project environments, subflows, workflows, workflow graphs, and settings into a
-new project with remapped copied subflow references and fresh browser identity
+browser profiles, subflows, workflows, workflow graphs, and settings into a
+new project with remapped copied subflow references and fresh browser profile
 storage values. `deleteProject` returns no payload; it removes the project and
-its contained workflows/subflows/sessions after command guards pass.
+its contained workflows/subflows/profiles after command guards pass.
 
-Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh backend-generated `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona and `fingerprint_fonts_dir` are preserved, and `run_policy.run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
+Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. It preserves the selected browser profile and resets `run_policy.run_from_selected_enabled` to false so the copy cannot reuse the source retained session implicitly.
 
 ## Batch Run Shape
 
@@ -409,7 +429,7 @@ startRecordingSession({
 ```
 
 `new_workflow` starts from a backend-owned unsaved Workflow Settings draft with
-a fresh browser identity and `workflow_id: null` on the public session.
+a fresh recorder browser identity and `workflow_id: null` on the public session.
 `replace_current_graph` starts from the existing workflow's saved Workflow
 Settings and returns the workflow id on the public session. It rejects active
 workflow, active profile, and active batch conflicts before launch. Public
@@ -520,7 +540,7 @@ evidence context so rotated identity observations remain inspectable.
 ## Identity Lab Shape
 
 Identity Lab is a read model, not a new identity catalog table. Managed
-identity rows are derived from current Workflow Settings Browser Launch values.
+identity rows are derived from current selected browser profile Browser Launch values.
 Run metrics match exact current `workflow_id` and `identity_id` from the run
 settings snapshot, with a safe fallback to sanitized `browser_identity` output
 only when the run association is unambiguous. Runs from previous identities are
@@ -595,7 +615,7 @@ plans use the same subflow resolver as full workflow plans. Nodes inside
 branch/loop/retry/try/fallback bodies are rejected for run-from-selected until
 nested execution semantics are designed.
 
-Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser Launch identity settings are applied by the runner/session manager rather than compiled into graph prelude actions.
+Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser Launch identity settings from the selected browser profile are applied by the runner/session manager rather than compiled into graph prelude actions.
 
 Executable frontend/backend ports must agree:
 

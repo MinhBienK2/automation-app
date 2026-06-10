@@ -245,13 +245,15 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         `Copy of ${sourceProject.name}`,
         sourceProject.description,
       );
+      const environmentIdMap = new Map<string, string>();
       for (const environment of sourceEnvironments) {
-        deps.repository.createProjectEnvironment(createdProject.id, {
+        const copiedEnvironment = deps.repository.createProjectEnvironment(createdProject.id, {
           name: environment.name,
           description: environment.description,
           is_default: environment.is_default,
           browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
         });
+        environmentIdMap.set(environment.id, copiedEnvironment.id);
       }
       deps.ensureDefaultProjectEnvironment(createdProject);
 
@@ -270,6 +272,18 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         const copiedWorkflow = deps.createWorkflow(workflow.name, {
           project_id: createdProject.id,
         });
+        const selectedEnvironmentId = workflow.environment_id
+          ? environmentIdMap.get(workflow.environment_id) ?? null
+          : null;
+        if (selectedEnvironmentId) {
+          deps.repository.assignWorkflowProjectEnvironment(
+            copiedWorkflow.id,
+            selectedEnvironmentId,
+          );
+        }
+        const selectedEnvironment = selectedEnvironmentId
+          ? deps.repository.getProjectEnvironment(selectedEnvironmentId)
+          : null;
         const graph = deps.repository.getWorkflowGraph(workflow.id);
         if (graph) {
           deps.repository.saveWorkflowGraph(
@@ -284,7 +298,8 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
             duplicateProjectWorkflowSettings(
               settings,
               copiedWorkflow,
-              duplicateProjectBrowserLaunch(settings.browser_launch),
+              selectedEnvironment?.browser_launch ??
+                deps.getSettings(copiedWorkflow.id).browser_launch,
             ),
           );
         }
@@ -306,13 +321,15 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         preparedImport.importedName,
         preparedImport.description,
       );
+      const environmentIdMap = new Map<string, string>();
       for (const environment of preparedImport.environments) {
-        deps.repository.createProjectEnvironment(createdProject.id, {
+        const createdEnvironment = deps.repository.createProjectEnvironment(createdProject.id, {
           name: environment.name,
           description: environment.description,
           is_default: environment.is_default,
           browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
         });
+        environmentIdMap.set(environment.id, createdEnvironment.id);
       }
       deps.ensureDefaultProjectEnvironment(createdProject);
 
@@ -331,6 +348,18 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         const createdWorkflow = deps.createWorkflow(packagedWorkflow.name, {
           project_id: createdProject.id,
         });
+        const selectedEnvironmentId = packagedWorkflow.environment_id
+          ? environmentIdMap.get(packagedWorkflow.environment_id) ?? null
+          : null;
+        if (selectedEnvironmentId) {
+          deps.repository.assignWorkflowProjectEnvironment(
+            createdWorkflow.id,
+            selectedEnvironmentId,
+          );
+        }
+        const selectedEnvironment = selectedEnvironmentId
+          ? deps.repository.getProjectEnvironment(selectedEnvironmentId)
+          : null;
         if (packagedWorkflow.flow) {
           deps.repository.saveWorkflowGraph(
             createdWorkflow.id,
@@ -351,9 +380,8 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
               ...packagedWorkflow.settings.run_policy,
               run_from_selected_enabled: false,
             },
-            browser_launch: duplicateProjectBrowserLaunch(
-              packagedWorkflow.settings.browser_launch,
-            ),
+            browser_launch: selectedEnvironment?.browser_launch ??
+              deps.getSettings(createdWorkflow.id).browser_launch,
             created_at: createdWorkflow.created_at,
             updated_at: createdWorkflow.updated_at,
           });

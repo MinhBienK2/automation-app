@@ -49,7 +49,7 @@ export function runFromSelectedState({
   if (!retainedProfileKey) {
     return {
       enabled: false,
-      reason: "Enable Reuse login session in Workflow Settings first.",
+      reason: "Select a persistent browser profile before using Run from selected.",
       visible: true,
     };
   }

@@ -11,6 +11,7 @@ import {
   createSchedule,
   deleteWorkflow,
   deleteProject,
+  deleteProjectEnvironment,
   deleteSchedule,
   disableSchedule,
   enableSchedule,
@@ -55,6 +56,7 @@ import {
   runWorkflowFromNode,
   listRunStates,
   saveWorkflowSettings,
+  setWorkflowProjectEnvironment,
   saveSubflowGraph,
   saveRecordingDraft,
   startRecordingSession,
@@ -144,6 +146,8 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.listProjectEnvironments.mockResolvedValue(undefined);
     workflowBridgeMock.createProjectEnvironment.mockResolvedValue(undefined);
     workflowBridgeMock.updateProjectEnvironment.mockResolvedValue(undefined);
+    workflowBridgeMock.deleteProjectEnvironment.mockResolvedValue(undefined);
+    workflowBridgeMock.setWorkflowProjectEnvironment.mockResolvedValue(undefined);
     workflowBridgeMock.resetProjectEnvironmentBrowserIdentity.mockResolvedValue(undefined);
     workflowBridgeMock.createSubflow.mockResolvedValue(undefined);
     workflowBridgeMock.listSubflows.mockResolvedValue(undefined);
@@ -179,6 +183,8 @@ describe("workflow API phase ten commands", () => {
       description: "Proxy posture",
     });
     await updateProjectEnvironment("environment-1", { name: "Updated" });
+    await deleteProjectEnvironment("environment-1");
+    await setWorkflowProjectEnvironment("workflow-1", "environment-2");
     await resetProjectEnvironmentBrowserIdentity("environment-1");
     await createSubflow("project-1", { name: "Login" });
     await listSubflows("project-1");
@@ -283,6 +289,13 @@ describe("workflow API phase ten commands", () => {
     expect(workflowBridgeMock.updateProjectEnvironment).toHaveBeenCalledWith(
       "environment-1",
       { name: "Updated" },
+    );
+    expect(workflowBridgeMock.deleteProjectEnvironment).toHaveBeenCalledWith(
+      "environment-1",
+    );
+    expect(workflowBridgeMock.setWorkflowProjectEnvironment).toHaveBeenCalledWith(
+      "workflow-1",
+      "environment-2",
     );
     expect(workflowBridgeMock.resetProjectEnvironmentBrowserIdentity).toHaveBeenCalledWith(
       "environment-1",

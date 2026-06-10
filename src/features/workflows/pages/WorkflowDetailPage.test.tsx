@@ -344,8 +344,38 @@ describe("Workflow detail integration", () => {
   });
 
   test("runs from the selected node when a retained persistent session is available", async () => {
+    const scenario = workflowDetailScenario([sleepStep]);
+    const browserLaunch = {
+      ...scenario.get_workflow_settings.browser_launch,
+      session_mode: "persistent_profile",
+      profile_dir: "qa-profile",
+      profile_name: "qa-profile",
+    };
+    const selectedWorkflow = {
+      ...workflow,
+      project_id: "project-1",
+      environment_id: "environment-qa",
+      environment_name: "QA profile",
+    };
     mockWorkflowBridgeCommands({
-      ...workflowDetailScenario([sleepStep]),
+      ...scenario,
+      list_workflows: () => [selectedWorkflow],
+      list_project_environments: () => [
+        {
+          id: "environment-qa",
+          project_id: "project-1",
+          name: "QA profile",
+          description: "",
+          is_default: true,
+          browser_launch: browserLaunch,
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      get_workflow: ({ id }: { id: string }) => ({
+        workflow: selectedWorkflow,
+        steps: id === selectedWorkflow.id ? [sleepStep] : [],
+      }),
       save_workflow_graph: undefined,
       get_run_state: {
         ...idleRunState,
@@ -357,19 +387,14 @@ describe("Workflow detail integration", () => {
         },
       },
       get_workflow_settings: {
-        ...workflowDetailScenario([sleepStep]).get_workflow_settings,
+        ...scenario.get_workflow_settings,
         run_policy: {
-          ...workflowDetailScenario([sleepStep]).get_workflow_settings.run_policy,
+          ...scenario.get_workflow_settings.run_policy,
           browser_retention: "retain",
           run_from_selected_enabled: true,
           run_from_selected_mode: "from_selected",
         },
-        browser_launch: {
-          ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
-          session_mode: "persistent_profile",
-          profile_dir: "qa-profile",
-          profile_name: "qa-profile",
-        },
+        browser_launch: browserLaunch,
       },
       run_workflow_from_node: {
         status: "running",
@@ -405,8 +430,38 @@ describe("Workflow detail integration", () => {
   });
 
   test("enables Run from selected when the retained session matches the profile directory", async () => {
+    const scenario = workflowDetailScenario([sleepStep]);
+    const browserLaunch = {
+      ...scenario.get_workflow_settings.browser_launch,
+      session_mode: "persistent_profile",
+      profile_dir: "qa-profile-dir",
+      profile_name: "legacy-display-name",
+    };
+    const selectedWorkflow = {
+      ...workflow,
+      project_id: "project-1",
+      environment_id: "environment-qa",
+      environment_name: "QA profile",
+    };
     mockWorkflowBridgeCommands({
-      ...workflowDetailScenario([sleepStep]),
+      ...scenario,
+      list_workflows: () => [selectedWorkflow],
+      list_project_environments: () => [
+        {
+          id: "environment-qa",
+          project_id: "project-1",
+          name: "QA profile",
+          description: "",
+          is_default: true,
+          browser_launch: browserLaunch,
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      get_workflow: ({ id }: { id: string }) => ({
+        workflow: selectedWorkflow,
+        steps: id === selectedWorkflow.id ? [sleepStep] : [],
+      }),
       save_workflow_graph: undefined,
       get_run_state: {
         ...idleRunState,
@@ -418,19 +473,14 @@ describe("Workflow detail integration", () => {
         },
       },
       get_workflow_settings: {
-        ...workflowDetailScenario([sleepStep]).get_workflow_settings,
+        ...scenario.get_workflow_settings,
         run_policy: {
-          ...workflowDetailScenario([sleepStep]).get_workflow_settings.run_policy,
+          ...scenario.get_workflow_settings.run_policy,
           browser_retention: "retain",
           run_from_selected_enabled: true,
           run_from_selected_mode: "from_selected",
         },
-        browser_launch: {
-          ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
-          session_mode: "persistent_profile",
-          profile_dir: "qa-profile-dir",
-          profile_name: "legacy-display-name",
-        },
+        browser_launch: browserLaunch,
       },
       run_workflow_from_node: {
         status: "running",
@@ -466,6 +516,19 @@ describe("Workflow detail integration", () => {
   });
 
   test("enables Run from selected for a main-path node after a merge", async () => {
+    const scenario = workflowDetailScenario([sleepStep]);
+    const browserLaunch = {
+      ...scenario.get_workflow_settings.browser_launch,
+      session_mode: "persistent_profile",
+      profile_dir: "qa-profile",
+      profile_name: "qa-profile",
+    };
+    const selectedWorkflow = {
+      ...workflow,
+      project_id: "project-1",
+      environment_id: "environment-qa",
+      environment_name: "QA profile",
+    };
     const graph: WorkflowGraph = {
       version: 2,
       nodes: [
@@ -527,7 +590,24 @@ describe("Workflow detail integration", () => {
     };
 
     mockWorkflowBridgeCommands({
-      ...workflowDetailScenario([sleepStep]),
+      ...scenario,
+      list_workflows: () => [selectedWorkflow],
+      list_project_environments: () => [
+        {
+          id: "environment-qa",
+          project_id: "project-1",
+          name: "QA profile",
+          description: "",
+          is_default: true,
+          browser_launch: browserLaunch,
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      get_workflow: ({ id }: { id: string }) => ({
+        workflow: selectedWorkflow,
+        steps: id === selectedWorkflow.id ? [sleepStep] : [],
+      }),
       get_workflow_graph: graph,
       save_workflow_graph: undefined,
       get_run_state: {
@@ -540,19 +620,14 @@ describe("Workflow detail integration", () => {
         },
       },
       get_workflow_settings: {
-        ...workflowDetailScenario([sleepStep]).get_workflow_settings,
+        ...scenario.get_workflow_settings,
         run_policy: {
-          ...workflowDetailScenario([sleepStep]).get_workflow_settings.run_policy,
+          ...scenario.get_workflow_settings.run_policy,
           browser_retention: "retain",
           run_from_selected_enabled: true,
           run_from_selected_mode: "from_selected",
         },
-        browser_launch: {
-          ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
-          session_mode: "persistent_profile",
-          profile_dir: "qa-profile",
-          profile_name: "qa-profile",
-        },
+        browser_launch: browserLaunch,
       },
       run_workflow_from_node: {
         status: "running",
@@ -618,53 +693,77 @@ describe("Workflow detail integration", () => {
   });
 
   test("opens workflow settings on the Browser Launch section from the detail header", async () => {
-    mockWorkflowBridgeCommands({
-      ...workflowDetailScenario([sleepStep]),
-      get_workflow_settings: {
-        workflow_id: "workflow-1",
-        version: 2,
-        general: {
-          name: "Login flow",
-          description: "",
-          tags: [],
-          notes: "",
-          created_at: "1",
-          updated_at: "1",
-        },
-        run_policy: {
-          max_workflow_duration_ms: null,
-          browser_retention: "retain",
-          batch_concurrency_limit: 1,
-          batch_headless: false,
-          batch_stop_on_first_failed_row: false,
-        },
-        browser_launch: {
-          session_mode: "persistent_profile",
-          identity_id: "bi_workflow-1",
-          display_name: "QA Profile identity",
-          profile_dir: "bi_workflow-1",
-          fingerprint_seed: "14523",
-          profile_name: "bi_workflow-1",
-          fingerprint_fonts_dir: null,
-          timezone: null,
-          locale: null,
-          geoip: false,
-          webrtc_policy: "default",
-          webrtc_ip: null,
-          proxy_enabled: true,
-          proxy_server: "http://proxy.local:8080",
-          proxy_username: "agent",
-          proxy_password: "secret",
-          headless: false,
-        },
-        environment: {
-          initial_variables: [],
-        },
-        migration_notes: [],
+    const project = {
+      id: "project-1",
+      name: "Main",
+      description: "",
+      created_at: "1",
+      updated_at: "1",
+    };
+    const selectedWorkflow = {
+      ...workflow,
+      project_id: project.id,
+      environment_id: "environment-main",
+      environment_name: "Default browser profile",
+    };
+    const scenario = workflowDetailScenario([sleepStep]);
+    const releaseBrowserLaunch = {
+      ...scenario.get_workflow_settings.browser_launch,
+      identity_id: "bi-release",
+      display_name: "Release profile identity",
+      profile_dir: "bi-release",
+      profile_name: "bi-release",
+    };
+    const projectEnvironments = [
+      {
+        id: "environment-main",
+        project_id: project.id,
+        name: "Default browser profile",
+        description: "Default project browser profile",
+        is_default: true,
+        browser_launch: scenario.get_workflow_settings.browser_launch,
         created_at: "1",
         updated_at: "1",
       },
+      {
+        id: "environment-release",
+        project_id: project.id,
+        name: "Release profile",
+        description: "Release test browser profile",
+        is_default: false,
+        browser_launch: releaseBrowserLaunch,
+        created_at: "2",
+        updated_at: "2",
+      },
+    ];
+    const currentSettings = {
+      ...scenario.get_workflow_settings,
+      browser_launch: scenario.get_workflow_settings.browser_launch,
+    };
+
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      list_projects: [project],
+      list_workflows: () => [selectedWorkflow],
+      list_project_environments: () => projectEnvironments,
+      get_workflow: ({ id }: { id: string }) => ({
+        workflow: selectedWorkflow,
+        steps: id === selectedWorkflow.id ? [sleepStep] : [],
+      }),
+      get_workflow_settings: {
+        ...currentSettings,
+        browser_launch: releaseBrowserLaunch,
+      },
       save_workflow_settings_section: undefined,
+      set_workflow_project_environment: ({
+        environmentId,
+      }: {
+        environmentId: string;
+      }) => ({
+        ...selectedWorkflow,
+        environment_id: environmentId,
+        environment_name: "Release profile",
+      }),
     });
 
     renderApp();
@@ -696,43 +795,32 @@ describe("Workflow detail integration", () => {
     await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }));
     expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
       .toHaveAttribute("aria-selected", "true");
-    expect(within(settingsDialog).getByLabelText("Identity display name")).toHaveValue(
-      "QA Profile identity",
-    );
-    expect(within(settingsDialog).getByLabelText("Identity id")).toHaveValue(
-      "bi_workflow-1",
-    );
+    const profileSelect = within(settingsDialog).getByLabelText("Browser profile");
+    expect(profileSelect).toHaveValue("environment-main");
+    expect(within(settingsDialog).queryByLabelText("Identity display name"))
+      .not.toBeInTheDocument();
+    expect(within(settingsDialog).queryByLabelText("Identity id")).not.toBeInTheDocument();
     expect(within(settingsDialog).queryByLabelText("Profile directory"))
       .not.toBeInTheDocument();
-    expect(within(settingsDialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
-    expect(within(settingsDialog).getByRole("switch", { name: "Reuse login session" }))
-      .toHaveAttribute("aria-checked", "true");
-    expect(within(settingsDialog).getByRole("switch", { name: "Use proxy" }))
-      .toHaveAttribute("aria-checked", "true");
-    await userEvent.clear(within(settingsDialog).getByLabelText("Identity display name"));
-    await userEvent.type(within(settingsDialog).getByLabelText("Identity display name"), "Release identity");
+    expect(within(settingsDialog).queryByLabelText("Fingerprint seed")).not.toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("switch", { name: "Reuse login session" }))
+      .not.toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("switch", { name: "Use proxy" }))
+      .not.toBeInTheDocument();
+    await userEvent.selectOptions(profileSelect, "environment-release");
     await userEvent.click(within(settingsDialog).getByRole("button", {
-      name: "Browser Identity Settings Help",
+      name: "Browser Profile Help",
     }));
-    expect(await screen.findByText("Browser Identity Settings Help")).toBeInTheDocument();
+    expect(await screen.findByText("Browser Profile Help")).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(within(settingsDialog).getByRole("button", {
       name: "Save Settings",
     }));
 
-    expect(workflowCommandCallMock).toHaveBeenCalledWith("save_workflow_settings_section", {
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("set_workflow_project_environment", {
       workflowId: "workflow-1",
-      section: "browser_launch",
-      sectionValue: expect.objectContaining({
-        session_mode: "persistent_profile",
-        display_name: "Release identity",
-        profile_dir: "bi_workflow-1",
-        fingerprint_seed: "14523",
-        fingerprint_fonts_dir: null,
-        proxy_enabled: true,
-        proxy_server: "http://proxy.local:8080",
-      }),
+      environmentId: "environment-release",
     });
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Workflow settings saved.",
@@ -752,7 +840,7 @@ describe("Workflow detail integration", () => {
       ...workflow,
       project_id: project.id,
       environment_id: "environment-main",
-      environment_name: "Project saved session",
+      environment_name: "Project browser profile",
     };
     const mainBrowserLaunch = scenario.get_workflow_settings.browser_launch;
     const currentSettings = {
@@ -763,7 +851,7 @@ describe("Workflow detail integration", () => {
       {
         id: "environment-main",
         project_id: project.id,
-        name: "Project saved session",
+        name: "Project browser profile",
         description: "Default project browser session",
         is_default: true,
         browser_launch: mainBrowserLaunch,
@@ -807,14 +895,20 @@ describe("Workflow detail integration", () => {
     expect(within(settingsDialog).queryByRole("button", {
       name: "Fork current session",
     })).not.toBeInTheDocument();
-    expect(within(settingsDialog).getByLabelText("Fingerprint seed"))
-      .toHaveAttribute("readonly");
+    expect(within(settingsDialog).getByLabelText("Browser profile"))
+      .toHaveValue("environment-main");
+    expect(within(settingsDialog).queryByLabelText("Fingerprint seed"))
+      .not.toBeInTheDocument();
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
       "set_workflow_environment",
       expect.anything(),
     );
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
       "fork_workflow_session",
+      expect.anything(),
+    );
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
+      "set_workflow_project_environment",
       expect.anything(),
     );
   }, 10_000);

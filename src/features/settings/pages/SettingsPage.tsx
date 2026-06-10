@@ -191,7 +191,7 @@ export function SettingsPage({
             <DialogTitle>Cleanup orphaned profiles</DialogTitle>
             <DialogDescription>
               This deletes local inactive browser profile directories that are no
-              longer referenced by a workflow or project saved session.
+              longer referenced by a workflow or project browser profile.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="form-actions">

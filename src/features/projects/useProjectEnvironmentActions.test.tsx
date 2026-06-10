@@ -74,7 +74,7 @@ function environment(id: string): ProjectEnvironment {
   return {
     id,
     project_id: "project-1",
-    name: "Project saved session",
+    name: "Project browser profile",
     description: "",
     is_default: true,
     browser_launch: browserLaunch(),

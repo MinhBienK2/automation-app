@@ -48,6 +48,8 @@ string map.
 - `listProjectEnvironments`
 - `createProjectEnvironment`
 - `updateProjectEnvironment`
+- `deleteProjectEnvironment`
+- `setWorkflowProjectEnvironment`
 - `resetProjectEnvironmentBrowserIdentity`
 - `createSubflow`
 - `listSubflows`
@@ -119,45 +121,47 @@ string map.
 - `saveRecordingDraft`
 - `dryRunValidateConfig`
 
-Project commands expose default-project and compatibility project-session
-management to the renderer. `createProject(input)` creates the project, default
-project saved session, and an initial draft workflow named `Main` in one
+Project commands expose default-project and compatibility project-profile
+management to the renderer. `createProject(input)` creates the project, initial
+browser profile, and an initial draft workflow named `Main` in one
 transaction, then returns the created `Project`. `updateProject(projectId, input)` renames or updates
 the selected project metadata. `duplicateProject(projectId)` creates an
 independent `Copy of <name>` project with copied environments, subflows,
 workflows, remapped Call Subflow references, and fresh browser
-identity/profile/fingerprint values for copied sessions. `deleteProject(projectId)`
+identity/profile/fingerprint values for copied profiles. `deleteProject(projectId)`
 deletes the project after active-run/profile/retained-session guards pass,
 removing workflows before the project row so workflows are not orphaned.
 `createWorkflow(name, options?)` accepts an optional project id. Omitted options
-use the default project. Workflow creation does not accept session/environment
-selection and persists workflow-owned Browser Launch defaults.
-`updateProjectEnvironment` remains the project-session metadata/update command,
-but the product UI treats fingerprint seeds as identity-managed values rather
-than direct edits. `resetProjectEnvironmentBrowserIdentity(environmentId)`
-returns the updated project session after backend-generating a new identity id,
-profile fields, and deterministic fingerprint seed while preserving non-storage
-Browser Launch preferences and deleting the old unshared local project profile
-directory after UI confirmation. Subflow commands expose project-scoped
+use the default project and assign its initial browser profile. `createProjectEnvironment`
+creates a new browser profile for a project, `updateProjectEnvironment` renames
+or updates profile metadata, `deleteProjectEnvironment(environmentId)` deletes
+an unused profile plus its local browser storage, and
+`setWorkflowProjectEnvironment(workflowId, environmentId)` selects the browser
+profile used by a workflow. Deletion is rejected while workflows select the
+profile. `resetProjectEnvironmentBrowserIdentity(environmentId)` remains a
+legacy guarded backend command, but the product UI gets new identities by
+creating profiles instead of exposing regeneration. Subflow commands expose project-scoped
 reusable graphs, metadata rename through `updateSubflow`, usage queries,
 guarded deletion, and graph save/load.
 
-Workflow Browser Launch settings are read and written through workflow settings
-commands. The IPC surface does not include workflow runtime identity-source
-selection or identity cloning commands; project saved identities are managed
-through project environment commands only.
+Workflow Browser Launch reads the selected browser profile through
+`getWorkflowSettings` and changes selection through
+`setWorkflowProjectEnvironment`. Legacy Browser Launch saves are applied to the
+selected profile so older command callers stay consistent with profile-owned
+runtime identity; the product UI does not expose identity field editing or
+workflow identity reset.
 
 `importWorkflowPackage(packageValue, options)` accepts the selected Flow and
 Settings sections plus optional `target_project_id`. When present, the backend
 creates the imported workflow and recreated subflows in that project. Importing
-Browser Launch saves sanitized Browser Launch values onto the imported workflow
-instead of mutating the target project's saved identity.
+  Browser Launch creates a private imported browser profile for the imported
+  workflow instead of mutating an existing target-project profile.
 
 `exportProjectPackage(projectId)` returns a full `project_package` JSON payload
 for the selected project. `previewProjectPackage(packageValue)` validates and
 summarizes project package contents. `importProjectPackage(packageValue)`
 validates the package, then creates a new `<project name> (imported)` project
-with recreated sessions, subflows, workflows, remapped Call Subflow ids, and
+  with recreated browser profiles, subflows, workflows, remapped Call Subflow ids, and
 fresh imported browser identities/profiles. It does not import runs, evidence,
 schedules, app settings, or browser profile storage. `saveProjectPackageFile`
 owns the native Save dialog and JSON file write for `.project.json` exports.
@@ -168,17 +172,15 @@ deletes the workflow's private browser profile directory only if no other
 workflow still references it, no active run owns the workflow/profile, and no
 retained session is active.
 
-`resetWorkflowBrowserIdentity(workflowId)` rotates the Browser Launch identity
-in the backend. It persists and returns updated Workflow Settings with a
-crypto-generated `identity_id`, matching profile directory, deterministic
-CloakBrowser-compatible seed, disabled Run from selected, and a migration note
-recording the old and new identity. The command rejects while the workflow or
-profile is active or a retained session still owns the profile.
+`resetWorkflowBrowserIdentity(workflowId)` remains a legacy guarded backend
+identity rotation command for compatibility. The current product UI does not
+expose it; operators create/select browser profiles for normal identity
+rotation.
 
 `runWorkflow` and `runWorkflowFromNode` return a `WorkflowRunSnapshot` with the
 new `run_id`, workflow metadata, source, start time, and nested run state.
-Both commands resolve the workflow's saved Browser Launch settings before
-browser launch or retained-session checks.
+Both commands resolve Browser Launch from the workflow's selected browser profile
+before browser launch or retained-session checks.
 `stopRun` accepts an optional run id and returns the stopped snapshot; omitting
 the run id is valid only when exactly one workflow run is active. `listRunStates`
 returns the current app-session run snapshots for multi-run monitoring.
@@ -250,9 +252,9 @@ invalid ranges return typed command errors instead of raw runtime exceptions.
 resolves and validates file artifact paths before preview, native reveal, or
 manifest-bundle export.
 
-`getIdentityLabOverview(request?)` returns a bounded Identity Lab read model
-for workflow-owned browser identities. `getIdentityLabDetail(target)` returns
-one managed identity detail or read-only historical identity reference.
+`getIdentityLabOverview(request?)` returns a bounded Identity Lab read model for
+workflows' selected project browser profiles. `getIdentityLabDetail(target)`
+returns one managed identity detail or read-only historical identity reference.
 `closeIdentityRetainedSession(workflowId, profileName)` closes only the
 matching in-memory retained browser context after backend workflow/profile/run
 guards pass; it does not delete persistent profile data, settings, evidence,

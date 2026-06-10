@@ -100,9 +100,10 @@ describe("workflow settings model", () => {
 
       for (const language of ["en", "vi"] as const) {
         const help = helpByLanguage[language];
+        const minimumFieldGuideItems = section.id === "browser_launch" ? 1 : 3;
         expect(help.title.length).toBeGreaterThan(10);
         expect(help.summary.length).toBeGreaterThan(80);
-        expect(help.fieldGuide.length).toBeGreaterThanOrEqual(3);
+        expect(help.fieldGuide.length).toBeGreaterThanOrEqual(minimumFieldGuideItems);
         expect(help.commonMistakes.length).toBeGreaterThan(0);
 
         for (const field of help.fieldGuide) {
@@ -150,22 +151,9 @@ describe("workflow settings model", () => {
       "Batch runs are headless",
       "Stop batch on first failed row",
     ]);
-    expect(workflowSettingsHelp.browser_launch.en.title).toBe("Browser Identity Settings Help");
+    expect(workflowSettingsHelp.browser_launch.en.title).toBe("Browser Profile Help");
     expect(workflowSettingsHelp.browser_launch.en.fieldGuide.map((field) => field.name)).toEqual([
-      "Reuse login session",
-      "Identity display name",
-      "Fingerprint seed",
-      "Fingerprint fonts directory",
-      "Use proxy",
-      "Proxy server",
-      "Proxy username",
-      "Proxy password",
-      "Proxy bypass",
-      "Timezone",
-      "Locale",
-      "GeoIP location",
-      "Humanize browser input",
-      "Headless browser",
+      "Browser profile",
     ]);
     expect(workflowSettingsHelp.graph_defaults.en.title).toBe("Graph Settings Help");
     expect(workflowSettingsHelp.graph_defaults.en.fieldGuide.map((field) => field.name)).toEqual([

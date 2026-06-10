@@ -405,264 +405,82 @@ export const workflowSettingsHelp: Record<
   },
   browser_launch: {
     en: {
-      title: "Browser Identity Settings Help",
+      title: "Browser Profile Help",
       summary:
-        "Browser Identity settings control the workflow-owned CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, managed fingerprint fonts, location, and network posture.",
+        "Browser Launch selects the project browser profile used before Chromium opens. The profile owns storage, fingerprint identity, managed fonts, location, network posture, humanization, and headed/headless defaults.",
       uiLabels: enLabels,
       bestFor: [
-        "Making a workflow's device identity and network posture repeatable from the first browser request.",
-        "Keeping launch-level profile and proxy controls in one auditable settings section.",
+        "Choosing which approved browser profile a workflow should use for a run.",
+        "Keeping account state and fingerprint posture reusable across workflows in the same project.",
       ],
       notFor: ["Changing browser identity halfway through a run, resizing pages after launch, or solving human challenge flows."],
       precedence: [
-        "Browser Launch values are resolved before Chromium starts, so changes require saving settings and starting a new run.",
-        "Each workflow owns its Browser Launch identity; Reset identity rotates the workflow's identity id, profile directory, and fingerprint seed.",
+        "The selected profile is resolved before Chromium starts, so selection changes require saving settings and starting a new run.",
+        "Create a new browser profile in Project Settings when a workflow needs a new identity/profile/fingerprint bundle.",
         "In-run graph actions can still change runtime browser context only after the browser has launched.",
       ],
       fieldGuide: [
         {
-          name: "Reuse login session",
+          name: "Browser profile",
           description:
-            "Switch that chooses whether the workflow uses the identity's persistent Chromium profile storage or a temporary clean context while keeping the same browser fingerprint seed.",
+            "Project-managed browser profile selected for this workflow. The profile carries persistent storage, fingerprint seed, persona, proxy/location posture, humanization, and launch defaults.",
           whenToUse:
-            "Use it for named approved test accounts that should keep login state; turn it off for fresh storage without rotating the device identity.",
-        },
-        {
-          name: "Identity display name",
-          description:
-            "Operator-facing label for the browser identity. Renaming it changes only metadata and never moves profile storage or changes the fingerprint seed.",
-          whenToUse:
-            "Use readable names that describe the approved account, region, or workflow purpose without treating rename as a reset.",
-        },
-        {
-          name: "Fingerprint seed",
-          description:
-            "Read-only CloakBrowser seed managed as part of this workflow's browser identity so profile storage and device fingerprint stay coherent across runs.",
-          whenToUse:
-            "Use Reset identity when the test needs a different seed and browser profile.",
-        },
-        {
-          name: "Fingerprint fonts directory",
-          description:
-            "Optional readable directory of managed fonts passed to CloakBrowser at launch so owned test identities can use an explicit font inventory instead of host defaults.",
-          whenToUse:
-            "Use it only with an approved, versioned font bundle that belongs to the test environment.",
-        },
-        {
-          name: "Use proxy",
-          description:
-            "Switch that enables or disables the saved proxy route. When off, saved server and credential values remain stored but are ignored at launch.",
-          whenToUse:
-            "Use it to temporarily disable an authorized proxy without deleting the configured endpoint.",
-        },
-        {
-          name: "Proxy server",
-          description:
-            "Full proxy endpoint used when Chromium launches, such as http://proxy.local:8080, pointing to infrastructure the operator is allowed to use.",
-          whenToUse:
-            "Use it when tests must start from a specific corporate, staging, regional, or isolated network route.",
-        },
-        {
-          name: "Proxy username",
-          description:
-            "Optional username sent to the configured proxy when that proxy requires authentication separate from the proxy server URL.",
-          whenToUse:
-            "Use it only for authorized proxy accounts that issue separate credentials; leave it blank otherwise.",
-        },
-        {
-          name: "Proxy password",
-          description:
-            "Optional secret paired with Proxy username for proxy authentication. It is saved as sensitive workflow configuration and omitted from sanitized package exports.",
-          whenToUse:
-            "Use it only when the authorized proxy requires a password and avoid placing the value in notes or screenshots.",
-        },
-        {
-          name: "Proxy bypass",
-          description:
-            "Optional comma-separated domains that should connect directly instead of through the configured proxy, such as .internal.test, localhost, or 127.0.0.1.",
-          whenToUse:
-            "Use it when a workflow needs the proxy for external targets but must still reach approved local, staging, or internal hosts directly.",
-        },
-        {
-          name: "Timezone",
-          description:
-            "Optional IANA timezone passed through CloakBrowser's launch-level fingerprint flag. When blank and GeoIP is off, launch uses the detected timezone of this machine.",
-          whenToUse:
-            "Set it explicitly when the proxy or account region is known and must be reproducible across machines.",
-        },
-        {
-          name: "Locale",
-          description:
-            "Optional BCP 47 locale passed at launch. When blank and GeoIP is off, launch uses the detected locale of this machine.",
-          whenToUse:
-            "Set it with timezone and proxy region when production detection expects a specific regional browser profile.",
-        },
-        {
-          name: "GeoIP location",
-          description:
-            "CloakBrowser GeoIP mode that derives timezone and locale from the current public or proxy exit IP when the mmdb-lib dependency is installed.",
-          whenToUse:
-            "Keep it enabled by default when explicit timezone and locale values are unknown.",
-        },
-        {
-          name: "Humanize browser input",
-          description:
-            "Launch-level CloakBrowser humanization toggle and preset. The default preset uses normal human-like mouse, keyboard, and scroll timing; careful uses slower, more deliberate movement.",
-          whenToUse:
-            "Keep it enabled for production-like owned tests; choose careful when a workflow should move more slowly and cautiously through sensitive screens.",
-        },
-        {
-          name: "Headless browser",
-          description:
-            "Switch that launches Chromium without a visible window when enabled, or headed with a visible browser window when disabled.",
-          whenToUse:
-            "Use headed mode for debugging, visual review, and production-like probes; use headless only when the selected identity policy allows it.",
+            "Use separate profiles for separate approved accounts, regions, network posture, or identity experiments.",
         },
       ],
       workflowExamples: [
         {
-          title: "Persistent owned account run",
-          steps: ["Enable Reuse login session", "Confirm the workflow identity label", "Keep headed mode for review"],
+          title: "Run with an approved profile",
+          steps: ["Create or rename the profile in Project Settings", "Select it in Browser Launch", "Save settings before starting a new run"],
         },
       ],
       safetyNotes: [
-        "Proxy and profile settings must stay scoped to owned or explicitly authorized test environments.",
+        "Profiles must stay scoped to owned or explicitly authorized test environments.",
       ],
       commonMistakes: [
         {
-          mistake: "Changing proxy settings while a browser is already running.",
-          fix: "Save Browser Launch settings and start a new run because launch-level values are applied before Chromium opens.",
+          mistake: "Expecting a new identity after renaming a profile.",
+          fix: "Create a new browser profile and select it for the workflow when a new identity/profile/fingerprint bundle is needed.",
         },
       ],
     },
     vi: {
-      title: "Trợ giúp Browser Identity",
+      title: "Trợ giúp Browser Profile",
       summary:
-        "Browser Identity điều khiển identity CloakBrowser riêng của workflow trước khi Chromium mở: profile storage, fingerprint seed, bộ font fingerprint được quản lý, vị trí, và network posture.",
+        "Browser Launch chọn browser profile của project trước khi Chromium mở. Profile sở hữu storage, fingerprint identity, font, vị trí, network posture, humanization, và headed/headless defaults.",
       uiLabels: viLabels,
       bestFor: [
-        "Giữ device identity và network posture của workflow lặp lại được ngay từ request đầu tiên của browser.",
-        "Gom profile và proxy ở cấp launch vào một section dễ audit.",
+        "Chọn browser profile được phê duyệt cho workflow khi chạy.",
+        "Giữ account state và fingerprint posture dùng lại được giữa các workflow trong cùng project.",
       ],
       notFor: ["Không dùng để đổi danh tính browser giữa run, resize trang sau launch, hoặc giải human challenge."],
       precedence: [
-        "Browser Launch được resolve trước khi Chromium start, nên thay đổi cần save settings và bắt đầu run mới.",
-        "Mỗi workflow sở hữu Browser Launch identity của nó; Reset identity xoay identity id, profile directory, và fingerprint seed của workflow.",
+        "Profile được chọn sẽ resolve trước khi Chromium start, nên thay đổi cần save settings và bắt đầu run mới.",
+        "Tạo browser profile mới trong Project Settings khi workflow cần identity/profile/fingerprint bundle mới.",
         "Graph action trong run chỉ có thể đổi runtime browser context sau khi browser đã mở.",
       ],
       fieldGuide: [
         {
-          name: "Reuse login session",
+          name: "Browser profile",
           description:
-            "Switch chọn workflow dùng Chromium profile persistent của identity hay context tạm sạch, trong khi vẫn giữ cùng fingerprint seed của browser/device identity.",
+            "Browser profile do project quản lý được chọn cho workflow này. Profile chứa persistent storage, fingerprint seed, persona, proxy/location posture, humanization, và launch defaults.",
           whenToUse:
-            "Dùng cho test account được phê duyệt cần giữ login state; tắt khi muốn storage sạch mà không đổi device identity.",
-        },
-        {
-          name: "Identity display name",
-          description:
-            "Nhãn operator nhìn thấy cho browser identity. Rename chỉ đổi metadata, không move profile storage và không đổi fingerprint seed.",
-          whenToUse:
-            "Dùng tên dễ đọc mô tả account, region, hoặc mục đích workflow mà không coi rename là reset identity.",
-        },
-        {
-          name: "Fingerprint seed",
-          description:
-            "Seed CloakBrowser read-only được quản lý cùng browser identity riêng của workflow để profile storage và device fingerprint luôn nhất quán qua nhiều run.",
-          whenToUse:
-            "Dùng Reset identity khi test cần seed và browser profile khác.",
-        },
-        {
-          name: "Fingerprint fonts directory",
-          description:
-            "Thư mục font managed tùy chọn, có thể đọc được, được truyền cho CloakBrowser lúc launch để identity test owned dùng inventory font rõ ràng thay vì default của host.",
-          whenToUse:
-            "Chỉ dùng với font bundle đã được phê duyệt, version rõ ràng, thuộc môi trường test.",
-        },
-        {
-          name: "Use proxy",
-          description:
-            "Switch bật hoặc tắt tuyến proxy đã lưu. Khi tắt, server và credential vẫn được lưu nhưng bị bỏ qua lúc launch.",
-          whenToUse:
-            "Dùng để tạm tắt proxy được phép mà không xóa endpoint đã cấu hình.",
-        },
-        {
-          name: "Proxy server",
-          description:
-            "Endpoint proxy đầy đủ dùng khi Chromium launch, ví dụ http://proxy.local:8080, trỏ tới hạ tầng operator có quyền sử dụng.",
-          whenToUse:
-            "Dùng khi test phải bắt đầu từ mạng công ty, staging, regional, hoặc tuyến mạng cô lập cụ thể.",
-        },
-        {
-          name: "Proxy username",
-          description:
-            "Username tùy chọn gửi tới proxy khi proxy yêu cầu xác thực tách riêng khỏi URL proxy server.",
-          whenToUse:
-            "Chỉ dùng cho proxy account được phép có credential riêng; nếu không thì để trống.",
-        },
-        {
-          name: "Proxy password",
-          description:
-            "Secret tùy chọn đi cùng Proxy username để xác thực proxy. Đây là cấu hình workflow nhạy cảm và bị bỏ khỏi package export đã sanitize.",
-          whenToUse:
-            "Chỉ dùng khi proxy được phép yêu cầu password và tránh đưa giá trị này vào notes hoặc screenshot.",
-        },
-        {
-          name: "Proxy bypass",
-          description:
-            "Danh sách domain phân tách bằng dấu phẩy sẽ kết nối trực tiếp thay vì đi qua proxy đã cấu hình, ví dụ .internal.test, localhost, hoặc 127.0.0.1.",
-          whenToUse:
-            "Dùng khi workflow cần proxy cho target bên ngoài nhưng vẫn phải truy cập trực tiếp host local, staging, hoặc nội bộ được phép.",
-        },
-        {
-          name: "Timezone",
-          description:
-            "Timezone IANA tùy chọn được truyền qua launch-level fingerprint flag của CloakBrowser. Khi để trống và GeoIP tắt, launch dùng timezone phát hiện từ máy hiện tại.",
-          whenToUse:
-            "Set rõ khi proxy hoặc account region đã biết và phải lặp lại được trên nhiều máy.",
-        },
-        {
-          name: "Locale",
-          description:
-            "Locale BCP 47 tùy chọn được truyền lúc launch. Khi để trống và GeoIP tắt, launch dùng locale phát hiện từ máy hiện tại.",
-          whenToUse:
-            "Set cùng timezone và proxy region khi production detection kỳ vọng một regional browser profile cụ thể.",
-        },
-        {
-          name: "GeoIP location",
-          description:
-            "Chế độ GeoIP của CloakBrowser để suy ra timezone và locale từ public IP hoặc proxy exit IP hiện tại khi dependency mmdb-lib đã được cài.",
-          whenToUse:
-            "Giữ bật mặc định khi chưa có timezone và locale rõ ràng.",
-        },
-        {
-          name: "Humanize browser input",
-          description:
-            "Toggle và preset humanization cấp launch của CloakBrowser. Preset default dùng timing chuột, bàn phím, scroll giống người bình thường; careful chậm hơn và thận trọng hơn.",
-          whenToUse:
-            "Giữ bật cho test owned gần production; chọn careful khi workflow cần thao tác chậm và cẩn trọng hơn trên màn hình nhạy cảm.",
-        },
-        {
-          name: "Headless browser",
-          description:
-            "Switch launch Chromium không hiện cửa sổ khi bật, hoặc headed với cửa sổ browser nhìn thấy được khi tắt.",
-          whenToUse:
-            "Dùng headed để debug, review trực quan, và production-like probes; chỉ dùng headless khi identity policy cho phép.",
+            "Dùng profile riêng cho account, region, network posture, hoặc identity experiment được phê duyệt.",
         },
       ],
       workflowExamples: [
         {
-          title: "Run bằng owned account persistent",
-          steps: ["Bật Reuse login session", "Kiểm tra nhãn identity của workflow", "Giữ headed mode để review"],
+          title: "Run với profile được phê duyệt",
+          steps: ["Tạo hoặc rename profile trong Project Settings", "Chọn profile trong Browser Launch", "Save settings trước khi bắt đầu run mới"],
         },
       ],
       safetyNotes: [
-        "Profile và proxy phải giới hạn trong môi trường test thuộc sở hữu hoặc được ủy quyền rõ ràng.",
+        "Profile phải giới hạn trong môi trường test thuộc sở hữu hoặc được ủy quyền rõ ràng.",
       ],
       commonMistakes: [
         {
-          mistake: "Đổi proxy khi browser đang chạy.",
-          fix: "Save Browser Launch settings và bắt đầu run mới vì launch-level values được áp dụng trước khi Chromium mở.",
+          mistake: "Mong có identity mới sau khi rename profile.",
+          fix: "Tạo browser profile mới và chọn nó cho workflow khi cần identity/profile/fingerprint bundle mới.",
         },
       ],
     },

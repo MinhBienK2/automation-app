@@ -43,8 +43,8 @@ Update docs: workflow lifecycle, frontend architecture, run-state contract if mo
 
 ## Change Projects, Environments, Or Subflows
 
-Use when changing project grouping, project saved-session browser launch
-selection, workflow create session choices, compatibility Project Environment
+Use when changing project grouping, project browser profile launch
+selection, workflow create profile choices, compatibility Project Environment
 rows, subflow CRUD, Call Subflow graph nodes, or workflow package subflow
 import/export, or project package import/export.
 

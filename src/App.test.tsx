@@ -114,7 +114,7 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
 
     expect(await screen.findByRole("heading", { name: "App Settings" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Project saved session" }))
+    expect(screen.queryByRole("heading", { name: "Project browser profile" }))
       .not.toBeInTheDocument();
     const autosaveToggle = screen.getByRole("switch", {
       name: "Autosave graph changes",
@@ -169,14 +169,14 @@ describe("App settings and graph autosave", () => {
     };
     const browserLaunch = defaultWorkflowSettings({
       workflowId: "environment-default",
-      workflowName: "Project saved session",
+      workflowName: "Project browser profile",
       createdAt: "1",
       updatedAt: "1",
     }).browser_launch;
     const defaultEnvironment = {
       id: "environment-default",
       project_id: project.id,
-      name: "Project saved session",
+      name: "Project browser profile",
       description: "Default saved browser session",
       is_default: true,
       browser_launch: browserLaunch,
@@ -195,20 +195,17 @@ describe("App settings and graph autosave", () => {
 
     expect(await screen.findByRole("heading", { name: "Project identity" }))
       .toBeInTheDocument();
-    const fingerprintGroup = screen.getByRole("group", { name: "Browser fingerprint" });
-    expect(within(fingerprintGroup).getByRole("textbox", { name: "Fingerprint seed" }))
-      .toHaveValue(browserLaunch.fingerprint_seed);
-    expect(within(fingerprintGroup).getByRole("textbox", { name: "Fingerprint seed" }))
-      .toHaveAttribute("readonly");
-    expect(within(fingerprintGroup).getByText(
-      "Fingerprint seed is regenerated with the browser identity.",
-    )).toBeInTheDocument();
-    expect(within(fingerprintGroup).getByText("Identity")).toBeInTheDocument();
-    expect(within(fingerprintGroup).getByText(browserLaunch.identity_id))
+    const profilesGroup = screen.getByRole("group", { name: "Browser Profiles" });
+    expect(within(profilesGroup).getByDisplayValue("Project browser profile"))
       .toBeInTheDocument();
+    expect(within(profilesGroup).queryByText(/Fingerprint seed/i)).not.toBeInTheDocument();
+    expect(within(profilesGroup).queryByText(browserLaunch.identity_id))
+      .not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save fingerprint seed" }))
       .not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Regenerate identity" }))
+    expect(screen.queryByRole("button", { name: "Regenerate identity" }))
+      .not.toBeInTheDocument();
+    expect(within(profilesGroup).getByRole("button", { name: "Add profile" }))
       .toBeInTheDocument();
     expect(screen.queryByText("Reuse choice")).not.toBeInTheDocument();
     expect(screen.queryByText("Saved browser data")).not.toBeInTheDocument();
@@ -246,7 +243,7 @@ describe("App settings and graph autosave", () => {
     ];
     const browserLaunch = defaultWorkflowSettings({
       workflowId: "environment-default",
-      workflowName: "Project saved session",
+      workflowName: "Project browser profile",
       createdAt: "1",
       updatedAt: "1",
     }).browser_launch;
@@ -257,7 +254,7 @@ describe("App settings and graph autosave", () => {
           {
             id: "environment-default",
             project_id: "project-1",
-            name: "Project saved session",
+            name: "Project browser profile",
             description: "Default saved browser session",
             is_default: true,
             browser_launch: browserLaunch,
@@ -374,7 +371,7 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByDisplayValue("Owned Lab")).toBeInTheDocument();
   });
 
-  test("keeps the project fingerprint seed read-only in App settings", async () => {
+  test("keeps project browser profile identity details hidden in App settings", async () => {
     const project = {
       id: "project-1",
       name: "Main",
@@ -384,14 +381,14 @@ describe("App settings and graph autosave", () => {
     };
     const browserLaunch = defaultWorkflowSettings({
       workflowId: "environment-default",
-      workflowName: "Project saved session",
+      workflowName: "Project browser profile",
       createdAt: "1",
       updatedAt: "1",
     }).browser_launch;
     const currentEnvironment = {
       id: "environment-default",
       project_id: project.id,
-      name: "Project saved session",
+      name: "Project browser profile",
       description: "Default saved browser session",
       is_default: true,
       browser_launch: browserLaunch,
@@ -407,10 +404,15 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     await openProjectTab("Settings");
-    const seedInput = await screen.findByRole("textbox", { name: "Fingerprint seed" });
-    expect(seedInput).toHaveValue(browserLaunch.fingerprint_seed);
-    expect(seedInput).toHaveAttribute("readonly");
+    const profilesGroup = await screen.findByRole("group", { name: "Browser Profiles" });
+    expect(within(profilesGroup).getByDisplayValue("Project browser profile"))
+      .toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Fingerprint seed" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByText(browserLaunch.identity_id)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save fingerprint seed" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Regenerate identity" }))
       .not.toBeInTheDocument();
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
       "update_project_environment",
@@ -418,7 +420,7 @@ describe("App settings and graph autosave", () => {
     );
   });
 
-  test("regenerates the project saved session identity", async () => {
+  test("creates project browser profiles from App settings", async () => {
     const project = {
       id: "project-1",
       name: "Main",
@@ -428,38 +430,45 @@ describe("App settings and graph autosave", () => {
     };
     const browserLaunch = defaultWorkflowSettings({
       workflowId: "environment-default",
-      workflowName: "Project saved session",
+      workflowName: "Project browser profile",
       createdAt: "1",
       updatedAt: "1",
     }).browser_launch;
-    const rotatedBrowserLaunch = {
+    const createdBrowserLaunch = {
       ...browserLaunch,
       identity_id: "bi_1234567890abcdef1234567890abcdef",
       profile_dir: "bi_1234567890abcdef1234567890abcdef",
       profile_name: "bi_1234567890abcdef1234567890abcdef",
       fingerprint_seed: "99887",
     };
-    let currentEnvironment = {
+    const currentEnvironment = {
       id: "environment-default",
       project_id: project.id,
-      name: "Project saved session",
+      name: "Project browser profile",
       description: "Default saved browser session",
       is_default: true,
       browser_launch: browserLaunch,
       created_at: "1",
       updated_at: "1",
     };
+    const createdEnvironment = {
+      id: "environment-buyer",
+      project_id: project.id,
+      name: "Buyer A",
+      description: "",
+      is_default: false,
+      browser_launch: createdBrowserLaunch,
+      created_at: "2",
+      updated_at: "2",
+    };
+    let environments = [currentEnvironment];
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       list_projects: [project],
-      list_project_environments: () => [currentEnvironment],
-      reset_project_environment_browser_identity: () => {
-        currentEnvironment = {
-          ...currentEnvironment,
-          browser_launch: rotatedBrowserLaunch,
-          updated_at: "2",
-        };
-        return currentEnvironment;
+      list_project_environments: () => environments,
+      create_project_environment: () => {
+        environments = [...environments, createdEnvironment];
+        return createdEnvironment;
       },
     });
 
@@ -468,51 +477,26 @@ describe("App settings and graph autosave", () => {
     await openProjectTab("Settings");
     workflowCommandCallMock.mockClear();
 
-    await userEvent.click(await screen.findByRole("button", {
-      name: "Regenerate identity",
-    }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: "Regenerate project identity?",
-    });
-    expect(within(dialog).getByText(
-      "This will create a new fingerprint seed and identity, then delete the current local browser profile for this project session.",
-    )).toBeInTheDocument();
-    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
-      "reset_project_environment_browser_identity",
-      expect.anything(),
-    );
-
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", {
-        name: "Regenerate project identity?",
-      })).not.toBeInTheDocument();
-    });
-    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
-      "reset_project_environment_browser_identity",
-      expect.anything(),
-    );
-
-    await userEvent.click(screen.getByRole("button", {
-      name: "Regenerate identity",
-    }));
-    const confirmationDialog = await screen.findByRole("dialog", {
-      name: "Regenerate project identity?",
-    });
-    await userEvent.click(within(confirmationDialog).getByRole("button", {
-      name: "Regenerate and delete profile",
-    }));
+    const profilesGroup = await screen.findByRole("group", { name: "Browser Profiles" });
+    await userEvent.click(within(profilesGroup).getByRole("button", { name: "Add profile" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add browser profile" });
+    await userEvent.type(within(dialog).getByLabelText("Profile name"), "Buyer A");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create profile" }));
 
     await waitFor(() => {
       expect(workflowCommandCallMock).toHaveBeenCalledWith(
-        "reset_project_environment_browser_identity",
-        { environmentId: "environment-default" },
+        "create_project_environment",
+        {
+          projectId: "project-1",
+          input: { name: "Buyer A", description: null },
+        },
       );
     });
-    expect(await screen.findByDisplayValue(rotatedBrowserLaunch.fingerprint_seed))
-      .toBeInTheDocument();
-    expect(screen.getByText(rotatedBrowserLaunch.identity_id)).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("Buyer A")).toBeInTheDocument();
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
+      "reset_project_environment_browser_identity",
+      expect.anything(),
+    );
   });
 
   test("exports project packages from settings and imports project packages from the projects header", async () => {
@@ -549,12 +533,12 @@ describe("App settings and graph autosave", () => {
         {
           id: "environment-1",
           project_id: sourceProject.id,
-          name: "Project saved session",
+          name: "Project browser profile",
           description: "",
           is_default: true,
           browser_launch: defaultWorkflowSettings({
             workflowId: "environment-1",
-            workflowName: "Project saved session",
+            workflowName: "Project browser profile",
             createdAt: "1",
             updatedAt: "1",
           }).browser_launch,
@@ -669,7 +653,7 @@ describe("App settings and graph autosave", () => {
           ...workflow,
           project_id: "project-1",
           environment_id: "environment-project-1",
-          environment_name: "Project saved session",
+          environment_name: "Project browser profile",
         },
       ]),
       list_projects: projects,
@@ -677,7 +661,7 @@ describe("App settings and graph autosave", () => {
         {
           id: `environment-${projectId}`,
           project_id: projectId,
-          name: "Project saved session",
+          name: "Project browser profile",
           description: "",
           is_default: true,
           browser_launch: null,
@@ -724,12 +708,12 @@ describe("App settings and graph autosave", () => {
       name: "Main",
       project_id: createdProject.id,
       environment_id: "environment-project-2",
-      environment_name: "Project saved session",
+      environment_name: "Project browser profile",
     };
     const createdEnvironment = {
       id: "environment-project-2",
       project_id: createdProject.id,
-      name: "Project saved session",
+      name: "Project browser profile",
       description: "",
       is_default: true,
       browser_launch: null,
@@ -763,8 +747,7 @@ describe("App settings and graph autosave", () => {
     const workflowList = await screen.findByRole("region", { name: "Workflow list" });
     expect(within(workflowList).getByRole("heading", { name: "Main" }))
       .toBeInTheDocument();
-    expect(within(workflowList).getByText("Environment: Project saved session"))
-      .toBeInTheDocument();
+    expect(within(workflowList).queryByText(/Environment:/)).not.toBeInTheDocument();
     await waitFor(() => {
       expect(workflowBridgeMock.listWorkflows).toHaveBeenCalled();
     });
@@ -1304,8 +1287,10 @@ describe("App settings and graph autosave", () => {
     const settingsDialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
     expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
       .toHaveAttribute("aria-selected", "true");
-    expect(within(settingsDialog).getByLabelText("Identity display name"))
-      .toHaveValue(`${workflow.name} identity`);
+    expect(within(settingsDialog).getByLabelText("Browser profile"))
+      .toHaveValue("environment-1");
+    expect(within(settingsDialog).queryByLabelText("Identity display name"))
+      .not.toBeInTheDocument();
   });
 
   test("does not render the removed shell search header or Alerts shortcut", async () => {

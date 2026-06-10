@@ -85,21 +85,22 @@ Node/Electron backend.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Project, compatibility Project Environment, and Subflow CRUD command
   logic. `updateSubflow` owns subflow metadata rename validation, Browser Launch
-  settings for project saved identities are backend-owned, and subflow delete
-  is guarded by workflow usage. The renderer
-  exposes grouped project identity controls instead of a full Project
-  Environment list/create/editor. Project creation stays
-  backend-owned through `createProject`, which creates the project, default
-  saved session, and initial `Main` workflow transactionally. Project
+  settings for browser profiles are backend-owned, and subflow delete
+  is guarded by workflow usage. The renderer exposes grouped project details and
+  Browser Profiles controls instead of a full Project Environment editor.
+  Project creation stays backend-owned through `createProject`, which creates
+  the project, initial browser profile, and initial `Main` workflow
+  transactionally. Project
   rename/duplicate/export-package/import-package/delete stays backend-owned
   through `updateProject`, `duplicateProject`, `exportProjectPackage`,
-  `importProjectPackage`, and `deleteProject`, and project identity regeneration
-  stays backend-owned through `resetProjectEnvironmentBrowserIdentity`.
-- Workflow Browser Launch settings are command-owned through workflow settings
-  save/reset commands. Workflows do not expose commands for selecting a project
-  environment as a runtime identity source or cloning another workflow's
-  Browser Launch identity; project saved identities are managed only through
-  project identity commands.
+  `importProjectPackage`, and `deleteProject`. Browser profile creation, rename,
+  deletion, and workflow selection stay backend-owned through
+  `createProjectEnvironment`, `updateProjectEnvironment`,
+  `deleteProjectEnvironment`, and `setWorkflowProjectEnvironment`.
+- Workflow Browser Launch profile selection is command-owned through
+  `setWorkflowProjectEnvironment`. Profile identity/posture values are owned by
+  project environment commands; Workflow Settings does not expose identity
+  cloning or reset controls.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
@@ -109,11 +110,10 @@ Node/Electron backend.
 - Workflow-to-workflow nesting and subflow-to-subflow nesting are not part of
   the current workflow contract.
 - Product-facing workflow execution goes through `runWorkflow`, which runs the
-  saved workflow graph with saved Workflow Settings plus the selected project
-  saved session or private workflow-session Browser Launch settings as the run
-  baseline. The UI saves the current graph and dirty settings sections before
-  invoking it. Call Subflow nodes resolve same-project subflows and compile
-  them into the caller's run plan.
+  saved workflow graph with saved Workflow Settings plus Browser Launch resolved
+  from the selected project browser profile. The UI saves the current graph and
+  dirty settings sections before invoking it. Call Subflow nodes resolve
+  same-project subflows and compile them into the caller's run plan.
 - Manual full-run launch attempts blocked by graph/settings validation before a
   run row exists write one sanitized `launch_blocked` operational attention
   row. Manual validation alone does not write attention.
@@ -135,18 +135,19 @@ Node/Electron backend.
 - Project package import/export delegates preview/import preparation,
   package-local session/subflow/workflow validation, Call Subflow id remapping
   preparation, and export sanitization to `ProjectPackageService`; command
-  handlers create the imported project, recreated sessions, subflows, workflows,
-  graphs, and settings inside one SQLite transaction. Imported project sessions
+  handlers create the imported project, recreated profiles, subflows, workflows,
+  graphs, and settings inside one SQLite transaction. Imported project profiles
   get fresh identity/profile/fingerprint values and do not restore runs,
   evidence, schedules, app settings, or browser profile storage.
 - Production BrowserWindows keep `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`; renderer access stays limited to the typed preload bridge.
-- Product-facing local copy goes through `duplicateWorkflow`, which copies the saved graph and non-storage local settings without package-export sanitization, but creates a fresh browser identity/profile/fingerprint and disables Run from selected so the copy does not reuse the source session.
+- Product-facing local copy goes through `duplicateWorkflow`, which copies the saved graph and non-storage local settings without package-export sanitization, preserves the selected browser profile, and disables Run from selected.
 - Product-facing project copy goes through `duplicateProject`, which copies the
   project row, project environments, subflows, workflows, graphs, and
   non-storage settings, remaps copied Call Subflow references, creates fresh
-  browser identity/profile/fingerprint values for copied sessions, and disables
+  browser identity/profile/fingerprint values for copied profiles, preserves
+  workflow profile selections through mapped copied profile ids, and disables
   copied workflows' Run from selected state. Project duplicate/import/delete
-  transactions and project saved-session identity reset/profile cleanup live in
+  transactions and browser profile cleanup live in
   `projectCommandCascades.ts`.
 - Product-facing project deletion goes through `deleteProject`. It rejects while
   any workflow in that project has an active run, active profile, or retained
@@ -156,14 +157,10 @@ Node/Electron backend.
 - CloakBrowser operational commands stay in the backend: diagnostics report wrapper/binary/cache/display/GeoIP/font/profile metadata plus last smoke summary fields, install triggers `ensureBinary()`, and orphan cleanup deletes only inactive profile directories that no workflow references. Font diagnostics inspect configured font directories directly and report file counts, total bytes, normalized content hash, expected family coverage, missing/unreadable directories, and shared-directory warnings. Profile-size diagnostics are bounded by traversal entry/depth/time limits so the command path does not recursively walk unbounded Chromium storage.
 - Workflow Settings validation is service-owned and emits fingerprint-coherence warnings for proxy identities without timezone/locale or GeoIP, and for configured fingerprint fonts directories that can create a stable font hash across identities.
 - Workflow deletion accepts an explicit profile-data choice from the renderer. It keeps browser profile data by default, deletes only unshared profile directories when requested, and rejects deletion while that workflow has an active run, while that workflow's profile is owned by an active run, or while that workflow's retained browser session still owns the profile.
-- Browser identity rotation is command-owned through `resetWorkflowBrowserIdentity`. The backend generates the new high-entropy identity id, derives the CloakBrowser-compatible seed, persists a migration-note audit event, preserves non-storage Browser Launch preferences, disables Run from selected, and rejects reset while the workflow/profile is active or retained.
-- Project saved-session identity rotation is command-owned through
-  `resetProjectEnvironmentBrowserIdentity`. The backend generates the new
-  high-entropy identity id, derives the CloakBrowser-compatible seed, updates
-  matching profile fields, preserves non-storage Browser Launch preferences,
-  deletes the old unshared project profile directory after the persisted update,
-  and rejects reset while a workflow using that environment has an active run,
-  active profile, or retained session.
+- Legacy browser identity rotation commands remain backend-owned and guarded, but
+  the product UI no longer exposes them in Project Settings or Workflow Settings.
+  Operators create a new browser profile and select it when they need a new
+  browser identity.
 - Workflow Settings saves reject identity profile reset/delete while that workflow's retained browser session still owns the profile.
 - Debug-only fixture generation is not part of the production command surface.
 - List-step authoring commands remain retired from the production command surface.

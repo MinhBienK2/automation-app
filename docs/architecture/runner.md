@@ -36,7 +36,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 
 - `BrowserWorkflowRunner` runs action configs through CloakBrowser by default and Playwright-compatible page/context APIs. `AUTOMATION_BROWSER_ENGINE=camoufox` switches the default backend driver to the local Camoufox Firefox-compatible runtime at `CAMOUFOX_EXECUTABLE_PATH` or `~/.cache/camoufox/camoufox`.
 - CloakBrowser `humanize` defaults to enabled for both temporary and persistent contexts and follows the workflow Browser Launch toggle. The Browser Launch `human_preset` value maps to CloakBrowser `humanPreset` (`default` or `careful`).
-- `BrowserSessionManager` maps workflow Browser Launch identity values to CloakBrowser launch options before the first page action. The mapping includes stable fingerprint seed, fingerprint fonts directory, persistent profile directory, proxy server/bypass/credentials, explicit timezone/locale or detected local machine timezone/locale, GeoIP, supported WebRTC fingerprint args, humanization timing profile, headless mode, and the lab-verified CloakBrowser mitigation flags `--fingerprint-noise=false`, `--fingerprint-storage-quota=500`, and `--fingerprint-platform=windows`. New workflow and project saved identities enable GeoIP by default and blank legacy location settings normalize back to GeoIP; disabling GeoIP requires explicit timezone and locale values. It does not send empty `userAgent`, explicit Playwright launch `viewport`, `--window-size`, or CloakBrowser screen-size overrides. Persona viewport/window dimensions remain in sanitized evidence. Unsupported WebRTC disable policies are rejected by backend settings validation or normalized to `default` when persisted JSON is loaded. In-run Set Viewport changes only width and height.
+- `BrowserSessionManager` maps the selected browser profile's Browser Launch identity values to CloakBrowser launch options before the first page action. The mapping includes stable fingerprint seed, fingerprint fonts directory, persistent profile directory, proxy server/bypass/credentials, explicit timezone/locale or detected local machine timezone/locale, GeoIP, supported WebRTC fingerprint args, humanization timing profile, headless mode, and the lab-verified CloakBrowser mitigation flags `--fingerprint-noise=false`, `--fingerprint-storage-quota=500`, and `--fingerprint-platform=windows`. New browser profiles enable GeoIP by default and blank legacy location settings normalize back to GeoIP; disabling GeoIP requires explicit timezone and locale values. It does not send empty `userAgent`, explicit Playwright launch `viewport`, `--window-size`, or CloakBrowser screen-size overrides. Persona viewport/window dimensions remain in sanitized evidence. Unsupported WebRTC disable policies are rejected by backend settings validation or normalized to `default` when persisted JSON is loaded. In-run Set Viewport changes only width and height.
 - In Camoufox mode, `BrowserSessionManager` maps storage mode, persistent user data dir, proxy, explicit timezone/locale, headless mode, and download settings into Playwright Firefox launch/context options. It records `browser_engine: "camoufox"` plus Camoufox runtime evidence in `browser_identity`; CloakBrowser-only fingerprint seed/font/WebRTC/humanize flags remain saved identity metadata but are not passed to Firefox.
 - Real CloakBrowser launches fail before Chromium starts when a headed Linux identity has no `DISPLAY` or `WAYLAND_DISPLAY`; unit tests that inject a fake driver bypass this host prerequisite guard.
 - Command handlers compile the saved graph and pass persisted workflow settings
@@ -71,14 +71,14 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
   only and does not delete persistent browser profile data.
 - Starting a fresh run closes only a retained session that conflicts with the same workflow/profile before CloakBrowser launches, so persistent profile directories are not reused while an older browser process still owns the profile lock. Retained sessions for unrelated workflow/profile pairs remain available for inspection.
 - Run-from-selected is the exception to the relaunch rule: it keeps the retained context/page alive and runs the selected-node sub-plan against that page. Depending on Run Policy scope, the sub-plan may stop after the selected node or continue downstream. If the operator closed the browser manually, the runner clears retained metadata and reports that no reusable browser session is available.
-- Browser launch settings come from the workflow's saved Browser Launch section.
+- Browser launch settings come from the workflow's selected project browser profile.
   `browser_launch.headless` switches CloakBrowser between headed and headless
   mode.
-- Browser identities use CloakBrowser persistent contexts under the user's app data directory at `automation-app/browser-profiles/<profile_dir>` when Reuse login session is enabled. Runs without persistent storage use temporary contexts while keeping the configured fingerprint seed, and terminal retention still follows Run Policy and terminal node `close_browser` settings.
+- Browser identities use CloakBrowser persistent contexts under the user's app data directory at `automation-app/browser-profiles/<profile_dir>` when the selected profile uses persistent storage. Terminal retention still follows Run Policy and terminal node `close_browser` settings.
 - `BrowserSessionManager` provides the sanitized `browser_identity` record with run id, identity id/display name, profile directory or temporary marker, selected persona id/label/rationale and population buckets, fingerprint seed hash, configured fingerprint font hash when a readable font bundle is present, timezone/locale and source, GeoIP/supported WebRTC policy, active advanced override names such as `fingerprint_fonts_dir`, configured humanization status and preset, and CloakBrowser wrapper/binary evidence.
 - Browser recorder sessions also launch through `BrowserSessionManager`, but
   they do not execute compiled workflow steps. The recorder session manager
-  uses the same selected-session browser identity baseline, injects page-side
+  uses the same selected browser profile identity baseline, injects page-side
   capture through the Playwright-compatible page adapter, supports a limited
   recorder-safe `headless` launch override for verification runs, observes
   top-level page navigation plus backend tab/download/dialog events, drains buffered in-page
@@ -117,7 +117,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 ## Belongs Here
 
 - CloakBrowser session launch and tab/frame/download behavior.
-- Selected project saved-session or private workflow-session Browser Launch identity application at browser launch.
+- Selected project browser profile identity application at browser launch.
 - Retained browser session lookup, stale detection, and close/retain bookkeeping.
 - Workflow/profile-scoped retained-session close for Identity Lab.
 - Action dispatch and browser interaction.

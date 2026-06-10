@@ -32,7 +32,7 @@ Every user-addable action type must have:
 - Backend action registry metadata for owner, palette visibility, and audit risk.
 - Backend action validation and execution coverage in the `electron/backend/actions/` registries.
 
-Browser identity actions such as profile, proxy, user-agent, and download-directory settings are not part of the in-run action contract. Browser identity belongs in Workflow Settings Browser Launch.
+Browser identity actions such as profile, proxy, user-agent, and download-directory settings are not part of the in-run action contract. Browser identity belongs in project browser profiles selected by Workflow Settings Browser Launch.
 
 Runner traces classify every top-level executed action with compact mode/status metadata. The runner's CloakBrowser-native/custom-human/direct-DOM capability map is internal execution policy, not a serialized action config field.
 

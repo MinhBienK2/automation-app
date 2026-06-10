@@ -31,13 +31,11 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   creation plus project package import from the workspace header.
 - `src/features/projects/components/ProjectEnvironmentSettings.tsx`: selected
   project settings surface with grouped Project details controls for rename,
-  duplicate, export package, and delete actions, plus Browser fingerprint
-  controls for editing the saved-session fingerprint seed and confirming
-  backend-owned identity regeneration/profile deletion without exposing a
-  duplicate full Browser Launch editor.
-- `src/features/projects/useProjectEnvironmentActions.ts`: project saved-session
-  update/reset command handling and environment-list refresh callbacks used by
-  `App.tsx`.
+  duplicate, export package, and delete actions, plus Browser Profiles controls
+  for adding, renaming, and deleting unused project browser profiles.
+- `src/features/projects/useProjectEnvironmentActions.ts`: project browser
+  profile create/update/delete command handling and profile-list refresh
+  callbacks used by `App.tsx`.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, graph
   autosave, searchable XPath cookbook help, environment readiness diagnostics,
   guarded maintenance commands, orphaned-profile cleanup confirmation, and graph
@@ -53,9 +51,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   state and create/update/delete/enable/disable command handling used by
   `App.tsx`.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen
-  with browser-session create choices, selected session/environment display,
-  icon-only row actions, direct Run for saved workflow state, and the Record
-  Workflow entry point.
+  with icon-only row actions, direct Run for saved workflow state, and the
+  Record Workflow entry point.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow
   workspace with owning-project metadata in the detail header.
 - `src/features/workflows/pages/SubflowListPage.tsx`: subflow list,
@@ -68,7 +65,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   Subflow Settings dialog shared by the list and detail header for renaming a
   reusable subflow.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, selected-block subflow planning, and the right-side inspector drawer are split into sibling `WorkflowGraph*` component modules and focused workflow graph libs.
-- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Browser Launch exposes workflow-owned identity/posture controls, Reset identity, and a read-only seed display. Graph exposes Live Run visibility, the Follow current default when Live Run is enabled, and the new link wait default. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
+- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Browser Launch exposes only the project browser profile selector. Graph exposes Live Run visibility, the Follow current default when Live Run is enabled, and the new link wait default. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
 - `src/features/workflows/components/RecordingReviewDialog.tsx`: browser recorder status and review dialog for generated recording drafts.
 - `src/features/workflows/components/WorkflowPackageOptions.tsx`: shared Workflow Package Flow/Settings section checkbox controls used by import/export dialogs.
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
@@ -137,8 +134,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   visible draft, or keep editing. Workflow detail uses the prompt for
   manual-save graph changes and failed autosave; autosave-enabled workflow
   navigation does not prompt unless autosave has failed.
-- Workflow Settings editing through list Edit and detail Settings, grouped related controls within each section, Run Policy lifecycle controls including the grouped Run from selected scope plus paused read-only batch defaults, workflow-owned Browser Launch identity/posture controls, Graph link-wait authoring defaults, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual nested collapsible section help with individually collapsible field, example, related-action, and mistake guidance, and run-before-save orchestration.
-- Browser Launch Reset identity uses an in-app confirmation dialog and delegates generation/persistence to `resetWorkflowBrowserIdentity`; project identity regeneration also uses an in-app confirmation dialog before delegating to `resetProjectEnvironmentBrowserIdentity`. The renderer does not create identity ids, fingerprint seeds, or delete browser profile directories directly.
+- Workflow Settings editing through list Edit and detail Settings, grouped related controls within each section, Run Policy lifecycle controls including the grouped Run from selected scope plus paused read-only batch defaults, Browser Launch profile selection, Graph link-wait authoring defaults, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual nested collapsible section help with individually collapsible field, example, related-action, and mistake guidance, and run-before-save orchestration.
+- Browser profile creation, deletion, and workflow profile selection delegate to
+  backend commands. The renderer does not create identity ids, fingerprint seeds,
+  or delete browser profile directories directly.
 - Overview is the default app screen. It calls `getOperationsOverview` with
   the operator local-day UTC range, displays backend-owned aggregate data,
   supports manual refresh, and navigates returned workflow/schedule/evidence
@@ -161,11 +160,11 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   stays fixed in the detail panel when many projects exist. Selecting a
   different project resets the active collection to Workflows so operators do
   not land in the previous project's Settings or Subflows context. Project
-  Settings owns project rename, duplicate, delete confirmation, and
-  saved-session identity actions. Project package export delegates package
+  Settings owns project rename, duplicate, delete confirmation, and browser
+  profile create/rename/delete actions. Project package export delegates package
   creation and native Save dialog writing to the backend. Project package import
   lives in the Projects workspace header next to Create Project, reads JSON from
-  a browser file input, previews package workflows/subflows/sessions and omitted
+  a browser file input, previews package workflows/subflows/profiles and omitted
   fields, then creates and selects a new imported project.
   Project creation selects the new project, switches to Workflows, and refreshes
   workflow summaries because the backend creates the project's default `Main`
@@ -184,15 +183,15 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   Identity Lab as a read-only historical target carrying workflow, run, and
   evidence context.
 - Workflow list create, direct Run, delete, duplicate, and Workflow Package
-  import/export interaction. Create names the workflow and uses workflow-owned
-  Browser Launch defaults. List Run calls the existing `runWorkflow`
+  import/export interaction. Create names the workflow and selects the project's
+  default browser profile. List Run calls the existing `runWorkflow`
   command against saved workflow state and leaves the user on the list while
   run snapshot polling continues. Active row status, row Run disabling, and row
   Stop are scoped to that workflow's run id. Delete opens an in-app
   confirmation dialog with Delete private browser profile data checked by
   default. Duplicate calls `duplicateWorkflow` so local copies preserve the
-  saved graph and non-storage settings while receiving a fresh browser
-  identity/profile/fingerprint. Export chooses Flow and selected Workflow
+  saved graph, non-storage settings, and selected browser profile while disabling
+  Run from selected on the copy. Export chooses Flow and selected Workflow
   Settings sections, then delegates native Save dialog and package JSON writing
   to the Electron backend. Import reads package JSON from the browser file
   input, previews available sections, sends the selected project id as the
@@ -217,7 +216,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   canvas highlighting and focus actions.
 - Workflow detail run monitoring uses a right-side Run Monitor drawer when saved Graph settings enable Live Run. The header Monitor command opens or hides the drawer, and active runs open it automatically unless the operator closed it for the current workflow session. The drawer derives labels from the loaded graph plus `current_step_id`, `current_step_number`, `completed_step_ids`, and `error.step_id`, and renders a chronological node-activity log without a separate current-node summary section. Each node occurrence is one row whose status is running, completed, or failed; repeated ids create additional rows when a loop/retry body runs the same graph node more than once. Future pending graph nodes are not rendered in the log, and timeline rows do not receive separate current/active selection styling when the graph highlights the current node. Clicking a timeline row can select/focus its graph node. The saved Follow current setting controls automatic graph selection/centering outside the drawer; the drawer does not expose a separate Follow current toggle. Graph nodes remain highlighted by current/completed/failed state even when the drawer is closed. The drawer does not invent branch, loop, retry, timestamps, or skipped-node events beyond the current run-state contract.
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
-- Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Run Policy. It is enabled only for one selected main-path node when saved settings use Reuse login session, browser retention is `retain`, and run state reports a matching retained browser session. Run Policy scope decides whether the action runs only the selected node or continues from that node through the downstream main path.
+- Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Run Policy. It is enabled only for one selected main-path node when the selected browser profile is persistent, browser retention is `retain`, and run state reports a matching retained browser session. Run Policy scope decides whether the action runs only the selected node or continues from that node through the downstream main path.
 - Subflows navigation state inside the selected project's Subflows collection,
   plus list/detail state, list-scoped create/duplicate/delete command state,
   settings rename command state, graph save status, usage-warning presentation,
@@ -260,7 +259,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   inactive profile cleanup uses a destructive in-app confirmation before
   invoking the backend command. App Settings displays environment readiness from
   sanitized diagnostics and does not expose raw binary/cache/profile/font paths.
-  Project identity control state belongs to the selected project's Settings
+  Project details and Browser Profiles control state belongs to the selected project's Settings
   collection.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
 - Evidence navigation state in the app shell/sidebar, Evidence query/detail

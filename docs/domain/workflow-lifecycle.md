@@ -5,14 +5,14 @@
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
 - Electron backend commands validate a non-blank workflow name before persistence.
 - Repository trims and stores the workflow with timestamps, associates it with
-  the default `Main` project, creates a `Start -> New node` draft graph, and
-  persists default workflow-owned Workflow Settings. `New node` is an
-  unconfigured action node with `config: null`.
+  the selected or default project, assigns a project browser profile, creates a
+  `Start -> New node` draft graph, and persists default Workflow Settings.
+  `New node` is an unconfigured action node with `config: null`.
 - The workflow list Create dialog asks for the workflow name only. Omitted
-  backend create options use the default project but do not select a project
-  saved session.
+  backend create options use the default project and that project's initial
+  browser profile.
 - UI refreshes list and opens the created workflow.
-- The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. While a workflow has an active run, the row disables Run, Duplicate, Export, and Delete and exposes Stop for the active run id. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, copies non-storage Workflow Settings without package-export sanitization, creates a fresh backend-generated browser identity/profile/fingerprint for the copy, disables Run from selected, and refreshes the list.
+- The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. While a workflow has an active run, the row disables Run, Duplicate, Export, and Delete and exposes Stop for the active run id. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, copies non-storage Workflow Settings without package-export sanitization, preserves the selected browser profile, disables Run from selected, and refreshes the list.
 - If a manual full-run launch from Graph Builder or the workflow list is
   blocked by graph/settings validation before a run row is created, the backend
   records one sanitized `launch_blocked` operational attention row for Overview.
@@ -20,17 +20,16 @@
 - The workflow list header exposes Import Workflow for JSON workflow packages.
   Import rejects files larger than 5 MB before reading JSON, previews valid
   packages, and always creates a new workflow in the selected project on
-  success; it never overwrites an existing workflow or the selected project's
-  saved session.
+  success; it never overwrites an existing workflow or mutates an existing
+  browser profile.
 
 ## Project Create
 
 - Projects UI calls `createProject` through `src/lib/workflowApi.ts`.
 - Electron backend commands validate a non-blank project name before
   persistence.
-- The command transactionally creates the project, its default project saved
-  identity, and one normal draft workflow named `Main` with workflow-owned
-  Browser Launch settings.
+- The command transactionally creates the project, its initial browser profile,
+  and one normal draft workflow named `Main` selecting that profile.
 - UI selects the created project, switches to its Workflows collection, and
   refreshes workflows so the `Main` workflow is visible immediately.
 
@@ -38,33 +37,33 @@
 
 - Projects -> Settings can rename the selected project through `updateProject`.
 - Duplicate project calls `duplicateProject`, creates `Copy of <project name>`,
-  copies project environments, subflows, workflows, workflow graphs, and
-  non-storage settings, remaps copied Call Subflow references to copied
-  subflows, and gives copied project/workflow browser identities fresh
-  identity/profile/fingerprint values so the new project does not reuse the
-  source project's saved identities.
+  copies browser profiles, subflows, workflows, workflow graphs, and non-storage
+  settings, remaps copied Call Subflow references to copied subflows, preserves
+  workflow profile selections through copied profile ids, and gives copied
+  browser profiles fresh identity/profile/fingerprint values so the new project
+  does not reuse the source project's local identities.
 - Export project calls `exportProjectPackage` and then `saveProjectPackageFile`
   to write a `.project.json` package through the native Save dialog. The
-  package includes project metadata, saved project identities, subflows,
+  package includes project metadata, browser profiles, subflows,
   workflows, saved graphs, and Workflow Settings, with proxy secrets, proxy URL
   credentials, local fingerprint font directories, and preflight fields
   sanitized.
 - Delete project opens an in-app confirmation before calling `deleteProject`.
   The backend rejects deletion while any workflow in that project has an active
   run, active profile, or retained session, then deletes the project's
-  workflows, subflows, and saved-session rows. The UI selects the next available
+  workflows, subflows, and browser profile rows. The UI selects the next available
   project after deletion.
 
 ## Project Import
 
 - Import project accepts a JSON project package from the Projects workspace
   header next to Create Project, previews workflows, subflows, project
-  identities, and sanitized omitted fields, then calls `importProjectPackage`.
+  browser profiles, and sanitized omitted fields, then calls `importProjectPackage`.
   Import validates package graphs/settings first, transactionally creates
-  `<project name> (imported)`, recreates project identities, subflows, and
-  workflows, remaps Call Subflow ids, gives imported project/workflow browser
-  identities fresh identity/profile/fingerprint values, selects the new project,
-  and switches to Workflows. It does not import runs, evidence, schedules, app
+  `<project name> (imported)`, recreates browser profiles, subflows, and
+  workflows, remaps Call Subflow ids, gives imported browser profiles fresh
+  identity/profile/fingerprint values, selects the new project, and switches to
+  Workflows. It does not import runs, evidence, schedules, app
   settings, or browser profile storage.
 
 ## Open Detail
@@ -181,9 +180,9 @@
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
-- `run_workflow` loads and validates saved Workflow Settings, resolves the
-  workflow-owned Browser Launch identity before launch including profile
-  directory, fixed fingerprint seed, fingerprint fonts
+- `run_workflow` loads and validates saved Workflow Settings, resolves Browser
+  Launch from the workflow's selected project browser profile before launch
+  including profile directory, fixed fingerprint seed, fingerprint fonts
   directory, proxy, explicit or detected local timezone/locale, supported
   WebRTC policy values, humanize toggle/preset, and headless mode, prepends
   Environment initial variables before the first graph step, compiles edge
@@ -194,7 +193,8 @@
   disables direct script execution, and applies browser retention as the
   default terminal session policy. Authors use explicit Wait and Random Wait
   nodes when a workflow needs a business-semantic pause.
-- Reset identity in Workflow Settings is an in-app confirmation that delegates to `resetWorkflowBrowserIdentity`. The command owns identity generation, persists old/new identity evidence in `migration_notes`, rejects active workflow/profile/retained-session resets, preserves non-storage preferences, and returns saved settings to the dialog.
+- Workflow Settings no longer exposes identity reset. Operators create/select a
+  different project browser profile when they need a new browser identity.
 - Identity Lab can close the selected workflow/profile's retained session
   through `closeIdentityRetainedSession`. Closing a retained session clears only
   in-memory browser context state and leaves persistent profile data, settings,
@@ -214,10 +214,11 @@
 - Evidence loads durable persisted run evidence through `listEvidenceItems`.
   Overview recent evidence can focus a specific evidence id, and Evidence
   queries can still filter by `run_id`.
-- Identity Lab loads current workflow-owned browser identity posture through
-  `getIdentityLabOverview` / `getIdentityLabDetail`. Evidence details with an
-  identity id open Identity Lab as a read-only historical identity reference
-  with workflow, run, and evidence context.
+- Identity Lab loads current browser identity posture from workflows' selected
+  project browser profiles through `getIdentityLabOverview` /
+  `getIdentityLabDetail`. Evidence details with an identity id open Identity Lab
+  as a read-only historical identity reference with workflow, run, and evidence
+  context.
 - Persisted run rows record durable `source` provenance as `manual` or
   `schedule`; older local rows are migrated deterministically from started
   schedule events when possible and otherwise treated as manual.

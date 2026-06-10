@@ -7,18 +7,19 @@ Mission Control is an Electron desktop app for building and running browser auto
 ## Core Concepts
 
 - A workflow is a named automation definition whose product authoring source is the saved visual graph.
-- A project groups workflows, reusable subflows, and one project saved browser
-  session. The current MVP creates and uses a default project named `Main` for
+- A project groups workflows, reusable subflows, and project-owned browser
+  profiles. The current MVP creates and uses a default project named `Main` for
   existing local data.
-- A project saved session is the project-owned default fingerprint identity and
-  persistent browser profile. It stores the stable fingerprint seed plus the
-  profile directory that preserves cookies, localStorage, sessionStorage, and
-  login state across browser restarts. The persisted table/DTO is still named
-  `project_environments` for compatibility, but the product UI exposes it as a
-  grouped Project identity surface with an editable fingerprint seed, read-only
-  identity id, and backend-owned identity regeneration instead of a full
-  environment list. Regeneration is confirmed in the UI before it replaces the
-  identity and deletes the old local project profile directory.
+- A browser profile is the project-owned fingerprint identity, launch posture,
+  and persistent browser storage selected by workflows in that project. It
+  stores the stable fingerprint seed plus the profile directory that preserves
+  cookies, localStorage, sessionStorage, and login state across browser
+  restarts. The persisted table/DTO is still named `project_environments` for
+  compatibility, but the product UI exposes it as Browser Profiles in Project
+  Settings. Operators can add, rename, and delete profiles; deleting a profile
+  always deletes its local browser storage and is blocked while any workflow
+  selects it. Creating a new profile is the user-facing way to get a new
+  backend-generated browser identity.
 - A subflow is a reusable non-runnable graph fragment inside one project.
   Workflows call subflows through `call_subflow` graph nodes; subflows run in
   the caller's browser context and do not create independent runs or browser
@@ -33,11 +34,11 @@ Mission Control is an Electron desktop app for building and running browser auto
   details on demand, previews screenshots only through validated backend file
   commands, reveals artifacts in their folder, and exports sanitized manifest
   bundles without exposing absolute paths or raw browser storage.
-- Identity Lab is the durable workspace for workflow-owned browser identities.
-  It derives current managed identity rows from Workflow Settings, shows
-  session continuity, configured posture, latest observed browser identity
-  evidence, matching run/evidence summaries, rotation history, sanitized
-  diagnostics, and read-only historical identity references.
+- Identity Lab is the durable workspace for browser identity posture. It derives
+  current managed identity rows from workflows' selected project browser
+  profiles, shows session continuity, configured posture, latest observed
+  browser identity evidence, matching run/evidence summaries, rotation history,
+  sanitized diagnostics, and read-only historical identity references.
 - Mission Control navigation is a typed in-memory target contract across
   Overview, Projects, Evidence, Schedules, Identities, App Settings, and graph
   issues. The Projects workspace exposes project-scoped Workflows,
@@ -64,31 +65,25 @@ Mission Control is an Electron desktop app for building and running browser auto
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from App Settings.
 - Workflow Settings is the per-workflow configuration aggregate for run policy,
-  graph authoring defaults, workflow-owned browser launch identity, and initial
+  graph authoring defaults, the selected browser profile, and initial
   environment variables.
-- The Browser Launch section is identity-oriented and stored on each workflow.
-  Workflows do not select project saved identities or another workflow's
-  identity bundle as a runtime identity source. Reset identity creates a fresh
-  backend-generated workflow identity/profile/fingerprint bundle while
-  preserving non-storage launch preferences.
-- New project saved identities and workflow Browser Launch settings automatically get a
-  browser identity with a stable `identity_id`, editable display name, stable
-  `profile_dir`, fixed CloakBrowser fingerprint seed, and a stored persona
-  selected from `src/lib/personaCatalog.ts`. The persona binds
+- The Browser Launch section selects one browser profile from the workflow's
+  project. It does not expose identity id, identity display name, fingerprint
+  seed, proxy, timezone/locale, humanization, headless, storage reuse, or reset
+  controls; those launch values are profile-owned and resolved from the selected
+  profile before the browser opens.
+- New browser profiles automatically get a browser identity with a stable
+  `identity_id`, stable `profile_dir`, fixed CloakBrowser fingerprint seed, and
+  a stored persona selected from `src/lib/personaCatalog.ts`. The persona binds
   the OS/browser bucket, viewport/window dimensions, timezone/locale metadata,
   proxy/geo policy, WebRTC mode, font bundle metadata, and behavior timing
   profile so the identity is explainable and less clustered than one fixed
-  desktop shape. Reuse login session only controls persistent storage; it does
-  not rotate or detach the fingerprint identity. The section also owns proxy
-  server/credentials/bypass, timezone/locale/GeoIP, supported WebRTC IP policy
-  values, the humanize toggle and `default`/`careful` preset, and
-  headed/headless policy. New project saved sessions enable GeoIP by default so
-  blank timezone/locale fields are resolved from the current public or proxy
-  exit IP; blank legacy location settings normalize back to GeoIP, while
-  operators who need GeoIP off should set explicit timezone and locale.
-  Settings validation warns when proxy-enabled identities lack explicit
-  timezone/locale and GeoIP is off, and when a configured fingerprint fonts
-  directory can create a stable font hash across identities.
+  desktop shape. Browser profiles own proxy server/credentials/bypass,
+  timezone/locale/GeoIP, supported WebRTC IP policy values, humanization preset,
+  and headed/headless policy. New profiles enable GeoIP by default so blank
+  timezone/locale fields resolve from the current public or proxy exit IP; blank
+  legacy location settings normalize back to GeoIP, while operators who need
+  GeoIP off should set explicit timezone and locale.
 - CloakBrowser diagnostics are backend commands. They report wrapper/binary/cache/display/GeoIP status and browser profile metadata with bounded approximate profile sizes, and provide explicit binary install/check plus orphaned inactive profile cleanup without exposing browser storage or secrets to the renderer.
 - The Run Policy section owns maximum workflow duration, terminal browser retention, the Allow Run JavaScript policy, Run from selected enablement/scope, and batch defaults for headless mode, concurrency, and stopping after the first failed row.
 - The Graph section owns the default duration-only wait copied onto newly created graph links.
@@ -99,20 +94,18 @@ Mission Control is an Electron desktop app for building and running browser auto
 Users can:
 
 - Create, select, rename, duplicate, and delete projects. Newly created
-  projects automatically contain a project saved session and a draft workflow
-  named `Main`.
-- Export and import project packages containing project metadata, saved-session
-  launch posture, workflow settings, saved graphs, and subflows. Import creates
-  a new project with fresh browser
-  identities/profiles and does not import runs, evidence, schedules, app
-  settings, or browser profile storage.
+  projects automatically contain a browser profile and a draft workflow named
+  `Main` that selects it.
+- Export and import project packages containing project metadata, browser
+  profiles, workflow settings, saved graphs, and subflows. Import creates a new
+  project with fresh browser identities/profiles and does not import runs,
+  evidence, schedules, app settings, or browser profile storage.
 - Create, rename, open, and delete workflows inside a selected project.
-- Create workflows in the default `Main` project with workflow-owned Browser
-  Launch settings.
-- Inspect the selected project's saved session from the selected project's
-  Settings collection, edit its fingerprint seed, or regenerate its backend-owned
-  identity/profile/seed after confirming that the old local profile will be
-  deleted.
+- Create workflows in the selected project and choose which browser profile they
+  run with from Workflow Settings.
+- Manage browser profiles from the selected project's Settings collection:
+  create profiles, rename them, and delete unused profiles with confirmation.
+  Profiles selected by workflows cannot be deleted.
 - Manage the selected project from the selected project's Settings collection:
   rename it, duplicate it as an independent project copy with copied workflows
   and subflows plus fresh browser identities, or delete it and all workflows,
@@ -137,13 +130,14 @@ Users can:
 - Create a reusable subflow from selected workflow graph nodes. The creation
   dialog can either only persist the new subflow or persist it and replace the
   selected nodes with a configured Call Subflow node.
-- Configure the workflow's browser identity and launch behavior before running it.
+- Select the workflow's browser profile before running it.
 - Configure Workflow Settings from the workflow list Edit action or the workflow detail Settings action.
 - Export workflow packages containing Flow, selected Workflow Settings
   sections, and referenced subflows.
 - Import workflow packages as new workflows in the selected project without
-  overwriting existing workflows or the selected project's saved session.
-- Duplicate workflows locally while preserving the saved graph and non-storage local settings, while creating a fresh browser identity/profile/fingerprint so the copy starts with a new session.
+  overwriting existing workflows or existing browser profiles.
+- Duplicate workflows locally while preserving the saved graph, non-storage local
+  settings, and selected browser profile.
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 - Create, enable, disable, edit, delete, and audit workflow schedules from the Schedules page. Schedules can be one-time, interval-based, or friendly calendar presets and can coexist per workflow.
 - Start, inspect, stop, and discard backend-owned browser recording sessions.

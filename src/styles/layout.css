@@ -729,6 +729,42 @@
   gap: 8px;
 }
 
+.project-profile-list {
+  display: grid;
+  gap: 8px;
+}
+
+.project-profile-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  min-width: 0;
+}
+
+.project-profile-name-field {
+  min-width: 0;
+}
+
+.project-profile-meta {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.project-profile-actions {
+  grid-column: auto;
+  justify-content: flex-end;
+  min-height: 40px;
+}
+
 .project-session-code {
   font-family:
     "Source Code Pro",

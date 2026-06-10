@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Plus, Trash2 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -14,11 +14,14 @@ import { SettingsFieldGroup } from "../../../components/ui/settings-field-group"
 import type {
   Project,
   ProjectEnvironment,
+  ProjectEnvironmentInput,
+  WorkflowSummary,
 } from "../../../types/workflow";
 
 type ProjectEnvironmentSettingsProps = {
   project: Project | null;
   projectEnvironments: ProjectEnvironment[];
+  workflows: WorkflowSummary[];
   error: string;
   onUpdateProject: (
     projectId: string,
@@ -27,37 +30,46 @@ type ProjectEnvironmentSettingsProps = {
   onDuplicateProject: (projectId: string) => Promise<void>;
   onExportProjectPackage: (projectId: string) => Promise<void>;
   onDeleteProject: (projectId: string) => Promise<void>;
-  onResetProjectEnvironmentBrowserIdentity: (
-    environmentId: string,
+  onCreateProjectEnvironment: (
+    projectId: string,
+    input: ProjectEnvironmentInput,
   ) => Promise<void>;
+  onUpdateProjectEnvironment: (
+    environmentId: string,
+    input: Partial<ProjectEnvironmentInput>,
+  ) => Promise<void>;
+  onDeleteProjectEnvironment: (environmentId: string) => Promise<void>;
 };
 
 export function ProjectEnvironmentSettings({
   project,
   projectEnvironments,
+  workflows,
   error,
   onUpdateProject,
   onDuplicateProject,
   onExportProjectPackage,
   onDeleteProject,
-  onResetProjectEnvironmentBrowserIdentity,
+  onCreateProjectEnvironment,
+  onUpdateProjectEnvironment,
+  onDeleteProjectEnvironment,
 }: ProjectEnvironmentSettingsProps) {
-  const projectSession =
-    projectEnvironments.find((environment) => environment.is_default) ??
-    projectEnvironments[0] ??
-    null;
-  const browserLaunch = projectSession?.browser_launch ?? null;
   const [projectNameDraft, setProjectNameDraft] = useState(project?.name ?? "");
+  const [profileNameDrafts, setProfileNameDrafts] = useState<Record<string, string>>({});
+  const [newProfileName, setNewProfileName] = useState("");
   const [localError, setLocalError] = useState("");
   const [savingProject, setSavingProject] = useState(false);
   const [duplicatingProject, setDuplicatingProject] = useState(false);
   const [exportingProject, setExportingProject] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
-  const [regeneratingIdentity, setRegeneratingIdentity] = useState(false);
-  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [savingProfileId, setSavingProfileId] = useState<string | null>(null);
+  const [creatingProfile, setCreatingProfile] = useState(false);
+  const [deletingProfileId, setDeletingProfileId] = useState<string | null>(null);
+  const [createProfileDialogOpen, setCreateProfileDialogOpen] = useState(false);
+  const [deleteProfileCandidate, setDeleteProfileCandidate] =
+    useState<ProjectEnvironment | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const savedProjectName = project?.name ?? "";
-  const savedSeed = browserLaunch?.fingerprint_seed ?? "";
   const projectNameChanged = projectNameDraft.trim() !== savedProjectName;
 
   useEffect(() => {
@@ -66,8 +78,13 @@ export function ProjectEnvironmentSettings({
   }, [project?.id, savedProjectName]);
 
   useEffect(() => {
+    setProfileNameDrafts(
+      Object.fromEntries(
+        projectEnvironments.map((environment) => [environment.id, environment.name]),
+      ),
+    );
     setLocalError("");
-  }, [projectSession?.id, savedSeed]);
+  }, [projectEnvironments]);
 
   async function saveProjectName() {
     if (!project) return;
@@ -122,20 +139,53 @@ export function ProjectEnvironmentSettings({
     }
   }
 
-  async function regenerateIdentity() {
-    if (!projectSession) return;
+  async function createProfile() {
+    if (!project) return;
+    const name = newProfileName.trim();
+    if (!name) {
+      setLocalError("Profile name is required.");
+      return;
+    }
     setLocalError("");
-    setRegeneratingIdentity(true);
+    setCreatingProfile(true);
     try {
-      await onResetProjectEnvironmentBrowserIdentity(projectSession.id);
+      await onCreateProjectEnvironment(project.id, { name, description: null });
+      setNewProfileName("");
+      setCreateProfileDialogOpen(false);
     } finally {
-      setRegeneratingIdentity(false);
+      setCreatingProfile(false);
     }
   }
 
-  async function confirmRegenerateIdentity() {
-    await regenerateIdentity();
-    setRegenerateDialogOpen(false);
+  async function saveProfileName(environment: ProjectEnvironment) {
+    const name = (profileNameDrafts[environment.id] ?? "").trim();
+    if (!name) {
+      setLocalError("Profile name is required.");
+      return;
+    }
+    setLocalError("");
+    setSavingProfileId(environment.id);
+    try {
+      await onUpdateProjectEnvironment(environment.id, { name });
+    } finally {
+      setSavingProfileId(null);
+    }
+  }
+
+  async function confirmDeleteProfile() {
+    if (!deleteProfileCandidate) return;
+    setLocalError("");
+    setDeletingProfileId(deleteProfileCandidate.id);
+    try {
+      await onDeleteProjectEnvironment(deleteProfileCandidate.id);
+      setDeleteProfileCandidate(null);
+    } finally {
+      setDeletingProfileId(null);
+    }
+  }
+
+  function profileUsageCount(environmentId: string) {
+    return workflows.filter((workflow) => workflow.environment_id === environmentId).length;
   }
 
   const projectActionPending =
@@ -223,70 +273,156 @@ export function ProjectEnvironmentSettings({
         </div>
       </SettingsFieldGroup>
 
-      <SettingsFieldGroup title="Browser fingerprint">
-        <label className="field project-session-seed-field">
-          <span>Fingerprint seed</span>
-          <Input
-            aria-label="Fingerprint seed"
-            className="project-session-code"
-            value={savedSeed}
-            disabled={!browserLaunch || regeneratingIdentity}
-            readOnly
-          />
-        </label>
-        <p className="workflow-settings-hint settings-field-group-wide">
-          Fingerprint seed is regenerated with the browser identity.
-        </p>
-
-        <div className="field project-session-value-row">
-          <span>Identity</span>
-          <strong className="project-session-code">
-            {browserLaunch?.identity_id ?? "unavailable"}
-          </strong>
+      <SettingsFieldGroup
+        title="Browser Profiles"
+        description="Profiles own browser storage, fingerprint identity, and launch posture for workflows in this project."
+      >
+        <div className="project-profile-list settings-field-group-wide">
+          {projectEnvironments.length === 0 ? (
+            <p className="muted">No browser profiles in this project.</p>
+          ) : (
+            projectEnvironments.map((environment) => {
+              const usageCount = profileUsageCount(environment.id);
+              const draftName = profileNameDrafts[environment.id] ?? environment.name;
+              const nameChanged = draftName.trim() !== environment.name;
+              const pending = savingProfileId === environment.id || deletingProfileId === environment.id;
+              return (
+                <div className="project-profile-row" key={environment.id}>
+                  <label className="field project-profile-name-field">
+                    <span>Profile name</span>
+                    <Input
+                      aria-label={`Profile name for ${environment.name}`}
+                      value={draftName}
+                      disabled={pending}
+                      onChange={(event) => {
+                        const nextValue = event.currentTarget.value;
+                        setProfileNameDrafts((current) => ({
+                          ...current,
+                          [environment.id]: nextValue,
+                        }));
+                      }}
+                    />
+                  </label>
+                  <div className="project-profile-meta">
+                    <span>{usageCount === 0 ? "Not used" : `Used by ${usageCount} workflow${usageCount === 1 ? "" : "s"}`}</span>
+                  </div>
+                  <div className="project-session-actions project-profile-actions">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      aria-label={`Save profile name for ${environment.name}`}
+                      disabled={!nameChanged || pending}
+                      onClick={() => {
+                        void saveProfileName(environment);
+                      }}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      aria-label={`Delete profile ${environment.name}`}
+                      disabled={usageCount > 0 || pending}
+                      title={usageCount > 0 ? "Profile is used by workflows" : undefined}
+                      onClick={() => setDeleteProfileCandidate(environment)}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
-        <div className="project-session-actions">
+        <div className="project-session-actions settings-field-group-wide">
           <Button
             type="button"
             size="sm"
             variant="secondary"
-            onClick={() => {
-              setRegenerateDialogOpen(true);
-            }}
-            disabled={!projectSession || regeneratingIdentity}
+            onClick={() => setCreateProfileDialogOpen(true)}
+            disabled={!project || creatingProfile}
           >
-            Regenerate identity
+            <Plus aria-hidden="true" />
+            Add profile
           </Button>
         </div>
       </SettingsFieldGroup>
 
-      <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+      <Dialog open={createProfileDialogOpen} onOpenChange={setCreateProfileDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Regenerate project identity?</DialogTitle>
+            <DialogTitle>Add browser profile</DialogTitle>
             <DialogDescription>
-              This will create a new fingerprint seed and identity, then delete the
-              current local browser profile for this project session.
+              Create a fresh browser profile for this project.
+            </DialogDescription>
+          </DialogHeader>
+          <label className="field">
+            <span>Profile name</span>
+            <Input
+              aria-label="Profile name"
+              autoFocus
+              value={newProfileName}
+              disabled={creatingProfile}
+              onChange={(event) => setNewProfileName(event.currentTarget.value)}
+            />
+          </label>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={creatingProfile}
+              onClick={() => setCreateProfileDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={creatingProfile}
+              onClick={() => {
+                void createProfile();
+              }}
+            >
+              Create profile
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteProfileCandidate)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteProfileCandidate(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete browser profile</DialogTitle>
+            <DialogDescription>
+              Do you want to delete this browser profile?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setRegenerateDialogOpen(false)}
-              disabled={regeneratingIdentity}
+              disabled={Boolean(deletingProfileId)}
+              onClick={() => setDeleteProfileCandidate(null)}
             >
               Cancel
             </Button>
             <Button
               type="button"
               variant="destructive"
+              disabled={Boolean(deletingProfileId)}
               onClick={() => {
-                void confirmRegenerateIdentity();
+                void confirmDeleteProfile();
               }}
-              disabled={!projectSession || regeneratingIdentity}
             >
-              Regenerate and delete profile
+              Delete profile
             </Button>
           </DialogFooter>
         </DialogContent>

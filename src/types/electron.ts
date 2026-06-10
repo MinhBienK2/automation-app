@@ -82,6 +82,11 @@ export type WorkflowElectronBridge = {
     environmentId: string,
     input: Partial<ProjectEnvironmentInput>,
   ): Promise<ProjectEnvironment>;
+  deleteProjectEnvironment(environmentId: string): Promise<void>;
+  setWorkflowProjectEnvironment(
+    workflowId: string,
+    environmentId: string,
+  ): Promise<Workflow>;
   resetProjectEnvironmentBrowserIdentity(
     environmentId: string,
   ): Promise<ProjectEnvironment>;

@@ -6,12 +6,11 @@ Preserve these unless the task explicitly changes them.
 
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
-- New workflows have a `Start -> New node` draft graph and workflow-owned
-  Browser Launch settings. Project saved identities are not selected during
-  workflow creation.
+- New workflows have a `Start -> New node` draft graph and select a browser
+  profile from their project for Browser Launch.
 - Workflow list cards do not show project environment/session labels.
 - Workflow list `Edit` opens Workflow Settings at General.
-- Workflow list row actions are icon-only controls with accessible labels for View Details, Run `<workflow name>`, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>`, preserves the saved graph and non-storage copied settings without package-export sanitization, creates a fresh browser identity/profile/fingerprint, and disables Run from selected for the copy.
+- Workflow list row actions are icon-only controls with accessible labels for View Details, Run `<workflow name>`, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>`, preserves the saved graph, non-storage copied settings, and selected browser profile without package-export sanitization, and disables Run from selected for the copy.
 - Workflow deletion uses an in-app confirmation dialog that asks whether to keep or delete the workflow's private browser profile data. Delete private browser profile data is checked by default, and keeping profile data requires unchecking it. Deleting profile data removes only unshared inactive profile directories. Backend deletion rejects while the workflow is actively running, while its persistent profile is used by an active run, or while a retained browser session still owns the workflow/profile.
 - Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run is disabled only for a workflow that already has an active run, row status and Stop are scoped to that workflow's run id, and list-started runs keep polling run snapshots until terminal status. Duplicate, Export, and Delete are disabled for the active workflow row until that run reaches a terminal state.
 - Runtime failure UI names the failed compiled step path and includes subflow
@@ -23,7 +22,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow list exposes Import Workflow. Import rejects workflow package files
   larger than 5 MB before reading JSON, shows a preview, and always creates a
   new workflow in the selected project on success; it never overwrites an
-  existing workflow, mutates the selected project's saved session, or leaves a
+  existing workflow, mutates existing project browser profiles, or leaves a
   partial workflow after failed validation.
 - Browser recording never exposes captured password or secret-like text field values to the renderer. Top-level page navigations can become recorded `navigate` steps, but embedded frame navigations such as ad/user-sync iframes must not become workflow nodes. Text entry must preserve literal whitespace and clearing, contenteditable edits must capture visible editor text, and text-composition, edit-hotkey, deletion-key, or modifier-only keydown noise must not create workflow nodes or split one text entry into multiple Fill Field steps. Clipboard paste into non-sensitive targets records replayable Set Clipboard plus Paste steps and suppresses the duplicate input event caused by the paste; sensitive pasted values are redacted and excluded until reviewed. Generic clicks that only precede a checkbox/radio/select/upload control event must not create duplicate click nodes. A tab opened by a recorded click should replay as click plus tab switch; a tab created without a preceding click should replay as Open New Tab. Those generated input steps are excluded by default with a review warning until the operator supplies a safe literal or variable. Stopping a recorder drains buffered fallback events before review draft generation. Generated recording graphs preserve positive captured gaps between included steps as fixed edge delays and wrap long recordings into readable rows instead of one horizontal line. The workflow detail header does not expose Record Replacement. Saving a recording draft only honors reviewed labels, inclusion flags, supported captured value edits, and backend-held timing metadata against the backend-held draft steps; renderer-supplied action type, locator replacement, or timing replacement is ignored. Discarding a recording session and successfully saving a recording draft consume the backend in-memory recorder state instead of leaving reusable draft/session handles.
 - Schedules is a separate sidebar page for creating and auditing workflow schedules across workflows. A workflow can have multiple schedules.
@@ -37,32 +36,30 @@ Preserve these unless the task explicitly changes them.
   selection. The selected project shows Workflows, Subflows, and Settings as
   fixed tabs in the detail panel. Workflows and subflows shown there are scoped
   to the selected project, selecting a different project resets the detail tabs
-  to Workflows, and the project identity controls live in the
+  to Workflows, and project details plus browser profile controls live in the
   selected project's Settings collection. The auto-created default project is
   named `Main`. Creating a project automatically creates a workflow named
-  `Main` inside that project using its project saved session. The Projects
+  `Main` inside that project using its first browser profile. The Projects
   workspace header exposes Import project next to Create Project because import
   creates a separate project rather than mutating the selected one. Project
   Settings shows a `Project identity` heading, a
   `Project details` group with editable Project name, Save,
-  Duplicate project, and Delete project, plus a `Browser fingerprint` group,
-  identity-managed Fingerprint seed, read-only Identity, and Regenerate
-  identity without a separate seed save path or full Browser Launch editor. Duplicate
-  project creates and selects an independent project copy with copied workflows
-  and subflows, remapped Call Subflow references, and fresh browser
-  identities/profiles. Project Settings exposes Export project for the selected
+  Duplicate project, Export project, and Delete project, plus a `Browser
+  Profiles` group where operators can add profiles, rename profiles inline, and
+  delete unused profiles after confirmation. The UI does not expose fingerprint
+  seed, identity id, or regenerate identity controls. Duplicate project creates
+  and selects an independent project copy with copied workflows and subflows,
+  remapped Call Subflow references, and fresh browser identities/profiles.
+  Project Settings exposes Export project for the selected
   project. Export writes a `.project.json` package through the native Save
   dialog with sensitive/local Browser Launch fields sanitized. Import previews
-  the package, creates and selects a new project, remaps workflow/subflow/session
-  ids, and gives imported sessions fresh
+  the package, creates and selects a new project, remaps workflow/subflow/profile
+  ids, and gives imported profiles fresh
   identities/profiles without importing runs, evidence, schedules, app settings,
   or browser profile storage. Delete project opens an in-app confirmation warning that
-  workflows, subflows, and saved browser sessions inside the project will be
-  deleted; Cancel keeps the project, and confirmation removes the selected
-  project after backend active-run/retained-session guards pass. Regenerate
-  identity opens an in-app confirmation warning that the current local project
-  browser profile will be deleted; Cancel keeps the current identity unchanged,
-  and confirmation invokes the backend reset.
+  workflows, subflows, and browser profiles inside the project will be deleted;
+  Cancel keeps the project, and confirmation removes the selected project after
+  backend active-run/retained-session guards pass.
 - The app shell does not render a top command/search header or Alerts shortcut.
   Sidebar navigation and in-page links are the user-facing cross-workspace
   navigation surfaces.
@@ -70,9 +67,10 @@ Preserve these unless the task explicitly changes them.
   only broad historical evidence browser; Overview recent evidence opens
   Evidence focused on the selected evidence id.
 - Identities is a separate sidebar page after Schedules and before App Settings.
-  It lists workflow-owned current browser identities, shows managed identity
-  posture/diagnostics/run context, and opens read-only historical references
-  for old identity ids from evidence or rotation history.
+  It lists current browser identities derived from workflows' selected project
+  browser profiles, shows managed identity posture/diagnostics/run context, and
+  opens read-only historical references for old identity ids from evidence or
+  rotation history.
 - Scheduled runs use the latest saved workflow graph and saved Workflow Settings at fire time; unsaved workflow detail drafts are not run.
 - Schedules run only while the Electron app process is active. Missed occurrences are skipped and recorded; the scheduler does not run catch-up backlogs.
 - If a schedule fires while the same workflow is active, the same persistent browser profile is active, or a batch run is active, that occurrence is skipped with reason `active_workflow`, `active_profile`, or `active_batch`; one-time schedules are disabled after the skipped opportunity. Isolated schedules can start concurrently.
@@ -88,8 +86,8 @@ Preserve these unless the task explicitly changes them.
   fingerprint font directories. Package import recreates referenced subflows
   in the selected project and remaps Call Subflow ids before saving the
   imported workflow graph. Importing Browser Launch creates a private imported
-  session for the new workflow instead of rewriting the selected project's
-  saved session.
+  browser profile for the new workflow instead of rewriting an existing selected
+  project profile.
 - Workflow detail collapses the app sidebar into the icon rail when opened and
   exposes a compact header command bar with the owning project name in header
   metadata. Settings, Validate, and Save are
@@ -100,30 +98,27 @@ Preserve these unless the task explicitly changes them.
   running, and Run from selected appears only when its workflow setting makes it
   relevant.
 - Workflow Settings contains General, Graph, Run Policy, Browser Launch, and Environment sections. Related controls are grouped inside each section so users can scan settings by purpose. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
-- Workflow Settings Browser Launch values are owned by the workflow at run
-  time. Project saved identities remain project settings data and are not a
-  workflow runtime identity source.
-- Workflow Settings Browser Launch does not expose session-source selection or
-  identity cloning controls. Workflows do not link to another workflow's or
-  project environment's profile/fingerprint bundle through settings.
+- Workflow Settings Browser Launch selects one browser profile from the workflow's
+  project. The selected profile supplies browser storage, fingerprint seed,
+  persona, proxy/location posture, humanization, and headed/headless defaults at
+  run time.
+- Workflow Settings Browser Launch does not expose session-source selection,
+  identity cloning controls, identity id, identity display name, fingerprint seed,
+  Reset identity, Reuse login session, proxy/location controls, humanize controls,
+  or launch controls. Creating a new project browser profile is the user-facing
+  route to a new browser identity.
 - Workflow Settings Run Policy exposes maximum workflow duration, browser retention, Allow Run JavaScript, and a grouped Run from selected control. When Run from selected is enabled, the group shows a scope select with `selected_only` for running only the selected node and `from_selected` for running from that node through the downstream main path. Batch concurrency, batch headless, and stop-on-first-failed-row values remain visible but disabled with a pause note until Batch Run UI is ready.
 - Workflow Settings Graph exposes the new link wait default for newly created graph links in one grouped control. It supports no default wait, fixed duration milliseconds, or random min/max milliseconds, and changing it must not rewrite existing links.
 - Workflow Settings Environment exposes initial variable values as typed rows for graph template/runtime context.
-- Workflow Settings Browser Launch exposes browser identity controls. Each
-  workflow has a stable read-only `identity_id`, editable display name,
-  read-only CloakBrowser fingerprint seed, stored persona metadata, and
-  optional fingerprint fonts directory. Backend-generated identities use
-  high-entropy `bi_<32 hex>` ids. `profile_dir` remains internal storage
-  metadata and is not shown as a separate Browser Launch field. The seed is
-  always visible in the dialog but is changed only through Reset identity;
-  renaming the display name does not change profile
-  storage, persona, or the fingerprint seed.
-- Workflow Settings Browser Launch exposes Reset identity as the browser identity rotation control. Reset uses an in-app confirmation dialog, saves pending settings before invoking the backend reset command, creates a new backend-generated identity id/profile directory/fingerprint seed, records a migration-note audit event, preserves non-storage preferences such as proxy, locale, and fingerprint fonts directory, and disables Run from selected in Run Policy until a fresh retained session exists.
-- Workflow Settings Browser Launch exposes a Reuse login session checkbox. Turning it on uses the identity's stable persistent browser profile; turning it off clears `profile_name` so the run uses temporary browser storage while keeping the same identity seed and disables Run from selected in Run Policy.
-- Workflow Settings Browser Launch exposes the workflow identity's proxy URL/credentials/bypass, timezone, locale, detected local machine timezone/locale, GeoIP, fingerprint fonts directory, a Humanize browser input toggle, a Humanize preset select with `default` and `careful`, and headless launch controls. New workflow and project saved identities enable GeoIP by default so blank timezone/locale fields resolve from the current public or proxy exit IP; blank legacy location settings normalize back to GeoIP. Running with GeoIP off requires explicit timezone and locale values. A stored persona from the catalog binds viewport/window dimensions, OS/browser bucket, region rationale, font bundle metadata, and timing profile for identity context.
+- Project browser profiles use backend-generated high-entropy `bi_<32 hex>`
+  identity ids, internal persistent profile directories, deterministic
+  CloakBrowser fingerprint seeds, stored persona metadata, optional fingerprint
+  fonts directories, proxy/location posture, humanization, and headless defaults.
+  These values remain backend/profile-owned and are not rendered as editable
+  Workflow Settings fields.
 - Workflow Settings validation warns operators when proxy-enabled identities lack explicit timezone/locale and GeoIP is off, and when a configured fingerprint fonts directory can create a stable font hash across identities. CloakBrowser diagnostics inspect configured font directories and report missing/unreadable directories, file counts, normalized hashes, expected family coverage, shared-directory warnings, and bounded approximate profile sizes instead of placeholder status.
 - Set Viewport is an in-run viewport-size action. Active authoring exposes width and height only; Workflow Settings Browser Launch no longer exposes viewport width, viewport height, device scale factor, mobile viewport, or touch input controls.
-- Workflow Settings saves, backend identity reset, and workflow deletion must reject browser identity profile reset/delete while a workflow/profile run is active or a retained browser session is still active for that workflow/profile.
+- Workflow Settings saves, browser profile deletion, backend identity reset, and workflow deletion must reject browser identity profile reset/delete while a workflow/profile run is active or a retained browser session is still active for that workflow/profile.
 - Identity Lab Close Retained Session closes only the matching in-memory
   retained browser context after backend guards pass. It must not delete
   profile data, cookies/login state, workflow settings, evidence, or
@@ -139,7 +134,7 @@ Preserve these unless the task explicitly changes them.
   maintenance commands, and graph shortcut guidance. The XPath cookbook groups
   locator recipes for text, attributes, forms, scoped buttons, tables/lists,
   dialogs, menus, state, parent/child targeting, SVG, iframe targets, fallbacks,
-  and debugging. It does not manage the project saved session and does not
+  and debugging. It does not manage project browser profiles and does not
   introduce notification or theme systems. Diagnostics display CloakBrowser,
   GeoIP, headed display, font, profile-count, and smoke readiness without raw
   binary/cache/profile/font paths. Cleanup Orphaned Profiles opens an in-app
@@ -152,7 +147,7 @@ Preserve these unless the task explicitly changes them.
   enabled and has not failed.
 - Running from the graph workspace saves the visible graph before execution.
 - Running from the graph workspace saves dirty Workflow Settings sections before execution.
-- Run from selected is a workflow-detail action. It is hidden unless enabled in Workflow Settings Run Policy, runs from exactly one selected main-path node using the retained browser session, saves visible graph/settings first, and is disabled unless Reuse login session is enabled, browser retention is `retain`, and the retained session matches the workflow/profile directory. Its Run Policy scope controls whether execution covers only the selected node or continues from that node through the downstream main path. Call Subflow nodes and nodes downstream from them are valid main-path selections when the referenced subflows are valid.
+- Run from selected is a workflow-detail action. It is hidden unless enabled in Workflow Settings Run Policy, runs from exactly one selected main-path node using the retained browser session, saves visible graph/settings first, and is disabled unless the selected browser profile is persistent, browser retention is `retain`, and the retained session matches the workflow/profile directory. Its Run Policy scope controls whether execution covers only the selected node or continues from that node through the downstream main path. Call Subflow nodes and nodes downstream from them are valid main-path selections when the referenced subflows are valid.
 - If the retained browser was closed manually, Run from selected remains unavailable or fails with a readable stale-session message; it must not silently launch a new browser from the selected node.
 - If saving the visible graph fails before a run, the run does not start.
 - If saving dirty Workflow Settings fails before a run, the run does not start.
@@ -186,10 +181,9 @@ Preserve these unless the task explicitly changes them.
 - Action and graph-native logic inspectors group related multi-field controls so operators can scan what belongs together: targets, entered content, output names, match values, mode-specific fields, artifacts, runtime policy, loop guards, retry policy, router cases, random choices, and terminal behavior are separated by named groups. Single-field actions such as Press Key, Hotkey, and Set Clipboard remain ungrouped.
 - Drag and Drop authoring exposes `Drag source` as its own group and `Drop setup` as the group for `Drop target` plus `Drop point`. Drag source and Drop target each expose Use locator versus Use Find Element ref; ref mode hides that endpoint's locator fields while preserving saved locator config. Source and target labels must stay distinct so operators do not confuse the element being dragged with the place it lands.
 - Scroll authoring exposes Page Scroll, Scroll To Element, and Scroll Until Element Visible labels while preserving the serialized `page`, `into_view`, and `until_element_visible` modes. Page Scroll shows Scroll style, Direction, and Pixels; Scroll style defaults to Human-like and can switch to Smooth single wheel. Scroll To Element supports Use locator or Use Find Element ref, optional Iframe XPath, and Timeout ms defaulting to `60000`; Scroll Until Element Visible shows locator target, timeout, Direction, and Pixels for the repeated page-scroll search gesture without low-level target constraint fields.
-- Browser identity belongs in Workflow Settings Browser Launch for workflows
-  and Project Settings for project saved identities. Launch-time identity
-  settings are not represented as in-run action nodes in the current workflow
-  contract.
+- Browser identity belongs in project browser profiles selected by Workflow
+  Settings Browser Launch. Launch-time identity settings are not represented as
+  in-run action nodes in the current workflow contract.
 - Subflows are reusable graph fragments, not standalone runnable scenarios.
   They are reachable from the selected project's Subflows collection, can be
   created, opened, renamed through Subflow Settings, saved, duplicated, and
@@ -296,11 +290,11 @@ Preserve these unless the task explicitly changes them.
 
 - Full runs execute the compiled saved graph.
 - Full runs launch through CloakBrowser/Playwright in the Electron backend by default, with humanized interaction enabled by default. Setting `AUTOMATION_BROWSER_ENGINE=camoufox` selects the local Camoufox Firefox-compatible runtime for lab runs and records that engine in browser identity evidence.
-- Full runs use persisted Workflow Settings as the run baseline. Browser Launch identity settings, including profile directory, fingerprint seed, fingerprint fonts directory, proxy, explicit or detected local timezone/locale, supported WebRTC IP policy values, humanize toggle/preset, and headless mode, are resolved before browser launch. New or lazy backend defaults auto-fill the repo-local `.local/cloakbrowser-fonts/linux` bundle when it exists and is readable, while an operator-cleared `fingerprint_fonts_dir: null` remains cleared. Persona viewport/window dimensions are recorded in identity evidence; Browser Launch does not send explicit Playwright `viewport`, `--window-size`, or CloakBrowser screen-size overrides. Environment initial variables are applied before the first graph step; saved edge waits compile into synthetic wait steps before target nodes; Run Policy max duration cancels and fails overlong runs with a timeout reason, and Run Policy can reject Run JavaScript before page script evaluation.
+- Full runs use persisted Workflow Settings plus the selected browser profile as the run baseline. Browser Launch identity settings, including profile directory, fingerprint seed, fingerprint fonts directory, proxy, explicit or detected local timezone/locale, supported WebRTC IP policy values, humanize toggle/preset, and headless mode, are resolved before browser launch. New or lazy backend defaults auto-fill the repo-local `.local/cloakbrowser-fonts/linux` bundle when it exists and is readable, while an operator-cleared `fingerprint_fonts_dir: null` remains cleared. Persona viewport/window dimensions are recorded in identity evidence; Browser Launch does not send explicit Playwright `viewport`, `--window-size`, or CloakBrowser screen-size overrides. Environment initial variables are applied before the first graph step; saved edge waits compile into synthetic wait steps before target nodes; Run Policy max duration cancels and fails overlong runs with a timeout reason, and Run Policy can reject Run JavaScript before page script evaluation.
 - Set Viewport updates runtime viewport width and height only.
 - Headed CloakBrowser runs on Linux fail with a clear display prerequisite message when no `DISPLAY` or `WAYLAND_DISPLAY` is configured.
 - Domain allowlist graph nodes become a run-scope navigation policy. Disallowed Navigate/Open New Tab URLs fail after template rendering and before browser navigation.
-- Browser identity profile directories persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without persistent session reuse use temporary browser storage but still keep the configured identity seed unless the operator explicitly resets or duplicates the identity.
+- Browser profile directories persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Creating and selecting a different browser profile is how operators move to a new identity/storage bundle.
 - Missing Workflow Settings rows return lazy v2 defaults.
 - Stop returns a stopped state immediately for the targeted run id; active workflow/profile ownership clears after the runner finishes cancellation.
 - Different workflows can run concurrently when they do not share a persistent browser profile. Same-workflow runs, shared persistent-profile runs, and batch conflicts are rejected with readable command errors.

@@ -2,9 +2,81 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, test, vi } from "vitest";
-import type { WorkflowSettings } from "../../../types/workflow";
+import type { ProjectEnvironment, WorkflowPersona, WorkflowSettings } from "../../../types/workflow";
 import { defaultWorkflowSettings } from "../lib/workflowSettings";
 import { WorkflowSettingsDialog } from "./WorkflowSettingsDialog";
+
+const persona: WorkflowPersona = {
+  id: "persona-1",
+  label: "Linux desktop",
+  rationale: "Stable owned lab desktop posture.",
+  os_bucket: "linux_desktop",
+  browser_channel_bucket: "chromium_stable",
+  viewport: { width: 1365, height: 768 },
+  window: { width: 1365, height: 768 },
+  timezone: "Asia/Ho_Chi_Minh",
+  locale: "vi-VN",
+  proxy_geo_policy: "direct",
+  webrtc_mode: "default",
+  font_bundle: {
+    label: "Default",
+    expected_families: ["Arial"],
+  },
+  behavioral_timing_profile: "default",
+};
+
+const browserProfiles: ProjectEnvironment[] = [
+  {
+    id: "profile-1",
+    project_id: "project-1",
+    name: "Buyer A",
+    description: "",
+    is_default: false,
+    browser_launch: {
+      session_mode: "persistent_profile",
+      identity_id: "bi_profile_1",
+      display_name: "Buyer A",
+      persona_id: persona.id,
+      persona,
+      profile_dir: "bi_profile_1",
+      fingerprint_seed: "12345",
+      profile_name: "bi_profile_1",
+      proxy_enabled: false,
+      headless: false,
+      geoip: true,
+      webrtc_policy: "default",
+      humanize: true,
+      human_preset: "default",
+    },
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "profile-2",
+    project_id: "project-1",
+    name: "Buyer B",
+    description: "",
+    is_default: false,
+    browser_launch: {
+      session_mode: "persistent_profile",
+      identity_id: "bi_profile_2",
+      display_name: "Buyer B",
+      persona_id: persona.id,
+      persona,
+      profile_dir: "bi_profile_2",
+      fingerprint_seed: "23456",
+      profile_name: "bi_profile_2",
+      proxy_enabled: false,
+      headless: false,
+      geoip: true,
+      webrtc_policy: "default",
+      humanize: true,
+      human_preset: "default",
+    },
+    created_at: "2026-01-02T00:00:00.000Z",
+    updated_at: "2026-01-02T00:00:00.000Z",
+  },
+];
 
 describe("WorkflowSettingsDialog", () => {
   test("renders batch run policy controls as paused and disabled", () => {
@@ -38,20 +110,24 @@ describe("WorkflowSettingsDialog", () => {
     ).toBeInTheDocument();
   });
 
-  test("renders Browser Identity controls without restoring Owned Test Gates", () => {
+  test("renders Browser Profile selection without identity internals", async () => {
+    const user = userEvent.setup();
+    const onBrowserProfileChange = vi.fn();
     const settings = defaultWorkflowSettings({
       workflowId: "workflow-1",
       workflowName: "Checkout QA",
     });
-    settings.browser_launch.proxy_enabled = true;
 
     render(
       <WorkflowSettingsDialog
         activeSection="browser_launch"
         hasUnsavedChanges={false}
         open
+        browserProfiles={browserProfiles}
+        selectedBrowserProfileId="profile-1"
         settings={settings}
         onActiveSectionChange={vi.fn()}
+        onBrowserProfileChange={onBrowserProfileChange}
         onDiscardChanges={vi.fn()}
         onOpenChange={vi.fn()}
         onSaveSettings={vi.fn()}
@@ -69,27 +145,15 @@ describe("WorkflowSettingsDialog", () => {
     ]);
     expect(within(dialog).queryByRole("tab", { name: "Owned Test Gates" }))
       .not.toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Identity display name")).toHaveValue("Checkout QA identity");
-    expect(within(dialog).getByLabelText("Identity id")).toHaveValue("bi_workflow-1");
-    const identityRow = within(dialog)
-      .getByLabelText("Identity id")
-      .closest(".workflow-settings-identity-row");
-    expect(identityRow).not.toBeNull();
-    expect(within(dialog).getByLabelText("Identity display name").closest(".workflow-settings-identity-row"))
-      .toBe(identityRow);
-    expect(
-      Array.from(identityRow?.querySelectorAll("label") ?? []).map((label) =>
-        label.textContent,
-      ),
-    ).toEqual(["Identity id", "Identity display name"]);
-    expect(within(dialog).getByLabelText("Identity id").closest("label"))
-      .toHaveClass("workflow-settings-identity-id-field");
-    expect(within(dialog).getByLabelText("Identity display name").closest("label"))
-      .toHaveClass("workflow-settings-identity-name-field");
+    expect(within(dialog).getByLabelText("Browser profile")).toHaveValue("profile-1");
+    expect(within(dialog).getByRole("option", { name: "Buyer A" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("option", { name: "Buyer B" })).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Identity display name")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Identity id")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Profile directory")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Legacy profile key")).not.toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
-    expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("type", "text");
+    expect(within(dialog).queryByLabelText("Fingerprint seed")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Reset identity" })).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Browser brand")).not.toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "Show fingerprint seed" }))
       .not.toBeInTheDocument();
@@ -101,15 +165,12 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).queryByLabelText("Proxy region")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Proxy provider")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Test account binding")).not.toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Proxy bypass")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Timezone")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Locale")).toBeInTheDocument();
-    expect(within(dialog).getByText(
-      `Detected on this machine: ${expectedLocalTimezone()} / ${expectedLocalLocale()}`,
-    )).toBeInTheDocument();
-    expect(within(dialog).getByRole("switch", { name: "GeoIP location" })).toBeInTheDocument();
-    expect(within(dialog).getByRole("group", { name: "Fingerprint" })).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toHaveValue("");
+    expect(within(dialog).queryByLabelText("Proxy bypass")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Timezone")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Locale")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("switch", { name: "GeoIP location" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("group", { name: "Fingerprint" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Fingerprint fonts directory")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Fingerprint platform")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Hardware concurrency")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Device memory GB")).not.toBeInTheDocument();
@@ -121,15 +182,18 @@ describe("WorkflowSettingsDialog", () => {
       .not.toBeInTheDocument();
     expect(within(dialog).queryByRole("switch", { name: "Touch input" }))
       .not.toBeInTheDocument();
-    expect(within(dialog).getByRole("switch", { name: "Humanize browser input" })).toBeChecked();
-    expect(within(dialog).getByLabelText("Humanize preset")).toHaveValue("default");
+    expect(within(dialog).queryByRole("switch", { name: "Humanize browser input" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Humanize preset")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Behavior fidelity")).not.toBeInTheDocument();
     expect(within(dialog).queryByRole("switch", { name: "Fingerprint preflight" })).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Preflight probe URL")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Allowed probe origins")).not.toBeInTheDocument();
+
+    await user.selectOptions(within(dialog).getByLabelText("Browser profile"), "profile-2");
+    expect(onBrowserProfileChange).toHaveBeenCalledWith("profile-2");
   });
 
-  test("does not expose shared session source or fork controls in Browser Launch", () => {
+  test("does not expose session source or fork controls in Browser Launch", () => {
     const settings = defaultWorkflowSettings({
       workflowId: "workflow-1",
       workflowName: "Checkout QA",
@@ -140,8 +204,11 @@ describe("WorkflowSettingsDialog", () => {
         activeSection="browser_launch"
         hasUnsavedChanges={false}
         open
+        browserProfiles={browserProfiles}
+        selectedBrowserProfileId="profile-1"
         settings={settings}
         onActiveSectionChange={vi.fn()}
+        onBrowserProfileChange={vi.fn()}
         onDiscardChanges={vi.fn()}
         onOpenChange={vi.fn()}
         onSaveSettings={vi.fn()}
@@ -154,12 +221,10 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).queryByRole("button", { name: "Fork current session" }))
       .not.toBeInTheDocument();
     expect(within(dialog).queryByText(/Shared with/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByRole("switch", { name: "Reuse login session" }))
-      .toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("readonly");
-    expect(
-      within(dialog).getByText("Fingerprint seed is part of this workflow's browser identity."),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Browser profile")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("switch", { name: "Reuse login session" }))
+      .not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Fingerprint seed")).not.toBeInTheDocument();
   });
 
   test("groups graph live run and link wait defaults into reusable settings field groups", () => {
@@ -251,10 +316,13 @@ describe("WorkflowSettingsDialog", () => {
     settings.browser_launch.proxy_enabled = true;
 
     const props = {
+      browserProfiles,
       hasUnsavedChanges: false,
       open: true,
+      selectedBrowserProfileId: "profile-1",
       settings,
       onActiveSectionChange: vi.fn(),
+      onBrowserProfileChange: vi.fn(),
       onDiscardChanges: vi.fn(),
       onOpenChange: vi.fn(),
       onSaveSettings: vi.fn(),
@@ -294,22 +362,11 @@ describe("WorkflowSettingsDialog", () => {
       />,
     );
     dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
-    const expectedBrowserGroups = [
-      "Session & identity",
-      "Proxy",
-      "Location",
-      "Fingerprint",
-      "Humanization",
-      "Launch",
-    ];
+    const expectedBrowserGroups = ["Browser Profile"];
     for (const groupName of expectedBrowserGroups) {
       expect(within(dialog).getByRole("group", { name: groupName })).toHaveClass("settings-field-group");
     }
-    expect(within(within(dialog).getByRole("group", { name: "Session & identity" })).getByLabelText("Identity id"))
-      .toBeInTheDocument();
-    expect(within(within(dialog).getByRole("group", { name: "Proxy" })).getByLabelText("Proxy server"))
-      .toBeInTheDocument();
-    expect(within(within(dialog).getByRole("group", { name: "Launch" })).getByRole("switch", { name: "Headless browser" }))
+    expect(within(within(dialog).getByRole("group", { name: "Browser Profile" })).getByLabelText("Browser profile"))
       .toBeInTheDocument();
 
     rerender(
@@ -322,48 +379,31 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByRole("group", { name: "Initial variables" })).toHaveClass("settings-field-group");
   });
 
-  test("can edit the fingerprint fonts directory without seed reveal or copy actions", async () => {
-    const user = userEvent.setup();
-    const onSettingsChange = vi.fn();
+  test("does not edit profile-owned fingerprint settings in Workflow Settings", () => {
     const initialSettings = defaultWorkflowSettings({
       workflowId: "workflow-1",
       workflowName: "Checkout QA",
     });
-
-    function Harness() {
-      const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
-      return (
-        <WorkflowSettingsDialog
-          activeSection="browser_launch"
-          hasUnsavedChanges={false}
-          open
-          settings={settings}
-          onActiveSectionChange={vi.fn()}
-          onDiscardChanges={vi.fn()}
-          onOpenChange={vi.fn()}
-          onSaveSettings={vi.fn()}
-          onSettingsChange={(nextSettings) => {
-            onSettingsChange(nextSettings);
-            setSettings(nextSettings);
-          }}
-        />
-      );
-    }
-
-    render(<Harness />);
+    render(
+      <WorkflowSettingsDialog
+        activeSection="browser_launch"
+        browserProfiles={browserProfiles}
+        hasUnsavedChanges={false}
+        open
+        selectedBrowserProfileId="profile-1"
+        settings={initialSettings}
+        onActiveSectionChange={vi.fn()}
+        onBrowserProfileChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={vi.fn()}
+      />,
+    );
 
     expect(screen.queryByRole("button", { name: "Show fingerprint seed" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Copy fingerprint seed" })).not.toBeInTheDocument();
-
-    await user.type(screen.getByLabelText("Fingerprint fonts directory"), "/opt/fp-fonts");
-
-    expect(onSettingsChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        browser_launch: expect.objectContaining({
-          fingerprint_fonts_dir: "/opt/fp-fonts",
-        }),
-      }),
-    );
+    expect(screen.queryByLabelText("Fingerprint fonts directory")).not.toBeInTheDocument();
   });
 
   test("does not save disabled batch switch changes but still edits active run policy fields", async () => {
@@ -482,111 +522,31 @@ describe("WorkflowSettingsDialog", () => {
     );
   });
 
-  test("reuse session toggles persistent storage without changing the saved identity", async () => {
-    const user = userEvent.setup();
-    const onSettingsChange = vi.fn();
-    const defaultSettings = defaultWorkflowSettings({
-      workflowId: "workflow-1",
-      workflowName: "Checkout QA",
-    });
-    const initialSettings = {
-      ...defaultSettings,
-      run_policy: {
-        ...defaultSettings.run_policy,
-        run_from_selected_enabled: true,
-        run_from_selected_mode: "from_selected" as const,
-      },
-    };
-
-    function Harness() {
-      const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
-      return (
-        <WorkflowSettingsDialog
-          activeSection="browser_launch"
-          hasUnsavedChanges={false}
-          open
-          settings={settings}
-          onActiveSectionChange={vi.fn()}
-          onDiscardChanges={vi.fn()}
-          onOpenChange={vi.fn()}
-          onSaveSettings={vi.fn()}
-          onSettingsChange={(nextSettings) => {
-            onSettingsChange(nextSettings);
-            setSettings(nextSettings);
-          }}
-        />
-      );
-    }
-
-    render(
-      <Harness />,
-    );
-
-    expect(screen.queryByRole("switch", { name: "Enable Run from selected" }))
-      .not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("switch", { name: "Reuse login session" }));
-    expect(onSettingsChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        browser_launch: expect.objectContaining({
-          session_mode: "temporary",
-          profile_name: null,
-          identity_id: "bi_workflow-1",
-          profile_dir: "bi_workflow-1",
-        }),
-        run_policy: expect.objectContaining({
-          run_from_selected_enabled: false,
-        }),
-      }),
-    );
-  });
-
-  test("resets browser identity through an in-app confirmation and backend callback", async () => {
-    const user = userEvent.setup();
-    const onResetBrowserIdentity = vi.fn();
-    const confirmSpy = vi.spyOn(window, "confirm");
+  test("does not expose workflow-level identity reset", () => {
     const initialSettings = defaultWorkflowSettings({
       workflowId: "workflow-1",
       workflowName: "Checkout QA",
     });
 
-    function Harness() {
-      const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
-      return (
-        <WorkflowSettingsDialog
-          activeSection="browser_launch"
-          hasUnsavedChanges={false}
-          open
-          settings={settings}
-          onActiveSectionChange={vi.fn()}
-          onDiscardChanges={vi.fn()}
-          onOpenChange={vi.fn()}
-          onSaveSettings={vi.fn()}
-          onSettingsChange={(nextSettings) => {
-            setSettings(nextSettings);
-          }}
-          onResetBrowserIdentity={onResetBrowserIdentity}
-        />
-      );
-    }
+    render(
+      <WorkflowSettingsDialog
+        activeSection="browser_launch"
+        browserProfiles={browserProfiles}
+        hasUnsavedChanges={false}
+        open
+        selectedBrowserProfileId="profile-1"
+        settings={initialSettings}
+        onActiveSectionChange={vi.fn()}
+        onBrowserProfileChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={vi.fn()}
+      />,
+    );
 
-    render(<Harness />);
-
-    await user.click(screen.getByRole("button", { name: "Reset identity" }));
-    const dialog = screen.getByRole("dialog", { name: "Reset browser identity" });
-
-    expect(within(dialog).getByText(/creates a new backend-generated identity id/i))
-      .toBeInTheDocument();
-    expect(confirmSpy).not.toHaveBeenCalled();
-    expect(onResetBrowserIdentity).not.toHaveBeenCalled();
-
-    await user.click(within(dialog).getByRole("button", { name: "Reset identity" }));
-
-    expect(onResetBrowserIdentity).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("button", { name: "Duplicate identity" }))
-      .not.toBeInTheDocument();
-
-    confirmSpy.mockRestore();
+    expect(screen.queryByRole("button", { name: "Reset identity" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Reset browser identity" })).not.toBeInTheDocument();
   });
 
   test("renders settings help with the scrollable workflow settings help layout", async () => {
@@ -654,11 +614,3 @@ describe("WorkflowSettingsDialog", () => {
     expect(mistakeItem?.open).toBe(false);
   });
 });
-
-function expectedLocalTimezone() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-}
-
-function expectedLocalLocale() {
-  return Intl.DateTimeFormat().resolvedOptions().locale || "en-US";
-}

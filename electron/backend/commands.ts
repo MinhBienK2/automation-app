@@ -66,7 +66,10 @@ import { runBatchWorkflowRows } from "./runtime/batchWorkflowRun.js";
 import { sanitizePathSegment } from "./evidence/artifacts.js";
 import { EvidenceRepository } from "./evidence/evidenceRepository.js";
 import { IdentityRepository } from "./identity/identityRepository.js";
-import { createProjectCommandCascades } from "./projects/projectCommandCascades.js";
+import {
+  createProjectCommandCascades,
+  projectEnvironmentProfileKey,
+} from "./projects/projectCommandCascades.js";
 import { migrateWorkflowGraph } from "./graph/migration.js";
 import { ProjectPackageService } from "./services/projectPackageService.js";
 import { WorkflowPackageService } from "./services/workflowPackageService.js";
@@ -226,8 +229,25 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ensureDefaultProjectEnvironment(project);
     for (const workflow of repository.listWorkflows()) {
       const projectId = workflow.project_id ?? project.id;
-      if (!workflow.project_id || workflow.environment_id) {
+      if (!workflow.project_id) {
         repository.assignWorkflowProject(workflow.id, projectId);
+      }
+      const current = repository.getWorkflowSummary(workflow.id);
+      if (!current?.environment_id) {
+        const ownerProject = repository.getProject(projectId) ?? project;
+        const persistedSettings = repository.getWorkflowSettings(workflow.id);
+        const environment = persistedSettings
+          ? repository.createProjectEnvironment(ownerProject.id, {
+              name: `${workflow.name} browser profile`,
+              description: "Migrated workflow browser profile",
+              browser_launch: settingsService.normalizeWorkflowSettings(
+                persistedSettings,
+                workflow,
+              ).browser_launch,
+              is_default: false,
+            })
+          : ensureDefaultProjectEnvironment(ownerProject);
+        repository.assignWorkflowProjectEnvironment(workflow.id, environment.id);
       }
     }
   }
@@ -242,9 +262,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const existing = repository.getDefaultProjectEnvironment(project.id);
     if (existing) return existing;
     return repository.createProjectEnvironment(project.id, {
-      name: "Project saved session",
-      description: "Default project-owned fingerprint and persistent browser profile",
-      browser_launch: defaultEnvironmentBrowserLaunch("Project saved session"),
+      name: "Project browser profile",
+      description: "Project-owned browser profile with persistent storage and fingerprint identity",
+      browser_launch: defaultEnvironmentBrowserLaunch("Project browser profile"),
       is_default: true,
     });
   }
@@ -364,9 +384,19 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   function getSettings(workflowId: string): WorkflowSettings {
     const persisted = repository.getWorkflowSettings(workflowId);
     const workflow = requireWorkflow(workflowId);
-    return persisted
+    const normalized = persisted
       ? settingsService.normalizeWorkflowSettings(persisted, workflow)
       : settingsService.defaultWorkflowSettings(workflow);
+    if (!workflow.environment_id) return normalized;
+    const environment = repository.getProjectEnvironment(workflow.environment_id);
+    if (!environment || environment.project_id !== workflow.project_id) return normalized;
+    return settingsService.normalizeWorkflowSettings(
+      {
+        ...normalized,
+        browser_launch: environment.browser_launch,
+      },
+      workflow,
+    );
   }
 
   function lastRunAtForWorkflow(workflowId: string): string | null {
@@ -403,6 +433,20 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     runManager.assertWorkflowDeletionAllowed(workflowId, settings);
   }
 
+  function saveSelectedProfileBrowserLaunch(
+    workflow: WorkflowSummary,
+    browserLaunch: WorkflowSettings["browser_launch"],
+  ) {
+    if (!workflow.environment_id) return browserLaunch;
+    const environment = repository.getProjectEnvironment(workflow.environment_id);
+    if (!environment || environment.project_id !== workflow.project_id) {
+      return browserLaunch;
+    }
+    return repository.updateProjectEnvironment(environment.id, {
+      browser_launch: browserLaunch,
+    })?.browser_launch ?? browserLaunch;
+  }
+
   function assertCanResetBrowserIdentity(workflowId: string, settings: WorkflowSettings) {
     runManager.assertCanResetBrowserIdentity(workflowId, settings);
   }
@@ -417,13 +461,42 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     );
   }
 
+  function usedBrowserProfileFingerprintSeeds(exceptWorkflowId?: string) {
+    const seeds = usedFingerprintSeeds(exceptWorkflowId);
+    for (const project of repository.listProjects()) {
+      for (const environment of repository.listProjectEnvironments(project.id)) {
+        const seed = environment.browser_launch.fingerprint_seed;
+        if (seed) seeds.add(seed);
+      }
+    }
+    return seeds;
+  }
+
+  function duplicateBrowserProfileLaunch(
+    browserLaunch: WorkflowSettings["browser_launch"],
+    exceptWorkflowId?: string,
+  ): WorkflowSettings["browser_launch"] {
+    const identityId = createHighEntropyBrowserIdentityId();
+    return {
+      ...browserLaunch,
+      identity_id: identityId,
+      profile_dir: identityId,
+      profile_name:
+        browserLaunch.session_mode === "persistent_profile" ? identityId : null,
+      fingerprint_seed: deriveFingerprintSeedFromIdentityId(
+        identityId,
+        usedBrowserProfileFingerprintSeeds(exceptWorkflowId),
+      ),
+    };
+  }
+
   function rotateBrowserIdentity(workflowId: string): WorkflowSettings {
     const settings = getSettings(workflowId);
     assertCanResetBrowserIdentity(workflowId, settings);
     const identityId = createHighEntropyBrowserIdentityId();
     const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
       identityId,
-      usedFingerprintSeeds(workflowId),
+      usedBrowserProfileFingerprintSeeds(workflowId),
     );
     const timestamp = new Date().toISOString();
     return saveSettings(workflowId, {
@@ -501,6 +574,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       );
     }
 
+    const browserLaunch = saveSelectedProfileBrowserLaunch(
+      workflow,
+      activeSettings.browser_launch,
+    );
     const timestamp = new Date().toISOString();
     const normalized: WorkflowSettings = {
       ...activeSettings,
@@ -512,7 +589,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         updated_at: timestamp,
         created_at: activeSettings.general.created_at ?? workflow.created_at,
       },
-      browser_launch: activeSettings.browser_launch,
+      browser_launch: browserLaunch,
       migration_notes: activeSettings.migration_notes,
       updated_at: timestamp,
       created_at: activeSettings.created_at ?? workflow.created_at,
@@ -551,20 +628,24 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const project = options.project_id
       ? requireProject(options.project_id)
       : ensureDefaultProject();
+    const environment = ensureDefaultProjectEnvironment(project);
     const workflow = repository.createWorkflow(
       normalized,
       createDraftGraph(),
       new Date(),
-      { projectId: project.id, environmentId: null },
+      { projectId: project.id, environmentId: environment.id },
     );
     const defaultSettings = settingsService.defaultWorkflowSettings(workflow, {
       randomizeIdentity: true,
     });
-    repository.saveWorkflowSettings(workflow.id, defaultSettings);
+    repository.saveWorkflowSettings(workflow.id, {
+      ...defaultSettings,
+      browser_launch: environment.browser_launch,
+    });
     return {
       ...workflow,
       project_id: project.id,
-      environment_id: null,
+      environment_id: environment.id,
     };
   }
 
@@ -726,7 +807,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ): ProjectEnvironment {
       requireProject(projectId);
       const name = input.name.trim();
-      if (!name) throw commandError("Environment name is required", "name");
+      if (!name) throw commandError("Profile name is required", "name");
       return repository.createProjectEnvironment(projectId, {
         name,
         description: input.description?.trim() ?? "",
@@ -741,7 +822,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ): ProjectEnvironment {
       const current = requireProjectEnvironment(environmentId);
       if (input.name != null && !input.name.trim()) {
-        throw commandError("Environment name is required", "name");
+        throw commandError("Profile name is required", "name");
       }
       const updated = repository.updateProjectEnvironment(environmentId, {
         ...input,
@@ -753,6 +834,36 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         repository.updateProjectEnvironment(updated.id, { is_default: true });
         return requireProjectEnvironment(updated.id);
       }
+      return updated;
+    },
+
+    deleteProjectEnvironment(environmentId: string) {
+      const environment = requireProjectEnvironment(environmentId);
+      const usage = repository.listWorkflowsUsingEnvironment(environment.id);
+      if (usage.length > 0) {
+        throw commandError("Browser profile is used by workflows", "environmentId");
+      }
+      const profileDir = projectEnvironmentProfileKey(environment);
+      repository.deleteProjectEnvironment(environment.id);
+      if (profileDir) {
+        nodeFs.rmSync(path.join(context.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)), {
+          recursive: true,
+          force: true,
+        });
+      }
+    },
+
+    setWorkflowProjectEnvironment(
+      workflowId: string,
+      environmentId: string,
+    ): Workflow {
+      const workflow = requireWorkflow(workflowId);
+      const environment = requireProjectEnvironment(environmentId);
+      if (!workflow.project_id || workflow.project_id !== environment.project_id) {
+        throw commandError("Browser profile must belong to the workflow project", "environmentId");
+      }
+      const updated = repository.assignWorkflowProjectEnvironment(workflow.id, environment.id);
+      if (!updated) throw commandError("Workflow not found", "workflowId");
       return updated;
     },
 
@@ -980,14 +1091,23 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const sourceWorkflow = requireWorkflow(workflowId);
       context.database.exec("BEGIN IMMEDIATE");
       try {
-        const created = createWorkflow(name, {
+        let created = createWorkflow(name, {
           project_id: sourceWorkflow.project_id,
         });
+        if (sourceWorkflow.environment_id) {
+          created = repository.assignWorkflowProjectEnvironment(
+            created.id,
+            sourceWorkflow.environment_id,
+          ) ?? created;
+        }
         const graph = repository.getWorkflowGraph(workflowId);
         if (graph) repository.saveWorkflowGraph(created.id, graph);
-        const settings = repository.getWorkflowSettings(workflowId);
+        const settings = getSettings(workflowId);
         if (settings) {
-          saveSettings(created.id, settingsService.duplicateWorkflowSettings(settings, created));
+          saveSettings(created.id, {
+            ...settingsService.duplicateWorkflowSettings(settings, created),
+            browser_launch: getSettings(created.id).browser_launch,
+          });
         }
         context.database.exec("COMMIT");
         return { workflow: created, steps: [] };
@@ -1030,7 +1150,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const profileKey = browserProfileKey(settings);
       if (settings.browser_launch.session_mode !== "persistent_profile" || !profileKey) {
         throw commandError(
-          "Run from selected requires Reuse login session to be enabled",
+          "Run from selected requires a persistent browser profile",
           "browser_launch.session_mode",
         );
       }
@@ -1213,9 +1333,28 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
       context.database.exec("BEGIN IMMEDIATE");
       try {
-        const workflow = createWorkflow(preparedImport.importedName, {
+        let workflow = createWorkflow(preparedImport.importedName, {
           project_id: targetProjectId,
         });
+        let importedProfile: ProjectEnvironment | null = null;
+        if (importsBrowserLaunch && preparedImport.candidateSettings?.browser_launch) {
+          importedProfile = repository.createProjectEnvironment(
+            workflow.project_id ?? targetProjectId,
+            {
+              name: `${workflow.name} browser profile`,
+              description: "Imported workflow browser profile",
+              is_default: false,
+              browser_launch: duplicateBrowserProfileLaunch(
+                preparedImport.candidateSettings.browser_launch,
+                workflow.id,
+              ),
+            },
+          );
+          workflow = repository.assignWorkflowProjectEnvironment(
+            workflow.id,
+            importedProfile.id,
+          ) ?? workflow;
+        }
         const subflowIdMap = new Map<string, string>();
         for (const subflow of preparedImport.subflows) {
           const createdSubflow = repository.createSubflow(
@@ -1240,7 +1379,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             ...preparedImport.candidateSettings,
             workflow_id: workflow.id,
             browser_launch: importsBrowserLaunch
-              ? preparedImport.candidateSettings.browser_launch
+              ? importedProfile?.browser_launch ??
+                preparedImport.candidateSettings.browser_launch
               : baseSettings.browser_launch,
             general: {
               ...preparedImport.candidateSettings.general,
