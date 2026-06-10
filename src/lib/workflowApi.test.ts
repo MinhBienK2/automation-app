@@ -21,7 +21,6 @@ import {
   duplicateProject,
   duplicateSubflow,
   dryRunValidateConfig,
-  forkWorkflowSession,
   compileWorkflowGraph,
   getWorkflowSettings,
   getSubflow,
@@ -73,7 +72,6 @@ import {
   validateSchedule,
   previewWorkflowPackage,
   previewProjectPackage,
-  setWorkflowEnvironment,
   deleteSubflow,
   updateProjectEnvironment,
   updateProject,
@@ -147,8 +145,6 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.createProjectEnvironment.mockResolvedValue(undefined);
     workflowBridgeMock.updateProjectEnvironment.mockResolvedValue(undefined);
     workflowBridgeMock.resetProjectEnvironmentBrowserIdentity.mockResolvedValue(undefined);
-    workflowBridgeMock.setWorkflowEnvironment.mockResolvedValue(undefined);
-    workflowBridgeMock.forkWorkflowSession.mockResolvedValue(undefined);
     workflowBridgeMock.createSubflow.mockResolvedValue(undefined);
     workflowBridgeMock.listSubflows.mockResolvedValue(undefined);
     workflowBridgeMock.getSubflow.mockResolvedValue(undefined);
@@ -184,8 +180,6 @@ describe("workflow API phase ten commands", () => {
     });
     await updateProjectEnvironment("environment-1", { name: "Updated" });
     await resetProjectEnvironmentBrowserIdentity("environment-1");
-    await setWorkflowEnvironment("workflow-1", "environment-1");
-    await forkWorkflowSession("workflow-1");
     await createSubflow("project-1", { name: "Login" });
     await listSubflows("project-1");
     await getSubflow("subflow-1");
@@ -292,13 +286,6 @@ describe("workflow API phase ten commands", () => {
     );
     expect(workflowBridgeMock.resetProjectEnvironmentBrowserIdentity).toHaveBeenCalledWith(
       "environment-1",
-    );
-    expect(workflowBridgeMock.setWorkflowEnvironment).toHaveBeenCalledWith(
-      "workflow-1",
-      "environment-1",
-    );
-    expect(workflowBridgeMock.forkWorkflowSession).toHaveBeenCalledWith(
-      "workflow-1",
     );
     expect(workflowBridgeMock.createSubflow).toHaveBeenCalledWith("project-1", {
       name: "Login",

@@ -22,7 +22,6 @@ import {
 
 type WorkflowDetailPageProps = {
   detail: WorkflowDetail;
-  environmentName?: string | null;
   projectName?: string | null;
   isRunning: boolean;
   appError: string;
@@ -58,7 +57,6 @@ type WorkflowDetailPageProps = {
 
 export function WorkflowDetailPage({
   detail,
-  environmentName = null,
   projectName = null,
   isRunning,
   appError,
@@ -173,7 +171,6 @@ export function WorkflowDetailPage({
         meta={[
           graphSaveStatus,
           ...(projectName ? [`Project: ${projectName}`] : []),
-          ...(environmentName ? [`Environment: ${environmentName}`] : []),
         ]}
         status={
           <RunStatusBar

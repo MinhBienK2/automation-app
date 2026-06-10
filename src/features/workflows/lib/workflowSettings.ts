@@ -407,26 +407,19 @@ export const workflowSettingsHelp: Record<
     en: {
       title: "Browser Identity Settings Help",
       summary:
-        "Browser Identity settings control the stable CloakBrowser session source resolved before Chromium opens: profile storage, fingerprint seed, managed fingerprint fonts, location, and network posture.",
+        "Browser Identity settings control the workflow-owned CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, managed fingerprint fonts, location, and network posture.",
       uiLabels: enLabels,
       bestFor: [
-        "Making shared session, device identity, and network posture repeatable from the first browser request.",
+        "Making a workflow's device identity and network posture repeatable from the first browser request.",
         "Keeping launch-level profile and proxy controls in one auditable settings section.",
       ],
       notFor: ["Changing browser identity halfway through a run, resizing pages after launch, or solving human challenge flows."],
       precedence: [
         "Browser Launch values are resolved before Chromium starts, so changes require saving settings and starting a new run.",
-        "Session source changes point the workflow at a project browser session; Fork current session creates a new private browser identity for this workflow.",
+        "Each workflow owns its Browser Launch identity; Reset identity rotates the workflow's identity id, profile directory, and fingerprint seed.",
         "In-run graph actions can still change runtime browser context only after the browser has launched.",
       ],
       fieldGuide: [
-        {
-          name: "Session source",
-          description:
-            "Project browser session selected by this workflow. Multiple workflows can point at the same source and therefore share one profile directory, fingerprint seed, and launch posture.",
-          whenToUse:
-            "Select another workflow's approved session when flows should reuse the same owned account state; fork when this workflow needs an independent identity.",
-        },
         {
           name: "Reuse login session",
           description:
@@ -444,9 +437,9 @@ export const workflowSettingsHelp: Record<
         {
           name: "Fingerprint seed",
           description:
-            "Read-only CloakBrowser seed managed as part of the selected session identity so profile storage and device fingerprint stay coherent across runs.",
+            "Read-only CloakBrowser seed managed as part of this workflow's browser identity so profile storage and device fingerprint stay coherent across runs.",
           whenToUse:
-            "Use Reset identity or Fork current session when the test needs a different seed and browser profile.",
+            "Use Reset identity when the test needs a different seed and browser profile.",
         },
         {
           name: "Fingerprint fonts directory",
@@ -529,7 +522,7 @@ export const workflowSettingsHelp: Record<
       workflowExamples: [
         {
           title: "Persistent owned account run",
-          steps: ["Choose the approved session source", "Enable Reuse login session", "Keep headed mode for review"],
+          steps: ["Enable Reuse login session", "Confirm the workflow identity label", "Keep headed mode for review"],
         },
       ],
       safetyNotes: [
@@ -545,26 +538,19 @@ export const workflowSettingsHelp: Record<
     vi: {
       title: "Trợ giúp Browser Identity",
       summary:
-        "Browser Identity điều khiển session source CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, bộ font fingerprint được quản lý, vị trí, và network posture.",
+        "Browser Identity điều khiển identity CloakBrowser riêng của workflow trước khi Chromium mở: profile storage, fingerprint seed, bộ font fingerprint được quản lý, vị trí, và network posture.",
       uiLabels: viLabels,
       bestFor: [
-        "Giữ shared session, device identity, và network posture lặp lại được ngay từ request đầu tiên của browser.",
+        "Giữ device identity và network posture của workflow lặp lại được ngay từ request đầu tiên của browser.",
         "Gom profile và proxy ở cấp launch vào một section dễ audit.",
       ],
       notFor: ["Không dùng để đổi danh tính browser giữa run, resize trang sau launch, hoặc giải human challenge."],
       precedence: [
         "Browser Launch được resolve trước khi Chromium start, nên thay đổi cần save settings và bắt đầu run mới.",
-        "Đổi Session source sẽ trỏ workflow sang một project browser session; Fork current session tạo browser identity riêng mới cho workflow này.",
+        "Mỗi workflow sở hữu Browser Launch identity của nó; Reset identity xoay identity id, profile directory, và fingerprint seed của workflow.",
         "Graph action trong run chỉ có thể đổi runtime browser context sau khi browser đã mở.",
       ],
       fieldGuide: [
-        {
-          name: "Session source",
-          description:
-            "Project browser session mà workflow này chọn. Nhiều workflow có thể trỏ cùng một source và cùng chia sẻ profile directory, fingerprint seed, và launch posture.",
-          whenToUse:
-            "Chọn session đã được phê duyệt của workflow khác khi các flow cần dùng chung owned account state; fork khi workflow này cần identity độc lập.",
-        },
         {
           name: "Reuse login session",
           description:
@@ -582,9 +568,9 @@ export const workflowSettingsHelp: Record<
         {
           name: "Fingerprint seed",
           description:
-            "Seed CloakBrowser read-only được quản lý cùng selected session identity để profile storage và device fingerprint luôn nhất quán qua nhiều run.",
+            "Seed CloakBrowser read-only được quản lý cùng browser identity riêng của workflow để profile storage và device fingerprint luôn nhất quán qua nhiều run.",
           whenToUse:
-            "Dùng Reset identity hoặc Fork current session khi test cần seed và browser profile khác.",
+            "Dùng Reset identity khi test cần seed và browser profile khác.",
         },
         {
           name: "Fingerprint fonts directory",
@@ -667,7 +653,7 @@ export const workflowSettingsHelp: Record<
       workflowExamples: [
         {
           title: "Run bằng owned account persistent",
-          steps: ["Chọn session source đã phê duyệt", "Bật Reuse login session", "Giữ headed mode để review"],
+          steps: ["Bật Reuse login session", "Kiểm tra nhãn identity của workflow", "Giữ headed mode để review"],
         },
       ],
       safetyNotes: [

@@ -226,23 +226,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ensureDefaultProjectEnvironment(project);
     for (const workflow of repository.listWorkflows()) {
       const projectId = workflow.project_id ?? project.id;
-      const existingEnvironment = workflow.environment_id
-        ? repository.getProjectEnvironment(workflow.environment_id)
-        : null;
-      if (existingEnvironment && existingEnvironment.project_id === projectId) {
-        if (!workflow.project_id) {
-          repository.assignWorkflowProjectEnvironment(workflow.id, projectId, existingEnvironment.id);
-        }
-        continue;
+      if (!workflow.project_id || workflow.environment_id) {
+        repository.assignWorkflowProject(workflow.id, projectId);
       }
-      const settings = getSettings(workflow.id);
-      const environment = repository.createProjectEnvironment(projectId, {
-        name: `${workflow.name} environment`,
-        description: "Migrated workflow browser launch settings",
-        browser_launch: settings.browser_launch,
-        is_default: false,
-      });
-      repository.assignWorkflowProjectEnvironment(workflow.id, projectId, environment.id);
     }
   }
 
@@ -288,23 +274,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       throw commandError("Project environment not found", "environmentId");
     }
     return environment;
-  }
-
-  function selectedProjectEnvironment(workflowId: string): ProjectEnvironment | null {
-    const workflow = requireWorkflow(workflowId);
-    return workflow.environment_id
-      ? repository.getProjectEnvironment(workflow.environment_id)
-      : null;
-  }
-
-  function settingsWithSelectedEnvironment(
-    workflowId: string,
-    settings: WorkflowSettings,
-  ): WorkflowSettings {
-    const environment = selectedProjectEnvironment(workflowId);
-    return environment
-      ? { ...settings, browser_launch: environment.browser_launch }
-      : settings;
   }
 
   function graphContextForWorkflow(workflow: WorkflowSummary) {
@@ -395,10 +364,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   function getSettings(workflowId: string): WorkflowSettings {
     const persisted = repository.getWorkflowSettings(workflowId);
     const workflow = requireWorkflow(workflowId);
-    const normalized = persisted
+    return persisted
       ? settingsService.normalizeWorkflowSettings(persisted, workflow)
       : settingsService.defaultWorkflowSettings(workflow);
-    return settingsWithSelectedEnvironment(workflowId, normalized);
   }
 
   function lastRunAtForWorkflow(workflowId: string): string | null {
@@ -549,12 +517,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       updated_at: timestamp,
       created_at: activeSettings.created_at ?? workflow.created_at,
     };
-    const selectedEnvironment = selectedProjectEnvironment(workflowId);
-    if (selectedEnvironment) {
-      repository.updateProjectEnvironment(selectedEnvironment.id, {
-        browser_launch: normalized.browser_launch,
-      });
-    }
     repository.saveWorkflowSettings(workflowId, normalized);
     return normalized;
   }
@@ -598,55 +560,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const defaultSettings = settingsService.defaultWorkflowSettings(workflow, {
       randomizeIdentity: true,
     });
-    const environment = resolveWorkflowCreationEnvironment({
-      project,
-      workflowName: normalized,
-      selection: options.environment ?? { mode: "project_default" },
-      defaultBrowserLaunch: defaultSettings.browser_launch,
-    });
-    repository.assignWorkflowProjectEnvironment(workflow.id, project.id, environment.id);
-    repository.saveWorkflowSettings(workflow.id, {
-      ...defaultSettings,
-      browser_launch: environment.browser_launch,
-    });
+    repository.saveWorkflowSettings(workflow.id, defaultSettings);
     return {
       ...workflow,
       project_id: project.id,
-      environment_id: environment.id,
+      environment_id: null,
     };
-  }
-
-  function resolveWorkflowCreationEnvironment({
-    project,
-    workflowName,
-    selection,
-    defaultBrowserLaunch,
-  }: {
-    project: Project;
-    workflowName: string;
-    selection: NonNullable<WorkflowCreateOptions["environment"]>;
-    defaultBrowserLaunch: WorkflowSettings["browser_launch"];
-  }): ProjectEnvironment {
-    if (selection.mode === "existing") {
-      const environment = requireProjectEnvironment(selection.environment_id);
-      if (environment.project_id !== project.id) {
-        throw commandError(
-          "Workflow environment must belong to the selected project",
-          "environment_id",
-        );
-      }
-      return environment;
-    }
-    if (selection.mode === "isolated") {
-      const environmentName = selection.name?.trim() || `${workflowName} isolated environment`;
-      return repository.createProjectEnvironment(project.id, {
-        name: environmentName,
-        description: "Isolated workflow browser identity and launch posture",
-        browser_launch: defaultBrowserLaunch,
-        is_default: false,
-      });
-    }
-    return ensureDefaultProjectEnvironment(project);
   }
 
   function getWorkflowGraph(workflowId: string): WorkflowGraph {
@@ -730,14 +649,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       context.database.exec("BEGIN IMMEDIATE");
       try {
         const project = repository.createProject(name, input.description?.trim() ?? "");
-        const environment = ensureDefaultProjectEnvironment(project);
-        createWorkflow("Main", {
-          project_id: project.id,
-          environment: {
-            mode: "existing",
-            environment_id: environment.id,
-          },
-        });
+        ensureDefaultProjectEnvironment(project);
+        createWorkflow("Main", { project_id: project.id });
         context.database.exec("COMMIT");
         return project;
       } catch (error) {
@@ -845,77 +758,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     resetProjectEnvironmentBrowserIdentity(environmentId: string): ProjectEnvironment {
       return projectCascades.rotateProjectEnvironmentBrowserIdentity(environmentId);
-    },
-
-    setWorkflowEnvironment(workflowId: string, environmentId: string): Workflow {
-      const workflow = requireWorkflow(workflowId);
-      const environment = requireProjectEnvironment(environmentId);
-      if (workflow.project_id !== environment.project_id) {
-        throw commandError(
-          "Workflow environment must belong to the same project",
-          "environmentId",
-        );
-      }
-      repository.setWorkflowEnvironment(workflowId, environmentId);
-      const settings = getSettings(workflowId);
-      repository.saveWorkflowSettings(workflowId, settings);
-      return {
-        ...summaryToWorkflow(requireWorkflow(workflowId)),
-        project_id: environment.project_id,
-        environment_id: environment.id,
-      };
-    },
-
-    forkWorkflowSession(workflowId: string): Workflow {
-      const workflow = requireWorkflow(workflowId);
-      if (!workflow.project_id) {
-        throw commandError(
-          "Workflow must belong to a project before forking its browser session",
-          "workflowId",
-        );
-      }
-      const settings = getSettings(workflowId);
-      const identityId = createHighEntropyBrowserIdentityId();
-      const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
-        identityId,
-        usedFingerprintSeeds(workflowId),
-      );
-      const persistent = settings.browser_launch.session_mode === "persistent_profile";
-      const browserLaunch: WorkflowSettings["browser_launch"] = {
-        ...settings.browser_launch,
-        identity_id: identityId,
-        display_name: `${workflow.name} identity`,
-        profile_dir: identityId,
-        profile_name: persistent ? identityId : null,
-        fingerprint_seed: fingerprintSeed,
-      };
-      context.database.exec("BEGIN IMMEDIATE");
-      try {
-        const environment = repository.createProjectEnvironment(workflow.project_id, {
-          name: `${workflow.name} private session`,
-          description: "Forked browser identity and launch posture",
-          is_default: false,
-          browser_launch: browserLaunch,
-        });
-        repository.setWorkflowEnvironment(workflowId, environment.id);
-        saveSettings(workflowId, {
-          ...settings,
-          run_policy: {
-            ...settings.run_policy,
-            run_from_selected_enabled: false,
-          },
-          browser_launch: browserLaunch,
-        });
-        context.database.exec("COMMIT");
-        return {
-          ...summaryToWorkflow(requireWorkflow(workflowId)),
-          project_id: workflow.project_id,
-          environment_id: environment.id,
-        };
-      } catch (error) {
-        context.database.exec("ROLLBACK");
-        throw error;
-      }
     },
 
     createSubflow(
@@ -1140,7 +982,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       try {
         const created = createWorkflow(name, {
           project_id: sourceWorkflow.project_id,
-          environment: { mode: "isolated" },
         });
         const graph = repository.getWorkflowGraph(workflowId);
         if (graph) repository.saveWorkflowGraph(created.id, graph);
@@ -1374,12 +1215,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       try {
         const workflow = createWorkflow(preparedImport.importedName, {
           project_id: targetProjectId,
-          environment: importsBrowserLaunch
-            ? {
-                mode: "isolated",
-                name: `${packageValue.workflow.name} imported session`,
-              }
-            : { mode: "project_default" },
         });
         const subflowIdMap = new Map<string, string>();
         for (const subflow of preparedImport.subflows) {

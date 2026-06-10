@@ -5,14 +5,12 @@
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
 - Electron backend commands validate a non-blank workflow name before persistence.
 - Repository trims and stores the workflow with timestamps, associates it with
-  the default `Main` project, selects either the project saved session or a new
-  private workflow session according to the create options, creates a
-  `Start -> New node` draft graph, and persists default Workflow Settings over
-  the selected session. `New node` is an unconfigured action node with
-  `config: null`.
-- The workflow list Create dialog can reuse the project saved session or create
-  a new workflow session. Omitted backend create options also use the project
-  saved session by default.
+  the default `Main` project, creates a `Start -> New node` draft graph, and
+  persists default workflow-owned Workflow Settings. `New node` is an
+  unconfigured action node with `config: null`.
+- The workflow list Create dialog asks for the workflow name only. Omitted
+  backend create options use the default project but do not select a project
+  saved session.
 - UI refreshes list and opens the created workflow.
 - The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. While a workflow has an active run, the row disables Run, Duplicate, Export, and Delete and exposes Stop for the active run id. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, copies non-storage Workflow Settings without package-export sanitization, creates a fresh backend-generated browser identity/profile/fingerprint for the copy, disables Run from selected, and refreshes the list.
 - If a manual full-run launch from Graph Builder or the workflow list is
@@ -31,8 +29,8 @@
 - Electron backend commands validate a non-blank project name before
   persistence.
 - The command transactionally creates the project, its default project saved
-  session, and one normal draft workflow named `Main` that uses that project
-  saved session.
+  identity, and one normal draft workflow named `Main` with workflow-owned
+  Browser Launch settings.
 - UI selects the created project, switches to its Workflows collection, and
   refreshes workflows so the `Main` workflow is visible immediately.
 
@@ -42,11 +40,12 @@
 - Duplicate project calls `duplicateProject`, creates `Copy of <project name>`,
   copies project environments, subflows, workflows, workflow graphs, and
   non-storage settings, remaps copied Call Subflow references to copied
-  subflows, and gives copied browser sessions fresh identity/profile/fingerprint
-  values so the new project does not reuse the source project's saved sessions.
+  subflows, and gives copied project/workflow browser identities fresh
+  identity/profile/fingerprint values so the new project does not reuse the
+  source project's saved identities.
 - Export project calls `exportProjectPackage` and then `saveProjectPackageFile`
   to write a `.project.json` package through the native Save dialog. The
-  package includes project metadata, saved/private project sessions, subflows,
+  package includes project metadata, saved project identities, subflows,
   workflows, saved graphs, and Workflow Settings, with proxy secrets, proxy URL
   credentials, local fingerprint font directories, and preflight fields
   sanitized.
@@ -59,14 +58,14 @@
 ## Project Import
 
 - Import project accepts a JSON project package from the Projects workspace
-  header next to Create Project, previews workflows, subflows, sessions, and
-  sanitized omitted fields, then calls `importProjectPackage`. Import validates
-  package graphs/settings first, transactionally creates `<project name>
-  (imported)`, recreates sessions, subflows, workflows, remaps Call Subflow ids
-  and workflow session ids, gives imported sessions fresh
-  identity/profile/fingerprint values, selects the new project, and switches to
-  Workflows. It does not import runs, evidence, schedules, app settings, or
-  browser profile storage.
+  header next to Create Project, previews workflows, subflows, project
+  identities, and sanitized omitted fields, then calls `importProjectPackage`.
+  Import validates package graphs/settings first, transactionally creates
+  `<project name> (imported)`, recreates project identities, subflows, and
+  workflows, remaps Call Subflow ids, gives imported project/workflow browser
+  identities fresh identity/profile/fingerprint values, selects the new project,
+  and switches to Workflows. It does not import runs, evidence, schedules, app
+  settings, or browser profile storage.
 
 ## Open Detail
 
@@ -183,8 +182,8 @@
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
 - `run_workflow` loads and validates saved Workflow Settings, resolves the
-  workflow's selected project saved session or private workflow session before
-  launch including profile directory, fixed fingerprint seed, fingerprint fonts
+  workflow-owned Browser Launch identity before launch including profile
+  directory, fixed fingerprint seed, fingerprint fonts
   directory, proxy, explicit or detected local timezone/locale, supported
   WebRTC policy values, humanize toggle/preset, and headless mode, prepends
   Environment initial variables before the first graph step, compiles edge
@@ -275,10 +274,10 @@
   project, remaps Call Subflow ids in the imported Flow, saves selected Flow to
   the new workflow id, saves selected Settings after remapping `workflow_id`,
   refreshes the list, and opens the imported workflow.
-- Importing the Browser Launch settings section creates a private imported
-  workflow session for the new workflow before saving the sanitized package
-  Browser Launch values. Imports that omit Browser Launch use the target
-  project's saved session without mutating it.
+- Importing the Browser Launch settings section saves the sanitized package
+  Browser Launch values onto the new workflow. Imports that omit Browser Launch
+  keep the new workflow's default Browser Launch settings and do not mutate the
+  target project's saved identity.
 - Import does not overwrite or merge into an existing workflow.
 - Failed import validation or persistence rolls back without leaving a partial workflow.
 

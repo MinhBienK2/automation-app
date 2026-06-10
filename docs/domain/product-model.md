@@ -64,17 +64,14 @@ Mission Control is an Electron desktop app for building and running browser auto
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from App Settings.
 - Workflow Settings is the per-workflow configuration aggregate for run policy,
-  graph authoring defaults, browser launch/session selection, and initial
+  graph authoring defaults, workflow-owned browser launch identity, and initial
   environment variables.
-- The Browser Launch section is identity-oriented and starts from a selected
-  session source. Workflows can point at the same project saved session or
-  another same-project workflow's private session, which means they share one
-  browser identity bundle: `identity_id`, display name, `profile_dir`,
-  CloakBrowser fingerprint seed, persona, and launch posture. Forking creates a
-  private session source for the workflow with a fresh backend-generated
-  identity/profile/fingerprint bundle while preserving non-storage launch
-  preferences.
-- New project saved sessions and private workflow sessions automatically get a
+- The Browser Launch section is identity-oriented and stored on each workflow.
+  Workflows do not select project saved identities or another workflow's
+  identity bundle as a runtime identity source. Reset identity creates a fresh
+  backend-generated workflow identity/profile/fingerprint bundle while
+  preserving non-storage launch preferences.
+- New project saved identities and workflow Browser Launch settings automatically get a
   browser identity with a stable `identity_id`, editable display name, stable
   `profile_dir`, fixed CloakBrowser fingerprint seed, and a stored persona
   selected from `src/lib/personaCatalog.ts`. The persona binds
@@ -105,13 +102,13 @@ Users can:
   projects automatically contain a project saved session and a draft workflow
   named `Main`.
 - Export and import project packages containing project metadata, saved-session
-  launch posture, private workflow sessions, workflows, saved graphs/settings,
-  and subflows. Import creates a new project with fresh browser
+  launch posture, workflow settings, saved graphs, and subflows. Import creates
+  a new project with fresh browser
   identities/profiles and does not import runs, evidence, schedules, app
   settings, or browser profile storage.
 - Create, rename, open, and delete workflows inside a selected project.
-- Create workflows in the default `Main` project by reusing the project saved
-  session, or by creating a new private workflow session.
+- Create workflows in the default `Main` project with workflow-owned Browser
+  Launch settings.
 - Inspect the selected project's saved session from the selected project's
   Settings collection, edit its fingerprint seed, or regenerate its backend-owned
   identity/profile/seed after confirming that the old local profile will be

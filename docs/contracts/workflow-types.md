@@ -21,8 +21,8 @@
 Frontend and backend must agree on:
 
 - `Project`: `id`, `name`, optional description, default flag, timestamps.
-- `ProjectEnvironment`: compatibility DTO for project saved sessions and
-  private workflow sessions with `id`, `project_id`, `name`, optional
+- `ProjectEnvironment`: compatibility DTO for project saved identities with
+  `id`, `project_id`, `name`, optional
   description, `is_default`, `browser_launch`, and timestamps. The renderer
   exposes the default row as a single project saved session rather than a full
   Project Environment editor.
@@ -113,9 +113,8 @@ Frontend and backend must agree on:
 ## Workflow Settings Shape
 
 Workflow Settings are persisted separately from graph JSON. Browser Launch
-inside Workflow Settings is the saved selected-session overlay returned to
-legacy callers; workflow execution resolves Browser Launch from the workflow's
-selected project saved session or private workflow session:
+inside Workflow Settings is the workflow-owned identity/posture used for
+workflow execution:
 
 ```text
 {
@@ -243,10 +242,10 @@ referenced subflow in `subflows` and adds `subflows` to `included_sections`.
 Import recreates those subflows in the target project and remaps Call Subflow
 `subflow_id` values in the imported graph before saving it.
 
-When Browser Launch is selected during import, the backend creates a private
-imported workflow session and saves the sanitized package Browser Launch values
-there. Imports that omit Browser Launch use the target project's saved session
-without rewriting it.
+When Browser Launch is selected during import, the backend saves the sanitized
+package Browser Launch values onto the imported workflow. Imports that omit
+Browser Launch keep the new workflow's default Browser Launch values without
+rewriting the target project's saved identity.
 
 Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`, credentials embedded in `settings.browser_launch.proxy_server`, and local `settings.browser_launch.fingerprint_fonts_dir`.
 
@@ -316,13 +315,11 @@ profile directories are retained.
 
 `resetProjectEnvironmentBrowserIdentity` is the command boundary for project saved-session identity rotation. After UI confirmation, it returns the updated project environment after replacing `identity_id`, persistent profile fields, and `fingerprint_seed`, while preserving non-storage Browser Launch preferences and deleting the old unshared local project profile directory.
 
-`setWorkflowEnvironment` links a workflow to an existing same-project
-`ProjectEnvironment` session row. `forkWorkflowSession` creates a new private
-session row for a workflow with a fresh backend-generated `identity_id`,
-`profile_dir`, persistent `profile_name` when enabled, and `fingerprint_seed`;
-it preserves non-storage Browser Launch preferences, disables
-`run_policy.run_from_selected_enabled`, does not copy local browser storage, and
-returns the updated `Workflow` with the new `environment_id`.
+Workflow Browser Launch settings are stored on `WorkflowSettings` and are not
+resolved from a selected `ProjectEnvironment` at run time. Creating, duplicating,
+or importing a workflow leaves `workflow.environment_id` null; project saved
+identities remain project-scoped settings data. Operator-triggered workflow
+identity rotation uses `resetWorkflowBrowserIdentity`.
 
 `createProject` returns the created `Project` after trimming a non-empty
 project name and also persists that project's default saved session plus an

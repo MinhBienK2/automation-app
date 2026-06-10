@@ -44,7 +44,7 @@ type ProjectWorkflow = {
   id: string;
   name: string;
   project_id: string;
-  environment_id: string;
+  environment_id: string | null;
 };
 
 type TestProject = {
@@ -105,8 +105,6 @@ type ProjectWorkflowTestHandlers = {
   previewProjectPackage(packageValue: ProjectPackage): unknown;
   importProjectPackage(packageValue: ProjectPackage): TestProject;
   saveProjectPackageFile(packageValue: ProjectPackage): Promise<string | null>;
-  setWorkflowEnvironment(workflowId: string, environmentId: string): ProjectWorkflow;
-  forkWorkflowSession(workflowId: string): ProjectWorkflow;
   createSubflow(projectId: string, input: { name: string; description?: string | null }): TestSubflow;
   updateSubflow(
     subflowId: string,
@@ -152,7 +150,7 @@ describe("Electron workflow command handlers", () => {
       browser_launch: {
         session_mode: "persistent_profile",
         identity_id: expect.stringMatching(/^bi_/),
-        display_name: "Project saved session identity",
+        display_name: "Login flow identity",
         persona_id: expect.any(String),
         persona: expect.objectContaining({
           behavioral_timing_profile: expect.any(String),
@@ -196,7 +194,7 @@ describe("Electron workflow command handlers", () => {
 
     const settings = handlers.getWorkflowSettings(created.id);
     expect(settings.browser_launch.profile_name).toBe(settings.browser_launch.profile_dir);
-    expect(settings.browser_launch.display_name).toBe("Project saved session identity");
+    expect(settings.browser_launch.display_name).toBe("Login flow identity");
     const initialSeed = settings.browser_launch.fingerprint_seed;
     const saved = handlers.saveWorkflowSettings(created.id, {
       ...settings,
@@ -214,7 +212,7 @@ describe("Electron workflow command handlers", () => {
 
     expect(saved.general.name).toBe("Renamed flow");
     expect(saved.browser_launch.fingerprint_seed).toBe(initialSeed);
-    expect(saved.browser_launch.display_name).toBe("Project saved session identity");
+    expect(saved.browser_launch.display_name).toBe("Login flow identity");
     expect(saved.browser_launch.humanize).toBe(false);
     expect(saved.browser_launch.human_preset).toBe("careful");
     expect(handlers.listWorkflows()[0]).toMatchObject({
@@ -241,7 +239,7 @@ describe("Electron workflow command handlers", () => {
   });
 
   test("creates a default project saved session and uses it for new workflows by default", async () => {
-    const { handlers } = await createTestHandlers();
+    const { handlers, database } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
 
     const projects = projectHandlers.listProjects();
@@ -266,19 +264,13 @@ describe("Electron workflow command handlers", () => {
 
     expect(workflow).toMatchObject({
       project_id: project.id,
-      environment_id: environments[0].id,
+      environment_id: null,
     });
     expect(listRow).toMatchObject({
       project_id: project.id,
-      environment_id: workflow.environment_id,
-      environment_name: "Project saved session",
+      environment_id: null,
+      environment_name: null,
     });
-
-    const isolated = handlers.createWorkflow("Private session workflow", {
-      project_id: project.id,
-      environment: { mode: "isolated" },
-    });
-    expect(isolated.environment_id).not.toBe(environments[0].id);
   });
 
   test("renames, duplicates, and deletes projects from project settings", async () => {
@@ -299,7 +291,6 @@ describe("Electron workflow command handlers", () => {
 
     const workflow = handlers.createWorkflow("Checkout E2E", {
       project_id: project.id,
-      environment: { mode: "isolated" },
     }) as ProjectWorkflow;
     const subflow = projectHandlers.createSubflow(project.id, { name: "Login" });
     projectHandlers.saveSubflowGraph(
@@ -364,7 +355,6 @@ describe("Electron workflow command handlers", () => {
     );
     const sourceWorkflow = handlers.createWorkflow("Checkout E2E", {
       project_id: sourceProject.id,
-      environment: { mode: "isolated", name: "Checkout private session" },
     }) as ProjectWorkflow;
     const sourceSettings = handlers.getWorkflowSettings(sourceWorkflow.id);
     handlers.saveWorkflowSettings(sourceWorkflow.id, {
@@ -402,9 +392,9 @@ describe("Electron workflow command handlers", () => {
       version: 1,
       project: { name: "Staging Project", description: "Owned staging flows" },
     });
-    expect(packageValue.environments.some((environment) =>
-      environment.browser_launch.proxy_password === null &&
-      environment.browser_launch.proxy_server === "https://proxy.example:8443"
+    expect(packageValue.workflows.some((workflow) =>
+      workflow.settings?.browser_launch.proxy_password === null &&
+      workflow.settings.browser_launch.proxy_server === "https://proxy.example:8443"
     )).toBe(true);
     expect(JSON.stringify(packageValue)).not.toContain("secret");
     expect(JSON.stringify(packageValue)).not.toContain("user:pass");
@@ -423,9 +413,6 @@ describe("Electron workflow command handlers", () => {
     const importedGraph = handlers.getWorkflowGraph(importedWorkflow?.id ?? "");
     const importedCallNode = importedGraph.nodes.find((node) => node.id === "call-login");
     const importedSettings = handlers.getWorkflowSettings(importedWorkflow?.id ?? "");
-    const importedWorkflowEnvironment = projectHandlers
-      .listProjectEnvironments(importedProject.id)
-      .find((environment) => environment.id === importedWorkflow?.environment_id);
 
     expect(importedProject).toMatchObject({
       name: "Staging Project (imported)",
@@ -434,7 +421,8 @@ describe("Electron workflow command handlers", () => {
     expect(importedProject.id).not.toBe(sourceProject.id);
     expect(importedWorkflow).toMatchObject({
       project_id: importedProject.id,
-      environment_name: "Checkout private session",
+      environment_id: null,
+      environment_name: null,
     });
     expect(importedWorkflow?.id).not.toBe(sourceWorkflow.id);
     expect(importedSubflows).toHaveLength(1);
@@ -448,22 +436,19 @@ describe("Electron workflow command handlers", () => {
     expect(importedSettings.environment.initial_variables).toEqual([
       { name: "account.username", value_type: "text", value: "qa-user" },
     ]);
-    expect(importedWorkflowEnvironment?.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
-    expect(importedWorkflowEnvironment?.browser_launch.identity_id)
-      .not.toBe(packageValue.environments.find((item) => item.id === sourceWorkflow.environment_id)
-        ?.browser_launch.identity_id);
-    expect(importedSettings.browser_launch).toEqual(importedWorkflowEnvironment?.browser_launch);
+    expect(importedSettings.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
+    expect(importedSettings.browser_launch.identity_id)
+      .not.toBe(sourceSettings.browser_launch.identity_id);
     expect(importedSettings.browser_launch.proxy_password).toBeNull();
     expect(importedSettings.browser_launch.proxy_server).toBe("https://proxy.example:8443");
   });
 
   test("rejects invalid project package imports without creating orphan projects", async () => {
-    const { handlers } = await createTestHandlers();
+    const { handlers, database } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
     const project = projectHandlers.listProjects()[0];
     const workflow = handlers.createWorkflow("Checkout E2E", {
       project_id: project.id,
-      environment: { mode: "project_default" },
     }) as ProjectWorkflow;
     const subflow = projectHandlers.createSubflow(project.id, { name: "Login helper" });
     projectHandlers.saveSubflowGraph(
@@ -496,7 +481,6 @@ describe("Electron workflow command handlers", () => {
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
 
     const project = projectHandlers.createProject({ name: "Owned Staging" });
-    const environments = projectHandlers.listProjectEnvironments(project.id);
     const projectWorkflows = handlers
       .listWorkflows()
       .filter((item) => item.project_id === project.id);
@@ -505,8 +489,8 @@ describe("Electron workflow command handlers", () => {
       expect.objectContaining({
         name: "Main",
         project_id: project.id,
-        environment_id: environments[0].id,
-        environment_name: "Project saved session",
+        environment_id: null,
+        environment_name: null,
       }),
     ]);
 
@@ -566,7 +550,7 @@ describe("Electron workflow command handlers", () => {
     await expect(fs.stat(oldProfilePath)).rejects.toThrow();
   });
 
-  test("runs workflows with the selected project environment browser launch settings", async () => {
+  test("workflow runs use workflow-owned browser launch settings instead of selected project environments", async () => {
     const runner = {
       run: vi.fn(async () => ({
         status: "success" as const,
@@ -583,10 +567,10 @@ describe("Electron workflow command handlers", () => {
     };
     const { handlers } = await createTestHandlers({ runner });
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const workflow = handlers.createWorkflow("Environment run") as ProjectWorkflow;
-    const projectId = workflow.project_id;
+    const project = projectHandlers.createProject({ name: "Owned Lab" });
+    const projectId = project.id;
     const defaultEnvironment = projectHandlers.listProjectEnvironments(projectId)[0];
-    const selectedEnvironment = projectHandlers.createProjectEnvironment(projectId, {
+    projectHandlers.createProjectEnvironment(projectId, {
       name: "Proxy identity",
       description: "Project-level browser posture",
       browser_launch: {
@@ -598,108 +582,32 @@ describe("Electron workflow command handlers", () => {
         locale: "vi-VN",
       },
     });
+    const workflow = handlers.createWorkflow("Environment run", {
+      project_id: project.id,
+    }) as ProjectWorkflow;
     handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
-    projectHandlers.setWorkflowEnvironment(workflow.id, selectedEnvironment.id);
     await handlers.runWorkflow(workflow.id);
 
     expect(runner.run).toHaveBeenCalledWith(
       expect.objectContaining({
         settings: expect.objectContaining({
           browser_launch: expect.objectContaining({
-            proxy_enabled: true,
-            proxy_server: "http://proxy.internal:8080",
-            timezone: "Asia/Ho_Chi_Minh",
-            locale: "vi-VN",
-            headless: true,
+            proxy_enabled: false,
+            proxy_server: null,
+            timezone: null,
+            locale: null,
+            headless: false,
           }),
         }),
       }),
     );
   });
 
-  test("forks a workflow session into a fresh identity bundle without copying storage", async () => {
+  test("does not expose workflow session link or fork commands", async () => {
     const { handlers } = await createTestHandlers();
-    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const workflow = handlers.createWorkflow("Checkout E2E", {
-      environment: { mode: "isolated", name: "Checkout account" },
-    }) as ProjectWorkflow;
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    const sourceEnvironmentId = workflow.environment_id;
-    const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "fork-session-fonts-"));
-    tempRoots.push(fontsDir);
-    const customized = handlers.saveWorkflowSettings(workflow.id, {
-      ...settings,
-      run_policy: {
-        ...settings.run_policy,
-        run_from_selected_enabled: true,
-      },
-      browser_launch: {
-        ...settings.browser_launch,
-        display_name: "Checkout account",
-        proxy_enabled: true,
-        proxy_server: "http://proxy.local:8080",
-        proxy_username: "operator",
-        proxy_password: "secret",
-        proxy_bypass: ".internal.test",
-        timezone: "America/New_York",
-        locale: "en-US",
-        geoip: false,
-        fingerprint_fonts_dir: fontsDir,
-        humanize: false,
-        human_preset: "careful",
-        headless: true,
-      },
-    });
-
-    const forkedWorkflow = projectHandlers.forkWorkflowSession(workflow.id);
-    const forkedSettings = handlers.getWorkflowSettings(workflow.id);
-    const environments = projectHandlers.listProjectEnvironments(workflow.project_id);
-    const forkedEnvironment = environments.find(
-      (environment) => environment.id === forkedWorkflow.environment_id,
-    );
-
-    expect(forkedWorkflow.environment_id).not.toBe(sourceEnvironmentId);
-    expect(forkedEnvironment).toMatchObject({
-      project_id: workflow.project_id,
-      is_default: false,
-      name: "Checkout E2E private session",
-      description: "Forked browser identity and launch posture",
-    });
-    expect(forkedSettings.browser_launch).toMatchObject({
-      session_mode: "persistent_profile",
-      display_name: "Checkout E2E identity",
-      proxy_enabled: true,
-      proxy_server: "http://proxy.local:8080",
-      proxy_username: "operator",
-      proxy_password: "secret",
-      proxy_bypass: ".internal.test",
-      timezone: "America/New_York",
-      locale: "en-US",
-      geoip: false,
-      fingerprint_fonts_dir: fontsDir,
-      humanize: false,
-      human_preset: "careful",
-      headless: true,
-    });
-    expect(forkedSettings.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
-    expect(forkedSettings.browser_launch.profile_dir).toBe(
-      forkedSettings.browser_launch.identity_id,
-    );
-    expect(forkedSettings.browser_launch.profile_name).toBe(
-      forkedSettings.browser_launch.identity_id,
-    );
-    expect(forkedSettings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
-    expect(forkedSettings.browser_launch.identity_id).not.toBe(
-      customized.browser_launch.identity_id,
-    );
-    expect(forkedSettings.browser_launch.profile_dir).not.toBe(
-      customized.browser_launch.profile_dir,
-    );
-    expect(forkedSettings.browser_launch.fingerprint_seed).not.toBe(
-      customized.browser_launch.fingerprint_seed,
-    );
-    expect(forkedSettings.run_policy.run_from_selected_enabled).toBe(false);
+    expect("setWorkflowEnvironment" in handlers).toBe(false);
+    expect("forkWorkflowSession" in handlers).toBe(false);
   });
 
   test("persists subflows, reports workflow usage, duplicates safely, and blocks used deletion", async () => {
@@ -1540,15 +1448,9 @@ describe("Electron workflow command handlers", () => {
 
   test("reports missing and shared fingerprint font directories as actionable diagnostics", async () => {
     const { handlers, database } = await createTestHandlers();
-    const owner = handlers.createWorkflow("Font owner", {
-      environment: { mode: "isolated" },
-    });
-    const shared = handlers.createWorkflow("Font shared", {
-      environment: { mode: "isolated" },
-    });
-    const missing = handlers.createWorkflow("Font missing", {
-      environment: { mode: "isolated" },
-    });
+    const owner = handlers.createWorkflow("Font owner");
+    const shared = handlers.createWorkflow("Font shared");
+    const missing = handlers.createWorkflow("Font missing");
     const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "shared-fonts-"));
     tempRoots.push(fontsDir);
     await fs.writeFile(path.join(fontsDir, "Arial-Regular.ttf"), "arial");
@@ -1572,13 +1474,16 @@ describe("Electron workflow command handlers", () => {
       },
     });
     database
-      .prepare("UPDATE project_environments SET browser_launch_json = ? WHERE id = ?")
+      .prepare("UPDATE workflows SET settings_json = ? WHERE id = ?")
       .run(
         JSON.stringify({
-          ...missingSettings.browser_launch,
-          fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
+          ...missingSettings,
+          browser_launch: {
+            ...missingSettings.browser_launch,
+            fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
+          },
         }),
-        String(missing.environment_id),
+        missing.id,
       );
 
     const diagnostics = await handlers.getCloakBrowserDiagnostics();
@@ -2287,11 +2192,12 @@ describe("Electron workflow command handlers", () => {
       .find((environment) => environment.id === targetDefaultEnvironment.id);
 
     expect(imported.workflow.project_id).toBe(targetProject.id);
-    expect(imported.workflow.environment_id).not.toBe(targetDefaultEnvironment.id);
+    expect(imported.workflow.environment_id).toBeNull();
     expect(handlers.listWorkflows().find((item) => item.id === imported.workflow.id))
       .toMatchObject({
         project_id: targetProject.id,
-        environment_name: "Imported into target imported session",
+        environment_id: null,
+        environment_name: null,
       });
     expect(targetSavedSessionAfter?.browser_launch).toEqual(targetSavedSessionBefore);
     expect(handlers.getWorkflowSettings(imported.workflow.id).browser_launch)
@@ -5270,17 +5176,11 @@ describe("Electron workflow schedule commands", () => {
         },
       },
     });
-    const runningWorkflow = handlers.createWorkflow("Running workflow", {
-      environment: { mode: "isolated" },
-    });
+    const runningWorkflow = handlers.createWorkflow("Running workflow");
     handlers.saveWorkflowGraph(runningWorkflow.id, runnableGraph());
-    const scheduledWorkflow = handlers.createWorkflow("Scheduled workflow", {
-      environment: { mode: "isolated" },
-    });
+    const scheduledWorkflow = handlers.createWorkflow("Scheduled workflow");
     handlers.saveWorkflowGraph(scheduledWorkflow.id, runnableGraph());
-    const isolatedWorkflow = handlers.createWorkflow("Isolated workflow", {
-      environment: { mode: "isolated" },
-    });
+    const isolatedWorkflow = handlers.createWorkflow("Isolated workflow");
     handlers.saveWorkflowGraph(isolatedWorkflow.id, runnableGraph());
     const schedule = handlers.createSchedule({
       workflow_id: scheduledWorkflow.id,

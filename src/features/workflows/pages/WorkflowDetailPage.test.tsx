@@ -8,7 +8,6 @@ import {
 } from "../../../tests/mocks/electron";
 import { sleepStep, workflow } from "../../../tests/mocks/workflowFixtures";
 import type {
-  ProjectEnvironment,
   WorkflowGraph,
   WorkflowRunSnapshot,
   WorkflowStep,
@@ -740,7 +739,7 @@ describe("Workflow detail integration", () => {
     );
   }, 10_000);
 
-  test("links workflow settings to a shared browser session and forks a private session", async () => {
+  test("does not expose workflow session selection or fork controls", async () => {
     const scenario = workflowDetailScenario([sleepStep]);
     const project = {
       id: "project-1",
@@ -749,44 +748,18 @@ describe("Workflow detail integration", () => {
       created_at: "1",
       updated_at: "1",
     };
-    let selectedWorkflow = {
+    const selectedWorkflow = {
       ...workflow,
       project_id: project.id,
       environment_id: "environment-main",
       environment_name: "Project saved session",
     };
-    const sharedWorkflow = {
-      id: "workflow-login",
-      name: "Login bootstrap",
-      step_count: 1,
-      project_id: project.id,
-      environment_id: "environment-login",
-      environment_name: "Login bootstrap session",
-      created_at: "2",
-      updated_at: "2",
-    };
     const mainBrowserLaunch = scenario.get_workflow_settings.browser_launch;
-    const sharedBrowserLaunch = {
-      ...mainBrowserLaunch,
-      identity_id: "bi_login",
-      display_name: "Login bootstrap identity",
-      profile_dir: "bi_login",
-      profile_name: "bi_login",
-      fingerprint_seed: "99887",
-    };
-    const forkedBrowserLaunch = {
-      ...mainBrowserLaunch,
-      identity_id: "bi_private",
-      display_name: "Login flow identity",
-      profile_dir: "bi_private",
-      profile_name: "bi_private",
-      fingerprint_seed: "77777",
-    };
-    let currentSettings = {
+    const currentSettings = {
       ...scenario.get_workflow_settings,
       browser_launch: mainBrowserLaunch,
     };
-    let projectEnvironments: ProjectEnvironment[] = [
+    const projectEnvironments = [
       {
         id: "environment-main",
         project_id: project.id,
@@ -797,76 +770,18 @@ describe("Workflow detail integration", () => {
         created_at: "1",
         updated_at: "1",
       },
-      {
-        id: "environment-login",
-        project_id: project.id,
-        name: "Login bootstrap session",
-        description: "Session owned by Login bootstrap",
-        is_default: false,
-        browser_launch: sharedBrowserLaunch,
-        created_at: "2",
-        updated_at: "2",
-      },
     ];
 
     mockWorkflowBridgeCommands({
       ...scenario,
       list_projects: [project],
-      list_workflows: () => [selectedWorkflow, sharedWorkflow],
+      list_workflows: () => [selectedWorkflow],
       list_project_environments: () => projectEnvironments,
       get_workflow: ({ id }: { id: string }) => ({
-        workflow: id === sharedWorkflow.id ? sharedWorkflow : selectedWorkflow,
-        steps: id === sharedWorkflow.id ? [] : [sleepStep],
+        workflow: selectedWorkflow,
+        steps: id === selectedWorkflow.id ? [sleepStep] : [],
       }),
-      get_workflow_settings: ({ workflowId }: { workflowId: string }) =>
-        workflowId === selectedWorkflow.id
-          ? currentSettings
-          : {
-              ...currentSettings,
-              workflow_id: sharedWorkflow.id,
-              browser_launch: sharedBrowserLaunch,
-            },
-      set_workflow_environment: ({
-        environmentId,
-      }: {
-        workflowId: string;
-        environmentId: string;
-      }) => {
-        const environment = projectEnvironments.find((item) => item.id === environmentId)!;
-        selectedWorkflow = {
-          ...selectedWorkflow,
-          environment_id: environment.id,
-          environment_name: environment.name,
-        };
-        currentSettings = {
-          ...currentSettings,
-          browser_launch: environment.browser_launch,
-        };
-        return selectedWorkflow;
-      },
-      fork_workflow_session: () => {
-        const forkedEnvironment: ProjectEnvironment = {
-          id: "environment-private",
-          project_id: project.id,
-          name: "Login flow private session",
-          description: "Forked browser identity and launch posture",
-          is_default: false,
-          browser_launch: forkedBrowserLaunch,
-          created_at: "3",
-          updated_at: "3",
-        };
-        projectEnvironments = [...projectEnvironments, forkedEnvironment];
-        selectedWorkflow = {
-          ...selectedWorkflow,
-          environment_id: forkedEnvironment.id,
-          environment_name: forkedEnvironment.name,
-        };
-        currentSettings = {
-          ...currentSettings,
-          browser_launch: forkedBrowserLaunch,
-        };
-        return selectedWorkflow;
-      },
+      get_workflow_settings: () => currentSettings,
     });
 
     renderApp();
@@ -882,44 +797,26 @@ describe("Workflow detail integration", () => {
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
+    expect(within(header).queryByText(/Environment:/)).not.toBeInTheDocument();
     await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
     const settingsDialog = await screen.findByRole("dialog", {
       name: "Workflow Settings",
     });
 
-    const sourceSelect = within(settingsDialog).getByLabelText("Session source");
-    expect(sourceSelect).toHaveValue("environment-main");
+    expect(within(settingsDialog).queryByLabelText("Session source")).not.toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("button", {
+      name: "Fork current session",
+    })).not.toBeInTheDocument();
     expect(within(settingsDialog).getByLabelText("Fingerprint seed"))
       .toHaveAttribute("readonly");
-
-    await userEvent.selectOptions(sourceSelect, "environment-login");
-
-    await waitFor(() => {
-      expect(workflowCommandCallMock).toHaveBeenCalledWith("set_workflow_environment", {
-        workflowId: workflow.id,
-        environmentId: "environment-login",
-      });
-    });
-    await waitFor(() => {
-      expect(within(settingsDialog).getByLabelText("Fingerprint seed"))
-        .toHaveValue("99887");
-    });
-
-    await userEvent.click(within(settingsDialog).getByRole("button", {
-      name: "Fork current session",
-    }));
-
-    await waitFor(() => {
-      expect(workflowCommandCallMock).toHaveBeenCalledWith("fork_workflow_session", {
-        workflowId: workflow.id,
-      });
-    });
-    await waitFor(() => {
-      expect(within(settingsDialog).getByLabelText("Session source"))
-        .toHaveValue("environment-private");
-      expect(within(settingsDialog).getByLabelText("Fingerprint seed"))
-        .toHaveValue("77777");
-    });
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
+      "set_workflow_environment",
+      expect.anything(),
+    );
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
+      "fork_workflow_session",
+      expect.anything(),
+    );
   }, 10_000);
 
   test("asks before closing workflow settings with unsaved changes", async () => {

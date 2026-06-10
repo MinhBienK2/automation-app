@@ -326,23 +326,16 @@ export class WorkflowRepository {
       .run(name, now.toISOString(), id);
   }
 
-  setWorkflowEnvironment(id: string, environmentId: string, now = new Date()) {
-    this.database
-      .prepare("UPDATE workflows SET environment_id = ?, updated_at = ? WHERE id = ?")
-      .run(environmentId, now.toISOString(), id);
-  }
-
-  assignWorkflowProjectEnvironment(
+  assignWorkflowProject(
     id: string,
     projectId: string,
-    environmentId: string,
     now = new Date(),
   ) {
     this.database
       .prepare(
-        "UPDATE workflows SET project_id = ?, environment_id = ?, updated_at = ? WHERE id = ?",
+        "UPDATE workflows SET project_id = ?, environment_id = NULL, updated_at = ? WHERE id = ?",
       )
-      .run(projectId, environmentId, now.toISOString(), id);
+      .run(projectId, now.toISOString(), id);
   }
 
   deleteWorkflow(id: string) {

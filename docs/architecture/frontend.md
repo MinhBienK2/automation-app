@@ -68,7 +68,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   Subflow Settings dialog shared by the list and detail header for renaming a
   reusable subflow.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, selected-block subflow planning, and the right-side inspector drawer are split into sibling `WorkflowGraph*` component modules and focused workflow graph libs.
-- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Browser Launch exposes a Session source selector, Fork current session, read-only seed display, and identity/posture controls resolved from the selected project browser session. Graph exposes Live Run visibility, the Follow current default when Live Run is enabled, and the new link wait default. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
+- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Browser Launch exposes workflow-owned identity/posture controls, Reset identity, and a read-only seed display. Graph exposes Live Run visibility, the Follow current default when Live Run is enabled, and the new link wait default. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
 - `src/features/workflows/components/RecordingReviewDialog.tsx`: browser recorder status and review dialog for generated recording drafts.
 - `src/features/workflows/components/WorkflowPackageOptions.tsx`: shared Workflow Package Flow/Settings section checkbox controls used by import/export dialogs.
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
@@ -137,8 +137,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   visible draft, or keep editing. Workflow detail uses the prompt for
   manual-save graph changes and failed autosave; autosave-enabled workflow
   navigation does not prompt unless autosave has failed.
-- Workflow Settings editing through list Edit and detail Settings, grouped related controls within each section, Run Policy lifecycle controls including the grouped Run from selected scope plus paused read-only batch defaults, Browser Launch session-source linking/forking, Graph link-wait authoring defaults, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual nested collapsible section help with individually collapsible field, example, related-action, and mistake guidance, and run-before-save orchestration.
-- Browser Launch Reset identity uses an in-app confirmation dialog and delegates generation/persistence to `resetWorkflowBrowserIdentity`; Fork current session delegates to `forkWorkflowSession`; project identity regeneration also uses an in-app confirmation dialog before delegating to `resetProjectEnvironmentBrowserIdentity`. The renderer does not create identity ids, fingerprint seeds, or delete browser profile directories directly.
+- Workflow Settings editing through list Edit and detail Settings, grouped related controls within each section, Run Policy lifecycle controls including the grouped Run from selected scope plus paused read-only batch defaults, workflow-owned Browser Launch identity/posture controls, Graph link-wait authoring defaults, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual nested collapsible section help with individually collapsible field, example, related-action, and mistake guidance, and run-before-save orchestration.
+- Browser Launch Reset identity uses an in-app confirmation dialog and delegates generation/persistence to `resetWorkflowBrowserIdentity`; project identity regeneration also uses an in-app confirmation dialog before delegating to `resetProjectEnvironmentBrowserIdentity`. The renderer does not create identity ids, fingerprint seeds, or delete browser profile directories directly.
 - Overview is the default app screen. It calls `getOperationsOverview` with
   the operator local-day UTC range, displays backend-owned aggregate data,
   supports manual refresh, and navigates returned workflow/schedule/evidence
@@ -184,8 +184,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   Identity Lab as a read-only historical target carrying workflow, run, and
   evidence context.
 - Workflow list create, direct Run, delete, duplicate, and Workflow Package
-  import/export interaction. Create chooses either the project saved session or
-  a new private workflow session. List Run calls the existing `runWorkflow`
+  import/export interaction. Create names the workflow and uses workflow-owned
+  Browser Launch defaults. List Run calls the existing `runWorkflow`
   command against saved workflow state and leaves the user on the list while
   run snapshot polling continues. Active row status, row Run disabling, and row
   Stop are scoped to that workflow's run id. Delete opens an in-app

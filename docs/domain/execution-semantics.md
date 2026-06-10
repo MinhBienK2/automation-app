@@ -44,15 +44,13 @@
   validation before a run row exists write sanitized operational attention for
   Overview. Scheduled validation failures continue to use schedule events and
   are not duplicated into operational attention rows.
-- `run_workflow` loads Workflow Settings and the workflow's selected browser
-  session row before starting the runner. That row may be the project saved
-  session, a private workflow session, or a same-project session shared with
-  another workflow. Settings validation and run validation happen before browser
-  launch.
+- `run_workflow` loads Workflow Settings before starting the runner. Browser
+  Launch values are read from the workflow's saved settings, not from a selected
+  project environment or another workflow. Settings validation and run
+  validation happen before browser launch.
 - Environment initial variables from Workflow Settings compile into setup
-  actions before graph actions. Browser Launch settings are resolved from the
-  selected project saved session or private workflow session before the runner
-  launches the browser.
+actions before graph actions. Browser Launch settings are resolved from the
+workflow settings before the runner launches the browser.
 - Graph settings affect authoring only; the runner executes the edge delays already saved on the graph.
 - Domain allowlist graph nodes are promoted into a run-scope `domain_policy`. The runner enforces that policy after template rendering and before `navigate` or `open_new_tab` can call the browser navigation API. Runtime `domain_allowlist` nodes remain available as in-flow assertions.
 - Run Policy `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
@@ -127,14 +125,13 @@
   guarded command. This releases only the retained in-memory browser context;
   it does not remove the persistent profile directory, saved identity settings,
   cookies/login state, evidence files, or historical run rows.
-- The selected project saved session or private workflow session resolves the
-  browser identity before the browser starts. `BrowserSessionManager` maps persistent versus
+- The workflow's saved Browser Launch settings resolve the browser identity
+  before the browser starts. `BrowserSessionManager` maps persistent versus
   temporary storage, stable profile directory, fingerprint seed, fingerprint
   fonts directory, proxy server/bypass/credentials, explicit timezone/locale or
   local machine timezone/locale, GeoIP, supported WebRTC policy values,
   humanize toggle/preset, and headless mode into CloakBrowser launch options.
-  New project saved sessions and private workflow sessions enable GeoIP by
-  default, and blank legacy location
+  New workflow and project saved identities enable GeoIP by default, and blank legacy location
   settings normalize back to GeoIP, so CloakBrowser resolves blank
   timezone/locale fields from the current public or proxy exit IP. Running with
   GeoIP off requires explicit timezone and locale values. It also applies the

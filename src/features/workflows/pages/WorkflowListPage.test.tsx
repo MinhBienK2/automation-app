@@ -67,7 +67,7 @@ describe("Workflow list integration", () => {
     expect(screen.queryByText("1733 steps")).not.toBeInTheDocument();
   });
 
-  test("lists workflows and creates a workflow from a dialog", async () => {
+  test("lists workflows and creates a workflow without browser session selection", async () => {
     const project = {
       id: "project-1",
       name: "Main",
@@ -118,13 +118,9 @@ describe("Workflow list integration", () => {
     const dialog = await screen.findByRole("dialog", { name: "Create Workflow" });
 
     await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Login flow");
-    expect(within(dialog).getByText("Use project saved session")).toBeInTheDocument();
-    expect(within(dialog).getByText("Create new workflow session")).toBeInTheDocument();
-    expect(within(dialog).queryByText("Existing: Staging Chrome")).not.toBeInTheDocument();
-    await userEvent.selectOptions(
-      within(dialog).getByLabelText("Browser session"),
-      "isolated",
-    );
+    expect(within(dialog).queryByLabelText("Browser session")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Use project saved session")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Create new workflow session")).not.toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
     await waitFor(() => {
@@ -132,9 +128,6 @@ describe("Workflow list integration", () => {
         "Login flow",
         {
           project_id: project.id,
-          environment: {
-            mode: "isolated",
-          },
         },
       );
     });
@@ -142,7 +135,7 @@ describe("Workflow list integration", () => {
       .toBeInTheDocument();
   });
 
-  test("shows the selected project environment in the workflow detail header", async () => {
+  test("does not surface project environment session labels on workflow rows or detail header", async () => {
     const environmentAwareWorkflow = {
       ...workflow,
       project_id: "project-1",
@@ -161,10 +154,12 @@ describe("Workflow list integration", () => {
     renderApp();
 
     await openWorkflows();
+    expect(screen.queryByText("Environment: Staging Chrome")).not.toBeInTheDocument();
+
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
 
     const header = await screen.findByRole("region", { name: "Workflow detail header" });
-    expect(within(header).getByText("Environment: Staging Chrome")).toBeInTheDocument();
+    expect(within(header).queryByText("Environment: Staging Chrome")).not.toBeInTheDocument();
   });
 
   test("records a workflow from the list and saves a reviewed draft", async () => {

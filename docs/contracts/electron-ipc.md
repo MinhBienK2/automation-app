@@ -49,8 +49,6 @@ string map.
 - `createProjectEnvironment`
 - `updateProjectEnvironment`
 - `resetProjectEnvironmentBrowserIdentity`
-- `setWorkflowEnvironment`
-- `forkWorkflowSession`
 - `createSubflow`
 - `listSubflows`
 - `getSubflow`
@@ -131,11 +129,9 @@ workflows, remapped Call Subflow references, and fresh browser
 identity/profile/fingerprint values for copied sessions. `deleteProject(projectId)`
 deletes the project after active-run/profile/retained-session guards pass,
 removing workflows before the project row so workflows are not orphaned.
-`createWorkflow(name, options?)` accepts optional project and session/environment
-selection; omitted options use the project saved session by default. The
-renderer's create dialog exposes only reuse project saved session or create new
-workflow session, while older `existing` environment selections remain accepted
-at the command boundary for compatibility.
+`createWorkflow(name, options?)` accepts an optional project id. Omitted options
+use the default project. Workflow creation does not accept session/environment
+selection and persists workflow-owned Browser Launch defaults.
 `updateProjectEnvironment` remains the project-session metadata/update command,
 but the product UI treats fingerprint seeds as identity-managed values rather
 than direct edits. `resetProjectEnvironmentBrowserIdentity(environmentId)`
@@ -146,18 +142,16 @@ directory after UI confirmation. Subflow commands expose project-scoped
 reusable graphs, metadata rename through `updateSubflow`, usage queries,
 guarded deletion, and graph save/load.
 
-`setWorkflowEnvironment(workflowId, environmentId)` links a workflow to an
-existing same-project browser session row. `forkWorkflowSession(workflowId)`
-creates a new private browser session row for the workflow with a fresh
-backend-generated identity/profile/fingerprint bundle, preserves non-storage
-Browser Launch preferences, disables Run from selected, and does not copy local
-browser storage.
+Workflow Browser Launch settings are read and written through workflow settings
+commands. The IPC surface does not include workflow runtime identity-source
+selection or identity cloning commands; project saved identities are managed
+through project environment commands only.
 
 `importWorkflowPackage(packageValue, options)` accepts the selected Flow and
 Settings sections plus optional `target_project_id`. When present, the backend
 creates the imported workflow and recreated subflows in that project. Importing
-Browser Launch creates a private imported workflow session instead of mutating
-the target project's saved session.
+Browser Launch saves sanitized Browser Launch values onto the imported workflow
+instead of mutating the target project's saved identity.
 
 `exportProjectPackage(projectId)` returns a full `project_package` JSON payload
 for the selected project. `previewProjectPackage(packageValue)` validates and
@@ -183,8 +177,8 @@ profile is active or a retained session still owns the profile.
 
 `runWorkflow` and `runWorkflowFromNode` return a `WorkflowRunSnapshot` with the
 new `run_id`, workflow metadata, source, start time, and nested run state.
-Both commands resolve the workflow's selected project saved session or private
-workflow session before browser launch or retained-session checks.
+Both commands resolve the workflow's saved Browser Launch settings before
+browser launch or retained-session checks.
 `stopRun` accepts an optional run id and returns the stopped snapshot; omitting
 the run id is valid only when exactly one workflow run is active. `listRunStates`
 returns the current app-session run snapshots for multi-run monitoring.

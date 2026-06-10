@@ -83,10 +83,10 @@ Node/Electron backend.
   diagnostics, rotation history, and retained-session close guards stay in the
   backend.
 - Workflow graph load, save, validate, compile, and run command logic.
-- Project, compatibility Project Environment/session, and Subflow CRUD command
+- Project, compatibility Project Environment, and Subflow CRUD command
   logic. `updateSubflow` owns subflow metadata rename validation, Browser Launch
-  settings for project saved sessions and private workflow sessions are
-  backend-owned, and subflow delete is guarded by workflow usage. The renderer
+  settings for project saved identities are backend-owned, and subflow delete
+  is guarded by workflow usage. The renderer
   exposes grouped project identity controls instead of a full Project
   Environment list/create/editor. Project creation stays
   backend-owned through `createProject`, which creates the project, default
@@ -95,13 +95,11 @@ Node/Electron backend.
   through `updateProject`, `duplicateProject`, `exportProjectPackage`,
   `importProjectPackage`, and `deleteProject`, and project identity regeneration
   stays backend-owned through `resetProjectEnvironmentBrowserIdentity`.
-- Workflow browser session selection is command-owned through
-  `setWorkflowEnvironment` and `forkWorkflowSession`. `setWorkflowEnvironment`
-  points a workflow at an existing same-project session row and refreshes the
-  workflow's Browser Launch settings from that row. `forkWorkflowSession`
-  creates a private session row with a fresh backend-generated
-  identity/profile/fingerprint bundle, preserves non-storage launch posture,
-  disables Run from selected, and does not copy local browser storage.
+- Workflow Browser Launch settings are command-owned through workflow settings
+  save/reset commands. Workflows do not expose commands for selecting a project
+  environment as a runtime identity source or cloning another workflow's
+  Browser Launch identity; project saved identities are managed only through
+  project identity commands.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
@@ -128,11 +126,9 @@ Node/Electron backend.
 - Workflow package import delegates preview/import preparation, selected-section
   validation, referenced packaged-subflow validation, Call Subflow id remapping,
   and export sanitization to `WorkflowPackageService`; command handlers still
-  resolve the target project, choose the project saved session or a private
-  imported session, and wrap workflow, recreated subflows, graph, settings, and
-  any imported session writes in a SQLite transaction. Export sanitization
-  removes proxy secrets, proxy URL credentials, and local fingerprint font
-  directories.
+  resolve the target project and wrap workflow, recreated subflows, graph, and
+  settings writes in a SQLite transaction. Export sanitization removes proxy
+  secrets, proxy URL credentials, and local fingerprint font directories.
 - Legacy `import_workflow` also wraps workflow creation and optional settings
   save in one SQLite transaction so invalid imported settings cannot leave an
   orphan workflow row.

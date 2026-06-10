@@ -152,7 +152,6 @@ describe("workflow settings model", () => {
     ]);
     expect(workflowSettingsHelp.browser_launch.en.title).toBe("Browser Identity Settings Help");
     expect(workflowSettingsHelp.browser_launch.en.fieldGuide.map((field) => field.name)).toEqual([
-      "Session source",
       "Reuse login session",
       "Identity display name",
       "Fingerprint seed",

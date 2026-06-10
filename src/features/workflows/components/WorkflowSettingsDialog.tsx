@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { GitFork, HelpCircle, Save, Settings } from "lucide-react";
+import { HelpCircle, Save, Settings } from "lucide-react";
 import type {
   WorkflowSettings,
   WorkflowSettingsBrowserLaunch,
@@ -32,7 +32,6 @@ import {
   workflowSettingsHelp,
   workflowSettingsSections,
 } from "../lib/workflowSettings";
-import type { WorkflowSessionOption } from "../lib/workflowSessionOptions";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
 import { HelpDisclosure } from "./HelpDisclosure";
 
@@ -47,10 +46,6 @@ type WorkflowSettingsDialogProps = {
   onSettingsChange: (settings: WorkflowSettings) => void;
   onSaveSettings: () => void | boolean | Promise<void | boolean>;
   onResetBrowserIdentity?: () => void | Promise<void>;
-  sessionOptions?: WorkflowSessionOption[];
-  selectedSessionEnvironmentId?: string | null;
-  onSelectWorkflowSession?: (environmentId: string) => void | Promise<void>;
-  onForkWorkflowSession?: () => void | Promise<void>;
   onDiscardChanges: () => void;
 };
 
@@ -65,10 +60,6 @@ export function WorkflowSettingsDialog({
   onSettingsChange,
   onSaveSettings,
   onResetBrowserIdentity,
-  sessionOptions = [],
-  selectedSessionEnvironmentId,
-  onSelectWorkflowSession,
-  onForkWorkflowSession,
   onDiscardChanges,
 }: WorkflowSettingsDialogProps) {
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
@@ -195,10 +186,6 @@ export function WorkflowSettingsDialog({
                     value={settings.browser_launch}
                     onChange={(value) => updateSection("browser_launch", value)}
                     onResetBrowserIdentity={onResetBrowserIdentity}
-                    sessionOptions={sessionOptions}
-                    selectedSessionEnvironmentId={selectedSessionEnvironmentId}
-                    onSelectWorkflowSession={onSelectWorkflowSession}
-                    onForkWorkflowSession={onForkWorkflowSession}
                   />
                 ) : null}
                 {activeSection === "graph_defaults" ? (
@@ -573,30 +560,15 @@ export function BrowserLaunchSettingsSection({
   value,
   onChange,
   onResetBrowserIdentity,
-  sessionOptions = [],
-  selectedSessionEnvironmentId,
-  onSelectWorkflowSession,
-  onForkWorkflowSession,
 }: {
   value: WorkflowSettingsBrowserLaunch;
   onChange: (value: WorkflowSettingsBrowserLaunch) => void;
   onResetBrowserIdentity?: () => void | Promise<void>;
-  sessionOptions?: WorkflowSessionOption[];
-  selectedSessionEnvironmentId?: string | null;
-  onSelectWorkflowSession?: (environmentId: string) => void | Promise<void>;
-  onForkWorkflowSession?: () => void | Promise<void>;
 }) {
   const [resetIdentityOpen, setResetIdentityOpen] = useState(false);
   const [resetIdentityPending, setResetIdentityPending] = useState(false);
-  const [sessionActionPending, setSessionActionPending] = useState(false);
   const persistent = value.session_mode === "persistent_profile";
   const localEnvironment = detectedLocalBrowserEnvironment();
-  const selectedSession =
-    sessionOptions.find((option) => option.environment_id === selectedSessionEnvironmentId) ??
-    sessionOptions.find((option) => option.browser_launch.identity_id === value.identity_id) ??
-    null;
-  const selectedSessionValue =
-    selectedSession?.environment_id ?? selectedSessionEnvironmentId ?? "";
   const confirmResetIdentity = async () => {
     if (!onResetBrowserIdentity) return;
     setResetIdentityPending(true);
@@ -607,56 +579,12 @@ export function BrowserLaunchSettingsSection({
       setResetIdentityPending(false);
     }
   };
-  const selectWorkflowSession = async (environmentId: string) => {
-    if (!onSelectWorkflowSession || !environmentId) return;
-    setSessionActionPending(true);
-    try {
-      await onSelectWorkflowSession(environmentId);
-    } finally {
-      setSessionActionPending(false);
-    }
-  };
-  const forkWorkflowSession = async () => {
-    if (!onForkWorkflowSession) return;
-    setSessionActionPending(true);
-    try {
-      await onForkWorkflowSession();
-    } finally {
-      setSessionActionPending(false);
-    }
-  };
   return (
     <div className="settings-form-grid">
       <SettingsFieldGroup
         title="Session & identity"
         description="Persistent storage, browser identity, and operator controls for this launch environment."
       >
-        {sessionOptions.length ? (
-          <>
-            <label className="field settings-field-group-wide">
-              <span>Session source</span>
-              <Select
-                value={selectedSessionValue}
-                disabled={!onSelectWorkflowSession || sessionActionPending}
-                onChange={(event) => {
-                  void selectWorkflowSession(event.currentTarget.value);
-                }}
-              >
-                {sessionOptions.map((option) => (
-                  <option key={option.environment_id} value={option.environment_id}>
-                    {sessionOptionLabel(option)}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            {selectedSession ? (
-              <div className="workflow-session-source-summary settings-field-group-wide">
-                <span>{sessionUsageLabel(selectedSession)}</span>
-                {selectedSession.description ? <span>{selectedSession.description}</span> : null}
-              </div>
-            ) : null}
-          </>
-        ) : null}
         <SwitchField
           checked={persistent}
           label="Reuse login session"
@@ -690,32 +618,17 @@ export function BrowserLaunchSettingsSection({
           />
         </label>
         <p className="workflow-settings-hint settings-field-group-wide">
-          Fingerprint seed is part of the selected browser session identity.
+          Fingerprint seed is part of this workflow's browser identity.
         </p>
-        {onResetBrowserIdentity || onForkWorkflowSession ? (
+        {onResetBrowserIdentity ? (
           <div className="settings-field-group-actions">
-            {onForkWorkflowSession ? (
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={sessionActionPending}
-                onClick={() => {
-                  void forkWorkflowSession();
-                }}
-              >
-                <GitFork aria-hidden="true" />
-                Fork current session
-              </Button>
-            ) : null}
-            {onResetBrowserIdentity ? (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setResetIdentityOpen(true)}
-              >
-                Reset identity
-              </Button>
-            ) : null}
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setResetIdentityOpen(true)}
+            >
+              Reset identity
+            </Button>
           </div>
         ) : null}
         <Dialog open={resetIdentityOpen} onOpenChange={setResetIdentityOpen}>
@@ -880,22 +793,6 @@ function detectedLocalBrowserEnvironment() {
     timezone: options.timeZone || "UTC",
     locale: options.locale || "en-US",
   };
-}
-
-function sessionOptionLabel(option: WorkflowSessionOption) {
-  const ownerLabel = option.workflow_names.length
-    ? ` - ${option.workflow_names.join(", ")}`
-    : "";
-  return `${option.name}${ownerLabel}`;
-}
-
-function sessionUsageLabel(option: WorkflowSessionOption) {
-  if (!option.workflow_names.length) {
-    return option.is_default
-      ? "Project default session"
-      : "No workflows currently linked";
-  }
-  return `Shared with ${option.workflow_names.join(", ")}`;
 }
 
 function GraphDefaultsSettingsSection({

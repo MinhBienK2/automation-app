@@ -249,14 +249,8 @@ export type ProjectEnvironmentInput = {
   browser_launch?: WorkflowSettingsBrowserLaunch | null;
 };
 
-export type WorkflowEnvironmentSelection =
-  | { mode: "project_default" }
-  | { mode: "existing"; environment_id: string }
-  | { mode: "isolated"; name?: string | null };
-
 export type WorkflowCreateOptions = {
   project_id?: string | null;
-  environment?: WorkflowEnvironmentSelection | null;
 };
 
 export type WorkflowSettingsEnvironment = {

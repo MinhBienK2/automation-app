@@ -245,19 +245,15 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         `Copy of ${sourceProject.name}`,
         sourceProject.description,
       );
-      const environmentIdMap = new Map<string, string>();
       for (const environment of sourceEnvironments) {
-        const copiedEnvironment = deps.repository.createProjectEnvironment(createdProject.id, {
+        deps.repository.createProjectEnvironment(createdProject.id, {
           name: environment.name,
           description: environment.description,
           is_default: environment.is_default,
           browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
         });
-        environmentIdMap.set(environment.id, copiedEnvironment.id);
       }
-      const defaultEnvironment =
-        deps.repository.getDefaultProjectEnvironment(createdProject.id) ??
-        deps.ensureDefaultProjectEnvironment(createdProject);
+      deps.ensureDefaultProjectEnvironment(createdProject);
 
       const subflowIdMap = new Map<string, string>();
       for (const subflow of sourceSubflows) {
@@ -271,12 +267,8 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
       }
 
       for (const workflow of sourceWorkflows) {
-        const copiedEnvironmentId = workflow.environment_id
-          ? environmentIdMap.get(workflow.environment_id) ?? defaultEnvironment.id
-          : defaultEnvironment.id;
         const copiedWorkflow = deps.createWorkflow(workflow.name, {
           project_id: createdProject.id,
-          environment: { mode: "existing", environment_id: copiedEnvironmentId },
         });
         const graph = deps.repository.getWorkflowGraph(workflow.id);
         if (graph) {
@@ -287,13 +279,12 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         }
         const settings = deps.repository.getWorkflowSettings(workflow.id);
         if (settings) {
-          const copiedEnvironment = deps.requireProjectEnvironment(copiedEnvironmentId);
           deps.saveSettings(
             copiedWorkflow.id,
             duplicateProjectWorkflowSettings(
               settings,
               copiedWorkflow,
-              copiedEnvironment.browser_launch,
+              duplicateProjectBrowserLaunch(settings.browser_launch),
             ),
           );
         }
@@ -315,19 +306,15 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         preparedImport.importedName,
         preparedImport.description,
       );
-      const environmentIdMap = new Map<string, string>();
       for (const environment of preparedImport.environments) {
-        const createdEnvironment = deps.repository.createProjectEnvironment(createdProject.id, {
+        deps.repository.createProjectEnvironment(createdProject.id, {
           name: environment.name,
           description: environment.description,
           is_default: environment.is_default,
           browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
         });
-        environmentIdMap.set(environment.id, createdEnvironment.id);
       }
-      const defaultEnvironment =
-        deps.repository.getDefaultProjectEnvironment(createdProject.id) ??
-        deps.ensureDefaultProjectEnvironment(createdProject);
+      deps.ensureDefaultProjectEnvironment(createdProject);
 
       const subflowIdMap = new Map<string, string>();
       for (const subflow of preparedImport.subflows) {
@@ -341,15 +328,8 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
       }
 
       for (const packagedWorkflow of preparedImport.workflows) {
-        const createdEnvironmentId = packagedWorkflow.environment_id
-          ? environmentIdMap.get(packagedWorkflow.environment_id) ?? defaultEnvironment.id
-          : defaultEnvironment.id;
         const createdWorkflow = deps.createWorkflow(packagedWorkflow.name, {
           project_id: createdProject.id,
-          environment: {
-            mode: "existing",
-            environment_id: createdEnvironmentId,
-          },
         });
         if (packagedWorkflow.flow) {
           deps.repository.saveWorkflowGraph(
@@ -358,7 +338,6 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
           );
         }
         if (packagedWorkflow.settings) {
-          const createdEnvironment = deps.requireProjectEnvironment(createdEnvironmentId);
           deps.saveSettings(createdWorkflow.id, {
             ...packagedWorkflow.settings,
             workflow_id: createdWorkflow.id,
@@ -372,7 +351,9 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
               ...packagedWorkflow.settings.run_policy,
               run_from_selected_enabled: false,
             },
-            browser_launch: createdEnvironment.browser_launch,
+            browser_launch: duplicateProjectBrowserLaunch(
+              packagedWorkflow.settings.browser_launch,
+            ),
             created_at: createdWorkflow.created_at,
             updated_at: createdWorkflow.updated_at,
           });
