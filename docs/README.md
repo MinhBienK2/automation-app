@@ -12,8 +12,8 @@ This directory is for coding agents working in this repository.
 ## Execution Loop
 
 1. Read this file.
-2. Read `docs/task-routes.md` and select the matching route.
-3. Read only the docs named by the route. For broad or unclear work, read the product/planning route first.
+2. Run `node scripts/agent-router.mjs --diff` (or `--file <path>`) to automatically identify the matching route, documentation to read, and unit tests to run.
+3. Read only the documentation files output by the router. For broad or unclear work, read the product/planning route first.
 4. Inspect the listed source files before editing.
 5. Use `.agents/skills/test-driven-development` before behavior-changing code.
 6. Implement the smallest scoped change.
