@@ -91,7 +91,7 @@ describe("desktop CI/CD", () => {
     const packageLock = JSON.parse(await readFile(packageLockPath, "utf8")) as {
       packages?: Record<string, { version?: string; dependencies?: Record<string, string> }>;
     };
-    const auditedVersion = "0.3.30";
+    const auditedVersion = "0.3.31";
 
     expect(packageJson.dependencies?.cloakbrowser).toBe(auditedVersion);
     expect(packageLock.packages?.[""]?.dependencies?.cloakbrowser).toBe(auditedVersion);

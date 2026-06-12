@@ -294,12 +294,7 @@ export function applyReactFlowGraphState(
 
 function displayPositionsForGraphNodes(nodes: GraphNode[]) {
   const positions = new Map<string, GraphPosition>();
-  const placedNodes: Array<{
-    id: string;
-    x: number;
-    y: number;
-    height: number;
-  }> = [];
+  const buckets = new Map<number, Array<{ x: number; y: number; height: number }>>();
   const orderedNodes = [...nodes].sort((left, right) => {
     const yDiff = left.position.y - right.position.y;
     if (yDiff !== 0) return yDiff;
@@ -312,20 +307,32 @@ function displayPositionsForGraphNodes(nodes: GraphNode[]) {
     const height = graphNodeHeightForPorts(node.ports);
     let y = node.position.y;
 
-    for (const placedNode of placedNodes) {
-      if (!nodeColumnsOverlap(node.position.x, placedNode.x)) continue;
-      y = Math.max(
-        y,
-        placedNode.y + placedNode.height + graphNodeCollisionClearance,
-      );
+    const bucketX = Math.floor(node.position.x / graphNodeWidth);
+
+    // Only check current bucket and its immediate adjacent neighbors
+    for (let b = bucketX - 1; b <= bucketX + 1; b++) {
+      const placedInBucket = buckets.get(b);
+      if (!placedInBucket) continue;
+      for (const placedNode of placedInBucket) {
+        if (!nodeColumnsOverlap(node.position.x, placedNode.x)) continue;
+        y = Math.max(
+          y,
+          placedNode.y + placedNode.height + graphNodeCollisionClearance,
+        );
+      }
     }
 
     positions.set(
       node.id,
       y === node.position.y ? node.position : { ...node.position, y },
     );
-    placedNodes.push({
-      id: node.id,
+
+    let bucket = buckets.get(bucketX);
+    if (!bucket) {
+      bucket = [];
+      buckets.set(bucketX, bucket);
+    }
+    bucket.push({
       x: node.position.x,
       y,
       height,
