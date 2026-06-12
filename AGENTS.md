@@ -48,5 +48,3 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 - Prefer existing action config variants and command names; update TypeScript DTOs and Electron backend handlers together when adding an action.
 - Keep the desktop smoke checklist in `README.md` accurate when workflow behavior changes.
 
-## Commit Attribution
-AI-authored commits MUST include a `Co-Authored-By: <agent name> <email>` trailer.
