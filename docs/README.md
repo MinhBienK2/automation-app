@@ -5,19 +5,31 @@ This directory is for coding agents working in this repository.
 ## Source Of Truth
 
 - Current code and `docs/` must agree for every touched area.
-- `AGENTS.md` defines mandatory agent workflow.
+- `AGENTS.md` defines mandatory agent rules. This file defines the execution workflow.
 - `DESIGN.md` is mandatory for layout, styling, and user-facing UI changes.
 - `docs/superpowers/` is a historical planning archive. Do not use it as current truth.
 
-## Required Reading Path
+## Execution Loop
 
 1. Read this file.
-2. Read `docs/task-routes.md`.
-3. Select the route or routes matching the task.
-4. Read only the domain, architecture, contract, and maintenance docs named by the route.
-5. Inspect the listed source files before editing.
+2. Read `docs/task-routes.md` and select the matching route.
+3. Read only the docs named by the route. For broad or unclear work, read the product/planning route first.
+4. Inspect the listed source files before editing.
+5. Use `.agents/skills/test-driven-development` before behavior-changing code.
+6. Implement the smallest scoped change.
+7. Run focused checks first, then broader checks when the touched area requires it.
+8. Update `docs/` when behavior, contracts, routes, ownership, or verification changed.
+9. Before final response, confirm docs and code agree for the touched area.
 
-For broad, ambiguous, or planning tasks, use the "Understand Product Or Plan Broad Work" route first. Do not read every file in `docs/`.
+## Final Response Checklist
+
+For code changes, include:
+
+- Tests/checks run.
+- Whether `docs/` was updated.
+- If `docs/` was not updated, why the touched behavior/contracts did not require it.
+
+For docs-only changes, mention that TDD was skipped because no runtime behavior changed.
 
 ## Update Rule
 
@@ -32,7 +44,13 @@ Update `docs/` in the same change when code changes affect:
 - Run state, progress, cancellation, or browser-session behavior.
 - File ownership, task routing, or required verification.
 
-If docs and code disagree, verify current code, fix the docs for the touched area, then continue.
+## Conflict Rule
+
+If source code and docs disagree:
+
+- Code is the immediate implementation reality.
+- Docs must be corrected for the touched area in the same task.
+- Do not leave docs known-stale after changing code.
 
 ## Token Budget
 

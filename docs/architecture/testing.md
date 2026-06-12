@@ -1,168 +1,56 @@
 # Testing Architecture
 
-## Frontend Tests
+## Frontend & Backend Unit Tests
 
-- Test runner: Vitest.
-- Testing utilities: Testing Library and local helpers.
-- Setup: `src/tests/setup.ts`
-- Mocks: `src/tests/mocks/`
-- Render helper: `src/tests/utils/renderApp.tsx`
+Run focused unit tests using `npm test -- <path_to_test>`:
+- Frontend Core: `src/lib/workflowApi.test.ts`, `src/features/workflows/pages/WorkflowDetailPage.test.tsx`, `src/features/workflows/lib/workflowStepForm.test.ts`
+- Backend Core: `electron/backend/commands.test.ts`, `electron/backend/graph/compiler.test.ts`, `electron/backend/runtime/runner.test.ts`, `electron/backend/evidence/model.test.ts`
+- Typecheck: `npx tsc --noEmit`
 
-Focused commands:
-
-- `npm test -- src/lib/workflowApi.test.ts`
-- `npm test -- src/features/workflows/pages/WorkflowDetailPage.test.tsx`
-- `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`
-- `npx tsc --noEmit`
-
-## Electron Backend Tests
-
-- Command API and persistence: `electron/backend/commands.test.ts`
-- Graph validation/compiler: `electron/backend/graph/compiler.test.ts`
-- Runner unit coverage: `electron/backend/runtime/runner.test.ts`
-- Evidence model coverage: `electron/backend/evidence/model.test.ts`
-- CloakBrowser launch smoke: `electron/backend/runtime/runner.smoke.test.ts`, gated by `RUN_CLOAKBROWSER_SMOKE=1`
-
-Focused commands:
-
-- `npm test -- electron/backend/commands.test.ts`
-- `npm test -- electron/backend/graph/compiler.test.ts`
-- `npm test -- electron/backend/runtime/runner.test.ts`
-- `npm test -- electron/backend/evidence/model.test.ts`
-- `npm run test:fingerprint`
-- `npm run test:smoke`
-- `npm run build:electron`
-
-`npm run test:smoke` launches the real CloakBrowser binary against a local
-fixture, so it is intentionally separate from the normal unit suite. It verifies
-`navigator.webdriver === false`, UA/headless masking, coherent Chromium UA
-Client Hints when the runtime exposes them, `window.chrome` and plugin baseline signals,
-persistent localStorage across two launches of the same profile, fixed-seed
-canvas stability, timezone/locale, positive viewport/screen coherence, and CloakBrowser
-wrapper/binary evidence. A fresh machine may download the CloakBrowser binary
-before the smoke test runs.
-
-`npm run test:fingerprint` is the focused browser identity gate for browser
-identity changes and CloakBrowser wrapper upgrades. It checks identity launch
-mapping and sanitized `browser_identity` evidence without requiring an external
-owned target.
-
-Runner unit coverage also guards the Run Policy `execute_js_enabled` safety
-switch: disabled workflows must reject Run JavaScript before browser-side script
-evaluation while still preserving normal evidence tags and output redaction
-when JavaScript execution is enabled.
+### Specialized Unit/Smoke Lanes
+- `npm run test:smoke`: Launches real CloakBrowser binary against local fixtures to verify WebDriver masking, user-agent details, persistent profile cache, and canvas/timezone metrics.
+- `npm run test:fingerprint`: Focused gate for identity mapping and sanitized browser evidence tests.
+- `ci-cd.test.ts`: Guards GHA build configurations, packaging targets, and exact-pinning of CloakBrowser.
+- `scripts/deploy-release.test.mjs`: Tests version bumping and deployment steps.
 
 ## Desktop E2E Tests
 
-- Test runner: Playwright Test.
-- Config: `playwright.config.ts`.
-- Electron fixture: `tests/e2e/support/electronFixture.ts`.
-- Deterministic local fixture server: `tests/e2e/support/fixtureServer.ts`.
-- Workflow graph helpers: `tests/e2e/support/workflows.ts`.
-- Tests launch the Electron app against a local Vite renderer, override Electron `appData` with a per-test temporary directory, seed workflows through the exposed desktop IPC bridge, and run them through the real Electron command, SQLite, and CloakBrowser-backed runner boundary.
-- The Playwright-managed Vite renderer runs with file-watch polling and ignores generated local artifacts such as `.local/` browser profiles and `test-results/`, so repo-local CloakBrowser profile caches do not exhaust OS watcher limits during E2E runs.
+E2E testing is powered by Playwright Test using `playwright.config.ts`, `tests/e2e/support/electronFixture.ts` (manages isolated temporary app-data profile folders), and `tests/e2e/support/fixtureServer.ts` (provides local deterministic target pages).
 
-Focused commands:
+### E2E Test Suite Map (Run via `npm run test:e2e:full -- tests/e2e/<suite>.e2e.ts`)
+- `coverage-matrix`: Registry coverage matrix guard for all action types/fields.
+- `electron-isolation`: App startup, data isolation, SQLite persistence.
+- `core-execution`: Core clicks, inputs, checkboxes, radios, select options, element text.
+- `capture-network`: Network capture, request blocking, response mocking, screenshots.
+- `keyboard-dialog`: Hotkeys, clipboard/paste, alert/confirm dialogs, focus/blur.
+- `human-behavior`: Trusted mouse, pointer, keyboard, and wheel event simulation sequence checks.
+- `pointer-actions`: Pointer clicks, drag-and-drop (offset/percent calculations), scroll modes.
+- `navigation-actions`: Navigation history, tabs/windows execution.
+- `extended-form-actions`: Uploads, custom drop-downs, contenteditable fields.
+- `wait-assertion-actions`: Assertion outcomes and element state waits (visible, hidden, etc.).
+- `control-flow`: Graph loops, retry, switch, variables, branches.
+- `browser-context-storage`: Geolocation, headers, cookies, storage.
+- `run-validation-and-stop`: Allowlist block, validation errors, run cancellation.
+- `batch-evidence`: Concurrency and batch execution runs, output persistence.
+- `run-from-selected-real`: Run-from-selected with retained profile browsers.
+- `browser-recorder`: Recording events, paste capture, review/saving.
+- `workflow-package`: Zip export/import, sanitization of sensitive settings.
+- `real-world-web` (via `npm run test:e2e:real-web`): Public target practice tests (excluded from CI/deterministic runs).
 
-- `npm run test:e2e:full -- tests/e2e/electron-isolation.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/core-execution.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/capture-network.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/human-behavior.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/keyboard-dialog.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/pointer-actions.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/navigation-actions.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/extended-form-actions.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/wait-assertion-actions.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/control-flow.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/browser-context-storage.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/run-validation-and-stop.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/batch-evidence.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/run-from-selected-real.e2e.ts`
-- `npm run test:e2e:real-web`
-- `npm run test:e2e:full -- tests/e2e/workflow-user-journeys.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/workflow-package.e2e.ts`
-- `npm run test:e2e:full -- tests/e2e/coverage-matrix.e2e.ts`
+### E2E Execution Lanes
+- `npm run test:e2e:smoke`: Fast confidence lane for Electron boot, core execution, and recorder.
+- `npm run test:e2e:full`: All local deterministic desktop E2E (headless, clean teardown).
+- `npm run test:e2e:visible`: Headed lane (`E2E_VISIBLE_BROWSER=1`) for visual browser observation. Pause with `E2E_OBSERVE_MS`.
+- `npm run test:e2e:flake`: Repeated test runs to capture flake in interaction logic.
 
-Desktop coverage map:
+## Packaging and CI/CD Verification
 
-- `coverage-matrix.e2e.ts`: guardrail that keeps visible action coverage, hidden-action coverage decisions, graph-node coverage, workflow journey coverage, behavior scenarios, capability traceability, capability gaps, and behavior-changing field variants aligned with the current type/capability registry.
-- `electron-isolation.e2e.ts`: Electron launch, temp app-data isolation, SQLite-backed desktop state.
-- `core-execution.e2e.ts`: `navigate`, `click`, `wait(text_visible)`, `input_text`, `clear_input`, `select_option` by label and value, `check`, `uncheck`, `toggle_checkbox`, `select_radio`, `submit_form`, `extract_text`, `extract_input_value`.
-- `capture-network.e2e.ts`: `extract_text`, `extract_attribute`, `extract_input_value`, `extract_list`, `extract_table`, `take_screenshot`, `wait_for_download`, `execute_js`, `wait_for_request`, `wait_for_response` with status-filtered and unfiltered matching, `block_request`, `mock_response`.
-- `keyboard-dialog.e2e.ts`: `focus_element`, `blur_element`, `press_key`, `hotkey`, `set_clipboard`, `paste_clipboard`, `type_sequence`, `accept_dialog`, `dismiss_dialog`.
-- `human-behavior.e2e.ts`: `hover`, `click`, `double_click`, `right_click`, `input_text`, `type_sequence`, and page scroll emit trusted page-observable mouse, pointer, keyboard, wheel, and scroll event sequences with CloakBrowser humanization enabled.
-- `pointer-actions.e2e.ts`: `click`, `double_click`, `right_click`, `hover`, `drag_and_drop`, and `scroll` page, into-view, and scroll-until-visible modes.
-- `navigation-actions.e2e.ts`: `navigate`, `go_back`, `go_forward`, `reload`, `open_new_tab`, `switch_tab`, `close_tab`.
-- `extended-form-actions.e2e.ts`: `upload_file`, `select_custom_option`, `set_contenteditable`.
-- `wait-assertion-actions.e2e.ts`: `wait(duration)`, `wait(page_load)`, element wait states (`visible`, `hidden`, `attached`, `detached`, `enabled`, `disabled`), `wait(text_visible)`, `wait(url_contains)`, `random_wait`, `assert_element` states (`visible`, `hidden`, `attached`, `enabled`, `disabled`), `assert_text` contains/equals pass paths, and assertion failure run-state paths.
-- `control-flow.e2e.ts`: graph-visible `set_variable`, `set_json_variables`, `if`, `switch`, `router`, `merge`, `repeat_times`, `repeat_for_each` array-variable and literal-item sources, `while`, `repeat_until`, `retry`, `break_loop`, `continue_loop`, `end_success`, `end_failure`, and `stop_workflow`.
-- `browser-context-storage.e2e.ts`: runtime `set_viewport` width/height behavior, `set_geolocation`, `grant_permission`, `set_extra_headers`, `set_cookie`, `clear_cookies`, `set_local_storage`, `set_session_storage`. Browser Launch no longer exposes launch-time device-shape controls.
-- `run-validation-and-stop.e2e.ts`: unconfigured graph run blocking, domain allowlist navigation blocking, and stop during a running wait.
-- `batch-evidence.e2e.ts`: graph-backed batch execution, row variable interpolation, persisted SQLite `runs`/`run_steps`, screenshot evidence files, and `__evidence` metadata.
-- `run-from-selected-real.e2e.ts`: retained persistent-session workflow run, visual graph node selection in the real browser, enabled Run from selected detail action, and selected-node rerun through the retained session.
-- `real-world-web.e2e.ts`: opt-in external website workflow suite covering read-only reference/docs pages, public demo commerce checkout, scraping sandbox catalog/quote pagination, and public automation-practice login/dynamic-loading/alert flows. Each graph includes a domain allowlist. It is excluded from the deterministic full lane because third-party availability and network behavior are outside repo control.
-- `workflow-user-journeys.e2e.ts`: user-facing workflow create, graph/settings affordances, list-run status, and delete confirmation.
-- `browser-recorder.e2e.ts`: backend-owned recorder session, deterministic
-  fixture capture including clipboard paste, review draft save, and replay
-  through the normal run manager.
-- `workflow-package.e2e.ts`: workflow package export, preview, import-as-new-workflow, flow preservation, and sensitive setting sanitization through the Electron bridge.
-E2E lanes:
-
-- `npm run test:e2e:smoke`: fast desktop confidence lane for Electron boot, core run, user journeys, coverage matrix, and recorder record-to-replay stability.
-- `npm run test:e2e:full`: all local deterministic desktop E2E. This lane intentionally uses helper defaults that run workflow browsers headless and close them after each workflow so CI and local verification stay deterministic.
-- `npm run test:e2e:visible`: local browser-observable review/debug lane. It runs only suites with meaningful browser-page behavior, excluding coverage, package, Electron-isolation, and UI-only journeys that would otherwise only show the desktop app. It sets `E2E_VISIBLE_BROWSER=1`, runs Playwright headed, makes helper-created workflow browsers non-headless, retains the workflow browser at terminal state, and waits briefly after helper-driven runs. Set `E2E_OBSERVE_MS=<milliseconds>` to change the post-run observation pause.
-- `npm run test:e2e:flake`: repeat high-risk interaction suites to catch timing, humanized pointer, form, and keyboard regressions.
-- `npm run test:e2e:real-web`: opt-in public external website lane. It sets `E2E_REAL_WEB=1`, runs `tests/e2e/real-world-web.e2e.ts`, and should be used for local/nightly confidence when outbound network and selected public demo/read-only sites are acceptable dependencies.
-
-Lower-level coverage:
-
-- Recorder action-family coverage lives in `eventCollector.test.ts`,
-  `timelineNormalizer.test.ts`, backend command tests, and review UI tests. It
-  covers keyboard/hotkeys, double/right click, tab, download, auto-dismissed
-  dialogs, wait/screenshot/submit markers, and reviewed upload paths before
-  workflow save.
-- Graph-internal control-flow action configs remain covered by runner and graph compiler tests while user authoring uses graph-native nodes; Router and Merge additionally have a local desktop E2E convergence scenario.
-- Browser identity settings are covered through Workflow Settings and runner launch contracts, not in-run action nodes.
-- Full structured `ElementTarget` locator kinds, constraints, and iframe targeting are covered through runner tests, with common `test_id` flows exercised in desktop E2E.
-- Invalid enum values and numeric validation edges remain covered in runner, graph compiler, and form validation suites unless a desktop regression exposes a user-facing gap.
-
-## Packaging And CI Tests
-
-- `ci-cd.test.ts` guards the GitHub Actions desktop packaging workflow and
-  electron-builder targets.
-- GitHub Actions quality gates run on Node.js 24 across Desktop CI, Desktop
-  Release, and CodeQL.
-- Desktop CI must run on pull requests and pushes to `main` without producing
-  release artifacts.
-- Desktop Release must run on `v*` tags or manual dispatch, use the
-  `internal-release` environment, execute quality gates before packaging, and
-  upload macOS, Windows, and Ubuntu/Linux artifacts.
-- Release artifacts must include a CycloneDX SBOM, SHA-256 checksum manifest,
-  JSON release manifest with actual `generated_at` and deterministic
-  `reproducible_epoch`, and GitHub artifact attestation.
-- `npm run deploy` is the local release helper. Real deploys require a clean
-  worktree, run tests/build, bump the package version, commit, create a `v*`
-  tag, and push the branch and tag.
-- CodeQL, Dependabot, immutable action pinning, and repository-governance docs
-  are part of release verification.
-- `ci-cd.test.ts` also verifies the audited CloakBrowser wrapper is exact-pinned
-  in `package.json` and `package-lock.json` so browser wrapper drift is caught
-  before release. It also verifies Dependabot excludes `cloakbrowser` from the
-  broad npm minor/patch group and that release governance documents the
-  CloakBrowser upgrade gate.
-
-Focused commands:
-
-- `npm test -- ci-cd.test.ts`
-- `npm test -- scripts/deploy-release.test.mjs`
-- `npm run build`
-- `npm run release:sbom`
-- `npm run release:manifest`
-- `npm run electron:pack:linux` on Linux packaging machines
+GitHub Actions quality gates run on Node 24 (pull request and branch pushes).
+- Release lane (`v*` tags) uses `internal-release` environments, producing attestation manifests, SBOM (CycloneDX), and checksums.
+- Local release builds are run using `npm run deploy` (requires clean worktree, tags release, and builds targets).
 
 ## Policy
 
-- Use TDD for behavior changes.
-- Run focused tests first.
-- Add broader checks when touching shared contracts or cross-layer behavior.
+- Use TDD for behavior changes (implement test first).
+- Run focused tests first, then wider checks.
 - Docs-only changes do not require TDD.

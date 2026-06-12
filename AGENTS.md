@@ -24,13 +24,9 @@ Before implementing any feature, bug fix, refactor, or behavior change, agents M
 Exceptions: docs-only changes, formatting-only changes, comment-only changes, generated code, trivial configuration updates, and throwaway prototypes. If skipping TDD for a code change, state why in the final response.
 
 ## Docs Sync Requirement
-Before code changes, agents MUST read only the relevant files under `docs/`.
+Before code changes, agents MUST read `docs/README.md` and follow its execution loop. That file is the single source of truth for the reading path, final-response checklist, update rules, and conflict resolution.
 
-Flow: read `docs/README.md`, route through `docs/task-routes.md`, follow `docs/agent-workflow.md`, then inspect listed source files.
-
-Exceptions: formatting-only changes, comment-only changes, generated files, dependency lockfile churn with no behavior or command changes, and throwaway prototypes. If skipping docs updates for a code change, state why in the final response.
-
-Final responses for code changes MUST include tests/checks run, whether `docs/` was updated, and why docs did not need updates if unchanged.
+Exceptions: formatting-only changes, comment-only changes, generated files, dependency lockfile churn with no behavior or command changes, and throwaway prototypes. If skipping, state why in the final response.
 
 ## Design System Requirement
 Before changing `src/App.css`, layout structure, or user-facing component styling, agents MUST read `DESIGN.md` and follow its design system for colors, typography, spacing, borders, radius, responsive behavior, and component treatment.
@@ -43,7 +39,14 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 - Electron backend commands, SQLite persistence, graph compiler, and CloakBrowser runner live under `electron/backend/`.
 - Agent source-of-truth docs live under `docs/`; historical plans/specs live under `docs/superpowers/`; smoke checklist lives in `README.md`.
 
+## Do NOT
+- Read all docs by default — use `docs/task-routes.md` as the router.
+- Duplicate TypeScript type shapes or command names into docs prose.
+- Add UI state, SQL, or browser API details to command-boundary docs.
+- Rewrite existing graph links or edge waits when changing graph defaults.
+
 ## Key Conventions
+- Layer map: `docs/architecture/overview.md`. Read it for broad or unclear tasks.
 - Add or update focused tests when changing validation, commands, persistence, runner behavior, or user-visible workflow UI.
 - Prefer existing action config variants and command names; update TypeScript DTOs and Electron backend handlers together when adding an action.
 - Keep the desktop smoke checklist in `README.md` accurate when workflow behavior changes.

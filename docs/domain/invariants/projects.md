@@ -1,0 +1,72 @@
+# Project And Subflow Invariants
+
+Preserve these unless the task explicitly changes them.
+
+## Projects
+
+- Auto-created default project named `Main`.
+- Creating a project creates a workflow named `Main` using its first browser profile.
+- Projects workspace header: Import project next to Create Project.
+- Project list sidebar: search/filtering + project selection.
+- Selected project shows Workflows, Subflows, Settings as fixed tabs.
+- Scoped to selected project; changing project resets detail tabs to Workflows.
+
+## Project Settings
+
+- `Project identity` heading, `Project details` group, `Browser Profiles` group.
+- Project details: editable name, Save, Duplicate project, Export project, Delete project.
+- Browser Profiles: add profiles, rename inline, delete unused after confirmation.
+- UI does NOT expose: fingerprint seed, identity id, regenerate identity controls.
+- Duplicate: independent copy with copied workflows/subflows, remapped Call Subflow refs, fresh identities/profiles.
+- Export: `.project.json` via native Save dialog, sanitized sensitive/local Browser Launch fields.
+- Import: previews package, creates new project, remaps ids, fresh identities. Does NOT import: runs, evidence, schedules, app settings, browser profile storage.
+- Delete: in-app confirmation warning. Rejected while active run/retained session in project.
+
+## Browser Profiles
+
+- Backend-generated `bi_<32 hex>` identity ids.
+- Internal persistent profile directories.
+- Deterministic CloakBrowser fingerprint seeds + stored persona metadata.
+- Proxy/location posture, humanization, headless defaults.
+- Values remain backend/profile-owned, not editable Workflow Settings fields.
+- Profile deletion rejects while selected by active run or retained session.
+- New profile = new identity (user-facing route to new browser identity).
+
+## Subflows
+
+- Reusable graph fragments, not standalone runnable scenarios.
+- Reachable from selected project's Subflows collection.
+- CRUD: create, open, rename via Subflow Settings, save, duplicate, delete.
+- Usage warnings when referenced by workflows. Deleting referenced subflow is blocked.
+- Subflow detail: owning project name in header, Settings opens rename, Save disabled until content changes.
+- Duplicate/delete actions stay on collection list, not detail header.
+
+## Call Subflow
+
+- Runs same-project subflow inside caller's run/browser context/output store/evidence/retention.
+- MVP subflows cannot call other subflows.
+- Empty subflow: validation/run stops at Call Subflow node (no skip to next).
+- Open subflow: from node inspector actions and context menu, opens without saving workflow.
+- Back from subflow detail returns to originating workflow detail.
+- Add Subflow toolbar picker: `Call subflow` (default) creates linked node; `Insert nodes` copies real nodes.
+
+## Navigation And App Shell
+
+- Sidebar order: Overview, Projects, Evidence, Schedules, Identities, App Settings.
+- Overview is default first screen.
+- No top command/search header or Alerts shortcut.
+- Sidebar and in-page links are cross-workspace navigation surfaces.
+- Evidence: separate sidebar page between Projects and Schedules. Only broad evidence browser.
+- Identities: separate sidebar page after Schedules. Sanitized DTOs, no raw paths/storage/credentials.
+- App Settings: autosave prefs, XPath cookbook, diagnostics, maintenance, shortcuts. No notification/theme systems.
+
+## UI Primitives
+
+- On/off settings: shared switch treatment.
+- Compact exclusive choices: shared segmented-control with clear active state.
+- Layout/styling follow `DESIGN.md`.
+- Compact desktop (1024x768): no horizontal page overflow; table interiors may keep bounded scrolling.
+- Command errors shown as readable messages.
+- Icon-only controls: accessible labels + visible tooltip text.
+- Identity Lab Close Retained Session: closes in-memory context only, does NOT delete profile data/cookies/settings/evidence/runs.
+- Identity Lab Reset Identity: guarded backend command with in-app confirmation, unavailable while run/session blocks.
