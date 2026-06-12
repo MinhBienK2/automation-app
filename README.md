@@ -2,279 +2,125 @@
 
 Electron desktop app for building and running authorized adversarial browser automation workflows against company-owned systems.
 
-The project is an internal red-team automation lab. Its explicit goal is to make automated workflows pass through the company's existing production and staging defenses in controlled owned environments, then produce evidence that helps security, trust, anti-abuse, and production teams find detection gaps and harden defenses. The lab models fake engagement, account integrity, network reputation, device/browser fingerprinting, behavioral analytics, velocity checks, graph detection, content/spam controls, risk scoring, challenge flows, API abuse, and coordinated bot scenarios.
+The project is an internal red-team automation lab. Its explicit goal is to make automated workflows pass through the company's existing production and staging defenses in controlled owned environments, then produce evidence that helps security, trust, anti-abuse, and production teams find detection gaps and harden defenses.
+
+---
 
 ## Development Commands
 
-Install frontend dependencies:
+### Core Actions
+| Task | Command | Description |
+|---|---|---|
+| **Install** | `npm install` | Install frontend/backend dependencies |
+| **Dev Run** | `npm run electron:dev` | Start desktop app with HMR/rebuild watchers |
+| **Build** | `npm run build` | Compile renderer and Electron main/preload |
+| **Typecheck** | `npx tsc --noEmit` | Run TypeScript compiler checks |
+| **Build IPC** | `npm run build:electron` | Build Electron main/preload only |
+| **Deploy** | `npm run deploy [-- --minor/--major]` | Run quality gates, bump version, tag & push |
 
+### Testing Lanes
+| Target | Command | Description |
+|---|---|---|
+| **Frontend Unit** | `npm test` | Run Vitest unit suite |
+| **E2E Full** | `npm run test:e2e` | Run all local deterministic Playwright E2E tests |
+| **E2E Smoke** | `npm run test:e2e:smoke` | Run fast E2E lane for core flows |
+| **E2E Visible** | `npm run test:e2e:visible` | Run E2E headed with post-run retention (Set `E2E_OBSERVE_MS` to pause) |
+| **E2E Flake** | `npm run test:e2e:flake` | Repeat interaction tests to detect timing regressions |
+| **E2E Real Web** | `npm run test:e2e:real-web` | Run opt-in real-world external target tests |
+| **Browser Smoke** | `npm run test:smoke` | Run CloakBrowser capability tests (e.g. webdriver, UA) |
+| **Fingerprint** | `npm run test:fingerprint` | Run focused fingerprint and identity matching tests |
+
+### Packaging Distributables
+| Target | Command | Description |
+|---|---|---|
+| **Pack (Linux)** | `npm run electron:pack` | Package distributables for Linux |
+| **Pack (Dir)** | `npm run electron:pack:dir` | Package local directory build for inspection |
+| **Pack (macOS)** | `npm run electron:pack:mac` | Package distributables for macOS |
+| **Pack (Windows)** | `npm run electron:pack:win` | Package distributables for Windows |
+| **Release SBOM** | `npm run release:sbom` | Generate CycloneDX SBOM for release |
+| **Release Manifest**| `npm run release:manifest` | Generate checksums and manifest file |
+
+---
+
+## CloakBrowser Setup & Config
+
+### Lab Machine Bootstrapping
 ```bash
 npm install
+npm run cloakbrowser:fonts:setup   # Set up localized Ubuntu fonts under .local/cloakbrowser-fonts/linux
+npx cloakbrowser install           # Download patched Chromium binary
+npx cloakbrowser info              # Verify binary status
+npm run test:smoke                 # Run capability checks
 ```
 
-Run the desktop app in development:
+### Key Operational Guidance
+- **Headed Display**: Headed Linux runs require a real display. Use a desktop session or `xvfb-run` for headed identities; otherwise set Browser Launch headless mode.
+- **Localized Fonts**: `npm run cloakbrowser:fonts:setup` downloads and extracts recommended Ubuntu fonts locally under `.local/cloakbrowser-fonts/linux` so that new/lazy-created profiles automatically use them without system-wide installations. Do not commit these fonts.
+- **Diagnostics**: Operators can use `getCloakBrowserDiagnostics`, `installCloakBrowserBinary`, and `cleanupOrphanedBrowserProfiles` commands in App Settings to check wrapper/binary versions, GeoIP MMDB availability, headed display status, local font hashes, and profile directory sizes.
+- **Environment Overrides**: Use `CLOAKBROWSER_AUTO_UPDATE=false` on lab machines for reproducibility. Overrides like `CLOAKBROWSER_BINARY_PATH`, `CLOAKBROWSER_CACHE_DIR`, and `CLOAKBROWSER_DOWNLOAD_URL` are supported. Never set `CLOAKBROWSER_SKIP_CHECKSUM=true`.
+- **Location & GeoIP**: New profiles enable GeoIP by default, allowing blank timezone/locale fields to resolve from the proxy exit IP. Settings validation warns if a proxy is configured without explicit location settings and GeoIP is disabled.
 
-```bash
-npm run electron:dev
-```
-
-The dev command starts Vite for renderer HMR and watches Electron
-main/preload/backend TypeScript. Renderer edits update in place; successful
-Electron rebuilds automatically restart the desktop process so backend logic
-changes are picked up without stopping the command. Dev restarts launch the
-Electron binary directly and replace the current desktop process instead of
-opening another app instance through an `npx` wrapper.
-
-Build the renderer and Electron main/preload:
-
-```bash
-npm run build
-```
-
-Package Linux/Ubuntu Electron distributables:
-
-```bash
-npm run electron:pack
-```
-
-Package a local Linux directory build for quick inspection:
-
-```bash
-npm run electron:pack:dir
-```
-
-Package platform-specific desktop builds:
-
-```bash
-npm run electron:pack:mac
-npm run electron:pack:win
-npm run electron:pack:linux
-```
-
-Generate release SBOM and checksums for existing files in `release/`:
-
-```bash
-npm run release:sbom
-npm run release:manifest
-```
-
-Run frontend tests:
-
-```bash
-npm test
-```
-
-Run desktop Electron E2E tests against deterministic local fixtures:
-
-```bash
-npm run test:e2e
-```
-
-Run the fast E2E smoke lane:
-
-```bash
-npm run test:e2e:smoke
-```
-
-Run the browser-observable E2E subset in visible mode for local review/debugging.
-This excludes coverage, package, Electron-isolation, and UI-only journeys that
-would only open the desktop app without meaningful browser action. The visible
-lane keeps workflow browsers headed, retains them at terminal state during the
-test, and adds a short observation pause after helper-driven workflow runs:
-
-```bash
-npm run test:e2e:visible
-```
-
-To slow the post-run observation window:
-
-```bash
-E2E_OBSERVE_MS=3000 npm run test:e2e:visible -- tests/e2e/core-execution.e2e.ts
-```
-
-Run high-risk E2E interaction suites repeatedly to catch flaky pointer, humanized
-interaction, form, and keyboard behavior:
-
-```bash
-npm run test:e2e:flake
-```
-
-Run the opt-in public real-web workflow lane. This uses external demo/read-only
-sites and is intentionally separate from the deterministic fixture-backed lane:
-
-```bash
-npm run test:e2e:real-web
-```
-
-Run the real CloakBrowser smoke test separately. First run may download the
-browser runtime:
-
-```bash
-npm run test:smoke
-```
-
-Run the focused fingerprint identity gate when changing browser identity or
-CloakBrowser wrapper behavior:
-
-```bash
-npm run test:fingerprint
-```
-
-## CloakBrowser Operations
-
-CloakBrowser is an exact-pinned npm dependency through `package.json` and
-`package-lock.json`, while its patched Chromium binary is managed by
-CloakBrowser's own cache. The app also installs CloakBrowser's optional
-`mmdb-lib` peer so GeoIP mode is available consistently on lab machines.
-Prepare a lab machine with:
-
-```bash
-npm install
-npm run cloakbrowser:fonts:setup
-npx cloakbrowser install
-npx cloakbrowser info
-npm run test:smoke
-```
-
-Operators can inspect the same data through the Electron backend diagnostics
-commands exposed over IPC: `getCloakBrowserDiagnostics`,
-`installCloakBrowserBinary`, and `cleanupOrphanedBrowserProfiles`. Diagnostics
-report wrapper/binary version, platform, binary path/cache/download URL,
-auto-update and checksum-skip status, GeoIP dependency availability, headed
-display availability, fingerprint font diagnostics with file counts,
-normalized hashes, missing/shared directory warnings, last recorded
-smoke summary, and profile storage metadata with bounded approximate
-profile sizes without proxy passwords,
-cookies, or browser storage values.
-
-For reproducible sensitive runs, keep `CLOAKBROWSER_AUTO_UPDATE=false` on lab
-machines or record the effective binary version from `browser_identity`
-evidence. Supported operator overrides are `CLOAKBROWSER_BINARY_PATH`,
-`CLOAKBROWSER_CACHE_DIR`, `CLOAKBROWSER_DOWNLOAD_URL`, and
-`CLOAKBROWSER_AUTO_UPDATE=false`. Do not set
-`CLOAKBROWSER_SKIP_CHECKSUM=true` in normal product paths; CloakBrowser verifies
-downloaded binaries with SHA-256 checksums. If an update regresses owned probes,
-roll back by pointing `CLOAKBROWSER_BINARY_PATH` at a previous cached Chromium
-binary under `~/.cloakbrowser`.
-For production-like lab machines that require stronger supply-chain checks,
-verify CloakBrowser signed release tags, binary attestations, or Docker image
-signatures when those artifacts are published by the upstream project before
-accepting a new wrapper or binary version.
-
-Linux headed runs require a real display. Use a desktop session or `xvfb-run`
-for headed identities; otherwise set Browser Launch headless mode. Install
-Playwright/Chromium system dependencies where the OS requires shared libraries,
-and keep normal desktop fonts plus emoji/extended fonts available on lab
-machines. To avoid installing the recommended Linux font packages system-wide,
-run `npm run cloakbrowser:fonts:setup`; it downloads and extracts the
-CloakBrowser-recommended Ubuntu font packages into the gitignored repo-local
-directory `.local/cloakbrowser-fonts/linux`, refreshes fontconfig for that
-directory when `fc-cache` is available, and prints the absolute path. New or
-lazy-created browser profiles auto-fill that repo-local path when the directory
-exists and is readable. The generated font files and downloaded `.deb` packages
-are local machine output and should not be committed. GeoIP mode uses the
-installed `mmdb-lib` package and may download its GeoIP database on first use.
-New browser profiles enable GeoIP by default so blank timezone/locale fields
-resolve from the current public or proxy exit IP; blank legacy location settings
-normalize back to GeoIP. Prefer explicit timezone/locale only when proxy
-inventory already supplies region metadata. Settings validation warns when an
-enabled proxy has no explicit timezone/locale and GeoIP is off, or when a
-shared `fingerprint_fonts_dir` can create a stable font hash.
-
-Typecheck the renderer:
-
-```bash
-npx tsc --noEmit
-```
-
-Build only the Electron main/preload code:
-
-```bash
-npm run build:electron
-```
-
-Deploy a new tag-backed desktop release. A real deploy requires a clean
-worktree, runs tests and build, bumps the package version, commits, creates a
-`v*` tag, pushes the branch, and pushes the tag to trigger Desktop Release:
-
-```bash
-npm run deploy
-npm run deploy -- --minor
-npm run deploy -- --major
-npm run deploy -- --dry-run
-```
+---
 
 ## Desktop CI/CD
 
-GitHub Actions workflows use Node.js 24. Workflow
-`.github/workflows/desktop-ci.yml` runs on pull requests and pushes to `main`.
-It runs `npm ci`, `npx tsc --noEmit`, `npm test`, and `npm run build` without
-producing release artifacts.
+Workflows run on **Node 24** under GitHub Actions:
+- **CI (`desktop-ci.yml`)**: Triggered on PRs and pushes to `main`. Runs checks, linting, unit tests, and production build without producing packaging artifacts.
+- **Release (`desktop-release.yml`)**: Triggered on `v*` tags. packages builds for macOS (`dmg`, `zip`), Windows (`nsis`, `zip`), and Linux (`AppImage`, `deb`, `tar.gz`). Produces CycloneDX SBOM (`sbom.cyclonedx.json`), SHA256 checksums, release manifest, and attestation signatures.
+- **Governance**: Refer to `docs/release-governance.md` for CodeQL, branch protection, Dependabot, and signing keys configuration.
 
-GitHub Actions workflow `.github/workflows/desktop-release.yml` runs on tags
-matching `v*` or manual dispatch. After quality gates pass, it waits on the
-`internal-release` environment, packages artifacts for macOS (`dmg`, `zip`),
-Windows (`nsis`, `zip`), and Ubuntu/Linux (`AppImage`, `deb`, `tar.gz`),
-generates `sbom.cyclonedx.json`, `SHA256SUMS`, and `release-manifest.json`
-with actual `generated_at` provenance plus deterministic `reproducible_epoch`,
-creates artifact attestations, uploads workflow artifacts, and publishes assets
-to the GitHub release.
-
-Repository owners must configure branch protection, required release reviewers,
-secret scanning, push protection, CodeQL, and Dependabot alerts as described in
-`docs/release-governance.md`. Signing secrets are optional for unsigned internal
-artifacts and required only when publishing signed/notarized builds.
+---
 
 ## MVP Smoke Checklist
 
-Use a simple page with an input, button, iframe, dialog trigger, download link, list, table, link, tall body, and an HTTP fixture that echoes request headers and geolocation.
+Ensure all checks pass on a simple test page (input, button, iframe, dialog, download, tables, exit IP echo) before release.
 
-1. Confirm the app opens on Overview, shows Active Runs, Succeeded Today, Attention Needed, Upcoming Schedules, Live Operations, Attention Queue, Execution Activity, Recent Evidence, and Upcoming Schedules, and that Open Projects navigates to the Projects workspace. Confirm the sidebar order is Overview, Projects, Evidence, Schedules, Identities, App Settings.
-1. Confirm the app shell has no top command/search header, Alerts shortcut, or Runs sidebar item, and that sidebar plus in-page navigation links still open Overview, Projects, Evidence, Schedules, Identities, and App Settings through typed targets without showing raw outputs, cookies, tokens, proxy credentials, absolute local paths, or browser storage.
-1. Open Evidence from the sidebar, confirm screenshot/download/browser identity/action trace/evidence manifest items from completed runs are searchable and filterable, screenshot preview and Reveal in Folder work only through validated evidence actions, downloads show metadata without in-app preview, Export Selection creates a manifest bundle without absolute original paths, and Overview Recent Evidence navigates into Evidence.
-1. Open Identities from the sidebar, confirm current managed identities show workflow owner, session/profile reuse, retained-session state, configured posture, latest observed browser identity evidence, diagnostics, rotation history, Open Evidence, and Open Workflow Settings. Confirm Close Retained Session clears only the retained in-memory browser session, Reset Identity is confirmed and blocked while a retained session or active run owns the profile, and old identity ids from evidence/rotation history open read-only historical references.
-2. Open Projects, confirm the project list sidebar can search/filter projects and that Workflows, Subflows, and Settings stay fixed as detail-panel tabs for the selected project, create a project and confirm its Workflows collection immediately contains a `Main` workflow using the project browser profile, create a workflow using that profile, then create another browser profile in Project Settings and select it from Workflow Settings.
-2. In Projects -> Subflows collection, create a subflow, open Settings from the list and rename it, open the subflow detail, open Settings from the detail header and rename it again, confirm subflow detail Save is disabled until graph content changes, add and save graph nodes, return to the list, duplicate it from the list, delete the unused duplicate from the list, and confirm a subflow referenced by a workflow shows usage warnings and cannot be deleted until the caller reference is removed.
-2. Confirm the new workflow graph starts with `Start -> New node`, the workflow
-   detail sidebar is collapsed to the icon rail, the graph inspector is closed
-   until a node or link is selected, selecting `New node` opens the inspector as
-   a right-side drawer over the canvas, and Close inspector clears the
-   selection.
-3. In Projects, confirm Import project sits in the workspace header next to Create Project and previews a package before creating/selecting a new project with remapped workflows/subflows/profiles. In Projects -> Settings, confirm Project identity shows a Project details group with editable Project name, Save project name, Duplicate project, Export project, and Delete project. Confirm Browser Profiles lists project profiles, supports Add profile and inline rename, blocks deleting profiles used by workflows, and deletes unused profiles after a simple confirmation. Confirm fingerprint seed, identity id, and Regenerate identity are not shown. Open App Settings from the sidebar, confirm XPath cookbook shows searchable locator recipes and filtering for terms such as iframe/table/dialog; confirm Environment readiness shows sanitized CloakBrowser, GeoIP, headed display, font, profile-count, and smoke status; run Install CloakBrowser Binary, click Cleanup Orphaned Profiles and confirm Cancel leaves profiles untouched, then reopen and confirm cleanup; turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved, with Save disabled until graph content changes.
-4. Add Navigate, Wait, Random Wait, Fill Field, Click, Find Element, Drag and Drop, Custom Select, and Scroll action nodes. Confirm related fields are grouped by target/content/output/mode where applicable, targetable single-target actions can target a Find Element ref, Drag and Drop lets Drag source and Drop target independently use locator or Find Element ref, Custom Select lets Trigger source switch between locator and Find Element ref, Find Element exposes target/output/viewport/rank groups, Scroll shows Page Scroll style/Direction/Pixels fields, Scroll To Element supports locator or Find Element ref with Timeout ms defaulting to 60000, and Scroll Until Element Visible uses locator target/timeout plus Direction/Pixels fields without low-level target constraint controls.
-5. Add Extract Text, Extract Attribute, Extract Field Value, Extract List, Extract Table, and Take Screenshot action nodes.
-6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Accept Dialog, Dismiss Dialog, and Wait For Download action nodes.
-7. Add Set Variables, Set JSON Variables, Assert Element, Assert Text, If, Switch, Router, Merge, Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop, Retry, End Success, End Failure, and Stop Workflow graph nodes from their current visible graph palettes. Confirm Element visible logic conditions can switch Element source between XPath and Find Element ref. Add a Call Subflow node through the dedicated Add Subflow picker, then use the same picker in Insert nodes mode to copy a subflow's real nodes into the workflow graph.
-8. Add Set Cookie and Clear Cookies action nodes. Confirm profile, proxy, fingerprint seed, timezone/locale, and headless launch are owned by project browser profiles selected in Workflow Settings rather than in-run action nodes; confirm browser retention and batch run defaults remain in Workflow Settings Run Policy.
-9. Open Settings from the workflow detail header, confirm it opens to Browser Launch, and select a Browser profile. Confirm Browser Launch does not expose identity display name, stable identity id, fingerprint seed, Reset identity, proxy/location/humanize/headless controls, Session source, or Fork current session. Confirm Workflow Settings has General, Graph, Run Policy, Browser Launch, and Environment sections with related fields grouped inside each section; Run Policy edits max duration, browser retention, Allow Run JavaScript, and a grouped Run from selected control with the Run from selected scope select, and shows disabled batch controls with the pause note; Graph defaults Live Run on, Follow current off, hides Follow current when Live Run is off, and edits the new link wait default in one grouped control; Environment edits initial variable rows; section help is available with nested collapsible guidance groups and item-level field/example/mistake disclosures; the dialog has one Save Settings button in the header; and closing with edits shows the unsaved-changes prompt.
-12. From the workflow list, run saved workflows directly and confirm the app stays on the list, disables Run, Duplicate, Export, and Delete only for rows whose workflow is already running, and shows row-level status and Stop for active runs until terminal state.
-13. From Graph Builder, click `Launch Run` and verify the existing save/settings/validation/run pipeline starts immediately without a confirmation dialog. With Graph Live Run enabled, confirm the Live Run navigator shows a chronological node-activity log timeline where each node occurrence has one row whose status changes from running to completed or failed, and that clicking a timeline row opens the graph inspector for that node. Confirm future pending graph nodes do not appear in the log, the timeline does not highlight the current graph node as a selected/active row, and Follow current behavior is controlled from Workflow Settings Graph instead of a drawer toggle. Disable Graph Live Run and confirm a run no longer shows the navigator.
-12. Open Schedules from the sidebar, create disabled one-time, interval, daily, weekly, and monthly schedules for saved workflows, enable valid schedules, confirm invalid workflow drafts cannot be enabled, confirm isolated due schedules can start concurrently, and confirm schedule history records started/skipped/missed/failed-to-start/disabled decisions with workflow/profile/batch conflict reasons when skipped. Confirm schedule history can open related Workflows, and stale schedule targets show unavailable-target states.
-13. Duplicate a workflow and confirm the copy keeps the saved graph, non-storage local settings, selected browser profile, and disabled Run from selected; export a workflow package with Flow, selected Settings, and a referenced subflow, confirm the native Save dialog lets you choose the folder and file name, import it back as a new workflow in the selected project without overwriting the original or rewriting existing browser profiles, confirm imported Call Subflow ids point at recreated subflows, and run a graph-backed batch with at least two input rows.
-13. Add Run JavaScript, Wait For Request, Wait For Response, Block Request, Mock Response, Set Local Storage, and Set Session Storage action nodes.
-14. From the workflow list, click Record Workflow, record common form actions including click, text entry, select, checkbox/radio, clipboard paste, and submit, stop the backend-owned recorder session, review the generated draft, edit a step label and clipboard text, exclude one generated step, save it as a new workflow, reopen it, and confirm the saved graph runs through normal workflow validation/run controls with recorded inter-step pacing represented as edge waits. Confirm the workflow detail page no longer shows Record Replacement. Dry-run validate a config, and in a debug build generate a local fixture HTML file from a single `.html` filename.
-15. Move graph nodes by dragging the node body, reopen the workflow, and confirm node positions persist.
-16. Save Workflow Settings, save the graph, and run the graph workflow.
-17. Run `npm run test:fingerprint` and confirm browser identity launch mapping and sanitized `browser_identity` evidence pass. Run `npm run test:smoke` and confirm the Electron runner launches CloakBrowser/Playwright with `humanize` enabled by default, applies the selected human preset, passes the stable fingerprint seed, configured fingerprint fonts directory, and current Fingerprint.com mitigation args without explicit user-agent, Playwright viewport, `--window-size`, or CloakBrowser screen-size overrides, records the fingerprint font hash, uses headed/headless according to Workflow Settings, reports wrapper/binary evidence, keeps `navigator.webdriver === false`, omits `HeadlessChrome` from UA, keeps Chromium UA Client Hints coherent when exposed, exposes baseline `window.chrome`/plugins, reflects explicit or detected local timezone/locale and evidence persona metadata, keeps fixed-seed canvas output stable across two launches, and stores persistent localStorage under the app data browser profile directory. On a fresh machine, expect the first smoke run to download the browser runtime.
-17. For Camoufox lab runs, start the app with `AUTOMATION_BROWSER_ENGINE=camoufox` and optionally `CAMOUFOX_EXECUTABLE_PATH=/path/to/camoufox`; confirm run evidence records `browser_engine: "camoufox"` and Camoufox runtime evidence.
-17. Confirm extracted outputs are available in the browser session output store and screenshot/text-file artifact paths exist.
-17. Confirm runner evidence outputs include `__action_traces` and run-scoped `__evidence` metadata when screenshot or download artifacts are produced, and that nested branch/body action traces include parent node and sequence metadata.
-18. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
-19. Confirm structured target fields let element and output steps target iframe content, and confirm Scroll To Element and Scroll Until Element Visible can target iframe content with an iframe XPath.
-20. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
-21. Confirm download and text-file actions save a new file under the current run evidence directory and store its app-local path plus `__evidence` metadata in outputs.
-22. Confirm `{{variable}}` templates interpolate into action text, template fields can insert variables from the picker and highlight tokens, Set Variables supports multiple typed rows, Set JSON Variables stores object keys, Repeat For Each can use literal items and a variable array, Router takes the first matching case or default branch, Merge converges routed branches, and control-flow blocks run nested actions.
-23. Confirm persistent browser profile state survives a browser restart when the workflow keeps the same selected profile, and cookies can be set/cleared.
-24. Confirm the selected browser profile's fingerprint fonts directory, proxy, GeoIP or explicit timezone/locale, WebRTC, humanize preset, and headless defaults apply before browser launch; Workflow Settings Environment initial variables apply before graph actions run; saved graph edge waits run before their target nodes; Call Subflow nodes run in the caller's browser context; graph nodes for geolocation, permissions, headers, cookies, and storage apply from the graph when used; and outputs include sanitized `browser_identity` evidence.
-27. Confirm batch run results account for each executed row, separate success from failure, use saved graph steps, apply batch headless defaults, reject concurrency above 1, and stop after the first failed row when configured.
-28. Confirm terminal workflow and batch row runs create SQLite `runs` and `run_steps` evidence with outputs, action traces, nested branch/body run-step rows, failed-step errors, and failure screenshot paths when failures occur.
-28. Confirm Run JavaScript stores output when Run Policy allows it, fails clearly before script evaluation when Allow Run JavaScript is off, storage actions set browser storage, network wait sees the request/response, block request rejects fetch, and mock response returns controlled body/status.
-29. Confirm selector suggestions prefer stable attributes and recorder output maps to the action taxonomy.
-30. Confirm bad XPath fails immediately with a short message.
-31. Stop during a long Wait duration.
-32. Open the workflow graph and confirm a new workflow starts as `Start -> New node`. Confirm the graph toolbar shows icon controls for undo, redo, select, pan, fit view, auto arrange, and Shortcuts, plus New node, Add Action, Add Subflow, Add Logic, Add Variable, and Add End without Add Output. Confirm Add Subflow opens a same-project subflow picker whose default Call subflow mode creates a configured, visually distinct Call Subflow node labeled with the selected subflow name, and whose Insert nodes mode copies the selected subflow's real non-start nodes plus internal links into the workflow without a Call Subflow reference. Confirm action, logic, and subflow nodes have distinct category accent colors plus top-right category badges. Confirm Add Variable offers Set Variables and Set JSON Variables. Drag empty canvas to box-select graph items, hold Space and drag to pan the view, toggle the hand tool to pan persistently, add visible graph nodes, use auto arrange to reposition compact graphs into readable left-to-right flow and long graphs into left-to-right wrapped rows, arrange a branch-heavy graph such as `If -> true/false -> Merge -> Continue`, choose an action type from the searchable inspector dropdown, confirm the search input focuses and click-outside closes it, edit inspector fields including Drag and Drop's grouped Drag source and Drop setup destination position modes plus logic groups such as Condition, Loop guard, Router cases, Default route, Choice output, and Weighted choices, connect nodes through explicit ports, reconnect a used port and confirm the old link is replaced, confirm edge order labels follow execution order, multi-select nodes, bulk duplicate/copy/paste/delete, use Create subflow from the selection summary and confirm `Chỉ tạo` creates the reusable subflow without changing the workflow graph while `Tạo và thay thế` creates it and replaces a simple selected chain with a Call Subflow node, undo/redo graph edits including arrange operations, select/delete a link, validate the graph, save it, reopen the workflow, and confirm the graph persists.
-33. Open help for Fill Field, a capture action, If, and Retry; confirm the help reads as a bilingual decision guide with collapsible parent sections, minimum setup, grouped required/optional/advanced field and option details, item-level field/option/output/example disclosures, ports/outputs where relevant, workflow examples, and no standalone Common mistakes section.
-34. Run the graph and confirm blocking validation issues appear in the run issue panel before execution, runtime failures identify the failed graph node and can select it, long runtime/system errors stay collapsed with Copy details, the selected-node inspector mirrors last run error details without overflowing, canvas run highlights use semantic colors, and Call Subflow nodes expand same-project subflows with nested labels.
-35. Confirm Chromium remains open after success, failure, and stop by default, closes when Workflow Settings browser retention is set to close, closes when an End or Stop Workflow node has Close browser after workflow ends enabled, and max workflow duration fails an overlong run with a timeout message.
-36. In Workflow Settings, select a persistent Browser profile, set browser retention to retain, and enable Run from selected in Run Policy. Confirm the grouped scope select can choose either `Only rerun selected node` or `Run from selected node onward`. Run or stop a workflow to leave Chromium open, select a supported main-path node including Call Subflow or a node downstream from it, and confirm Run from selected uses the selected scope in the same browser. Then close Chromium manually and confirm Run from selected is unavailable or reports that a new reusable session is required.
-36. Delete the workflow and confirm the dialog asks whether to keep or delete the private browser profile data with Delete private browser profile data checked by default. Uncheck it only when the workflow's unshared retained login state should remain available. Confirm deletion is unavailable during an active run and works again after the run reaches a terminal state.
+### 1. Navigation & App Shell
+- [ ] App boots on Overview showing Active Runs, Succeeded Today, Attention Needed, Upcoming Schedules, Live Operations, Attention Queue, Activity, and Recent Evidence.
+- [ ] Sidebar displays: Overview, Projects, Evidence, Schedules, Identities, App Settings. App shell has no top command/search header, Alerts shortcut, or Runs sidebar.
+- [ ] Sidebar and page links navigate cleanly without displaying raw tokens, cookies, proxy credentials, storage data, or absolute local paths.
+- [ ] Evidence explorer is searchable/filterable. Screenshot previews and Reveal in Folder actions work. Downloads show metadata only (no preview). Export Selection creates a manifest bundle without absolute paths.
+
+### 2. Identities & Sessions
+- [ ] Identities list displays owner, profile reuse, retained-session status, exit posture, diagnostics, and rotation history.
+- [ ] "Close Retained Session" clears only in-memory browser sessions; "Reset Identity" prompts for confirmation and is blocked while the profile is actively running.
+- [ ] Old identity IDs in evidence/history open read-only historical references.
+- [ ] Deleting a workflow prompts to keep/delete private browser profile data (checked by default). Deletion is blocked during active runs.
+
+### 3. Projects & Subflows
+- [ ] Projects sidebar is searchable. Workflows, Subflows, and Settings are fixed detail tabs.
+- [ ] Creating a project automatically initializes a `Main` workflow using the project browser profile.
+- [ ] Subflow management: Create, rename, duplicate, delete unused. Deleting a referenced subflow is blocked with usage warnings.
+- [ ] Import project (in header) previews packages and creates/remaps workflows, subflows, and profiles.
+- [ ] Project Settings: Editable name, duplicate/export/delete buttons. Browser profiles list supports add, inline rename, and blocks deletion if used.
+
+### 4. Graph Builder & Node Editing
+- [ ] New workflows start with `Start -> New node`. Sidebar collapses to icon rail. Inspector drawer opens on select and closes on close action.
+- [ ] Graph toolbar shows: undo, redo, select, pan (Space drag), fit view, auto arrange, and Shortcuts. Plus: New Node, Add Action, Add Subflow, Add Logic, Add Variable, and Add End (no Add Output).
+- [ ] Node Accent Colors: Nodes display accent colors and category badges based on category.
+- [ ] Add Subflow options: `Call subflow` (creates visually distinct Call Subflow node) and `Insert nodes` (copies non-start nodes/links in place).
+- [ ] Auto-arrange repositions compact graphs left-to-right and wraps long graphs. Handles branch-heavy graphs (e.g. `If -> true/false -> Merge`).
+- [ ] Inspector editing: Searchable dropdown for action types. Grouped setups (e.g. Drag/Drop source & destination; Condition, loop guard, router cases).
+- [ ] Port/link editing: Reconnect replacement, execution order labels on edges. Multi-select supports duplicate, copy/paste, and delete.
+- [ ] Create Subflow from selection summary offers `Chỉ tạo` (keep graph) and `Tạo và thay thế` (replace selection with Call Subflow).
+- [ ] Autosave toggle changes save status (unsaved changes, saving, saved); manual Save button is disabled until content changes.
+- [ ] Help panel displays bilingual decision guides with collapsible sections, minimum setup, and field disclosures (no standalone Common mistakes section).
+
+### 5. Action Nodes Execution
+- [ ] **Basic Actions**: Navigate, wait (cancellation-aware), random wait, fill field (browser native), click, focus, blur (locator-side blur), right-click (custom human move), custom select (trigger selector).
+- [ ] **Advanced Interactions**: Drag/drop (supports locator/element ref, center/offset/percent modes), scroll (Page human wheel chunks, scroll to element, scroll until visible).
+- [ ] **Extraction**: Extract text, attribute, input value, list, table, screenshot.
+- [ ] **Navigation/Dialogs**: Back, forward, reload, new tab, switch/close tab (rejects invalid index), dialog accept (with text) and dismiss.
+- [ ] **Advanced API**: Run JS (gated by `execute_js_enabled`), wait for request/response, block request, mock response, set local/session storage.
+- [ ] **Variables & Loops**: Set Variables (multi-typed rows), Set JSON Variables, assertions (Assert Element/Text), control flow (If, Switch, Router, Merge, Repeat Times, Repeat For Each, While, Repeat Until, Break/Continue, Retry, End Success/Failure, Stop Workflow).
+- [ ] **Cookies**: Set Cookie and Clear Cookies.
+
+### 6. Run Execution & Batching
+- [ ] Launch Run starts save/validation/run pipeline without confirmation.
+- [ ] Live Run Navigator shows node activity timeline (running, completed, failed) where clicking rows opens the inspector. Follow current behaves per settings.
+- [ ] Scheduled runs: Disabled schedules, active interval/daily/weekly/monthly runs. Schedule history tracks start/skip/miss decisions with conflict details.
+- [ ] Run from selected: group scope selects Rerun Selected or Run From Selected. Session retains browser, runs sub-plan, and detects manual browser closure.
+- [ ] Batching: results success/failure indicators, sequential execution, rejects concurrency > 1, and respects stop-on-first-failed-row.
+- [ ] Persistence: terminal runs persist SQLite `runs` and `run_steps` with branch/loop traces, diagnostics, and failure screenshots.
+- [ ] Diagnostics: Validation warnings appear in the run issue panel. Canvas highlights run state. Long system errors remain collapsed with copy details.
+- [ ] Camoufox Engine: starting with `AUTOMATION_BROWSER_ENGINE=camoufox` records Camoufox runtime evidence in `browser_identity`.
