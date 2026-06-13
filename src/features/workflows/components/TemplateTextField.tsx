@@ -298,6 +298,7 @@ type TemplateTextareaFieldProps = {
   onChange: (value: string) => void;
   placeholder?: string;
   variableOptions?: VariableOption[];
+  showMath?: boolean;
 };
 
 export function TemplateTextareaField({
@@ -306,6 +307,7 @@ export function TemplateTextareaField({
   onChange,
   placeholder,
   variableOptions = defaultVariableOptions,
+  showMath = true,
 }: TemplateTextareaFieldProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -451,16 +453,18 @@ export function TemplateTextareaField({
       <div className="flex items-center justify-between">
         <Label htmlFor={textareaId} className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
         <div className="flex items-center gap-1.5">
-          <Button
-            aria-label={`Insert math for ${label}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={insertMath}
-            className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-          >
-            <Calculator className="h-3 w-3" />
-          </Button>
+          {showMath && (
+            <Button
+              aria-label={`Insert math for ${label}`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={insertMath}
+              className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+            >
+              <Calculator className="h-3 w-3" />
+            </Button>
+          )}
           <Button
             aria-expanded={open}
             aria-label={`Insert variable for ${label}`}

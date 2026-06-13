@@ -660,4 +660,22 @@ describe("ActionConfigEditor", () => {
     expect(screen.queryByLabelText("Mobile")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Touch")).not.toBeInTheDocument();
   });
+
+  test("Set JSON Variables editor does not show the math calculator button", () => {
+    render(
+      <ActionConfigEditor
+        config={{
+          type: "set_json_variables",
+          config: { json: "{\n  \"name\": \"value\"\n}" },
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    // Math button should not be present
+    expect(screen.queryByRole("button", { name: /Insert math for JSON variables/i })).not.toBeInTheDocument();
+    
+    // Braces button should still be present
+    expect(screen.getByRole("button", { name: /Insert variable for JSON variables/i })).toBeInTheDocument();
+  });
 });

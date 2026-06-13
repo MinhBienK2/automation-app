@@ -79,6 +79,24 @@ describe("TemplateTextField", () => {
     expect(handleChange).toHaveBeenCalledWith("hello {{var1}} world{{user.name}}");
   });
 
+  test("does not render math button in textarea when showMath is false", () => {
+    const handleChange = vi.fn();
+    render(
+      <TemplateTextareaField
+        label="My Textarea"
+        value="hello"
+        onChange={handleChange}
+        showMath={false}
+      />
+    );
+
+    // Math button should not be present
+    expect(screen.queryByRole("button", { name: /Insert math for My Textarea/i })).not.toBeInTheDocument();
+    
+    // Braces button should still be present
+    expect(screen.getByRole("button", { name: /Insert variable for My Textarea/i })).toBeInTheDocument();
+  });
+
   test("positions variable picker above the element if space below is insufficient", async () => {
     const user = (await import("@testing-library/user-event")).default.setup();
     const handleChange = vi.fn();
