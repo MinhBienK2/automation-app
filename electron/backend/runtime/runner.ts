@@ -378,6 +378,10 @@ export class BrowserWorkflowRunner {
       current_step_id: runtime.liveState.current_step_id,
       current_step_number: runtime.liveState.current_step_number,
       completed_step_ids: [...runtime.liveState.completed_step_ids],
+      outputs: {
+        ...runtime.outputs,
+        __action_traces: [...runtime.traces],
+      },
     });
   }
 

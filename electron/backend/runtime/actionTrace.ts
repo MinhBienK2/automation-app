@@ -28,6 +28,7 @@ export type ActionTrace = {
     changed_keys: string[];
     removed_keys: string[];
   };
+  output_values?: Record<string, unknown>;
   evidence_summary?: Array<{
     artifact_kind: "screenshot" | "download";
     path: string;
@@ -368,7 +369,7 @@ export function summarizeActionEffects(
   runtime: TraceEffectSource,
   outputSnapshot: Map<string, unknown>,
   evidenceStartIndex: number,
-): Pick<ActionTrace, "output_summary" | "evidence_summary"> {
+): Pick<ActionTrace, "output_summary" | "evidence_summary" | "output_values"> {
   const output_summary = summarizeOutputChanges(outputSnapshot, runtime.outputs);
   const evidence_summary = runtime.evidence
     .slice(evidenceStartIndex)
@@ -376,8 +377,15 @@ export function summarizeActionEffects(
       artifact_kind: artifact.artifact_kind,
       path: artifact.path,
     }));
+  const output_values: Record<string, unknown> = {};
+  if (output_summary) {
+    for (const key of [...output_summary.added_keys, ...output_summary.changed_keys]) {
+      output_values[key] = runtime.outputs[key];
+    }
+  }
   return {
     ...(output_summary ? { output_summary } : {}),
+    ...(Object.keys(output_values).length > 0 ? { output_values } : {}),
     ...(evidence_summary.length > 0 ? { evidence_summary } : {}),
   };
 }

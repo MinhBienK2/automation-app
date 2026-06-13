@@ -778,6 +778,7 @@ function App() {
             defaultEdgeDelay={workflowSettings?.graph_defaults?.default_edge_delay ?? null}
             liveRunEnabled={workflowSettings?.graph_defaults?.live_run_enabled ?? true}
             liveRunFollowCurrent={workflowSettings?.graph_defaults?.live_run_follow_current ?? false}
+            initialVariables={workflowSettings?.environment?.initial_variables}
             onBack={nav.backToList}
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={() => runWorkspace.stopRun(detailRunSnapshot?.run_id ?? "")}

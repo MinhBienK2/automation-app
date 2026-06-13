@@ -53,6 +53,7 @@ type WorkflowDetailPageProps = {
   runGraphFromSelectedReason: string;
   onSaveGraph: () => void;
   onValidateGraph: () => void;
+  initialVariables?: Array<{ name: string; value: string }> | null;
 };
 
 export function WorkflowDetailPage({
@@ -85,6 +86,7 @@ export function WorkflowDetailPage({
   runGraphFromSelectedReason,
   onSaveGraph,
   onValidateGraph,
+  initialVariables,
 }: WorkflowDetailPageProps) {
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
@@ -278,6 +280,7 @@ export function WorkflowDetailPage({
             <RunMonitorDrawer
               graph={workflowGraph}
               runState={graphRunState}
+              initialVariables={initialVariables}
               onFocusNode={requestNodeSelection}
               onClose={closeMonitor}
             />

@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useRef } from "react";
-import { ClipboardCopy, LocateFixed, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardCopy, LocateFixed, X, ChevronDown, ChevronRight } from "lucide-react";
 import type { GraphNode, RunState, WorkflowGraph } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
+import { RunMonitorEnvironmentPanel } from "./RunMonitorEnvironment";
 
 type RunMonitorDrawerProps = {
   graph: WorkflowGraph;
   runState: RunState;
   onFocusNode: (nodeId: string) => void;
   onClose: () => void;
+  initialVariables?: Array<{ name: string; value: string }> | null;
 };
 
 type RunMonitorTimelineEventStatus = "running" | "completed" | "failed";
@@ -138,7 +140,15 @@ export function RunMonitorDrawer({
   runState,
   onFocusNode,
   onClose,
+  initialVariables,
 }: RunMonitorDrawerProps) {
+  const [expandedEventNumbers, setExpandedEventNumbers] = useState<Record<number, boolean>>({});
+  const [showAllVars, setShowAllVars] = useState<Record<number, boolean>>({});
+  const traces = useMemo(() => {
+    return Array.isArray(runState.outputs?.__action_traces)
+      ? (runState.outputs.__action_traces as any[])
+      : [];
+  }, [runState.outputs?.__action_traces]);
   const timelineEndRef = useRef<HTMLSpanElement | null>(null);
   const nodeById = useMemo(
     () => new Map(graph.nodes.map((node) => [node.id, node])),
@@ -220,24 +230,62 @@ export function RunMonitorDrawer({
         {timeline.length > 0 ? (
           <>
             <ol>
-              {timeline.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className="run-monitor-step"
-                    data-status={item.status}
-                    aria-label={timelineItemLabel(item)}
-                    onClick={() => onFocusNode(item.nodeId)}
-                  >
-                    <span className="run-monitor-step-marker" aria-hidden="true" />
-                    <span className="run-monitor-step-copy">
-                      <span>Event {item.eventNumber} · {timelineEventTitle(item.status)}</span>
-                      <strong>Step {item.stepNumber} · {item.label}</strong>
-                    </span>
-                    <small>{monitorStatusLabel(item.status)}</small>
-                  </button>
-                </li>
-              ))}
+              {timeline.map((item, index) => {
+                const isExpanded = expandedEventNumbers[item.eventNumber] ?? false;
+                const isShowAll = showAllVars[item.eventNumber] ?? false;
+                const trace = traces[index];
+
+                return (
+                  <li key={item.id} className="run-monitor-timeline-item">
+                    <button
+                      type="button"
+                      className="run-monitor-step"
+                      data-status={item.status}
+                      data-expanded={isExpanded}
+                      aria-label={timelineItemLabel(item)}
+                      onClick={() => {
+                        onFocusNode(item.nodeId);
+                        setExpandedEventNumbers((prev) => ({
+                          ...prev,
+                          [item.eventNumber]: !isExpanded,
+                        }));
+                      }}
+                    >
+                      <span className="run-monitor-step-expand-icon">
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                        )}
+                      </span>
+                      <span className="run-monitor-step-marker" aria-hidden="true" />
+                      <span className="run-monitor-step-copy">
+                        <span>Event {item.eventNumber} · {timelineEventTitle(item.status)}</span>
+                        <strong>Step {item.stepNumber} · {item.label}</strong>
+                      </span>
+                      <span className="run-monitor-step-status-cell">
+                        <small>{monitorStatusLabel(item.status)}</small>
+                      </span>
+                    </button>
+                    {isExpanded && (
+                      <RunMonitorEnvironmentPanel
+                        initialVariables={initialVariables}
+                        traces={traces}
+                        stepIndex={index}
+                        trace={trace}
+                        showAll={isShowAll}
+                        onToggleShowAll={(e) => {
+                          e.stopPropagation();
+                          setShowAllVars((prev) => ({
+                            ...prev,
+                            [item.eventNumber]: !isShowAll,
+                          }));
+                        }}
+                      />
+                    )}
+                  </li>
+                );
+              })}
             </ol>
             <span ref={timelineEndRef} aria-hidden="true" className="run-monitor-scroll-target" />
           </>

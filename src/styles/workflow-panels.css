@@ -110,7 +110,7 @@
   position: absolute;
   top: 31px;
   bottom: -11px;
-  left: 14px;
+  left: 54px;
   width: 1px;
   background: #233240;
   content: "";
@@ -120,10 +120,10 @@
   display: grid;
   width: 100%;
   min-height: 62px;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 20px 28px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px 10px 0;
+  padding: 10px 12px 10px 8px;
   border: 1px solid #233240;
   border-radius: 8px;
   background: #0b1016;
@@ -213,6 +213,169 @@
 .run-monitor-scroll-target {
   display: block;
   height: 1px;
+}
+
+/* Collapsible Chevron and Status Cell */
+.run-monitor-step-expand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #667d8d;
+}
+
+.run-monitor-step:hover .run-monitor-step-expand-icon {
+  color: #32d3e6;
+}
+
+.run-monitor-step-status-cell {
+  display: flex;
+  align-items: center;
+}
+
+/* Environment panel styles */
+.run-monitor-env-panel {
+  margin-top: 6px;
+  margin-bottom: 6px;
+  margin-left: 48px;
+  padding: 12px;
+  background: #0b1016;
+  border: 1px solid #233240;
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+}
+
+.run-monitor-env-section-title {
+  color: #667d8d;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #233240;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+.run-monitor-env-changes-list,
+.run-monitor-env-all-list {
+  display: grid;
+  gap: 6px;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 12px;
+}
+
+.run-monitor-env-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #121c26;
+  border: 1px solid transparent;
+  word-break: break-all;
+}
+
+.env-added {
+  border-color: rgba(57, 217, 138, 0.18);
+  background: rgba(57, 217, 138, 0.04);
+}
+
+.env-changed {
+  border-color: rgba(50, 211, 230, 0.18);
+  background: rgba(50, 211, 230, 0.04);
+}
+
+.env-removed {
+  border-color: rgba(240, 100, 103, 0.18);
+  background: rgba(240, 100, 103, 0.04);
+}
+
+.env-badge {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+
+.badge-added {
+  background: rgba(57, 217, 138, 0.15);
+  color: #39d98a;
+}
+
+.badge-changed {
+  background: rgba(50, 211, 230, 0.15);
+  color: #32d3e6;
+}
+
+.badge-removed {
+  background: rgba(240, 100, 103, 0.15);
+  color: #f06467;
+}
+
+.env-key {
+  color: #e7eef5;
+  font-weight: 500;
+}
+
+.env-key-removed {
+  color: #667d8d;
+  text-decoration: line-through;
+}
+
+.env-separator {
+  color: #667d8d;
+}
+
+.env-value {
+  color: #9aaebd;
+}
+
+.env-value-old {
+  color: #667d8d;
+  text-decoration: line-through;
+}
+
+.env-value-new {
+  color: #32d3e6;
+}
+
+.env-arrow {
+  color: #667d8d;
+}
+
+.run-monitor-env-empty {
+  color: #667d8d;
+  font-size: 12px;
+  margin: 0;
+  font-style: italic;
+}
+
+.run-monitor-env-toggle {
+  justify-self: start;
+  background: none;
+  border: none;
+  color: #32d3e6;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.run-monitor-env-toggle:hover {
+  text-decoration: underline;
+}
+
+.run-monitor-env-all-vars {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  border-top: 1px dashed #233240;
+  padding-top: 10px;
 }
 
 @keyframes run-monitor-slide-in {

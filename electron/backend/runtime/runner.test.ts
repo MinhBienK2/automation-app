@@ -2529,6 +2529,65 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
+  test("populates output_values in action trace with delta variable values", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("first", "First Step", {
+            type: "set_variable",
+            config: {
+              variables: [
+                { name: "var1", value_type: "text", value: "hello" },
+                { name: "var2", value_type: "number", value: "42" },
+              ],
+            },
+          }),
+          step("second", "Second Step", {
+            type: "set_variable",
+            config: {
+              variables: [
+                { name: "var1", value_type: "text", value: "world" },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    const traces = result.outputs?.__action_traces as Array<Record<string, any>>;
+
+    const firstTrace = traces.find(t => t.node_id === "first");
+    expect(firstTrace).toBeDefined();
+    expect(firstTrace?.output_summary).toEqual({
+      added_keys: ["var1", "var2"],
+      changed_keys: [],
+      removed_keys: [],
+    });
+    expect(firstTrace?.output_values).toEqual({
+      var1: "hello",
+      var2: 42,
+    });
+
+    const secondTrace = traces.find(t => t.node_id === "second");
+    expect(secondTrace).toBeDefined();
+    expect(secondTrace?.output_summary).toEqual({
+      added_keys: [],
+      changed_keys: ["var1"],
+      removed_keys: [],
+    });
+    expect(secondTrace?.output_values).toEqual({
+      var1: "world",
+    });
+  });
+
   test("records repeated loop body traces with stable sequence metadata", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
