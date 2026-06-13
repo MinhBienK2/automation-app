@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import { ProjectProfilesPanel } from "./ProjectProfilesPanel";
-import type { Project, ProjectEnvironment, WorkflowSummary, IdentityLabOverview } from "../../../types/workflow";
+import type { Project, ProjectEnvironment, WorkflowSummary } from "../../../types/workflow";
 
 const project: Project = {
   id: "project-1",
@@ -66,83 +66,39 @@ const workflows: WorkflowSummary[] = [
   },
 ];
 
-const overview: IdentityLabOverview = {
-  generated_at: "2026-05-27T10:00:00.000Z",
-  counts: {
-    managed_identities: 1,
-    active_retained_sessions: 1,
-    identities_with_warnings: 0,
-    identities_with_recent_failures: 0,
-  },
-  data_warnings: [],
-  items: [
-    {
-      workflow_ref: { id: "workflow-1", name: "Workflow A" },
-      identity_ref: { id: "id-1", display_name: "QA identity" },
-      retained_session: { active: true, reason: null },
-      recent_failures_24h: 0,
-      short_identity_id: "id-1",
-      session_mode: "persistent_profile",
-      profile_reuse: true,
-      configured_posture_summary: [],
-      warning_badges: [],
-    },
-  ],
-  selected: {
-    kind: "managed",
-    workflow_ref: { id: "workflow-1", name: "Workflow A" },
-    identity_ref: { id: "id-1", display_name: "QA identity" },
-    session: { active: true, profile_name: "p-a", reset_blocked_reason: null },
-    configured_posture: [{ label: "OS", value: "linux" }],
-    latest_observed: null,
-    diagnostics: { binary_installed: true, geoip_available: true, headed_display_available: true, font_status: "ok" },
-    rotation_history: [],
-    actions: { can_close_retained_session: true, can_reset_identity: true },
-    recent_failures_24h: 0,
-    evidence_summary: { total: 0 },
-  },
-};
-
 describe("ProjectProfilesPanel", () => {
   test("renders profile list and details", async () => {
-    const onRefresh = vi.fn();
-    const onSelectIdentity = vi.fn();
-    const onOpenWorkflow = vi.fn();
-    const onOpenWorkflowSettings = vi.fn();
-    const onCloseRetainedSession = vi.fn();
-    const onResetIdentity = vi.fn();
-    const onOpenIdentityTarget = vi.fn();
-    const onCreateProjectEnvironment = vi.fn();
-    const onUpdateProjectEnvironment = vi.fn();
-    const onDeleteProjectEnvironment = vi.fn();
-
+    const user = userEvent.setup();
     render(
       <ProjectProfilesPanel
         project={project}
         projectEnvironments={environments}
         workflows={workflows}
-        overview={overview}
+        overview={null}
         loading={false}
         error=""
-        onRefresh={onRefresh}
-        onSelectIdentity={onSelectIdentity}
-        onOpenWorkflow={onOpenWorkflow}
-        onOpenWorkflowSettings={onOpenWorkflowSettings}
-        onCloseRetainedSession={onCloseRetainedSession}
-        onResetIdentity={onResetIdentity}
-        onOpenIdentityTarget={onOpenIdentityTarget}
-        onCreateProjectEnvironment={onCreateProjectEnvironment}
-        onUpdateProjectEnvironment={onUpdateProjectEnvironment}
-        onDeleteProjectEnvironment={onDeleteProjectEnvironment}
+        onRefresh={vi.fn()}
+        onSelectIdentity={vi.fn()}
+        onOpenWorkflow={vi.fn()}
+        onOpenWorkflowSettings={vi.fn()}
+        onCloseRetainedSession={vi.fn()}
+        onResetIdentity={vi.fn()}
+        onOpenIdentityTarget={vi.fn()}
+        onCreateProjectEnvironment={vi.fn()}
+        onUpdateProjectEnvironment={vi.fn()}
+        onDeleteProjectEnvironment={vi.fn()}
       />,
     );
 
     const list = screen.getByRole("region", { name: "Browser profiles list" });
     expect(within(list).getByText("Profile A")).toBeInTheDocument();
     expect(screen.getByText("Used by 1 workflow")).toBeInTheDocument();
-    expect(within(list).getByText("retained")).toBeInTheDocument();
 
-    const input = screen.getByLabelText("Profile name for Profile A");
+    const editBtn = screen.getByRole("button", { name: "Configure" });
+    await user.click(editBtn);
+
+    const editDialog = screen.getByRole("dialog", { name: /Profile Configuration: Profile A/i });
+    const input = within(editDialog).getByLabelText("Profile name for Profile A");
     expect(input).toHaveValue("Profile A");
   });
 
@@ -155,7 +111,7 @@ describe("ProjectProfilesPanel", () => {
         project={project}
         projectEnvironments={environments}
         workflows={workflows}
-        overview={overview}
+        overview={null}
         loading={false}
         error=""
         onRefresh={vi.fn()}
@@ -171,11 +127,15 @@ describe("ProjectProfilesPanel", () => {
       />,
     );
 
-    const input = screen.getByLabelText("Profile name for Profile A");
+    const editBtn = screen.getByRole("button", { name: "Configure" });
+    await user.click(editBtn);
+
+    const editDialog = screen.getByRole("dialog", { name: /Profile Configuration: Profile A/i });
+    const input = within(editDialog).getByLabelText("Profile name for Profile A");
     await user.clear(input);
     await user.type(input, "Profile New");
 
-    const saveButton = screen.getByRole("button", { name: "Save" });
+    const saveButton = within(editDialog).getByRole("button", { name: "Save" });
     await user.click(saveButton);
 
     expect(onUpdateProjectEnvironment).toHaveBeenCalledWith("env-1", {
@@ -192,7 +152,7 @@ describe("ProjectProfilesPanel", () => {
         project={project}
         projectEnvironments={environments}
         workflows={workflows}
-        overview={overview}
+        overview={null}
         loading={false}
         error=""
         onRefresh={vi.fn()}
@@ -224,74 +184,6 @@ describe("ProjectProfilesPanel", () => {
     });
   });
 
-  test("retains manual profile selection when the new profile has no workflows", async () => {
-    const user = userEvent.setup();
-    const twoEnvironments: ProjectEnvironment[] = [
-      ...environments,
-      {
-        id: "env-2",
-        project_id: project.id,
-        name: "Profile B",
-        description: "Secondary profile",
-        is_default: false,
-        browser_launch: {
-          session_mode: "persistent_profile",
-          identity_id: "id-2",
-          display_name: "Profile B",
-          persona_id: "persona-1",
-          persona: environments[0].browser_launch!.persona!,
-          profile_dir: "p-b",
-          fingerprint_seed: "seed-b",
-          proxy_enabled: false,
-          headless: false,
-          geoip: true,
-          webrtc_policy: "default",
-          humanize: true,
-          human_preset: "default",
-        },
-        created_at: "2026-01-01T00:00:00.000Z",
-        updated_at: "2026-01-01T00:00:00.000Z",
-      },
-    ];
-
-    const twoWorkflows: WorkflowSummary[] = [...workflows];
-
-    render(
-      <ProjectProfilesPanel
-        project={project}
-        projectEnvironments={twoEnvironments}
-        workflows={twoWorkflows}
-        overview={overview}
-        loading={false}
-        error=""
-        onRefresh={vi.fn()}
-        onSelectIdentity={vi.fn()}
-        onOpenWorkflow={vi.fn()}
-        onOpenWorkflowSettings={vi.fn()}
-        onCloseRetainedSession={vi.fn()}
-        onResetIdentity={vi.fn()}
-        onOpenIdentityTarget={vi.fn()}
-        onCreateProjectEnvironment={vi.fn()}
-        onUpdateProjectEnvironment={vi.fn()}
-        onDeleteProjectEnvironment={vi.fn()}
-      />,
-    );
-
-    const list = screen.getByRole("region", { name: "Browser profiles list" });
-    const profileARow = within(list).getByText("Profile A").closest("button");
-    expect(profileARow).toHaveClass("identity-row-active");
-
-    const profileBRow = within(list).getByText("Profile B").closest("button");
-    expect(profileBRow).not.toHaveClass("identity-row-active");
-    await user.click(profileBRow!);
-
-    // Wait for asynchronous state updates/effects to settle
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    expect(profileBRow).toHaveClass("identity-row-active");
-    expect(profileARow).not.toHaveClass("identity-row-active");
-  });
-
   test("can configure and save profile launch options", async () => {
     const user = userEvent.setup();
     const onUpdateProjectEnvironment = vi.fn().mockResolvedValue(undefined);
@@ -301,7 +193,7 @@ describe("ProjectProfilesPanel", () => {
         project={project}
         projectEnvironments={environments}
         workflows={workflows}
-        overview={overview}
+        overview={null}
         loading={false}
         error=""
         onRefresh={vi.fn()}
@@ -317,33 +209,38 @@ describe("ProjectProfilesPanel", () => {
       />,
     );
 
-    const proxySwitch = screen.getByRole("switch", { name: "Enable Proxy" });
+    const editBtn = screen.getByRole("button", { name: "Configure" });
+    await user.click(editBtn);
+
+    const editDialog = screen.getByRole("dialog", { name: /Profile Configuration: Profile A/i });
+
+    const proxySwitch = within(editDialog).getByRole("switch", { name: "Enable Proxy" });
     expect(proxySwitch).not.toBeChecked();
     await user.click(proxySwitch);
     expect(proxySwitch).toBeChecked();
 
-    const proxyInput = screen.getByLabelText("Proxy Server");
+    const proxyInput = within(editDialog).getByLabelText("Proxy Server");
     await user.type(proxyInput, "http://myproxy:8080");
 
-    const headlessSwitch = screen.getByRole("switch", { name: "Headless mode" });
+    const headlessSwitch = within(editDialog).getByRole("switch", { name: "Headless mode" });
     expect(headlessSwitch).not.toBeChecked();
     await user.click(headlessSwitch);
     expect(headlessSwitch).toBeChecked();
 
-    const geoipSwitch = screen.getByRole("switch", { name: "Determine location by GeoIP" });
+    const geoipSwitch = within(editDialog).getByRole("switch", { name: "Determine location by GeoIP" });
     expect(geoipSwitch).toBeChecked();
     await user.click(geoipSwitch);
     expect(geoipSwitch).not.toBeChecked();
 
-    const timezoneInput = screen.getByLabelText("Timezone");
+    const timezoneInput = within(editDialog).getByLabelText("Timezone");
     await user.clear(timezoneInput);
     await user.type(timezoneInput, "America/New_York");
 
-    const localeInput = screen.getByLabelText("Locale");
+    const localeInput = within(editDialog).getByLabelText("Locale");
     await user.clear(localeInput);
     await user.type(localeInput, "en-US");
 
-    const saveButton = screen.getByRole("button", { name: "Save" });
+    const saveButton = within(editDialog).getByRole("button", { name: "Save" });
     await user.click(saveButton);
 
     expect(onUpdateProjectEnvironment).toHaveBeenCalledWith("env-1", {
@@ -358,4 +255,3 @@ describe("ProjectProfilesPanel", () => {
     });
   });
 });
-

@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from "react";
-import { RefreshCw, ShieldCheck, XCircle, Plus, Trash2, Fingerprint } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2, Fingerprint } from "lucide-react";
 import { Button } from "../../../components/ui/button";
+import { Card } from "../../../components/ui/card";
+import { IconButton } from "../../../components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -17,8 +19,6 @@ import type {
   Project,
   ProjectEnvironment,
   WorkflowSummary,
-  IdentityLabOverview,
-  IdentityLabTarget,
   ProjectEnvironmentInput,
   WorkflowSettingsBrowserLaunch,
   WorkflowWebRtcPolicy,
@@ -29,7 +29,7 @@ type ProjectProfilesPanelProps = {
   project: Project | null;
   projectEnvironments: ProjectEnvironment[];
   workflows: WorkflowSummary[];
-  overview: IdentityLabOverview | null;
+  overview: any; // Keep signature compatibility
   loading: boolean;
   error: string;
   onRefresh: () => void;
@@ -38,7 +38,7 @@ type ProjectProfilesPanelProps = {
   onOpenWorkflowSettings: (workflowId: string) => void;
   onCloseRetainedSession: (workflowId: string, profileName: string) => void;
   onResetIdentity: (workflowId: string) => void | Promise<void>;
-  onOpenIdentityTarget: (target: IdentityLabTarget) => void;
+  onOpenIdentityTarget: (target: any) => void;
   onCreateProjectEnvironment: (
     projectId: string,
     input: { name: string; description?: string | null },
@@ -55,11 +55,7 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
     project,
     projectEnvironments,
     workflows,
-    overview,
-    loading,
     error,
-    onRefresh,
-    onSelectIdentity,
     onCreateProjectEnvironment,
     onUpdateProjectEnvironment,
     onDeleteProjectEnvironment,
@@ -71,59 +67,20 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
   const [newProfileName, setNewProfileName] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const selectedEnv = projectEnvironments.find((e) => e.id === selectedEnvId) || projectEnvironments[0] || null;
-  const usingWorkflows = selectedEnv ? workflows.filter((w) => w.environment_id === selectedEnv.id) : [];
-  const selectedMatches = selectedEnv ? overview?.items.filter((item) => {
-    const wf = workflows.find((w) => w.id === item.workflow_ref.id);
-    return wf?.environment_id === selectedEnv.id;
-  }) || [] : [];
-  const hasSession = selectedMatches.some((item) => item.retained_session.active);
-
-  const lastSyncedWorkflowIdRef = useRef<string | null>(null);
-
-  // Sync selectedEnvId when overview.selected changes (e.g., via external navigation)
-  useEffect(() => {
-    const activeWorkflowId = overview?.selected?.workflow_ref?.id || null;
-    if (activeWorkflowId !== lastSyncedWorkflowIdRef.current) {
-      lastSyncedWorkflowIdRef.current = activeWorkflowId;
-      if (activeWorkflowId) {
-        const activeWf = workflows.find((w) => w.id === activeWorkflowId);
-        if (activeWf?.environment_id && activeWf.environment_id !== selectedEnvId) {
-          setSelectedEnvId(activeWf.environment_id);
-        }
-      }
-    }
-  }, [overview?.selected?.workflow_ref?.id, workflows, selectedEnvId]);
+  const selectedEnv = projectEnvironments.find((e) => e.id === selectedEnvId) || null;
 
   // Sync environment changes & name/launch draft when the selected environment changes
   useEffect(() => {
     if (selectedEnv) {
-      setSelectedEnvId(selectedEnv.id);
       setProfileNameDraft(selectedEnv.name);
       setBrowserLaunchDraft(selectedEnv.browser_launch);
     } else {
-      setSelectedEnvId(null);
       setProfileNameDraft("");
       setBrowserLaunchDraft(null);
     }
   }, [selectedEnv?.id, selectedEnv?.name]);
-
-  // Auto-select new active workflow safely without loops
-  useEffect(() => {
-    if (selectedEnv && overview && !loading) {
-      const currentUsingWorkflows = workflows.filter((w) => w.environment_id === selectedEnv.id);
-      const currentSelectedWfId = overview.selected?.workflow_ref?.id;
-      const isCurrentWfInEnv = currentUsingWorkflows.some((w) => w.id === currentSelectedWfId);
-      if (!isCurrentWfInEnv) {
-        const firstWf = currentUsingWorkflows[0];
-        const identityId = firstWf?.environment_id ? selectedEnv.browser_launch?.identity_id : null;
-        if (firstWf && identityId) {
-          onSelectIdentity(firstWf.id, identityId);
-        }
-      }
-    }
-  }, [selectedEnv?.id, selectedEnv?.browser_launch?.identity_id, workflows, overview?.selected?.workflow_ref?.id, loading, onSelectIdentity]);
 
   const nameChanged = selectedEnv && profileNameDraft.trim() !== selectedEnv.name;
   const launchChanged = selectedEnv && JSON.stringify(browserLaunchDraft) !== JSON.stringify(selectedEnv.browser_launch);
@@ -151,333 +108,315 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
   }
 
   async function handleDeleteProfile() {
-    if (!selectedEnv) return;
-    await onDeleteProjectEnvironment(selectedEnv.id);
+    if (!selectedEnvId) return;
+    await onDeleteProjectEnvironment(selectedEnvId);
     setDeleteDialogOpen(false);
-    setSelectedEnvId(projectEnvironments[0]?.id || null);
+    setSelectedEnvId(null);
   }
 
-
   return (
-    <section className="identity-lab-screen" aria-label="Profiles workspace">
-      {error ? <p className="field-error" role="alert">{error}</p> : null}
-      <div className="identity-workspace" role="group" aria-label="Browser Profiles">
-        <section className="panel identity-list" aria-label="Browser profiles list">
-          <div className="projects-list-tools" style={{ padding: "8px 0", display: "flex", gap: "8px" }}>
-            <Button shape="pill" type="button" onClick={() => setCreateDialogOpen(true)}>
-              <Plus aria-hidden="true" />
-              Add profile
-            </Button>
-            <Button shape="pill" type="button" variant="secondary" onClick={onRefresh} disabled={loading} aria-label="Refresh profiles">
-              <RefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
-            </Button>
+    <section className="app-screen workflow-list-screen" aria-label="Profiles workspace">
+      <div role="group" aria-label="Browser Profiles" style={{ display: "contents" }}>
+      <header className="app-header">
+        <div>
+          <p className="eyebrow">Project Settings</p>
+          <h1>Browser Profiles</h1>
+        </div>
+        <div className="page-header-actions">
+          <div className="header-stats" aria-label="Profile summary">
+            <span>{projectEnvironments.length} profiles</span>
           </div>
-          {projectEnvironments.map((env) => {
-            const active = selectedEnvId === env.id;
+          <Button shape="pill" type="button" onClick={() => setCreateDialogOpen(true)}>
+            <Plus aria-hidden="true" />
+            Add profile
+          </Button>
+        </div>
+        {error ? <p className="field-error" role="alert">{error}</p> : null}
+      </header>
+
+      <section className="workflow-library" aria-label="Browser profiles list">
+        {projectEnvironments.length === 0 ? (
+          <div className="empty-state panel" style={{ minHeight: "240px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+            <Fingerprint aria-hidden="true" style={{ width: "36px", height: "36px", color: "var(--app-muted)", marginBottom: "12px" }} />
+            <h2>No profiles configured</h2>
+            <p className="muted">Add a profile to start setting up browser configurations.</p>
+          </div>
+        ) : (
+          projectEnvironments.map((env) => {
             const count = workflows.filter((w) => w.environment_id === env.id).length;
-            const matches = overview?.items.filter((item) => {
-              const wf = workflows.find((w) => w.id === item.workflow_ref.id);
-              return wf?.environment_id === env.id;
-            }) || [];
-            const hasSession = matches.some((item) => item.retained_session.active);
-            const failures = matches.reduce((sum, item) => sum + item.recent_failures_24h, 0);
-
             return (
-              <button
-                key={env.id}
-                className={active ? "identity-row identity-row-active" : "identity-row"}
-                type="button"
-                onClick={() => setSelectedEnvId(env.id)}
-              >
-                <span>
-                  <strong>{env.name}</strong>
-                  <small>{count === 0 ? "Not used" : `Used by ${count} workflow${count === 1 ? "" : "s"}`}</small>
-                </span>
-                <span className={hasSession ? "status-pill status-pill-on" : "status-pill"}>
-                  {hasSession ? "retained" : "closed"}
-                </span>
-                {failures > 0 ? (
-                  <span className="status-pill status-pill-danger">{failures} failure</span>
-                ) : (
-                  <ShieldCheck aria-hidden="true" />
-                )}
-              </button>
-            );
-          })}
-        </section>
-
-        <section className="panel identity-detail" aria-label="Profile detail">
-          {selectedEnv && browserLaunchDraft ? (
-            <div className="identity-detail-body" style={{ maxHeight: "calc(100vh - 180px)", overflowY: "auto", paddingRight: "8px" }}>
-                <header style={{
-                  borderBottom: "1px solid #233240",
-                  paddingBottom: "16px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}>
-                  <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <Card className="workflow-card" key={env.id}>
+                <div className="workflow-card-main">
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                     <div style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: "48px",
-                      height: "48px",
-                      borderRadius: "8px",
-                      background: "rgba(50, 211, 230, 0.08)",
-                      border: "1px solid rgba(50, 211, 230, 0.2)"
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "6px",
+                      background: "rgba(50, 211, 230, 0.06)",
+                      border: "1px solid rgba(50, 211, 230, 0.15)"
                     }}>
-                      <Fingerprint style={{ width: "24px", height: "24px", color: "var(--app-accent)" }} />
+                      <Fingerprint style={{ width: "20px", height: "20px", color: "var(--app-accent)" }} />
                     </div>
                     <div>
-                      <h2 style={{
-                        margin: 0,
-                        fontSize: "1.2rem",
-                        fontWeight: 600,
-                        color: "var(--app-text)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px"
-                      }}>
-                        {profileNameDraft || selectedEnv.name}
-                        {hasChanges && (
-                          <span style={{
-                            fontSize: "10px",
-                            fontWeight: 500,
-                            color: "var(--app-warning)",
-                            border: "1px solid rgba(244, 183, 64, 0.3)",
-                            background: "rgba(244, 183, 64, 0.08)",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            textTransform: "uppercase"
-                          }}>
-                            Unsaved Changes
-                          </span>
-                        )}
-                      </h2>
-                      <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "4px" }}>
-                        <span className={hasSession ? "status-pill status-pill-on" : "status-pill"}>
-                          {hasSession ? "retained" : "closed"}
-                        </span>
-                      </div>
+                      <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "var(--app-text)" }}>{env.name}</h2>
+                      <p className="muted" style={{ margin: "4px 0 0", fontSize: "12px" }}>
+                        {count === 0 ? "Not used" : `Used by ${count} workflow${count === 1 ? "" : "s"}`}
+                      </p>
                     </div>
                   </div>
+                </div>
 
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <Button type="button" size="sm" disabled={!hasChanges} onClick={handleSaveProfile}>
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      aria-label={`Delete profile ${selectedEnv.name}`}
-                      disabled={usingWorkflows.length > 0}
-                      title={usingWorkflows.length > 0 ? "Profile is used by workflows" : undefined}
-                      onClick={() => setDeleteDialogOpen(true)}
-                    >
-                      <Trash2 aria-hidden="true" />
-                      Delete
-                    </Button>
-                  </div>
-                </header>
-
-                <div className="profile-settings-form" style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
-                  {/* General Settings */}
-                  <SettingsFieldGroup
-                    title="General Settings"
-                    description="Modify the profile display name."
+                <div className="row-actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedEnvId(env.id);
+                      setEditDialogOpen(true);
+                    }}
                   >
+                    Configure
+                  </Button>
+                  <IconButton
+                    label={`Delete profile ${env.name}`}
+                    type="button"
+                    variant="destructive"
+                    disabled={count > 0}
+                    tooltip={count > 0 ? "Profile is used by workflows" : `Delete profile ${env.name}`}
+                    onClick={() => {
+                      setSelectedEnvId(env.id);
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </IconButton>
+                </div>
+              </Card>
+            );
+          })
+        )}
+      </section>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="workflow-dialog" style={{ width: "min(640px, calc(100vw - 32px))", maxHeight: "calc(100vh - 100px)", display: "flex", flexDirection: "column" }}>
+          <DialogHeader>
+            <DialogTitle style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Fingerprint style={{ color: "var(--app-accent)" }} />
+              Profile Configuration: {selectedEnv?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Configure browser options, proxy settings, WebRTC policy, and custom fonts.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedEnv && browserLaunchDraft && (
+            <div style={{ flex: 1, overflowY: "auto", paddingRight: "8px", margin: "16px 0", display: "flex", flexDirection: "column", gap: "20px" }}>
+              {/* General Settings */}
+              <SettingsFieldGroup
+                title="General Settings"
+                description="Modify the profile display name."
+              >
+                <label className="field settings-field-group-wide">
+                  <span>Profile name</span>
+                  <Input
+                    aria-label={`Profile name for ${selectedEnv.name}`}
+                    value={profileNameDraft}
+                    onChange={(e) => setProfileNameDraft(e.target.value)}
+                  />
+                </label>
+              </SettingsFieldGroup>
+
+              {/* Proxy Settings */}
+              <SettingsFieldGroup
+                title="Proxy Configuration"
+                description="Setup a proxy server for the browser profile session."
+              >
+                <SwitchField
+                  checked={browserLaunchDraft.proxy_enabled}
+                  label="Enable Proxy"
+                  onCheckedChange={(checked) =>
+                    setBrowserLaunchDraft((current) => current ? { ...current, proxy_enabled: checked } : null)
+                  }
+                />
+                {browserLaunchDraft.proxy_enabled && (
+                  <>
                     <label className="field settings-field-group-wide">
-                      <span>Profile name</span>
+                      <span>Proxy Server</span>
                       <Input
-                        aria-label={`Profile name for ${selectedEnv.name}`}
-                        value={profileNameDraft}
-                        onChange={(e) => setProfileNameDraft(e.target.value)}
+                        aria-label="Proxy Server"
+                        value={browserLaunchDraft.proxy_server ?? ""}
+                        placeholder="http://host:port"
+                        onChange={(e) =>
+                          setBrowserLaunchDraft((current) => current ? { ...current, proxy_server: e.target.value } : null)
+                        }
                       />
                     </label>
-                  </SettingsFieldGroup>
-                {/* Proxy Settings */}
-                <SettingsFieldGroup
-                  title="Proxy Configuration"
-                  description="Setup a proxy server for the browser profile session."
-                >
-                  <SwitchField
-                    checked={browserLaunchDraft.proxy_enabled}
-                    label="Enable Proxy"
-                    onCheckedChange={(checked) =>
-                      setBrowserLaunchDraft((current) => current ? { ...current, proxy_enabled: checked } : null)
-                    }
-                  />
-                  {browserLaunchDraft.proxy_enabled && (
-                    <>
-                      <label className="field settings-field-group-wide">
-                        <span>Proxy Server</span>
-                        <Input
-                          aria-label="Proxy Server"
-                          value={browserLaunchDraft.proxy_server ?? ""}
-                          placeholder="http://host:port"
-                          onChange={(e) =>
-                            setBrowserLaunchDraft((current) => current ? { ...current, proxy_server: e.target.value } : null)
-                          }
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Proxy Username</span>
-                        <Input
-                          aria-label="Proxy Username"
-                          value={browserLaunchDraft.proxy_username ?? ""}
-                          onChange={(e) =>
-                            setBrowserLaunchDraft((current) => current ? { ...current, proxy_username: e.target.value } : null)
-                          }
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Proxy Password</span>
-                        <Input
-                          aria-label="Proxy Password"
-                          type="password"
-                          value={browserLaunchDraft.proxy_password ?? ""}
-                          onChange={(e) =>
-                            setBrowserLaunchDraft((current) => current ? { ...current, proxy_password: e.target.value } : null)
-                          }
-                        />
-                      </label>
-                    </>
-                  )}
-                </SettingsFieldGroup>
-
-                {/* Browser Posture Settings */}
-                <SettingsFieldGroup
-                  title="Browser Posture"
-                  description="Manage localization, location GeoIP, and headless/humanization options."
-                >
-                  <SwitchField
-                    checked={browserLaunchDraft.headless}
-                    label="Headless mode"
-                    onCheckedChange={(checked) =>
-                      setBrowserLaunchDraft((current) => current ? { ...current, headless: checked } : null)
-                    }
-                  />
-                  <SwitchField
-                    checked={browserLaunchDraft.humanize}
-                    label="Humanize movements"
-                    onCheckedChange={(checked) =>
-                      setBrowserLaunchDraft((current) => current ? { ...current, humanize: checked } : null)
-                    }
-                  />
-                  {browserLaunchDraft.humanize && (
                     <label className="field">
-                      <span>Human Preset</span>
-                      <Select
-                        aria-label="Human Preset"
-                        value={browserLaunchDraft.human_preset}
+                      <span>Proxy Username</span>
+                      <Input
+                        aria-label="Proxy Username"
+                        value={browserLaunchDraft.proxy_username ?? ""}
                         onChange={(e) =>
-                          setBrowserLaunchDraft((current) => current ? { ...current, human_preset: e.target.value as WorkflowHumanPreset } : null)
+                          setBrowserLaunchDraft((current) => current ? { ...current, proxy_username: e.target.value } : null)
                         }
-                      >
-                        <option value="default">Default</option>
-                        <option value="careful">Careful</option>
-                      </Select>
+                      />
                     </label>
-                  )}
-                  <SwitchField
-                    checked={browserLaunchDraft.geoip}
-                    label="Determine location by GeoIP"
-                    onCheckedChange={(checked) =>
-                      setBrowserLaunchDraft((current) => current ? { ...current, geoip: checked } : null)
-                    }
-                  />
-                  {!browserLaunchDraft.geoip && (
-                    <>
-                      <label className="field">
-                        <span>Timezone</span>
-                        <Input
-                          aria-label="Timezone"
-                          value={browserLaunchDraft.timezone ?? ""}
-                          placeholder="e.g. Asia/Ho_Chi_Minh"
-                          onChange={(e) =>
-                            setBrowserLaunchDraft((current) => current ? { ...current, timezone: e.target.value } : null)
-                          }
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Locale</span>
-                        <Input
-                          aria-label="Locale"
-                          value={browserLaunchDraft.locale ?? ""}
-                          placeholder="e.g. vi-VN"
-                          onChange={(e) =>
-                            setBrowserLaunchDraft((current) => current ? { ...current, locale: e.target.value } : null)
-                          }
-                        />
-                      </label>
-                    </>
-                  )}
-                </SettingsFieldGroup>
+                    <label className="field">
+                      <span>Proxy Password</span>
+                      <Input
+                        aria-label="Proxy Password"
+                        type="password"
+                        value={browserLaunchDraft.proxy_password ?? ""}
+                        onChange={(e) =>
+                          setBrowserLaunchDraft((current) => current ? { ...current, proxy_password: e.target.value } : null)
+                        }
+                      />
+                    </label>
+                  </>
+                )}
+              </SettingsFieldGroup>
 
-                {/* WebRTC Policy Settings */}
-                <SettingsFieldGroup
-                  title="WebRTC Policy"
-                  description="Choose WebRTC IP handling strategy."
-                >
+              {/* Browser Posture Settings */}
+              <SettingsFieldGroup
+                title="Browser Posture"
+                description="Manage localization, location GeoIP, and headless/humanization options."
+              >
+                <SwitchField
+                  checked={browserLaunchDraft.headless}
+                  label="Headless mode"
+                  onCheckedChange={(checked) =>
+                    setBrowserLaunchDraft((current) => current ? { ...current, headless: checked } : null)
+                  }
+                />
+                <SwitchField
+                  checked={browserLaunchDraft.humanize}
+                  label="Humanize movements"
+                  onCheckedChange={(checked) =>
+                    setBrowserLaunchDraft((current) => current ? { ...current, humanize: checked } : null)
+                  }
+                />
+                {browserLaunchDraft.humanize && (
                   <label className="field">
-                    <span>WebRTC Policy</span>
+                    <span>Human Preset</span>
                     <Select
-                      aria-label="WebRTC Policy"
-                      value={browserLaunchDraft.webrtc_policy}
+                      aria-label="Human Preset"
+                      value={browserLaunchDraft.human_preset}
                       onChange={(e) =>
-                        setBrowserLaunchDraft((current) => current ? { ...current, webrtc_policy: e.target.value as WorkflowWebRtcPolicy } : null)
+                        setBrowserLaunchDraft((current) => current ? { ...current, human_preset: e.target.value as WorkflowHumanPreset } : null)
                       }
                     >
                       <option value="default">Default</option>
-                      <option value="auto_proxy_exit_ip">Auto proxy exit IP</option>
-                      <option value="explicit_ip">Explicit IP</option>
-                      <option value="disabled_if_supported">Disabled</option>
+                      <option value="careful">Careful</option>
                     </Select>
                   </label>
-                  {browserLaunchDraft.webrtc_policy === "explicit_ip" && (
+                )}
+                <SwitchField
+                  checked={browserLaunchDraft.geoip}
+                  label="Determine location by GeoIP"
+                  onCheckedChange={(checked) =>
+                    setBrowserLaunchDraft((current) => current ? { ...current, geoip: checked } : null)
+                  }
+                />
+                {!browserLaunchDraft.geoip && (
+                  <>
                     <label className="field">
-                      <span>Explicit WebRTC IP</span>
+                      <span>Timezone</span>
                       <Input
-                        aria-label="Explicit WebRTC IP"
-                        value={browserLaunchDraft.webrtc_ip ?? ""}
-                        placeholder="e.g. 1.2.3.4"
+                        aria-label="Timezone"
+                        value={browserLaunchDraft.timezone ?? ""}
+                        placeholder="e.g. Asia/Ho_Chi_Minh"
                         onChange={(e) =>
-                          setBrowserLaunchDraft((current) => current ? { ...current, webrtc_ip: e.target.value } : null)
+                          setBrowserLaunchDraft((current) => current ? { ...current, timezone: e.target.value } : null)
                         }
                       />
                     </label>
-                  )}
-                </SettingsFieldGroup>
+                    <label className="field">
+                      <span>Locale</span>
+                      <Input
+                        aria-label="Locale"
+                        value={browserLaunchDraft.locale ?? ""}
+                        placeholder="e.g. vi-VN"
+                        onChange={(e) =>
+                          setBrowserLaunchDraft((current) => current ? { ...current, locale: e.target.value } : null)
+                        }
+                      />
+                    </label>
+                  </>
+                )}
+              </SettingsFieldGroup>
 
-                {/* Custom Fonts Settings */}
-                <SettingsFieldGroup
-                  title="Custom Fonts"
-                  description="Provide a directory path for custom browser fonts."
-                >
-                  <label className="field settings-field-group-wide">
-                    <span>Custom Fonts Directory</span>
+              {/* WebRTC Policy Settings */}
+              <SettingsFieldGroup
+                title="WebRTC Policy"
+                description="Choose WebRTC IP handling strategy."
+              >
+                <label className="field">
+                  <span>WebRTC Policy</span>
+                  <Select
+                    aria-label="WebRTC Policy"
+                    value={browserLaunchDraft.webrtc_policy}
+                    onChange={(e) =>
+                      setBrowserLaunchDraft((current) => current ? { ...current, webrtc_policy: e.target.value as WorkflowWebRtcPolicy } : null)
+                    }
+                  >
+                    <option value="default">Default</option>
+                    <option value="auto_proxy_exit_ip">Auto proxy exit IP</option>
+                    <option value="explicit_ip">Explicit IP</option>
+                    <option value="disabled_if_supported">Disabled</option>
+                  </Select>
+                </label>
+                {browserLaunchDraft.webrtc_policy === "explicit_ip" && (
+                  <label className="field">
+                    <span>Explicit WebRTC IP</span>
                     <Input
-                      aria-label="Custom Fonts Directory"
-                      value={browserLaunchDraft.fingerprint_fonts_dir ?? ""}
-                      placeholder="e.g. /path/to/fonts"
+                      aria-label="Explicit WebRTC IP"
+                      value={browserLaunchDraft.webrtc_ip ?? ""}
+                      placeholder="e.g. 1.2.3.4"
                       onChange={(e) =>
-                        setBrowserLaunchDraft((current) => current ? { ...current, fingerprint_fonts_dir: e.target.value } : null)
+                        setBrowserLaunchDraft((current) => current ? { ...current, webrtc_ip: e.target.value } : null)
                       }
                     />
                   </label>
-                </SettingsFieldGroup>
-              </div>
-            </div>
-          ) : (
-            <div className="empty-state empty-state-compact">
-              <XCircle aria-hidden="true" />
-              <h3>Select a profile</h3>
+                )}
+              </SettingsFieldGroup>
+
+              {/* Custom Fonts Settings */}
+              <SettingsFieldGroup
+                title="Custom Fonts"
+                description="Provide a directory path for custom browser fonts."
+              >
+                <label className="field settings-field-group-wide">
+                  <span>Custom Fonts Directory</span>
+                  <Input
+                    aria-label="Custom Fonts Directory"
+                    value={browserLaunchDraft.fingerprint_fonts_dir ?? ""}
+                    placeholder="e.g. /path/to/fonts"
+                    onChange={(e) =>
+                      setBrowserLaunchDraft((current) => current ? { ...current, fingerprint_fonts_dir: e.target.value } : null)
+                    }
+                  />
+                </label>
+              </SettingsFieldGroup>
             </div>
           )}
-        </section>
-      </div>
+
+          <DialogFooter className="form-actions" style={{ borderTop: "1px solid #233240", paddingTop: "16px", marginTop: "auto" }}>
+            <Button type="button" variant="secondary" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={!hasChanges} onClick={async () => {
+              await handleSaveProfile();
+              setEditDialogOpen(false);
+            }}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent>
@@ -521,6 +460,7 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </section>
   );
 }

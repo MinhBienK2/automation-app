@@ -197,7 +197,7 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByRole("region", { name: "Profiles workspace" }))
       .toBeInTheDocument();
     const profilesGroup = screen.getByRole("group", { name: "Browser Profiles" });
-    expect(within(profilesGroup).getByDisplayValue("Project browser profile"))
+    expect(within(profilesGroup).getByText("Project browser profile"))
       .toBeInTheDocument();
     expect(within(profilesGroup).queryByText(/Fingerprint seed/i)).not.toBeInTheDocument();
     expect(within(profilesGroup).queryByText(browserLaunch.identity_id))
@@ -406,7 +406,7 @@ describe("App settings and graph autosave", () => {
 
     await openProjectTab("Profiles");
     const profilesGroup = await screen.findByRole("group", { name: "Browser Profiles" });
-    expect(within(profilesGroup).getByDisplayValue("Project browser profile"))
+    expect(within(profilesGroup).getByText("Project browser profile"))
       .toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Fingerprint seed" }))
       .not.toBeInTheDocument();
@@ -1037,7 +1037,13 @@ describe("App settings and graph autosave", () => {
 
     expect(await screen.findByRole("region", { name: "Profiles workspace" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Browser profiles list" })).toHaveTextContent("Profile A");
-    expect(screen.getByRole("region", { name: "Profile detail" })).toHaveTextContent("Proxy Configuration");
+
+    const user = userEvent.setup();
+    const configureBtn = screen.getByRole("button", { name: "Configure" });
+    await user.click(configureBtn);
+
+    const dialog = screen.getByRole("dialog", { name: /Profile Configuration: Profile A/i });
+    expect(dialog).toHaveTextContent("Proxy Configuration");
   });
 
   test("does not render the removed shell search header or Alerts shortcut", async () => {
