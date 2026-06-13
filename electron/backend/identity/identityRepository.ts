@@ -38,12 +38,25 @@ export class IdentityRepository {
 
   async getOverview(request: IdentityLabOverviewRequest = {}): Promise<IdentityLabOverview> {
     const diagnostics = await this.options.diagnostics();
-    const summaries = this.options.workflows()
+    let workflows = this.options.workflows();
+    if (request.project_id) {
+      workflows = workflows.filter((w) => w.project_id === request.project_id);
+    }
+    const summaries = workflows
       .map((workflow) => this.managedSummary(workflow))
       .filter((summary): summary is ManagedIdentitySummary => Boolean(summary))
       .filter((summary) => matchesSearch(summary, request.search));
-    const selectedTarget =
-      request.selected_target ??
+    let selectedTarget = request.selected_target;
+    if (selectedTarget && request.project_id) {
+      if (selectedTarget.workflow_id) {
+        const isMatched = workflows.some((w) => w.id === selectedTarget?.workflow_id);
+        if (!isMatched) {
+          selectedTarget = null;
+        }
+      }
+    }
+    const finalTarget =
+      selectedTarget ??
       (summaries[0]
         ? {
             type: "managed" as const,
@@ -51,8 +64,8 @@ export class IdentityRepository {
             identity_id: summaries[0].identity_ref.id,
           }
         : null);
-    const selected = selectedTarget
-      ? await this.getDetail(selectedTarget, diagnostics)
+    const selected = finalTarget
+      ? await this.getDetail(finalTarget, diagnostics)
       : null;
     const limited = summaries.slice(0, limitValue(request.limits?.identities, 100));
     return {

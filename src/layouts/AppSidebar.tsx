@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "../components/ui/button";
-import { CalendarClock, Fingerprint, Folder, Gauge, Settings, ChevronDown, ChevronRight } from "lucide-react";
+import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight } from "lucide-react";
 import type { AppScreen } from "../shared/types/workspaceContracts";
 
-type AppSidebarActiveItem = "overview" | "projects" | "schedules" | "identities" | "settings";
+type AppSidebarActiveItem = "overview" | "projects" | "schedules" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
   collapsed: boolean;
   onOpenOverview: () => void;
-  onOpenIdentities: () => void;
   onOpenProjects: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
@@ -56,7 +55,6 @@ export function AppSidebar({
   activeItem,
   collapsed,
   onOpenOverview,
-  onOpenIdentities,
   onOpenProjects,
   onOpenSchedules,
   onOpenSettings,
@@ -118,19 +116,6 @@ export function AppSidebar({
         >
           <CalendarClock aria-hidden="true" className="sidebar-item-icon" />
           <span>Schedules</span>
-        </Button>
-        <Button
-          className={
-            activeItem === "identities"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="ghost"
-          type="button"
-          onClick={onOpenIdentities}
-        >
-          <Fingerprint aria-hidden="true" className="sidebar-item-icon" />
-          <span>Identities</span>
         </Button>
         <div className="sidebar-collapsible-group">
           <Button

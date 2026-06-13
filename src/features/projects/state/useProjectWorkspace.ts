@@ -30,7 +30,7 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [projectCollection, setProjectCollectionState] = useState<"workflows" | "subflows" | "settings">("workflows");
+  const [projectCollection, setProjectCollectionState] = useState<"workflows" | "subflows" | "profiles" | "settings">("workflows");
   const [projectEnvironments, setProjectEnvironments] = useState<ProjectEnvironment[]>([]);
 
   const loadProjectModel = useCallback(async () => {
@@ -91,10 +91,10 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
     }
   }, [setSubflows, setSubflowsLoading, setAppError]);
 
-  const setProjectCollection = useCallback((collection: "workflows" | "subflows" | "settings") => {
+  const setProjectCollection = useCallback((collection: "workflows" | "subflows" | "profiles" | "settings") => {
     setProjectCollectionState(collection);
     const projectId = currentProjectId();
-    if (projectId && (collection === "subflows" || collection === "settings")) {
+    if (projectId && (collection === "subflows" || collection === "settings" || collection === "profiles")) {
       void loadSubflowsForProject(projectId);
     }
   }, [currentProjectId, loadSubflowsForProject]);

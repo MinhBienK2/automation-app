@@ -22,12 +22,11 @@ Mission Control is an Electron desktop app for building and running browser auto
 
 ## Workspace Navigation
 
-Sidebar order: **Overview** → **Projects** → **Schedules** → **Identities** → **Setting** (collapsible: General, Help)
+Sidebar order: **Overview** → **Projects** → **Schedules** → **Setting** (collapsible: General, Help)
 
 - **Overview**: default screen. Metrics, live runs, attention, recent evidence, upcoming schedules, system health (environment readiness).
-- **Projects**: project-scoped authoring. Fixed tabs: Workflows, Subflows, Settings.
+- **Projects**: project-scoped authoring. Fixed tabs: Workflows, Subflows, Profiles, Settings.
 - **Schedules**: cross-workflow schedule CRUD and event history.
-- **Identities**: managed browser identity posture, diagnostics, retained-session close, historical refs.
 - **Setting**: collapsible navigation group:
   - **General**: autosave, maintenance.
   - **Help**: XPath cookbook, graph shortcuts.

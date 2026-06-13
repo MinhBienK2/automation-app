@@ -8,15 +8,19 @@ Preserve these unless the task explicitly changes them.
 - Creating a project creates a workflow named `Main` using its first browser profile.
 - Projects workspace header: Import project next to Create Project.
 - Project list sidebar: search/filtering + project selection.
-- Selected project shows Workflows, Subflows, Settings as fixed tabs.
+- Selected project shows Workflows, Subflows, Profiles, Settings as fixed tabs.
 - Scoped to selected project; changing project resets detail tabs to Workflows.
+
+## Profiles Tab
+
+- Scoped browser profiles list showing used counts, session statuses, and recent failures.
+- CRUD: add profiles, rename inline, delete unused after confirmation.
+- Integrated Identity Lab controls: configured posture, latest observed identity evidence, diagnostics (binary, geoip, display, fonts), rotation history, and action controls (Close Retained Session, Reset Identity).
 
 ## Project Settings
 
-- `Project identity` heading, `Project details` group, `Browser Profiles` group.
+- `Project identity` heading, `Project details` group.
 - Project details: editable name, Save, Duplicate project, Export project, Delete project.
-- Browser Profiles: add profiles, rename inline, delete unused after confirmation.
-- UI does NOT expose: fingerprint seed, identity id, regenerate identity controls.
 - Duplicate: independent copy with copied workflows/subflows, remapped Call Subflow refs, fresh identities/profiles.
 - Export: `.project.json` via native Save dialog, sanitized sensitive/local Browser Launch fields.
 - Import: previews package, creates new project, remaps ids, fresh identities. Does NOT import: runs, evidence, schedules, app settings, browser profile storage.
@@ -52,11 +56,10 @@ Preserve these unless the task explicitly changes them.
 
 ## Navigation And App Shell
 
-- Sidebar order: Overview, Projects, Schedules, Identities, Setting.
+- Sidebar order: Overview, Projects, Schedules, Setting.
 - Overview is default first screen (includes System Health diagnostics widget).
 - No top command/search header or Alerts shortcut.
 - Sidebar and in-page links are cross-workspace navigation surfaces.
-- Identities: separate sidebar page after Schedules. Sanitized DTOs, no raw paths/storage/credentials.
 - Setting: collapsible navigation group containing:
   - General: autosave prefs, maintenance commands.
   - Help: XPath cookbook, graph shortcuts.

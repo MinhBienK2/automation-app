@@ -13,7 +13,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import type { Project } from "../../../types/workflow";
 
-export type ProjectCollection = "workflows" | "subflows" | "settings";
+export type ProjectCollection = "workflows" | "subflows" | "profiles" | "settings";
 
 type ProjectsPageProps = {
   projects: Project[];
@@ -30,6 +30,7 @@ type ProjectsPageProps = {
 const projectCollections: Array<{ id: ProjectCollection; label: string }> = [
   { id: "workflows", label: "Workflows" },
   { id: "subflows", label: "Subflows" },
+  { id: "profiles", label: "Profiles" },
   { id: "settings", label: "Settings" },
 ];
 

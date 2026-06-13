@@ -6,7 +6,6 @@ import type {
   SubflowBackTarget,
 } from "../shared/types/workspaceContracts";
 import type {
-  IdentityLabTarget,
   MissionControlTarget,
   WorkflowSummary,
 } from "../types/workflow";
@@ -36,13 +35,12 @@ export interface AppNavigationDeps {
   detail: any;
   openWorkflow: (id: string) => Promise<void>;
   performOpenWorkflow: (id: string) => Promise<void>;
-  identityLabTarget: any;
   setIdentityLabTarget: (target: any) => void;
-  loadIdentityLabOverview: (target: any) => Promise<any>;
+  loadIdentityLabOverview: (target: any, projectId?: string | null) => Promise<any>;
   workflows: WorkflowSummary[];
   setWorkflows: React.Dispatch<React.SetStateAction<WorkflowSummary[]>>;
   openWorkflowSettings: (workflow: WorkflowSummary, sectionId?: any) => Promise<void>;
-  setProjectCollection: (collection: "workflows" | "subflows" | "settings") => void;
+  setProjectCollection: (collection: "workflows" | "subflows" | "profiles" | "settings") => void;
   setSelectedGraphNodeId: (nodeId: string | null) => void;
   setAppError: (error: string) => void;
 }
@@ -73,7 +71,6 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     detail,
     openWorkflow,
     performOpenWorkflow,
-    identityLabTarget,
     setIdentityLabTarget,
     loadIdentityLabOverview,
     workflows,
@@ -84,7 +81,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     setAppError,
   } = deps;
 
-  const performOpenProjects = useCallback((collection: "workflows" | "subflows" | "settings" = "workflows") => {
+  const performOpenProjects = useCallback((collection: "workflows" | "subflows" | "profiles" | "settings" = "workflows") => {
     setScreen("projects");
     setProjectCollection(collection);
     setSidebarCollapsed(false);
@@ -95,7 +92,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
         selectedProjectId && loaded.projects.some((project: any) => project.id === selectedProjectId)
           ? selectedProjectId
           : loaded.projects[0]?.id ?? currentProjectId();
-      if (collection === "subflows" || collection === "settings") {
+      if (collection === "subflows" || collection === "settings" || collection === "profiles") {
         await loadSubflowsForProject(projectId);
       }
     })();
@@ -108,7 +105,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     setAppError,
   ]);
 
-  const openProjects = useCallback((collection: "workflows" | "subflows" | "settings" = "workflows") => {
+  const openProjects = useCallback((collection: "workflows" | "subflows" | "profiles" | "settings" = "workflows") => {
     void requestGraphExitNavigation(() => performOpenProjects(collection));
   }, [requestGraphExitNavigation, performOpenProjects]);
 
@@ -192,17 +189,6 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
   ]);
 
 
-  const performOpenIdentities = useCallback((target: IdentityLabTarget | null = identityLabTarget) => {
-    setScreen("identities");
-    setAppError("");
-    setIdentityLabTarget(target);
-    void loadIdentityLabOverview(target);
-  }, [identityLabTarget, loadIdentityLabOverview, setIdentityLabTarget, setAppError]);
-
-  const openIdentities = useCallback((target: IdentityLabTarget | null = identityLabTarget) => {
-    void requestGraphExitNavigation(() => performOpenIdentities(target));
-  }, [requestGraphExitNavigation, performOpenIdentities, identityLabTarget]);
-
   const resolveWorkflowSummary = useCallback(async (workflowId: string) => {
     const cachedWorkflow = workflows.find((item) => item.id === workflowId);
     if (cachedWorkflow) return cachedWorkflow;
@@ -283,7 +269,14 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
       return;
     }
     if (target.type === "identity") {
-      performOpenIdentities(target.target);
+      const workflowId = target.target.workflow_id;
+      const wf = workflows.find((w) => w.id === workflowId);
+      if (wf?.project_id) {
+        performOpenProjects("profiles");
+        _setSelectedProjectId(wf.project_id);
+        setIdentityLabTarget(target.target);
+        void loadIdentityLabOverview(target.target, wf.project_id);
+      }
       return;
     }
     if (target.type === "schedule") {
@@ -302,7 +295,10 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     loadWorkflows,
     openWorkflowSettingsById,
     performOpenWorkflow,
-    performOpenIdentities,
+    _setSelectedProjectId,
+    setIdentityLabTarget,
+    loadIdentityLabOverview,
+    workflows,
     openScheduleTarget,
     setSelectedGraphNodeId,
   ]);
@@ -323,7 +319,6 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     openSettings,
     openSettingsHelp,
     openSchedules,
-    openIdentities,
     navigateToMissionControlTarget,
     backToList,
     backFromSubflowDetail,

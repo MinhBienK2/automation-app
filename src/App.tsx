@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { SettingsHelpPage } from "./features/settings/pages/SettingsHelpPage";
 import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnostics";
-import { IdentityLabPage } from "./features/identities/pages/IdentityLabPage";
+import { ProjectProfilesPanel } from "./features/projects/components/ProjectProfilesPanel";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
 import { useOperationsOverviewWorkspace } from "./features/overview/useOperationsOverviewWorkspace";
 import { ProjectEnvironmentSettings } from "./features/projects/components/ProjectEnvironmentSettings";
@@ -303,7 +303,6 @@ function App() {
     detail: workflowsWorkspace.detail,
     openWorkflow: workflowsWorkspace.openWorkflow,
     performOpenWorkflow: workflowsWorkspace.performOpenWorkflow,
-    identityLabTarget,
     setIdentityLabTarget,
     loadIdentityLabOverview,
     workflows: workflowsWorkspace.workflows,
@@ -459,6 +458,13 @@ function App() {
     void loadSettingsDiagnostics();
   }, []);
 
+  // --- Load Identity Lab Overview on project or tab change ---
+  useEffect(() => {
+    if (projectsWorkspace.projectCollection === "profiles") {
+      void loadIdentityLabOverview(identityLabTarget, projectsWorkspace.selectedProjectId);
+    }
+  }, [projectsWorkspace.selectedProjectId, projectsWorkspace.projectCollection]);
+
   // --- Run polling ---
   useEffect(() => {
     if (!runSnapshots.some((snapshot) => snapshot.state.status === "running")) return;
@@ -472,12 +478,15 @@ function App() {
 
   // --- Navigation Helpers ---
   const openIdentityTarget = useCallback((target: IdentityLabTarget) => {
-    nav.openIdentities(target);
-  }, [nav]);
+    setIdentityLabTarget(target);
+    void loadIdentityLabOverview(target, projectsWorkspace.selectedProjectId);
+  }, [setIdentityLabTarget, loadIdentityLabOverview, projectsWorkspace.selectedProjectId]);
 
   const selectIdentity = useCallback((workflowId: string, identityId: string) => {
-    nav.openIdentities({ type: "managed", workflow_id: workflowId, identity_id: identityId });
-  }, [nav]);
+    const target = { type: "managed" as const, workflow_id: workflowId, identity_id: identityId };
+    setIdentityLabTarget(target);
+    void loadIdentityLabOverview(target, projectsWorkspace.selectedProjectId);
+  }, [setIdentityLabTarget, loadIdentityLabOverview, projectsWorkspace.selectedProjectId]);
 
   const openIdentityWorkflowSettings = useCallback((workflowId: string) => {
     nav.navigateToMissionControlTarget({ type: "workflow", mode: "settings", workflow_id: workflowId });
@@ -574,15 +583,12 @@ function App() {
             ? "schedules"
           : nav.screen === "projects" || nav.screen === "detail" || nav.screen === "subflow-detail"
               ? "projects"
-              : nav.screen === "identities"
-                  ? "identities"
               : nav.screen === "overview"
                 ? "overview"
                 : "projects"
       }
       sidebarCollapsed={nav.sidebarCollapsed}
       onOpenOverview={() => nav.openOverview()}
-      onOpenIdentities={() => nav.openIdentities(null)}
       onOpenProjects={() => nav.openProjects(projectsWorkspace.projectCollection)}
       onOpenSchedules={nav.openSchedules}
       onOpenSettings={nav.openSettings}
@@ -603,26 +609,6 @@ function App() {
           diagnosticsLoading={settingsDiagnosticsLoading}
           diagnosticsError={settingsDiagnosticsError}
           onRefreshDiagnostics={loadSettingsDiagnostics}
-        />
-      ) : nav.screen === "identities" ? (
-        <IdentityLabPage
-          overview={identityLabOverview}
-          loading={identityLabLoading}
-          error={appError}
-          selectedIdentityId={identityLabOverview?.selected?.identity_ref.id ?? identityLabTarget?.identity_id ?? null}
-          onRefresh={() => loadIdentityLabOverview(identityLabTarget)}
-          onSelect={selectIdentity}
-          onOpenWorkflow={(workflowId) => {
-            void workflowsWorkspace.openWorkflow(workflowId);
-          }}
-          onOpenWorkflowSettings={(workflowId) => {
-            void openIdentityWorkflowSettings(workflowId);
-          }}
-          onCloseRetainedSession={(workflowId, profileName) => {
-            void closeIdentitySession(workflowId, profileName);
-          }}
-          onResetIdentity={(workflowId) => resetIdentityFromLab(workflowId)}
-          onOpenIdentityTarget={openIdentityTarget}
         />
       ) : nav.screen === "settings" ? (
         <SettingsPage
@@ -680,21 +666,41 @@ function App() {
                 void subflowsWorkspace.loadSubflowsForProject();
               }}
             />
-          ) : projectsWorkspace.projectCollection === "settings" ? (
-            <ProjectEnvironmentSettings
+          ) : projectsWorkspace.projectCollection === "profiles" ? (
+            <ProjectProfilesPanel
               project={selectedProject}
               projectEnvironments={selectedProjectEnvironments}
               workflows={selectedProjectWorkflows}
+              overview={identityLabOverview}
+              loading={identityLabLoading}
               error={appError}
-              onUpdateProject={(id, input) => projectsWorkspace.updateProject(id, input)}
-              onDuplicateProject={(id) => projectsWorkspace.duplicateProject(id)}
-              onExportProjectPackage={exportProjectPackageFile}
-              onDeleteProject={(id) => projectsWorkspace.deleteProject(id)}
+              onRefresh={() => loadIdentityLabOverview(identityLabTarget, selectedProject?.id)}
+              onSelectIdentity={selectIdentity}
+              onOpenWorkflow={(workflowId) => {
+                void workflowsWorkspace.openWorkflow(workflowId);
+              }}
+              onOpenWorkflowSettings={(workflowId) => {
+                void openIdentityWorkflowSettings(workflowId);
+              }}
+              onCloseRetainedSession={(workflowId, profileName) => {
+                void closeIdentitySession(workflowId, profileName, selectedProject?.id);
+              }}
+              onResetIdentity={(workflowId) => resetIdentityFromLab(workflowId, selectedProject?.id)}
+              onOpenIdentityTarget={openIdentityTarget}
               onCreateProjectEnvironment={createProjectEnvironment}
               onUpdateProjectEnvironment={updateProjectEnvironment}
               onDeleteProjectEnvironment={async (environmentId) => {
                 await deleteProjectEnvironment(environmentId, selectedProject?.id);
               }}
+            />
+          ) : projectsWorkspace.projectCollection === "settings" ? (
+            <ProjectEnvironmentSettings
+              project={selectedProject}
+              error={appError}
+              onUpdateProject={(id, input) => projectsWorkspace.updateProject(id, input)}
+              onDuplicateProject={(id) => projectsWorkspace.duplicateProject(id)}
+              onExportProjectPackage={exportProjectPackageFile}
+              onDeleteProject={(id) => projectsWorkspace.deleteProject(id)}
             />
           ) : (
             <WorkflowListPage

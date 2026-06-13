@@ -91,7 +91,7 @@ describe("App settings and graph autosave", () => {
     await within(collections).findByRole("button", { name: "Workflows" });
   }
 
-  async function openProjectTab(tabName: "Workflows" | "Subflows" | "Settings") {
+  async function openProjectTab(tabName: "Workflows" | "Subflows" | "Profiles" | "Settings") {
     const collections = await getProjectCollections();
     await userEvent.click(within(collections).getByRole("button", { name: tabName }));
   }
@@ -160,7 +160,7 @@ describe("App settings and graph autosave", () => {
       .not.toBeInTheDocument();
   });
 
-  test("shows grouped project identity controls in the project settings tab", async () => {
+  test("shows grouped project identity controls in the project profiles tab", async () => {
     const project = {
       id: "project-1",
       name: "Main",
@@ -192,9 +192,9 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await openProjectTab("Settings");
+    await openProjectTab("Profiles");
 
-    expect(await screen.findByRole("heading", { name: "Project identity" }))
+    expect(await screen.findByRole("region", { name: "Profiles workspace" }))
       .toBeInTheDocument();
     const profilesGroup = screen.getByRole("group", { name: "Browser Profiles" });
     expect(within(profilesGroup).getByDisplayValue("Project browser profile"))
@@ -372,7 +372,7 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByDisplayValue("Owned Lab")).toBeInTheDocument();
   });
 
-  test("keeps project browser profile identity details hidden in App settings", async () => {
+  test("keeps project browser profile identity details hidden in project profiles tab", async () => {
     const project = {
       id: "project-1",
       name: "Main",
@@ -404,7 +404,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await openProjectTab("Settings");
+    await openProjectTab("Profiles");
     const profilesGroup = await screen.findByRole("group", { name: "Browser Profiles" });
     expect(within(profilesGroup).getByDisplayValue("Project browser profile"))
       .toBeInTheDocument();
@@ -421,7 +421,7 @@ describe("App settings and graph autosave", () => {
     );
   });
 
-  test("creates project browser profiles from App settings", async () => {
+  test("creates project browser profiles from project profiles tab", async () => {
     const project = {
       id: "project-1",
       name: "Main",
@@ -475,7 +475,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await openProjectTab("Settings");
+    await openProjectTab("Profiles");
     workflowCommandCallMock.mockClear();
 
     const profilesGroup = await screen.findByRole("group", { name: "Browser Profiles" });
@@ -493,7 +493,7 @@ describe("App settings and graph autosave", () => {
         },
       );
     });
-    expect(await screen.findByDisplayValue("Buyer A")).toBeInTheDocument();
+    expect(await screen.findByText("Buyer A")).toBeInTheDocument();
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
       "reset_project_environment_browser_identity",
       expect.anything(),
@@ -1002,7 +1002,31 @@ describe("App settings and graph autosave", () => {
     }));
     const closeIdentityRetainedSession = vi.fn();
     mockWorkflowBridgeCommands({
-      ...listWorkflowScenario([workflow]),
+      ...listWorkflowScenario([
+        {
+          ...workflow,
+          project_id: "project-1",
+          environment_id: "environment-1",
+          environment_name: "Profile A",
+        },
+      ]),
+      list_projects: [{ id: "project-1", name: "Main", description: "" }],
+      list_project_environments: () => [
+        {
+          id: "environment-1",
+          project_id: "project-1",
+          name: "Profile A",
+          description: "",
+          is_default: true,
+          browser_launch: {
+            session_mode: "persistent_profile",
+            identity_id: "bi_123",
+            display_name: "Profile A",
+            profile_dir: "bi_123",
+            fingerprint_seed: "seed-a",
+          },
+        },
+      ],
       get_identity_lab_overview: ({ request }: { request: unknown }) =>
         getIdentityLabOverview(request),
       get_identity_lab_detail: () => getIdentityLabOverview().selected,
@@ -1012,15 +1036,14 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Identities" }));
+    await openProjectTab("Profiles");
 
-    expect(await screen.findByRole("heading", { name: "Identity Lab" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Managed identities" })).toHaveTextContent("QA identity");
-    expect(screen.getByRole("region", { name: "Identity detail" })).toHaveTextContent("Proxy");
-    expect(screen.getByRole("region", { name: "Identity detail" })).toHaveTextContent("seed-hash");
+    expect(await screen.findByRole("region", { name: "Profiles workspace" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Browser profiles list" })).toHaveTextContent("Profile A");
+    expect(screen.getByRole("region", { name: "Profile detail" })).toHaveTextContent("Proxy");
+    expect(screen.getByRole("region", { name: "Profile detail" })).toHaveTextContent("seed-hash");
     expect(screen.queryByRole("button", { name: "Open Last Run" })).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Identities" }));
     await userEvent.click(await screen.findByRole("button", { name: "Close Retained Session" }));
     await waitFor(() => {
       expect(closeIdentityRetainedSession).toHaveBeenCalledWith(workflow.id, "bi_123");
@@ -1031,6 +1054,23 @@ describe("App settings and graph autosave", () => {
     const scenario = workflowDetailScenario([]);
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([]),
+      list_projects: [{ id: "project-1", name: "Main", description: "" }],
+      list_project_environments: () => [
+        {
+          id: "environment-1",
+          project_id: "project-1",
+          name: "Profile A",
+          description: "",
+          is_default: true,
+          browser_launch: {
+            session_mode: "persistent_profile",
+            identity_id: "bi_123",
+            display_name: "Profile A",
+            profile_dir: "bi_123",
+            fingerprint_seed: "seed-a",
+          },
+        },
+      ],
       get_workflow: scenario.get_workflow,
       get_workflow_settings: scenario.get_workflow_settings,
       get_workflow_graph: scenario.get_workflow_graph,
@@ -1078,7 +1118,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Identities" }));
+    await openProjectTab("Profiles");
     await userEvent.click(await screen.findByRole("button", { name: "Open Workflow Settings" }));
 
     const settingsDialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
