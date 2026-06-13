@@ -47,6 +47,7 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 - Rewrite existing graph links or edge waits when changing defaults.
 
 ## Key Conventions
+- Quick Reference Map: `docs/ARCHITECTURE_QUICK_REF.md`. Read it to find hooks and commands instantly.
 - Layer map: `docs/architecture/overview.md`. Read it for broad or unclear tasks.
 - Add/update tests when changing validation, commands, persistence, runner, or UI.
 - Run `npm run lint` and `npx tsc --noEmit` before committing.
