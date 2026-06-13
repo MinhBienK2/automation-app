@@ -429,8 +429,8 @@
 
 .identity-workspace {
   display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
+  gap: 20px;
+  grid-template-columns: 280px 1fr;
   min-height: 0;
 }
 

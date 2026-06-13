@@ -204,17 +204,10 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
         <section className="panel identity-detail" aria-label="Profile detail">
           {selectedEnv && browserLaunchDraft ? (
             <div className="identity-detail-body" style={{ maxHeight: "calc(100vh - 180px)", overflowY: "auto", paddingRight: "8px" }}>
-              <header style={{ borderBottom: "1px solid #233240", paddingBottom: "16px" }}>
-                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                  <label className="field" style={{ flex: 1, margin: 0 }}>
-                    <span>Profile name</span>
-                    <Input
-                      aria-label={`Profile name for ${selectedEnv.name}`}
-                      value={profileNameDraft}
-                      onChange={(e) => setProfileNameDraft(e.target.value)}
-                    />
-                  </label>
-                  <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+              <header style={{ borderBottom: "1px solid #233240", paddingBottom: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h2 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 600, color: "var(--app-text)" }}>Profile Configuration</h2>
+                  <div style={{ display: "flex", gap: "8px" }}>
                     <Button type="button" size="sm" disabled={!hasChanges} onClick={handleSaveProfile}>
                       Save
                     </Button>
@@ -232,6 +225,15 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
                     </Button>
                   </div>
                 </div>
+
+                <label className="field" style={{ margin: 0, width: "100%" }}>
+                  <span>Profile name</span>
+                  <Input
+                    aria-label={`Profile name for ${selectedEnv.name}`}
+                    value={profileNameDraft}
+                    onChange={(e) => setProfileNameDraft(e.target.value)}
+                  />
+                </label>
               </header>
 
               <div className="profile-settings-form" style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
