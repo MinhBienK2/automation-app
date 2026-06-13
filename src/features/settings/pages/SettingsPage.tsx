@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { GraphShortcutGuide } from "../../workflows/components/GraphShortcutGuide";
 import { Button } from "../../../components/ui/button";
-import { XPathCookbook } from "../components/XPathCookbook";
 import {
   Dialog,
   DialogContent,
@@ -54,7 +52,7 @@ export function SettingsPage({
       <header className="app-header">
         <div>
           <p className="eyebrow">Application</p>
-          <h1>App Settings</h1>
+          <h1>Setting</h1>
         </div>
       </header>
 
@@ -74,8 +72,6 @@ export function SettingsPage({
           onCheckedChange={onGraphAutosaveEnabledChange}
         />
       </section>
-
-      <XPathCookbook />
 
       <section className="panel settings-panel" aria-label="Environment readiness">
         <div className="panel-heading">
@@ -216,17 +212,6 @@ export function SettingsPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <section className="panel settings-panel" aria-label="Graph shortcuts">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Workflow Editing</p>
-            <h2>Graph shortcuts</h2>
-          </div>
-        </div>
-
-        <GraphShortcutGuide />
-      </section>
 
     </section>
   );

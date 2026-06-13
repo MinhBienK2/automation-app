@@ -67,13 +67,81 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border-color: #233240;
+  justify-content: flex-start !important;
+  min-height: 38px !important;
+  padding: 0 14px !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--app-text-secondary) !important;
   text-align: left;
+  transition: all 140ms ease;
+  font-weight: 500;
+}
+
+.sidebar-nav-item:hover {
+  color: var(--app-text) !important;
+  background: var(--app-surface-muted) !important;
+  border-color: var(--app-border) !important;
 }
 
 .sidebar-nav-item-active {
-  border-color: rgba(50, 211, 230, 0.48);
-  color: #32d3e6;
+  color: var(--app-accent) !important;
+  background: rgba(50, 211, 230, 0.06) !important;
+  border-color: rgba(50, 211, 230, 0.2) !important;
+  border-left: 3px solid var(--app-accent) !important;
+}
+
+.sidebar-collapsible-group {
+  display: grid;
+  gap: 4px;
+}
+
+.sidebar-chevron-icon {
+  color: var(--app-text-muted);
+  transition: color 140ms ease, transform 140ms ease;
+}
+
+.sidebar-nav-item:hover .sidebar-chevron-icon {
+  color: var(--app-text-secondary);
+}
+
+.sidebar-submenu {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  margin-left: 20px;
+  padding-left: 12px;
+  border-left: 1.5px solid rgba(50, 211, 230, 0.12);
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.sidebar-submenu-item {
+  width: 100%;
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  justify-content: flex-start !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--app-text-muted) !important;
+  transition: all 140ms ease;
+}
+
+.sidebar-submenu-item:hover {
+  color: var(--app-text) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.sidebar-submenu-item-active {
+  color: var(--app-accent) !important;
+  background: rgba(50, 211, 230, 0.06) !important;
+  border-color: rgba(50, 211, 230, 0.15) !important;
+  font-weight: 500 !important;
 }
 
 .sidebar-toggle {
@@ -577,7 +645,8 @@
   padding: 18px;
 }
 
-.xpath-cookbook-panel {
+.xpath-cookbook-panel,
+.graph-shortcuts-panel {
   max-width: 960px;
 }
 

@@ -111,9 +111,9 @@ describe("App settings and graph autosave", () => {
 
     const { unmount } = renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Setting" }));
 
-    expect(await screen.findByRole("heading", { name: "App Settings" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Setting" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Project browser profile" }))
       .not.toBeInTheDocument();
     const autosaveToggle = screen.getByRole("switch", {
@@ -127,7 +127,7 @@ describe("App settings and graph autosave", () => {
     unmount();
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Setting" }));
     expect(
       screen.getByRole("switch", { name: "Autosave graph changes" }),
     ).toHaveAttribute("aria-checked", "false");
@@ -138,7 +138,8 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Setting" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Help" }));
 
     const cookbook = await screen.findByRole("region", { name: "XPath cookbook" });
     expect(
@@ -1348,7 +1349,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Setting" }));
 
     expect(await screen.findByRole("region", { name: "Environment readiness" })).toHaveTextContent("CloakBrowser");
     expect(screen.getByRole("region", { name: "Environment readiness" })).toHaveTextContent("GeoIP available");
@@ -1380,7 +1381,8 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Setting" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Help" }));
 
     const shortcuts = await screen.findByRole("region", { name: "Graph shortcuts" });
     expect(within(shortcuts).getByText("Drag empty canvas")).toBeInTheDocument();
@@ -1560,9 +1562,9 @@ describe("App settings and graph autosave", () => {
       expect(saveGraph).toHaveBeenCalled();
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "App Settings" }));
+    await userEvent.click(screen.getByRole("button", { name: "Setting" }));
 
-    expect(await screen.findByRole("heading", { name: "App Settings" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Setting" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Unsaved changes" })).not.toBeInTheDocument();
   });
 
@@ -1583,7 +1585,7 @@ describe("App settings and graph autosave", () => {
 
     expect(await screen.findByText("Autosave failed")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "App Settings" }));
+    await userEvent.click(screen.getByRole("button", { name: "Setting" }));
 
     const confirmDialog = await screen.findByRole("dialog", { name: "Unsaved changes" });
     await userEvent.click(within(confirmDialog).getByRole("button", { name: "Save and close" }));
@@ -1591,7 +1593,7 @@ describe("App settings and graph autosave", () => {
     await waitFor(() => {
       expect(saveGraph).toHaveBeenCalledTimes(2);
     });
-    expect(await screen.findByRole("heading", { name: "App Settings" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Setting" })).toBeInTheDocument();
   });
 
   test("asks before leaving a subflow detail with unsaved graph changes", async () => {

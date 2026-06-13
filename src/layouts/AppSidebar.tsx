@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { Button } from "../components/ui/button";
-import { CalendarClock, Files, Fingerprint, Folder, Gauge, Settings } from "lucide-react";
+import { CalendarClock, Files, Fingerprint, Folder, Gauge, Settings, ChevronDown, ChevronRight } from "lucide-react";
+import type { AppScreen } from "../shared/types/workspaceContracts";
 
 type AppSidebarActiveItem = "overview" | "projects" | "evidence" | "schedules" | "identities" | "settings";
 
@@ -12,7 +14,9 @@ type AppSidebarProps = {
   onOpenProjects: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
+  onOpenSettingsHelp: () => void;
   onToggle: () => void;
+  screen: AppScreen;
 };
 
 const appLogoSrc = `${import.meta.env.BASE_URL}app-logo.svg`;
@@ -58,8 +62,18 @@ export function AppSidebar({
   onOpenProjects,
   onOpenSchedules,
   onOpenSettings,
+  onOpenSettingsHelp,
   onToggle,
+  screen,
 }: AppSidebarProps) {
+  const [settingsExpanded, setSettingsExpanded] = useState(() => activeItem === "settings");
+
+  useEffect(() => {
+    if (activeItem === "settings") {
+      setSettingsExpanded(true);
+    }
+  }, [activeItem]);
+
   return (
     <aside aria-label="Application sidebar" className="app-sidebar">
       <div className="sidebar-brand">
@@ -73,7 +87,7 @@ export function AppSidebar({
               ? "sidebar-nav-item sidebar-nav-item-active"
               : "sidebar-nav-item"
           }
-          variant="secondary"
+          variant="ghost"
           type="button"
           onClick={onOpenOverview}
         >
@@ -86,7 +100,7 @@ export function AppSidebar({
               ? "sidebar-nav-item sidebar-nav-item-active"
               : "sidebar-nav-item"
           }
-          variant="secondary"
+          variant="ghost"
           type="button"
           onClick={onOpenProjects}
         >
@@ -99,7 +113,7 @@ export function AppSidebar({
               ? "sidebar-nav-item sidebar-nav-item-active"
               : "sidebar-nav-item"
           }
-          variant="secondary"
+          variant="ghost"
           type="button"
           onClick={onOpenEvidence}
         >
@@ -112,7 +126,7 @@ export function AppSidebar({
               ? "sidebar-nav-item sidebar-nav-item-active"
               : "sidebar-nav-item"
           }
-          variant="secondary"
+          variant="ghost"
           type="button"
           onClick={onOpenSchedules}
         >
@@ -125,26 +139,70 @@ export function AppSidebar({
               ? "sidebar-nav-item sidebar-nav-item-active"
               : "sidebar-nav-item"
           }
-          variant="secondary"
+          variant="ghost"
           type="button"
           onClick={onOpenIdentities}
         >
           <Fingerprint aria-hidden="true" className="sidebar-item-icon" />
           <span>Identities</span>
         </Button>
-        <Button
-          className={
-            activeItem === "settings"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenSettings}
-        >
-          <Settings aria-hidden="true" className="sidebar-item-icon" />
-          <span>App Settings</span>
-        </Button>
+        <div className="sidebar-collapsible-group">
+          <Button
+            className={
+              activeItem === "settings"
+                ? "sidebar-nav-item sidebar-nav-item-active"
+                : "sidebar-nav-item"
+            }
+            variant="ghost"
+            type="button"
+            onClick={() => {
+              setSettingsExpanded(!settingsExpanded);
+              if (activeItem !== "settings") {
+                onOpenSettings();
+              }
+            }}
+          >
+            <Settings aria-hidden="true" className="sidebar-item-icon" />
+            <span style={{ flex: "1 1 auto", textAlign: "left" }}>Setting</span>
+            {!collapsed && (
+              settingsExpanded ? (
+                <ChevronDown className="sidebar-chevron-icon" size={16} />
+              ) : (
+                <ChevronRight className="sidebar-chevron-icon" size={16} />
+              )
+            )}
+          </Button>
+          {!collapsed && settingsExpanded && (
+            <div className="sidebar-submenu">
+              <Button
+                className={
+                  screen === "settings"
+                    ? "sidebar-submenu-item sidebar-submenu-item-active"
+                    : "sidebar-submenu-item"
+                }
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={onOpenSettings}
+              >
+                <span>General</span>
+              </Button>
+              <Button
+                className={
+                  screen === "settings-help"
+                    ? "sidebar-submenu-item sidebar-submenu-item-active"
+                    : "sidebar-submenu-item"
+                }
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={onOpenSettingsHelp}
+              >
+                <span>Help</span>
+              </Button>
+            </div>
+          )}
+        </div>
       </nav>
       <Button
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}

@@ -147,6 +147,15 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     void requestGraphExitNavigation(performOpenSettings);
   }, [requestGraphExitNavigation, performOpenSettings]);
 
+  const performOpenSettingsHelp = useCallback(() => {
+    setScreen("settings-help");
+    setAppError("");
+  }, [setAppError]);
+
+  const openSettingsHelp = useCallback(() => {
+    void requestGraphExitNavigation(performOpenSettingsHelp);
+  }, [requestGraphExitNavigation, performOpenSettingsHelp]);
+
   const performOpenSchedules = useCallback(() => {
     setScreen("schedules");
     setAppError("");
@@ -334,6 +343,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     openProjects,
     openOverview,
     openSettings,
+    openSettingsHelp,
     openSchedules,
     openEvidence,
     openIdentities,

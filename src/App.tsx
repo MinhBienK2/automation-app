@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
+import { SettingsHelpPage } from "./features/settings/pages/SettingsHelpPage";
 import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnostics";
 import { EvidenceExplorerPage } from "./features/evidence/pages/EvidenceExplorerPage";
 import { IdentityLabPage } from "./features/identities/pages/IdentityLabPage";
@@ -593,7 +594,7 @@ function App() {
   return (
     <AppShell
       activeItem={
-        nav.screen === "settings"
+        nav.screen === "settings" || nav.screen === "settings-help"
           ? "settings"
           : nav.screen === "schedules"
             ? "schedules"
@@ -614,7 +615,9 @@ function App() {
       onOpenProjects={() => nav.openProjects(projectsWorkspace.projectCollection)}
       onOpenSchedules={nav.openSchedules}
       onOpenSettings={nav.openSettings}
+      onOpenSettingsHelp={nav.openSettingsHelp}
       onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
+      screen={nav.screen}
     >
       {nav.screen === "overview" ? (
         <OperationsOverviewPage
@@ -680,6 +683,8 @@ function App() {
           onInstallBinary={installSettingsBrowserBinary}
           onCleanupProfiles={cleanupSettingsBrowserProfiles}
         />
+      ) : nav.screen === "settings-help" ? (
+        <SettingsHelpPage />
       ) : nav.screen === "schedules" ? (
         <SchedulesPage
           schedules={schedules}

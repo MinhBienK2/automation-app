@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AppSidebar } from "./AppSidebar";
+import type { AppScreen } from "../shared/types/workspaceContracts";
 
 type AppShellProps = {
   children: ReactNode;
@@ -11,7 +12,9 @@ type AppShellProps = {
   onOpenProjects: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
+  onOpenSettingsHelp: () => void;
   onToggleSidebar: () => void;
+  screen: AppScreen;
 };
 
 export function AppShell({
@@ -24,7 +27,9 @@ export function AppShell({
   onOpenProjects,
   onOpenSchedules,
   onOpenSettings,
+  onOpenSettingsHelp,
   onToggleSidebar,
+  screen,
 }: AppShellProps) {
   return (
     <main className={sidebarCollapsed ? "app-shell app-shell-collapsed" : "app-shell"}>
@@ -37,7 +42,9 @@ export function AppShell({
         onOpenProjects={onOpenProjects}
         onOpenSchedules={onOpenSchedules}
         onOpenSettings={onOpenSettings}
+        onOpenSettingsHelp={onOpenSettingsHelp}
         onToggle={onToggleSidebar}
+        screen={screen}
       />
 
       <section aria-label="Application content" className="app-content" role="region">

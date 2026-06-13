@@ -58,7 +58,7 @@ describe("App shell", () => {
       "Evidence",
       "Schedules",
       "Identities",
-      "App Settings",
+      "Setting",
     ]);
     expect(screen.queryByRole("button", { name: "Run Center" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Identities" })).toBeInTheDocument();
@@ -69,5 +69,25 @@ describe("App shell", () => {
     expect(screen.queryByRole("searchbox", { name: "Search Mission Control" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Alerts" })).not.toBeInTheDocument();
+  });
+
+  test("toggles collapsible Setting submenu in the sidebar", async () => {
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
+
+    renderApp();
+
+    const settingButton = await screen.findByRole("button", { name: "Setting" });
+    expect(screen.queryByRole("button", { name: "General" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Help" })).not.toBeInTheDocument();
+
+    // Click to expand Setting
+    await userEvent.click(settingButton);
+    expect(await screen.findByRole("button", { name: "General" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Help" })).toBeInTheDocument();
+
+    // Click to collapse Setting
+    await userEvent.click(settingButton);
+    expect(screen.queryByRole("button", { name: "General" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Help" })).not.toBeInTheDocument();
   });
 });

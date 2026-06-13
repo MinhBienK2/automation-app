@@ -21,7 +21,7 @@ import type {
   WorkflowSettingsSaveStatus,
 } from "../../lib/appState";
 
-export type AppScreen = "overview" | "projects" | "detail" | "subflow-detail" | "settings" | "schedules" | "evidence" | "identities";
+export type AppScreen = "overview" | "projects" | "detail" | "subflow-detail" | "settings" | "schedules" | "evidence" | "identities" | "settings-help";
 export type OverviewFocus = "attention" | "recent_evidence" | "live_runs" | null;
 export type WorkflowDialogMode = "create" | "edit" | null;
 export type SubflowBackTarget =
@@ -38,6 +38,7 @@ export interface AppNavigationAPI {
   openProjects: (collection?: "workflows" | "subflows" | "settings") => void;
   openOverview: (focus?: OverviewFocus) => void;
   openSettings: () => void;
+  openSettingsHelp: () => void;
   openSchedules: () => void;
   openEvidence: (nextQuery?: any) => void;
   openIdentities: (target?: any) => void;
