@@ -270,3 +270,68 @@
   border-color: rgba(244, 183, 64, 0.52);
   color: #facc15;
 }
+
+.variable-row-table-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.variable-row-group-card {
+  border: 1px solid #233240;
+  border-radius: 6px;
+  padding: 10px;
+  background: #121c26;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.variable-row-line-one {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 8px;
+}
+
+.variable-row-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.variable-row-line-two {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px solid rgba(35, 50, 64, 0.4);
+  gap: 8px;
+}
+
+.variable-row-type-select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.variable-row-type-select span {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.variable-row-type-select select {
+  height: 28px !important;
+  font-size: 12px;
+  padding: 2px 8px !important;
+  background-color: #0e151d;
+  border-color: #233240;
+  min-width: 96px;
+}
+
+.variable-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+

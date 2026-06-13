@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect, useId } from "react";
+import { useMemo, useRef, useState, useEffect, useId, forwardRef, useImperativeHandle } from "react";
 import { createPortal } from "react-dom";
 import { Braces, Calculator } from "lucide-react";
 import { Button } from "../../../components/ui/button";
@@ -21,21 +21,34 @@ const defaultVariableOptions: VariableOption[] = [
 
 let rememberedVariableOptions: VariableOption[] = [];
 
+export interface TemplateTextFieldRef {
+  insertMath: () => void;
+  toggleBraces: () => void;
+}
+
 type TemplateTextFieldProps = {
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   variableOptions?: VariableOption[];
+  hideCompactButtons?: boolean;
 };
 
-export function TemplateTextField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  variableOptions = defaultVariableOptions,
-}: TemplateTextFieldProps) {
+export const TemplateTextField = forwardRef<TemplateTextFieldRef, TemplateTextFieldProps>(
+  (
+    {
+      id,
+      label,
+      value,
+      onChange,
+      placeholder,
+      variableOptions = defaultVariableOptions,
+      hideCompactButtons = false,
+    },
+    ref,
+  ) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0, width: 0 });
@@ -44,6 +57,11 @@ export function TemplateTextField({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const backdropRef = useRef<HTMLDivElement | null>(null);
   const inputId = useId();
+
+  useImperativeHandle(ref, () => ({
+    insertMath,
+    toggleBraces: () => setOpen((current) => !current),
+  }));
 
   const normalizedQuery = query.trim().toLowerCase();
   const allOptions = useMemo(() => mergeVariableOptions(variableOptions), [variableOptions]);
@@ -212,16 +230,18 @@ export function TemplateTextField({
           {highlightTemplateTokens(value)}
         </div>
         <input
-          id={inputId}
+          id={id || inputId}
           ref={inputRef}
           type="text"
-          className={`highlight-input-element ${hasLabel ? "" : "highlight-input-element-compact"}`}
+          className={`highlight-input-element ${
+            hasLabel || hideCompactButtons ? "" : "highlight-input-element-compact"
+          }`}
           value={value}
           placeholder={placeholder}
           onScroll={handleScroll}
           onChange={(event) => onChange(event.currentTarget.value)}
         />
-        {!hasLabel && (
+        {!hasLabel && !hideCompactButtons && (
           <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1 z-[3]">
             <Button
               aria-label="Insert math"
@@ -290,7 +310,7 @@ export function TemplateTextField({
       )}
     </div>
   );
-}
+});
 
 type TemplateTextareaFieldProps = {
   label: string;

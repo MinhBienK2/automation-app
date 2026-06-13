@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { VariableAssignment, VariableValueType } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
-import { X } from "lucide-react";
-import { rememberVariableOptions, TemplateTextField } from "./TemplateTextField";
+import { X, Calculator, Braces } from "lucide-react";
+import { rememberVariableOptions, TemplateTextField, type TemplateTextFieldRef } from "./TemplateTextField";
 
 type SetVariableConfig = {
   name?: string | null;
@@ -25,6 +25,7 @@ export function SetVariablesConfigFields({
 }: SetVariablesConfigFieldsProps) {
   const rows = variableRowsFromConfig(config);
   const duplicateNames = duplicateVariableNames(rows);
+  const itemRefs = useRef<(TemplateTextFieldRef | null)[]>([]);
 
   useEffect(() => {
     rememberVariableOptions(
@@ -46,61 +47,101 @@ export function SetVariablesConfigFields({
   function removeRow(index: number) {
     const nextRows = rows.filter((_, rowIndex) => rowIndex !== index);
     onChange({ variables: nextRows.length ? nextRows : [emptyVariableRow()] });
+    itemRefs.current.splice(index, 1);
   }
 
   return (
-    <div className="variable-row-table">
-      <div className="variable-row-grid variable-row-heading" aria-hidden="true">
-        <span>Name</span>
-        <span>Type</span>
-        <span>Value</span>
-        <span />
-      </div>
-      {rows.map((row, index) => (
-        <div className="variable-row-grid" key={index}>
-          <Label>
-            <span className="sr-only">Variable {index + 1} name</span>
-            <Input
-              aria-label={`Variable ${index + 1} name`}
-              value={row.name}
-              onChange={(event) => updateRow(index, { name: event.currentTarget.value })}
-            />
-          </Label>
-          <Label>
-            <span className="sr-only">Variable {index + 1} type</span>
-            <Select
-              aria-label={`Variable ${index + 1} type`}
-              value={row.value_type}
-              onChange={(event) =>
-                updateRow(index, { value_type: event.currentTarget.value as VariableValueType })
-              }
-            >
-              <option value="text">Text</option>
-              <option value="json">JSON</option>
-              <option value="number">Number</option>
-              <option value="boolean">Boolean</option>
-            </Select>
-          </Label>
-          <div className="min-w-0">
-            <TemplateTextField
-              label=""
-              value={row.value}
-              onChange={(value) => updateRow(index, { value })}
-              placeholder="Value"
-            />
+    <div className="variable-row-table-v2">
+      {rows.map((row, index) => {
+        const showMath = row.value_type !== "json" && row.value_type !== "boolean";
+        return (
+          <div className="variable-row-group-card" key={index}>
+            {/* Row 1: Name and Value */}
+            <div className="variable-row-line-one">
+              <div className="variable-row-field">
+                <Label htmlFor={`var-name-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Name</Label>
+                <Input
+                  id={`var-name-${index}`}
+                  aria-label={`Variable ${index + 1} name`}
+                  placeholder="Variable name"
+                  value={row.name}
+                  onChange={(event) => updateRow(index, { name: event.currentTarget.value })}
+                  className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
+                />
+              </div>
+              <div className="variable-row-field">
+                <Label htmlFor={`var-value-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Value</Label>
+                <TemplateTextField
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
+                  id={`var-value-${index}`}
+                  label=""
+                  value={row.value}
+                  onChange={(value) => updateRow(index, { value })}
+                  placeholder="Value"
+                  hideCompactButtons={true}
+                />
+              </div>
+            </div>
+
+            {/* Row 2: Type and Action Buttons */}
+            <div className="variable-row-line-two">
+              <div className="variable-row-type-select">
+                <span className="text-xs text-[var(--app-text-secondary)] font-medium">Type:</span>
+                <Select
+                  aria-label={`Variable ${index + 1} type`}
+                  value={row.value_type}
+                  onChange={(event) =>
+                    updateRow(index, { value_type: event.currentTarget.value as VariableValueType })
+                  }
+                  className="h-7 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)] py-0"
+                >
+                  <option value="text">Text</option>
+                  <option value="json">JSON</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Boolean</option>
+                </Select>
+              </div>
+
+              <div className="variable-row-actions">
+                {showMath && (
+                  <Button
+                    aria-label={`Insert math for variable ${index + 1}`}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => itemRefs.current[index]?.insertMath()}
+                    className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+                  >
+                    <Calculator className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button
+                  aria-label={`Insert variable for variable ${index + 1}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => itemRefs.current[index]?.toggleBraces()}
+                  className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+                >
+                  <Braces className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  aria-label={`Remove variable ${index + 1}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeRow(index)}
+                  className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
           </div>
-          <Button
-            aria-label={`Remove variable ${index + 1}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => removeRow(index)}
-            className="h-8 w-8 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
+        );
+      })}
       {duplicateNames.length ? (
         <p className="variable-warning">
           Duplicate paths overwrite earlier rows: {duplicateNames.join(", ")}
@@ -111,6 +152,7 @@ export function SetVariablesConfigFields({
         variant="secondary"
         size="sm"
         onClick={() => onChange({ variables: [...rows, emptyVariableRow()] })}
+        className="mt-2 text-xs"
       >
         Add variable row
       </Button>
