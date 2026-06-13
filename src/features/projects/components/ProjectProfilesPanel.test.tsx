@@ -137,9 +137,10 @@ describe("ProjectProfilesPanel", () => {
       />,
     );
 
-    expect(screen.getByText("Profile A")).toBeInTheDocument();
+    const list = screen.getByRole("region", { name: "Browser profiles list" });
+    expect(within(list).getByText("Profile A")).toBeInTheDocument();
     expect(screen.getByText("Used by 1 workflow")).toBeInTheDocument();
-    expect(screen.getByText("retained")).toBeInTheDocument();
+    expect(within(list).getByText("retained")).toBeInTheDocument();
 
     const input = screen.getByLabelText("Profile name for Profile A");
     expect(input).toHaveValue("Profile A");
@@ -276,10 +277,11 @@ describe("ProjectProfilesPanel", () => {
       />,
     );
 
-    const profileARow = screen.getByText("Profile A").closest("button");
+    const list = screen.getByRole("region", { name: "Browser profiles list" });
+    const profileARow = within(list).getByText("Profile A").closest("button");
     expect(profileARow).toHaveClass("identity-row-active");
 
-    const profileBRow = screen.getByText("Profile B").closest("button");
+    const profileBRow = within(list).getByText("Profile B").closest("button");
     expect(profileBRow).not.toHaveClass("identity-row-active");
     await user.click(profileBRow!);
 

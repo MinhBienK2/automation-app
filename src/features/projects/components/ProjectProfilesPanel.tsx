@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { RefreshCw, ShieldCheck, XCircle, Plus, Trash2 } from "lucide-react";
+import { RefreshCw, ShieldCheck, XCircle, Plus, Trash2, Fingerprint } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -74,6 +74,11 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
 
   const selectedEnv = projectEnvironments.find((e) => e.id === selectedEnvId) || projectEnvironments[0] || null;
   const usingWorkflows = selectedEnv ? workflows.filter((w) => w.environment_id === selectedEnv.id) : [];
+  const selectedMatches = selectedEnv ? overview?.items.filter((item) => {
+    const wf = workflows.find((w) => w.id === item.workflow_ref.id);
+    return wf?.environment_id === selectedEnv.id;
+  }) || [] : [];
+  const hasSession = selectedMatches.some((item) => item.retained_session.active);
 
   const lastSyncedWorkflowIdRef = useRef<string | null>(null);
 
@@ -204,9 +209,60 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
         <section className="panel identity-detail" aria-label="Profile detail">
           {selectedEnv && browserLaunchDraft ? (
             <div className="identity-detail-body" style={{ maxHeight: "calc(100vh - 180px)", overflowY: "auto", paddingRight: "8px" }}>
-              <header style={{ borderBottom: "1px solid #233240", paddingBottom: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h2 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 600, color: "var(--app-text)" }}>Profile Configuration</h2>
+                <header style={{
+                  borderBottom: "1px solid #233240",
+                  paddingBottom: "16px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}>
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "8px",
+                      background: "rgba(50, 211, 230, 0.08)",
+                      border: "1px solid rgba(50, 211, 230, 0.2)"
+                    }}>
+                      <Fingerprint style={{ width: "24px", height: "24px", color: "var(--app-accent)" }} />
+                    </div>
+                    <div>
+                      <h2 style={{
+                        margin: 0,
+                        fontSize: "1.2rem",
+                        fontWeight: 600,
+                        color: "var(--app-text)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px"
+                      }}>
+                        {profileNameDraft || selectedEnv.name}
+                        {hasChanges && (
+                          <span style={{
+                            fontSize: "10px",
+                            fontWeight: 500,
+                            color: "var(--app-warning)",
+                            border: "1px solid rgba(244, 183, 64, 0.3)",
+                            background: "rgba(244, 183, 64, 0.08)",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            textTransform: "uppercase"
+                          }}>
+                            Unsaved Changes
+                          </span>
+                        )}
+                      </h2>
+                      <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "4px" }}>
+                        <span className={hasSession ? "status-pill status-pill-on" : "status-pill"}>
+                          {hasSession ? "retained" : "closed"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                   <div style={{ display: "flex", gap: "8px" }}>
                     <Button type="button" size="sm" disabled={!hasChanges} onClick={handleSaveProfile}>
                       Save
@@ -224,19 +280,23 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
                       Delete
                     </Button>
                   </div>
-                </div>
+                </header>
 
-                <label className="field" style={{ margin: 0, width: "100%" }}>
-                  <span>Profile name</span>
-                  <Input
-                    aria-label={`Profile name for ${selectedEnv.name}`}
-                    value={profileNameDraft}
-                    onChange={(e) => setProfileNameDraft(e.target.value)}
-                  />
-                </label>
-              </header>
-
-              <div className="profile-settings-form" style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
+                <div className="profile-settings-form" style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
+                  {/* General Settings */}
+                  <SettingsFieldGroup
+                    title="General Settings"
+                    description="Modify the profile display name."
+                  >
+                    <label className="field settings-field-group-wide">
+                      <span>Profile name</span>
+                      <Input
+                        aria-label={`Profile name for ${selectedEnv.name}`}
+                        value={profileNameDraft}
+                        onChange={(e) => setProfileNameDraft(e.target.value)}
+                      />
+                    </label>
+                  </SettingsFieldGroup>
                 {/* Proxy Settings */}
                 <SettingsFieldGroup
                   title="Proxy Configuration"
