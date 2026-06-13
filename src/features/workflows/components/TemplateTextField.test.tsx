@@ -123,4 +123,29 @@ describe("TemplateTextField", () => {
     // Restore innerHeight
     Object.defineProperty(window, "innerHeight", { writable: true, value: originalInnerHeight });
   });
+
+  test("renders compactly without header row when label is empty", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    const handleChange = vi.fn();
+
+    render(
+      <TemplateTextField
+        label=""
+        value="hello"
+        onChange={handleChange}
+      />
+    );
+
+    // Should not render any labeled insert trigger
+    expect(screen.queryByRole("button", { name: /Insert variable for/i })).not.toBeInTheDocument();
+
+    // Should render the compact trigger button
+    const trigger = screen.getByRole("button", { name: "Insert variable" });
+    expect(trigger).toBeInTheDocument();
+    expect(trigger).toHaveClass("absolute");
+
+    // Click trigger and verify popover opens
+    await user.click(trigger);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+  });
 });

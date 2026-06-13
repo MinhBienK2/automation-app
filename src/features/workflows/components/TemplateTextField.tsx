@@ -135,22 +135,26 @@ export function TemplateTextField({
     }
   };
 
+  const hasLabel = Boolean(label && label.trim());
+
   return (
-    <div className="space-y-1.5" ref={containerRef}>
-      <div className="flex items-center justify-between">
-        <Label htmlFor={inputId} className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
-        <Button
-          aria-expanded={open}
-          aria-label={`Insert variable for ${label}`}
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setOpen((current) => !current)}
-          className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-        >
-          <Braces className="h-3 w-3" />
-        </Button>
-      </div>
+    <div className={hasLabel ? "space-y-1.5" : ""} ref={containerRef}>
+      {hasLabel && (
+        <div className="flex items-center justify-between">
+          <Label htmlFor={inputId} className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
+          <Button
+            aria-expanded={open}
+            aria-label={`Insert variable for ${label}`}
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setOpen((current) => !current)}
+            className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+          >
+            <Braces className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
 
       <div className="highlight-input-container">
         <div ref={backdropRef} className="highlight-input-backdrop">
@@ -160,12 +164,25 @@ export function TemplateTextField({
           id={inputId}
           ref={inputRef}
           type="text"
-          className="highlight-input-element"
+          className={`highlight-input-element ${hasLabel ? "" : "highlight-input-element-compact"}`}
           value={value}
           placeholder={placeholder}
           onScroll={handleScroll}
           onChange={(event) => onChange(event.currentTarget.value)}
         />
+        {!hasLabel && (
+          <Button
+            aria-expanded={open}
+            aria-label="Insert variable"
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setOpen((current) => !current)}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)] z-[3]"
+          >
+            <Braces className="h-3 w-3" />
+          </Button>
+        )}
       </div>
 
       {open && createPortal(

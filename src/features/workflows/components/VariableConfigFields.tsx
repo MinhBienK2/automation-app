@@ -4,7 +4,8 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
-import { rememberVariableOptions } from "./TemplateTextField";
+import { X } from "lucide-react";
+import { rememberVariableOptions, TemplateTextField } from "./TemplateTextField";
 
 type SetVariableConfig = {
   name?: string | null;
@@ -80,22 +81,23 @@ export function SetVariablesConfigFields({
               <option value="boolean">Boolean</option>
             </Select>
           </Label>
-          <Label>
-            <span className="sr-only">Variable {index + 1} value</span>
-            <Input
-              aria-label={`Variable ${index + 1} value`}
+          <div className="min-w-0">
+            <TemplateTextField
+              label=""
               value={row.value}
-              onChange={(event) => updateRow(index, { value: event.currentTarget.value })}
+              onChange={(value) => updateRow(index, { value })}
+              placeholder="Value"
             />
-          </Label>
+          </div>
           <Button
             aria-label={`Remove variable ${index + 1}`}
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => removeRow(index)}
+            className="h-8 w-8 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
           >
-            Remove
+            <X className="h-4 w-4" />
           </Button>
         </div>
       ))}

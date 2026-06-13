@@ -1039,6 +1039,10 @@
   box-sizing: border-box;
 }
 
+.highlight-input-element-compact {
+  padding-right: 32px !important;
+}
+
 .highlight-textarea-container {
   position: relative;
   width: 100%;
