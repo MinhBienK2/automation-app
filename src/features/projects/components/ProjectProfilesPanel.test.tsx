@@ -289,5 +289,71 @@ describe("ProjectProfilesPanel", () => {
     expect(profileBRow).toHaveClass("identity-row-active");
     expect(profileARow).not.toHaveClass("identity-row-active");
   });
+
+  test("can configure and save profile launch options", async () => {
+    const user = userEvent.setup();
+    const onUpdateProjectEnvironment = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <ProjectProfilesPanel
+        project={project}
+        projectEnvironments={environments}
+        workflows={workflows}
+        overview={overview}
+        loading={false}
+        error=""
+        onRefresh={vi.fn()}
+        onSelectIdentity={vi.fn()}
+        onOpenWorkflow={vi.fn()}
+        onOpenWorkflowSettings={vi.fn()}
+        onCloseRetainedSession={vi.fn()}
+        onResetIdentity={vi.fn()}
+        onOpenIdentityTarget={vi.fn()}
+        onCreateProjectEnvironment={vi.fn()}
+        onUpdateProjectEnvironment={onUpdateProjectEnvironment}
+        onDeleteProjectEnvironment={vi.fn()}
+      />,
+    );
+
+    const proxySwitch = screen.getByRole("switch", { name: "Enable Proxy" });
+    expect(proxySwitch).not.toBeChecked();
+    await user.click(proxySwitch);
+    expect(proxySwitch).toBeChecked();
+
+    const proxyInput = screen.getByLabelText("Proxy Server");
+    await user.type(proxyInput, "http://myproxy:8080");
+
+    const headlessSwitch = screen.getByRole("switch", { name: "Headless mode" });
+    expect(headlessSwitch).not.toBeChecked();
+    await user.click(headlessSwitch);
+    expect(headlessSwitch).toBeChecked();
+
+    const geoipSwitch = screen.getByRole("switch", { name: "Determine location by GeoIP" });
+    expect(geoipSwitch).toBeChecked();
+    await user.click(geoipSwitch);
+    expect(geoipSwitch).not.toBeChecked();
+
+    const timezoneInput = screen.getByLabelText("Timezone");
+    await user.clear(timezoneInput);
+    await user.type(timezoneInput, "America/New_York");
+
+    const localeInput = screen.getByLabelText("Locale");
+    await user.clear(localeInput);
+    await user.type(localeInput, "en-US");
+
+    const saveButton = screen.getByRole("button", { name: "Save" });
+    await user.click(saveButton);
+
+    expect(onUpdateProjectEnvironment).toHaveBeenCalledWith("env-1", {
+      browser_launch: expect.objectContaining({
+        proxy_enabled: true,
+        proxy_server: "http://myproxy:8080",
+        headless: true,
+        geoip: false,
+        timezone: "America/New_York",
+        locale: "en-US",
+      }),
+    });
+  });
 });
 

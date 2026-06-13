@@ -15,7 +15,7 @@ Preserve these unless the task explicitly changes them.
 
 - Scoped browser profiles list showing used counts, session statuses, and recent failures.
 - CRUD: add profiles, rename inline, delete unused after confirmation.
-- Integrated Identity Lab controls: configured posture, latest observed identity evidence, diagnostics (binary, geoip, display, fonts), rotation history, and action controls (Close Retained Session, Reset Identity).
+- Editable configuration options for the selected profile: Proxy (enabled, server, username, password), Timezone/Locale (with GeoIP toggle), WebRTC policy, Headless mode, Humanize settings (with presets), and Custom Fonts directory.
 
 ## Project Settings
 
@@ -31,8 +31,8 @@ Preserve these unless the task explicitly changes them.
 - Backend-generated `bi_<32 hex>` identity ids.
 - Internal persistent profile directories.
 - Deterministic CloakBrowser fingerprint seeds + stored persona metadata.
-- Proxy/location posture, humanization, headless defaults.
-- Values remain backend/profile-owned, not editable Workflow Settings fields.
+- Editable Proxy/location posture, humanization, headless, WebRTC, and custom fonts.
+- Browser launch configuration is managed and editable per browser profile in the Profiles tab, and selected by workflows.
 - Profile deletion rejects while selected by active run or retained session.
 - New profile = new identity (user-facing route to new browser identity).
 
@@ -73,5 +73,3 @@ Preserve these unless the task explicitly changes them.
 - Compact desktop (1024x768): no horizontal page overflow; table interiors may keep bounded scrolling.
 - Command errors shown as readable messages.
 - Icon-only controls: accessible labels + visible tooltip text.
-- Identity Lab Close Retained Session: closes in-memory context only, does NOT delete profile data/cookies/settings/evidence/runs.
-- Identity Lab Reset Identity: guarded backend command with in-app confirmation, unavailable while run/session blocks.

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Fingerprint, RefreshCw, ShieldCheck, XCircle, Plus, Trash2 } from "lucide-react";
+import { RefreshCw, ShieldCheck, XCircle, Plus, Trash2 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -10,12 +10,19 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
+import { Select } from "../../../components/ui/select";
+import { SettingsFieldGroup } from "../../../components/ui/settings-field-group";
+import { SwitchField } from "../../../components/ui/switch";
 import type {
   Project,
   ProjectEnvironment,
   WorkflowSummary,
   IdentityLabOverview,
   IdentityLabTarget,
+  ProjectEnvironmentInput,
+  WorkflowSettingsBrowserLaunch,
+  WorkflowWebRtcPolicy,
+  WorkflowHumanPreset,
 } from "../../../types/workflow";
 
 type ProjectProfilesPanelProps = {
@@ -38,43 +45,35 @@ type ProjectProfilesPanelProps = {
   ) => Promise<void>;
   onUpdateProjectEnvironment: (
     environmentId: string,
-    input: { name: string },
+    input: Partial<ProjectEnvironmentInput>,
   ) => Promise<void>;
   onDeleteProjectEnvironment: (environmentId: string) => Promise<void>;
 };
 
-export function ProjectProfilesPanel({
-  project,
-  projectEnvironments,
-  workflows,
-  overview,
-  loading,
-  error,
-  onRefresh,
-  onSelectIdentity,
-  onOpenWorkflow,
-  onOpenWorkflowSettings,
-  onCloseRetainedSession,
-  onResetIdentity,
-  onOpenIdentityTarget,
-  onCreateProjectEnvironment,
-  onUpdateProjectEnvironment,
-  onDeleteProjectEnvironment,
-}: ProjectProfilesPanelProps) {
+export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
+  const {
+    project,
+    projectEnvironments,
+    workflows,
+    overview,
+    loading,
+    error,
+    onRefresh,
+    onSelectIdentity,
+    onCreateProjectEnvironment,
+    onUpdateProjectEnvironment,
+    onDeleteProjectEnvironment,
+  } = props;
+
   const [selectedEnvId, setSelectedEnvId] = useState<string | null>(null);
   const [profileNameDraft, setProfileNameDraft] = useState("");
+  const [browserLaunchDraft, setBrowserLaunchDraft] = useState<WorkflowSettingsBrowserLaunch | null>(null);
   const [newProfileName, setNewProfileName] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [resetPending, setResetPending] = useState(false);
 
   const selectedEnv = projectEnvironments.find((e) => e.id === selectedEnvId) || projectEnvironments[0] || null;
   const usingWorkflows = selectedEnv ? workflows.filter((w) => w.environment_id === selectedEnv.id) : [];
-  const selectedWorkflow =
-    usingWorkflows.find((w) => w.id === overview?.selected?.workflow_ref?.id) ||
-    usingWorkflows[0] ||
-    (overview?.selected?.workflow_ref ? { id: overview.selected.workflow_ref.id, name: overview.selected.workflow_ref.name, environment_id: selectedEnv?.id } as any : null);
 
   const lastSyncedWorkflowIdRef = useRef<string | null>(null);
 
@@ -92,14 +91,16 @@ export function ProjectProfilesPanel({
     }
   }, [overview?.selected?.workflow_ref?.id, workflows, selectedEnvId]);
 
-  // Sync environment changes & name draft when the selected environment changes
+  // Sync environment changes & name/launch draft when the selected environment changes
   useEffect(() => {
     if (selectedEnv) {
       setSelectedEnvId(selectedEnv.id);
       setProfileNameDraft(selectedEnv.name);
+      setBrowserLaunchDraft(selectedEnv.browser_launch);
     } else {
       setSelectedEnvId(null);
       setProfileNameDraft("");
+      setBrowserLaunchDraft(null);
     }
   }, [selectedEnv?.id, selectedEnv?.name]);
 
@@ -120,6 +121,8 @@ export function ProjectProfilesPanel({
   }, [selectedEnv?.id, selectedEnv?.browser_launch?.identity_id, workflows, overview?.selected?.workflow_ref?.id, loading, onSelectIdentity]);
 
   const nameChanged = selectedEnv && profileNameDraft.trim() !== selectedEnv.name;
+  const launchChanged = selectedEnv && JSON.stringify(browserLaunchDraft) !== JSON.stringify(selectedEnv.browser_launch);
+  const hasChanges = nameChanged || launchChanged;
 
   async function handleAddProfile() {
     if (!project || !newProfileName.trim()) return;
@@ -128,9 +131,18 @@ export function ProjectProfilesPanel({
     setCreateDialogOpen(false);
   }
 
-  async function handleRenameProfile() {
-    if (!selectedEnv || !profileNameDraft.trim()) return;
-    await onUpdateProjectEnvironment(selectedEnv.id, { name: profileNameDraft.trim() });
+  async function handleSaveProfile() {
+    if (!selectedEnv) return;
+    const updates: Partial<ProjectEnvironmentInput> = {};
+    if (nameChanged) {
+      updates.name = profileNameDraft.trim();
+    }
+    if (launchChanged && browserLaunchDraft) {
+      updates.browser_launch = browserLaunchDraft;
+    }
+    if (Object.keys(updates).length > 0) {
+      await onUpdateProjectEnvironment(selectedEnv.id, updates);
+    }
   }
 
   async function handleDeleteProfile() {
@@ -140,20 +152,6 @@ export function ProjectProfilesPanel({
     setSelectedEnvId(projectEnvironments[0]?.id || null);
   }
 
-  async function confirmResetIdentity() {
-    const detail = overview?.selected?.kind === "managed" ? overview.selected : null;
-    if (!detail) return;
-    setResetPending(true);
-    try {
-      await onResetIdentity(detail.workflow_ref.id);
-      setResetDialogOpen(false);
-    } finally {
-      setResetPending(false);
-    }
-  }
-
-  const detail = overview?.selected?.kind === "managed" ? overview.selected : null;
-  const historicalDetail = overview?.selected?.kind === "historical" ? overview.selected : null;
 
   return (
     <section className="identity-lab-screen" aria-label="Profiles workspace">
@@ -204,8 +202,8 @@ export function ProjectProfilesPanel({
         </section>
 
         <section className="panel identity-detail" aria-label="Profile detail">
-          {selectedEnv ? (
-            <div className="identity-detail-body">
+          {selectedEnv && browserLaunchDraft ? (
+            <div className="identity-detail-body" style={{ maxHeight: "calc(100vh - 180px)", overflowY: "auto", paddingRight: "8px" }}>
               <header style={{ borderBottom: "1px solid #233240", paddingBottom: "16px" }}>
                 <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                   <label className="field" style={{ flex: 1, margin: 0 }}>
@@ -217,7 +215,7 @@ export function ProjectProfilesPanel({
                     />
                   </label>
                   <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
-                    <Button type="button" size="sm" disabled={!nameChanged} onClick={handleRenameProfile}>
+                    <Button type="button" size="sm" disabled={!hasChanges} onClick={handleSaveProfile}>
                       Save
                     </Button>
                     <Button
@@ -236,163 +234,179 @@ export function ProjectProfilesPanel({
                 </div>
               </header>
 
-              {usingWorkflows.length === 0 && !detail && !historicalDetail ? (
-                <div className="empty-state empty-state-compact">
-                  <XCircle aria-hidden="true" />
-                  <h3>No workflows are using this profile</h3>
-                </div>
-              ) : (
-                <>
-                  {usingWorkflows.length > 1 && (
-                    <div className="project-collection-tabs" style={{ margin: "12px 0" }}>
-                      {usingWorkflows.map((wf) => (
-                        <Button
-                          key={wf.id}
-                          type="button"
-                          variant={selectedWorkflow?.id === wf.id ? "default" : "ghost"}
-                          onClick={() => {
-                            const identityId = wf.environment_id ? selectedEnv?.browser_launch?.identity_id : null;
-                            if (identityId) onSelectIdentity(wf.id, identityId);
-                          }}
-                        >
-                          {wf.name}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-
-                  {detail && detail.workflow_ref.id === selectedWorkflow?.id ? (
+              <div className="profile-settings-form" style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
+                {/* Proxy Settings */}
+                <SettingsFieldGroup
+                  title="Proxy Configuration"
+                  description="Setup a proxy server for the browser profile session."
+                >
+                  <SwitchField
+                    checked={browserLaunchDraft.proxy_enabled}
+                    label="Enable Proxy"
+                    onCheckedChange={(checked) =>
+                      setBrowserLaunchDraft((current) => current ? { ...current, proxy_enabled: checked } : null)
+                    }
+                  />
+                  {browserLaunchDraft.proxy_enabled && (
                     <>
-                      <div className="identity-actions" style={{ marginTop: "12px" }}>
-                        <Button type="button" variant="secondary" onClick={() => onOpenWorkflowSettings(detail.workflow_ref.id)}>
-                          Open Workflow Settings
-                        </Button>
-                        {detail.actions.can_close_retained_session && detail.session.profile_name ? (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => onCloseRetainedSession(detail.workflow_ref.id, detail.session.profile_name ?? "")}
-                          >
-                            Close Retained Session
-                          </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          disabled={!detail.actions.can_reset_identity}
-                          onClick={() => setResetDialogOpen(true)}
-                        >
-                          Reset Identity
-                        </Button>
-                      </div>
-                      {detail.session.reset_blocked_reason ? (
-                        <p className="field-warning">{detail.session.reset_blocked_reason}</p>
-                      ) : null}
-
-                      <section className="identity-detail-section">
-                        <h3>Configured Posture</h3>
-                        <dl className="identity-definition-list">
-                          {detail.configured_posture.map((item) => (
-                            <div key={item.label}><dt>{item.label}</dt><dd>{item.value}</dd></div>
-                          ))}
-                        </dl>
-                      </section>
-
-                      <section className="identity-detail-section">
-                        <h3>Latest Observed</h3>
-                        {detail.latest_observed ? (
-                          <dl className="identity-definition-list">
-                            <div><dt>Run</dt><dd>{detail.latest_observed.run_id}</dd></div>
-                            {detail.latest_observed.fields.map((field) => (
-                              <div key={field.key}><dt>{field.key}</dt><dd>{String(field.value)}</dd></div>
-                            ))}
-                          </dl>
-                        ) : (
-                          <p className="muted">No observed browser identity evidence yet.</p>
-                        )}
-                      </section>
-
-                      <section className="identity-detail-section">
-                        <h3>Diagnostics</h3>
-                        <dl className="identity-definition-list">
-                          <div><dt>Binary</dt><dd>{detail.diagnostics.binary_installed ? "Installed" : "Missing"}</dd></div>
-                          <div><dt>GeoIP</dt><dd>{detail.diagnostics.geoip_available ? "Available" : "Unavailable"}</dd></div>
-                          <div><dt>Headed Display</dt><dd>{detail.diagnostics.headed_display_available ? "Available" : "Unavailable"}</dd></div>
-                          <div><dt>Fonts</dt><dd>{detail.diagnostics.font_status}</dd></div>
-                        </dl>
-                      </section>
-
-                      <section className="identity-detail-section">
-                        <h3>Rotation History</h3>
-                        {detail.rotation_history.length ? (
-                          <div className="identity-history-list">
-                            {detail.rotation_history.map((entry, index) => (
-                              <button
-                                key={`${entry.previous_identity_id ?? "unknown"}-${index}`}
-                                type="button"
-                                onClick={() => {
-                                  if (!entry.previous_identity_id) return;
-                                  onOpenIdentityTarget({
-                                    type: "historical",
-                                    identity_id: entry.previous_identity_id,
-                                    workflow_id: detail.workflow_ref.id,
-                                  });
-                                }}
-                              >
-                                <strong>{entry.previous_identity_id ?? "Previous identity unavailable"}</strong>
-                                <span>{entry.message}</span>
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="muted">No identity rotations recorded.</p>
-                        )}
-                      </section>
+                      <label className="field settings-field-group-wide">
+                        <span>Proxy Server</span>
+                        <Input
+                          aria-label="Proxy Server"
+                          value={browserLaunchDraft.proxy_server ?? ""}
+                          placeholder="http://host:port"
+                          onChange={(e) =>
+                            setBrowserLaunchDraft((current) => current ? { ...current, proxy_server: e.target.value } : null)
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Proxy Username</span>
+                        <Input
+                          aria-label="Proxy Username"
+                          value={browserLaunchDraft.proxy_username ?? ""}
+                          onChange={(e) =>
+                            setBrowserLaunchDraft((current) => current ? { ...current, proxy_username: e.target.value } : null)
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Proxy Password</span>
+                        <Input
+                          aria-label="Proxy Password"
+                          type="password"
+                          value={browserLaunchDraft.proxy_password ?? ""}
+                          onChange={(e) =>
+                            setBrowserLaunchDraft((current) => current ? { ...current, proxy_password: e.target.value } : null)
+                          }
+                        />
+                      </label>
                     </>
-                  ) : historicalDetail ? (
-                    <div className="identity-detail-body">
-                      <header>
-                        <Fingerprint aria-hidden="true" />
-                        <div>
-                          <h2>Historical Identity Reference</h2>
-                          <p className="muted">{historicalDetail.identity_ref.id}</p>
-                        </div>
-                      </header>
-                      <p className="field-warning">
-                        This identity is read-only and is no longer attached to current workflow settings.
-                      </p>
-                      <div className="identity-actions">
-                        {historicalDetail.workflow_ref ? (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => onOpenWorkflow(historicalDetail.workflow_ref?.id ?? "")}
-                          >
-                            Open Related Workflow
-                          </Button>
-                        ) : null}
-                      </div>
-                      <section className="identity-detail-section">
-                        <h3>Observed Fields</h3>
-                        {historicalDetail.observed_fields.length ? (
-                          <dl className="identity-definition-list">
-                            {historicalDetail.observed_fields.map((field) => (
-                              <div key={field.key}><dt>{field.key}</dt><dd>{String(field.value)}</dd></div>
-                            ))}
-                          </dl>
-                        ) : (
-                          <p className="muted">No bounded observed fields are available for this reference.</p>
-                        )}
-                      </section>
-                    </div>
-                  ) : (
-                    <div className="empty-state empty-state-compact">
-                      <XCircle aria-hidden="true" />
-                      <h3>Loading identity details...</h3>
-                    </div>
                   )}
-                </>
-              )}
+                </SettingsFieldGroup>
+
+                {/* Browser Posture Settings */}
+                <SettingsFieldGroup
+                  title="Browser Posture"
+                  description="Manage localization, location GeoIP, and headless/humanization options."
+                >
+                  <SwitchField
+                    checked={browserLaunchDraft.headless}
+                    label="Headless mode"
+                    onCheckedChange={(checked) =>
+                      setBrowserLaunchDraft((current) => current ? { ...current, headless: checked } : null)
+                    }
+                  />
+                  <SwitchField
+                    checked={browserLaunchDraft.humanize}
+                    label="Humanize movements"
+                    onCheckedChange={(checked) =>
+                      setBrowserLaunchDraft((current) => current ? { ...current, humanize: checked } : null)
+                    }
+                  />
+                  {browserLaunchDraft.humanize && (
+                    <label className="field">
+                      <span>Human Preset</span>
+                      <Select
+                        aria-label="Human Preset"
+                        value={browserLaunchDraft.human_preset}
+                        onChange={(e) =>
+                          setBrowserLaunchDraft((current) => current ? { ...current, human_preset: e.target.value as WorkflowHumanPreset } : null)
+                        }
+                      >
+                        <option value="default">Default</option>
+                        <option value="careful">Careful</option>
+                      </Select>
+                    </label>
+                  )}
+                  <SwitchField
+                    checked={browserLaunchDraft.geoip}
+                    label="Determine location by GeoIP"
+                    onCheckedChange={(checked) =>
+                      setBrowserLaunchDraft((current) => current ? { ...current, geoip: checked } : null)
+                    }
+                  />
+                  {!browserLaunchDraft.geoip && (
+                    <>
+                      <label className="field">
+                        <span>Timezone</span>
+                        <Input
+                          aria-label="Timezone"
+                          value={browserLaunchDraft.timezone ?? ""}
+                          placeholder="e.g. Asia/Ho_Chi_Minh"
+                          onChange={(e) =>
+                            setBrowserLaunchDraft((current) => current ? { ...current, timezone: e.target.value } : null)
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Locale</span>
+                        <Input
+                          aria-label="Locale"
+                          value={browserLaunchDraft.locale ?? ""}
+                          placeholder="e.g. vi-VN"
+                          onChange={(e) =>
+                            setBrowserLaunchDraft((current) => current ? { ...current, locale: e.target.value } : null)
+                          }
+                        />
+                      </label>
+                    </>
+                  )}
+                </SettingsFieldGroup>
+
+                {/* WebRTC Policy Settings */}
+                <SettingsFieldGroup
+                  title="WebRTC Policy"
+                  description="Choose WebRTC IP handling strategy."
+                >
+                  <label className="field">
+                    <span>WebRTC Policy</span>
+                    <Select
+                      aria-label="WebRTC Policy"
+                      value={browserLaunchDraft.webrtc_policy}
+                      onChange={(e) =>
+                        setBrowserLaunchDraft((current) => current ? { ...current, webrtc_policy: e.target.value as WorkflowWebRtcPolicy } : null)
+                      }
+                    >
+                      <option value="default">Default</option>
+                      <option value="auto_proxy_exit_ip">Auto proxy exit IP</option>
+                      <option value="explicit_ip">Explicit IP</option>
+                      <option value="disabled_if_supported">Disabled</option>
+                    </Select>
+                  </label>
+                  {browserLaunchDraft.webrtc_policy === "explicit_ip" && (
+                    <label className="field">
+                      <span>Explicit WebRTC IP</span>
+                      <Input
+                        aria-label="Explicit WebRTC IP"
+                        value={browserLaunchDraft.webrtc_ip ?? ""}
+                        placeholder="e.g. 1.2.3.4"
+                        onChange={(e) =>
+                          setBrowserLaunchDraft((current) => current ? { ...current, webrtc_ip: e.target.value } : null)
+                        }
+                      />
+                    </label>
+                  )}
+                </SettingsFieldGroup>
+
+                {/* Custom Fonts Settings */}
+                <SettingsFieldGroup
+                  title="Custom Fonts"
+                  description="Provide a directory path for custom browser fonts."
+                >
+                  <label className="field settings-field-group-wide">
+                    <span>Custom Fonts Directory</span>
+                    <Input
+                      aria-label="Custom Fonts Directory"
+                      value={browserLaunchDraft.fingerprint_fonts_dir ?? ""}
+                      placeholder="e.g. /path/to/fonts"
+                      onChange={(e) =>
+                        setBrowserLaunchDraft((current) => current ? { ...current, fingerprint_fonts_dir: e.target.value } : null)
+                      }
+                    />
+                  </label>
+                </SettingsFieldGroup>
+              </div>
             </div>
           ) : (
             <div className="empty-state empty-state-compact">
@@ -445,39 +459,6 @@ export function ProjectProfilesPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {detail ? (
-        <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Identity</p>
-              <DialogTitle>Reset browser identity</DialogTitle>
-              <DialogDescription>
-                This rotates the identity id, profile directory, and fingerprint seed for {detail.workflow_ref.name}.
-                Historical runs and evidence remain unchanged.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="form-actions">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={resetPending}
-                onClick={() => setResetDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={resetPending}
-                onClick={confirmResetIdentity}
-              >
-                Reset Identity
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
     </section>
   );
 }

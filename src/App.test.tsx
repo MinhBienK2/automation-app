@@ -1000,7 +1000,6 @@ describe("App settings and graph autosave", () => {
       },
       data_warnings: [],
     }));
-    const closeIdentityRetainedSession = vi.fn();
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([
         {
@@ -1030,8 +1029,6 @@ describe("App settings and graph autosave", () => {
       get_identity_lab_overview: ({ request }: { request: unknown }) =>
         getIdentityLabOverview(request),
       get_identity_lab_detail: () => getIdentityLabOverview().selected,
-      close_identity_retained_session: ({ workflowId, profileName }: { workflowId: string; profileName: string }) =>
-        closeIdentityRetainedSession(workflowId, profileName),
     });
 
     renderApp();
@@ -1040,94 +1037,7 @@ describe("App settings and graph autosave", () => {
 
     expect(await screen.findByRole("region", { name: "Profiles workspace" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Browser profiles list" })).toHaveTextContent("Profile A");
-    expect(screen.getByRole("region", { name: "Profile detail" })).toHaveTextContent("Proxy");
-    expect(screen.getByRole("region", { name: "Profile detail" })).toHaveTextContent("seed-hash");
-    expect(screen.queryByRole("button", { name: "Open Last Run" })).not.toBeInTheDocument();
-
-    await userEvent.click(await screen.findByRole("button", { name: "Close Retained Session" }));
-    await waitFor(() => {
-      expect(closeIdentityRetainedSession).toHaveBeenCalledWith(workflow.id, "bi_123");
-    });
-  });
-
-  test("opens workflow settings from Identity Lab when the workflow list cache is stale", async () => {
-    const scenario = workflowDetailScenario([]);
-    mockWorkflowBridgeCommands({
-      ...listWorkflowScenario([]),
-      list_projects: [{ id: "project-1", name: "Main", description: "" }],
-      list_project_environments: () => [
-        {
-          id: "environment-1",
-          project_id: "project-1",
-          name: "Profile A",
-          description: "",
-          is_default: true,
-          browser_launch: {
-            session_mode: "persistent_profile",
-            identity_id: "bi_123",
-            display_name: "Profile A",
-            profile_dir: "bi_123",
-            fingerprint_seed: "seed-a",
-          },
-        },
-      ],
-      get_workflow: scenario.get_workflow,
-      get_workflow_settings: scenario.get_workflow_settings,
-      get_workflow_graph: scenario.get_workflow_graph,
-      get_identity_lab_overview: () => ({
-        generated_at: "2026-05-27T10:00:00.000Z",
-        counts: {
-          managed_identities: 1,
-          active_retained_sessions: 0,
-          identities_with_warnings: 0,
-          identities_with_recent_failures: 0,
-        },
-        items: [],
-        selected: {
-          kind: "managed",
-          workflow_ref: { id: workflow.id, name: workflow.name },
-          identity_ref: { id: "bi_123", display_name: "QA identity" },
-          session: {
-            active: false,
-            profile_name: "bi_123",
-            reset_blocked_reason: null,
-          },
-          configured_posture: [{ label: "Proxy", value: "Disabled" }],
-          latest_observed: null,
-          last_run: null,
-          recent_failures_24h: 0,
-          evidence_summary: { total: 0 },
-          rotation_history: [],
-          diagnostics: {
-            binary_installed: true,
-            wrapper_version: "1.0.0",
-            geoip_available: true,
-            headed_display_available: true,
-            profile: { approximate_size_bytes: 0, active_session: false },
-            font_status: "ok",
-          },
-          actions: {
-            can_close_retained_session: false,
-            can_reset_identity: true,
-            reset_disabled_reason: null,
-          },
-        },
-        data_warnings: [],
-      }),
-    });
-
-    renderApp();
-
-    await openProjectTab("Profiles");
-    await userEvent.click(await screen.findByRole("button", { name: "Open Workflow Settings" }));
-
-    const settingsDialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
-    expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
-      .toHaveAttribute("aria-selected", "true");
-    expect(within(settingsDialog).getByLabelText("Browser profile"))
-      .toHaveValue("environment-1");
-    expect(within(settingsDialog).queryByLabelText("Identity display name"))
-      .not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Profile detail" })).toHaveTextContent("Proxy Configuration");
   });
 
   test("does not render the removed shell search header or Alerts shortcut", async () => {
