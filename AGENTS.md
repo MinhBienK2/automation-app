@@ -52,9 +52,4 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 - Add/update tests when changing validation, commands, persistence, runner, or UI.
 - Run `npm run lint` and `npx tsc --noEmit` before committing.
 
-## Commit Attribution
-AI commits MUST include:
-```
-Co-Authored-By: Antigravity AI <noreply@example.com>
-```
 

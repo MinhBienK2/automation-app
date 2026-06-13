@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import type { ActionConfig, ElementLocatorKind, ElementTarget } from "../../../types/workflow";
-import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { VariableNumericInput } from "./VariableNumericInput";
+import { TemplateTextField } from "./TemplateTextField";
 
 
 type TargetableElementConfig = Extract<
@@ -108,22 +108,20 @@ export function ElementTargetSourceFields({
       </div>
       {targetSource === "ref" ? (
         <>
-          <Label>
-            {refLabel}
-            <Input
-              value={targetRef ?? ""}
-              onChange={(event) =>
-                onChange({
-                  ...config,
-                  config: {
-                    ...config.config,
-                    [refField]: event.currentTarget.value,
-                  },
-                } as ActionConfig)
-              }
-              placeholder="Output name from Find Element"
-            />
-          </Label>
+          <TemplateTextField
+            label={refLabel}
+            value={targetRef ?? ""}
+            onChange={(val) =>
+              onChange({
+                ...config,
+                config: {
+                  ...config.config,
+                  [refField]: val,
+                },
+              } as ActionConfig)
+            }
+            placeholder="Output name from Find Element"
+          />
           <p className="text-xs leading-5 text-[var(--app-text-muted)]">
             {description}
           </p>
@@ -157,16 +155,14 @@ export function ElementOptionalFields({
 
   return (
     <>
-      <Label>
-        Iframe XPath
-        <Input
-          value={optionalConfig.iframe_xpath ?? ""}
-          onChange={(event) =>
-            onChange(updateActionConfigField(config, "iframe_xpath", event.currentTarget.value))
-          }
-          placeholder="Optional iframe XPath"
-        />
-      </Label>
+      <TemplateTextField
+        label="Iframe XPath"
+        value={optionalConfig.iframe_xpath ?? ""}
+        onChange={(val) =>
+          onChange(updateActionConfigField(config, "iframe_xpath", val))
+        }
+        placeholder="Optional iframe XPath"
+      />
       {showWaitUntil ? (
         <Label>
           Wait until
@@ -327,31 +323,25 @@ export function StructuredTargetFields({
           <option value="attribute">Attribute</option>
         </Select>
       </Label>
-      <Label>
-        {labelPrefix} locator
-        <Input
-          value={value}
-          onChange={(event) => updateLocator({ value: event.currentTarget.value })}
-          placeholder="Optional structured target"
-        />
-      </Label>
+      <TemplateTextField
+        label={`${labelPrefix} locator`}
+        value={value}
+        onChange={(val) => updateLocator({ value: val })}
+        placeholder="Optional structured target"
+      />
       {kind === "role" ? (
-        <Label>
-          {labelPrefix} role
-          <Input
-            value={locator?.role ?? "button"}
-            onChange={(event) => updateLocator({ role: event.currentTarget.value })}
-          />
-        </Label>
+        <TemplateTextField
+          label={`${labelPrefix} role`}
+          value={locator?.role ?? "button"}
+          onChange={(val) => updateLocator({ role: val })}
+        />
       ) : null}
       {kind === "attribute" ? (
-        <Label>
-          {labelPrefix} attribute
-          <Input
-            value={locator?.attribute ?? ""}
-            onChange={(event) => updateLocator({ attribute: event.currentTarget.value })}
-          />
-        </Label>
+        <TemplateTextField
+          label={`${labelPrefix} attribute`}
+          value={locator?.attribute ?? ""}
+          onChange={(val) => updateLocator({ attribute: val })}
+        />
       ) : null}
       {showConstraints ? (
         <>
@@ -389,13 +379,11 @@ export function StructuredTargetFields({
               <option value="false">Disabled</option>
             </Select>
           </Label>
-          <Label>
-            {labelPrefix} contains text
-            <Input
-              value={constraints?.contains_text ?? ""}
-              onChange={(event) => updateConstraint("contains_text", event.currentTarget.value)}
-            />
-          </Label>
+          <TemplateTextField
+            label={`${labelPrefix} contains text`}
+            value={constraints?.contains_text ?? ""}
+            onChange={(val) => updateConstraint("contains_text", val)}
+          />
           <VariableNumericInput
             label={`${labelPrefix} index`}
             value={constraints?.index}

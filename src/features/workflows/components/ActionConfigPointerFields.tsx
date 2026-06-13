@@ -4,6 +4,8 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { VariableNumericInput } from "./VariableNumericInput";
+import { TemplateTextField } from "./TemplateTextField";
 import {
   ElementTargetFields,
   ElementTargetSourceFields,
@@ -133,19 +135,19 @@ export function PointerActionFields({
                   <option value="left">Left</option>
                 </Select>
               </Label>
-              <Label>
-                Pixels
-                <Input
-                  min="1"
-                  type="number"
-                  value={config.config.pixels ?? 500}
-                  onChange={(event) =>
-                    onChange(
-                      updateActionConfigField(config, "pixels", event.currentTarget.value),
-                    )
-                  }
-                />
-              </Label>
+              <VariableNumericInput
+                label="Pixels"
+                value={config.config.pixels}
+                min={1}
+                onChange={(nextVal) => {
+                  const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                    ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                      ? nextVal
+                      : Number(nextVal)
+                    : null;
+                  onChange(updateActionConfigField(config, "pixels", val));
+                }}
+              />
             </ActionConfigFieldGroup>
           ) : (
             <>
@@ -166,32 +168,28 @@ export function PointerActionFields({
                   />
                 )}
                 {mode === "until_element_visible" || !usesTargetRef ? (
-                  <Label>
-                    Iframe XPath
-                    <Input
-                      value={config.config.iframe_xpath ?? ""}
-                      onChange={(event) =>
-                        onChange(
-                          updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
-                        )
-                      }
-                      placeholder="Optional iframe XPath"
-                    />
-                  </Label>
-                ) : null}
-                <Label>
-                  Timeout ms
-                  <Input
-                    min="1"
-                    type="number"
-                    value={config.config.timeout_ms ?? SCROLL_TARGET_DEFAULT_TIMEOUT_MS}
-                    onChange={(event) =>
-                      onChange(
-                        updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                      )
+                  <TemplateTextField
+                    label="Iframe XPath"
+                    value={config.config.iframe_xpath ?? ""}
+                    onChange={(val) =>
+                      onChange(updateActionConfigField(config, "iframe_xpath", val))
                     }
+                    placeholder="Optional iframe XPath"
                   />
-                </Label>
+                ) : null}
+                <VariableNumericInput
+                  label="Timeout ms"
+                  value={config.config.timeout_ms ?? SCROLL_TARGET_DEFAULT_TIMEOUT_MS}
+                  min={1}
+                  onChange={(nextVal) => {
+                    const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                      ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                        ? nextVal
+                        : Number(nextVal)
+                      : null;
+                    onChange(updateActionConfigField(config, "timeout_ms", val));
+                  }}
+                />
               </ActionConfigFieldGroup>
               {mode === "until_element_visible" ? (
                 <ActionConfigFieldGroup title="Search scroll gesture">
@@ -211,19 +209,19 @@ export function PointerActionFields({
                       <option value="left">Left</option>
                     </Select>
                   </Label>
-                  <Label>
-                    Pixels
-                    <Input
-                      min="1"
-                      type="number"
-                      value={config.config.pixels ?? 700}
-                      onChange={(event) =>
-                        onChange(
-                          updateActionConfigField(config, "pixels", event.currentTarget.value),
-                        )
-                      }
-                    />
-                  </Label>
+                  <VariableNumericInput
+                    label="Pixels"
+                    value={config.config.pixels}
+                    min={1}
+                    onChange={(nextVal) => {
+                      const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                        ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                          ? nextVal
+                          : Number(nextVal)
+                        : null;
+                      onChange(updateActionConfigField(config, "pixels", val));
+                    }}
+                  />
                 </ActionConfigFieldGroup>
               ) : null}
             </>

@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
 import type { ActionConfig } from "../../../types/workflow";
-import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
-import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
+import { VariableNumericInput } from "./VariableNumericInput";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -34,15 +33,13 @@ export function OutputActionFields({
     case "set_json_variables":
       return (
         <ActionConfigFieldGroup title="JSON variables">
-          <Label>
-            JSON variables
-            <Textarea
-              value={config.config.json}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "json", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <TemplateTextareaField
+            label="JSON variables"
+            value={config.config.json}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "json", val))
+            }
+          />
         </ActionConfigFieldGroup>
       );
     case "assert_element":
@@ -97,19 +94,19 @@ export function OutputActionFields({
                 <option value="equals">Equals</option>
               </Select>
             </Label>
-            <Label>
-              Timeout ms
-              <Input
-                min="1"
-                type="number"
-                value={config.config.timeout_ms ?? 3000}
-                onChange={(event) =>
-                  onChange(
-                    updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                  )
-                }
-              />
-            </Label>
+            <VariableNumericInput
+              label="Timeout ms"
+              value={config.config.timeout_ms}
+              min={1}
+              onChange={(nextVal) => {
+                const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                  ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                    ? nextVal
+                    : Number(nextVal)
+                  : null;
+                onChange(updateActionConfigField(config, "timeout_ms", val));
+              }}
+            />
           </ActionConfigFieldGroup>
         </>
       );

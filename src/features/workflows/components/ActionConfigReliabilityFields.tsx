@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import type { ActionConfig } from "../../../types/workflow";
-import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { NetworkWaitFields } from "./ActionConfigNetworkFields";
+import { TemplateTextField, TemplateTextareaField } from "./TemplateTextField";
+import { VariableNumericInput } from "./VariableNumericInput";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -21,37 +21,39 @@ export function ReliabilityActionFields({
       return (
         <>
           <ActionConfigFieldGroup title="Script body">
-            <Label>
-              Script
-              <Textarea
-                value={config.config.script}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "script", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <TemplateTextareaField
+              label="Script"
+              value={config.config.script}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "script", val))
+              }
+            />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Script result">
             <Label>
               Output name
-              <Input
+              <input
+                type="text"
+                className="flex h-10 w-full rounded-[var(--app-radius-sm)] border border-[var(--app-border-strong)] bg-[var(--app-surface)] px-3 py-2 text-sm leading-5 text-[var(--app-text)] outline-none transition-colors placeholder:text-[var(--app-text-muted)] focus-visible:border-[var(--app-accent-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
                 value={config.config.output_name ?? ""}
                 onChange={(event) =>
                   onChange(updateActionConfigField(config, "output_name", event.currentTarget.value))
                 }
               />
             </Label>
-            <Label>
-              Timeout ms
-              <Input
-                min="1"
-                type="number"
-                value={config.config.timeout_ms ?? 1000}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "timeout_ms", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <VariableNumericInput
+              label="Timeout ms"
+              value={config.config.timeout_ms}
+              min={1}
+              onChange={(nextVal) => {
+                const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                  ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                    ? nextVal
+                    : Number(nextVal)
+                  : null;
+                onChange(updateActionConfigField(config, "timeout_ms", val));
+              }}
+            />
           </ActionConfigFieldGroup>
         </>
       );
@@ -64,62 +66,56 @@ export function ReliabilityActionFields({
     case "block_request":
       return (
         <ActionConfigFieldGroup title="Blocked URLs">
-          <Label>
-            URL patterns
-            <Textarea
-              value={config.config.url_patterns.join("\n")}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "url_patterns", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <TemplateTextareaField
+            label="URL patterns"
+            value={config.config.url_patterns.join("\n")}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "url_patterns", val))
+            }
+          />
         </ActionConfigFieldGroup>
       );
     case "mock_response":
       return (
         <>
           <ActionConfigFieldGroup title="Request match">
-            <Label>
-              URL contains
-              <Input
-                value={config.config.url_contains}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "url_contains", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <TemplateTextField
+              label="URL contains"
+              value={config.config.url_contains}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "url_contains", val))
+              }
+            />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Mock response">
-            <Label>
-              Status
-              <Input
-                min="100"
-                max="599"
-                type="number"
-                value={config.config.status}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "status", event.currentTarget.value))
-                }
-              />
-            </Label>
-            <Label>
-              Body
-              <Textarea
-                value={config.config.body}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "body", event.currentTarget.value))
-                }
-              />
-            </Label>
-            <Label>
-              Content type
-              <Input
-                value={config.config.content_type ?? ""}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "content_type", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <VariableNumericInput
+              label="Status"
+              value={config.config.status}
+              min={100}
+              max={599}
+              onChange={(nextVal) => {
+                const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                  ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                    ? nextVal
+                    : Number(nextVal)
+                  : null;
+                onChange(updateActionConfigField(config, "status", val));
+              }}
+            />
+            <TemplateTextareaField
+              label="Body"
+              value={config.config.body}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "body", val))
+              }
+            />
+            <TemplateTextField
+              label="Content type"
+              value={config.config.content_type ?? ""}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "content_type", val))
+              }
+            />
           </ActionConfigFieldGroup>
         </>
       );
@@ -127,24 +123,20 @@ export function ReliabilityActionFields({
     case "set_session_storage":
       return (
         <ActionConfigFieldGroup title="Storage entry">
-          <Label>
-            Key
-            <Input
-              value={config.config.key}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "key", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Value
-            <Textarea
-              value={config.config.value}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "value", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <TemplateTextField
+            label="Key"
+            value={config.config.key}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "key", val))
+            }
+          />
+          <TemplateTextareaField
+            label="Value"
+            value={config.config.value}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "value", val))
+            }
+          />
         </ActionConfigFieldGroup>
       );
 

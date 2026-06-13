@@ -1,8 +1,8 @@
 import type { ActionConfig } from "../../../types/workflow";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
+import { TemplateTextField } from "./TemplateTextField";
+import { VariableNumericInput } from "./VariableNumericInput";
 
 export function NetworkWaitFields({
   config,
@@ -15,40 +15,42 @@ export function NetworkWaitFields({
 }) {
   return (
     <ActionConfigFieldGroup title="Network match">
-      <Label>
-        URL contains
-        <Input
-          value={config.config.url_contains}
-          onChange={(event) =>
-            onChange(updateActionConfigField(config, "url_contains", event.currentTarget.value))
-          }
-        />
-      </Label>
+      <TemplateTextField
+        label="URL contains"
+        value={config.config.url_contains}
+        onChange={(val) =>
+          onChange(updateActionConfigField(config, "url_contains", val))
+        }
+      />
       {includeStatus && config.type === "wait_for_response" ? (
-        <Label>
-          Status
-          <Input
-            min="100"
-            max="599"
-            type="number"
-            value={config.config.status ?? ""}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "status", event.currentTarget.value))
-            }
-          />
-        </Label>
-      ) : null}
-      <Label>
-        Timeout ms
-        <Input
-          min="1"
-          type="number"
-          value={config.config.timeout_ms ?? 5000}
-          onChange={(event) =>
-            onChange(updateActionConfigField(config, "timeout_ms", event.currentTarget.value))
-          }
+        <VariableNumericInput
+          label="Status"
+          value={config.config.status}
+          min={100}
+          max={599}
+          onChange={(nextVal) => {
+            const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+              ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                ? nextVal
+                : Number(nextVal)
+              : null;
+            onChange(updateActionConfigField(config, "status", val));
+          }}
         />
-      </Label>
+      ) : null}
+      <VariableNumericInput
+        label="Timeout ms"
+        value={config.config.timeout_ms}
+        min={1}
+        onChange={(nextVal) => {
+          const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+            ? typeof nextVal === "string" && nextVal.startsWith("{{")
+              ? nextVal
+              : Number(nextVal)
+            : null;
+          onChange(updateActionConfigField(config, "timeout_ms", val));
+        }}
+      />
     </ActionConfigFieldGroup>
   );
 }

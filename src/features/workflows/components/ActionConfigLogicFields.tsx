@@ -3,9 +3,10 @@ import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
-import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
+import { TemplateTextareaField } from "./TemplateTextField";
+import { VariableNumericInput } from "./VariableNumericInput";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -23,17 +24,19 @@ export function LogicActionFields({
     case "repeat_times":
       return (
         <ActionConfigFieldGroup title="Repeat count">
-          <Label>
-            Times
-            <Input
-              min="1"
-              type="number"
-              value={config.config.times}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "times", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <VariableNumericInput
+            label="Times"
+            value={config.config.times}
+            min={1}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              onChange(updateActionConfigField(config, "times", val));
+            }}
+          />
         </ActionConfigFieldGroup>
       );
     case "repeat_for_each":
@@ -95,45 +98,45 @@ export function LogicActionFields({
               />
             </Label>
           ) : (
-            <Label>
-              Items
-              <Textarea
-                value={config.config.items.join("\n")}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "items", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <TemplateTextareaField
+              label="Items"
+              value={config.config.items.join("\n")}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "items", val))
+              }
+            />
           )}
         </ActionConfigFieldGroup>
       );
     case "retry_block":
       return (
         <ActionConfigFieldGroup title="Retry policy">
-          <Label>
-            Max attempts
-            <Input
-              min="1"
-              type="number"
-              value={config.config.max_attempts}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "max_attempts", event.currentTarget.value),
-                )
-              }
-            />
-          </Label>
-          <Label>
-            Delay ms
-            <Input
-              min="0"
-              type="number"
-              value={config.config.delay_ms ?? 0}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "delay_ms", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <VariableNumericInput
+            label="Max attempts"
+            value={config.config.max_attempts}
+            min={1}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              onChange(updateActionConfigField(config, "max_attempts", val));
+            }}
+          />
+          <VariableNumericInput
+            label="Delay ms"
+            value={config.config.delay_ms}
+            min={0}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              onChange(updateActionConfigField(config, "delay_ms", val));
+            }}
+          />
         </ActionConfigFieldGroup>
       );
     case "stop_workflow":
@@ -151,15 +154,13 @@ export function LogicActionFields({
               <option value="failure">Failure</option>
             </Select>
           </Label>
-          <Label>
-            Reason
-            <Textarea
-              value={config.config.reason ?? ""}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "reason", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <TemplateTextareaField
+            label="Reason"
+            value={config.config.reason ?? ""}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "reason", val))
+            }
+          />
         </ActionConfigFieldGroup>
       );
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useId } from "react";
 import { Hash, Braces } from "lucide-react";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -27,6 +27,7 @@ export function VariableNumericInput({
   step,
   variableOptions,
 }: VariableNumericInputProps) {
+  const inputId = useId();
   const options = useMemo(() => getAvailableVariableOptions(variableOptions), [variableOptions]);
   const isVar = typeof value === "string" && value.startsWith("{{") && value.endsWith("}}");
   const [localVarMode, setLocalVarMode] = useState(isVar);
@@ -49,7 +50,7 @@ export function VariableNumericInput({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
+        <Label htmlFor={inputId} className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
         <Button
           type="button"
           variant="ghost"
@@ -65,6 +66,7 @@ export function VariableNumericInput({
       <div className="flex gap-2">
         {activeMode ? (
           <Select
+            id={inputId}
             value={currentVal}
             onChange={(e) => onChange(e.currentTarget.value)}
           >
@@ -82,6 +84,7 @@ export function VariableNumericInput({
           </Select>
         ) : (
           <Input
+            id={inputId}
             type="number"
             placeholder={placeholder}
             min={min}

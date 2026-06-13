@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import type { ActionConfig } from "../../../types/workflow";
-import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
-import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { TemplateTextField, TemplateTextareaField } from "./TemplateTextField";
+import { VariableNumericInput } from "./VariableNumericInput";
 import {
   ElementTargetSourceFields,
   StructuredTargetFields,
@@ -41,42 +41,36 @@ export function FormActionFields({
                 <option value="value">Value</option>
               </Select>
             </Label>
-            <Label>
-              Value
-              <Input
-                value={config.config.value}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "value", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <TemplateTextField
+              label="Value"
+              value={config.config.value}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "value", val))
+              }
+            />
           </ActionConfigFieldGroup>
         </>
       );
     case "press_key":
       return (
-        <Label>
-          Key
-          <Input
-            value={config.config.key}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "key", event.currentTarget.value))
-            }
-          />
-        </Label>
+        <TemplateTextField
+          label="Key"
+          value={config.config.key}
+          onChange={(val) =>
+            onChange(updateActionConfigField(config, "key", val))
+          }
+        />
       );
     case "hotkey":
       return (
-        <Label>
-          Keys
-          <Input
-            value={config.config.keys.join("+")}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "keys", event.currentTarget.value))
-            }
-            placeholder="Control+S"
-          />
-        </Label>
+        <TemplateTextField
+          label="Keys"
+          value={config.config.keys.join("+")}
+          onChange={(val) =>
+            onChange(updateActionConfigField(config, "keys", val))
+          }
+          placeholder="Control+S"
+        />
       );
     case "hover":
       return (
@@ -137,29 +131,25 @@ export function FormActionFields({
             <ElementTargetSourceFields config={config} onChange={onChange} />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Typed text">
-            <Label>
-              Text
-              <Textarea
-                value={config.config.text}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <TemplateTextareaField
+              label="Text"
+              value={config.config.text}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "text", val))
+              }
+            />
           </ActionConfigFieldGroup>
         </>
       );
     case "set_clipboard":
       return (
-        <Label>
-          Text
-          <Textarea
-            value={config.config.text}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-            }
-          />
-        </Label>
+        <TemplateTextareaField
+          label="Text"
+          value={config.config.text}
+          onChange={(val) =>
+            onChange(updateActionConfigField(config, "text", val))
+          }
+        />
       );
     case "upload_file":
       return (
@@ -168,15 +158,13 @@ export function FormActionFields({
             <ElementTargetSourceFields config={config} onChange={onChange} />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="File list">
-            <Label>
-              Files
-              <Textarea
-                value={config.config.files.join("\n")}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "files", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <TemplateTextareaField
+              label="Files"
+              value={config.config.files.join("\n")}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "files", val))
+              }
+            />
           </ActionConfigFieldGroup>
         </>
       );
@@ -202,17 +190,15 @@ export function FormActionFields({
             />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Custom option">
-            <Label>
-              Option text
-              <Input
-                value={config.config.option_text}
-                onChange={(event) =>
-                  onChange(
-                    updateActionConfigField(config, "option_text", event.currentTarget.value),
-                  )
-                }
-              />
-            </Label>
+            <TemplateTextField
+              label="Option text"
+              value={config.config.option_text}
+              onChange={(val) =>
+                onChange(
+                  updateActionConfigField(config, "option_text", val),
+                )
+              }
+            />
           </ActionConfigFieldGroup>
         </>
       );
@@ -223,15 +209,13 @@ export function FormActionFields({
             <ElementTargetSourceFields config={config} onChange={onChange} />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Editable content">
-            <Label>
-              Text
-              <Textarea
-                value={config.config.text}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <TemplateTextareaField
+              label="Text"
+              value={config.config.text}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "text", val))
+              }
+            />
             <Label>
               Clear before input
               <Select
@@ -307,67 +291,75 @@ function DragTargetPositionFields({
 
       {position.mode === "percent" ? (
         <>
-          <Label>
-            X percent
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={position.x_percent}
-              onChange={(event) =>
-                updatePosition({
-                  ...position,
-                  x_percent: Number(event.currentTarget.value),
-                })
-              }
-            />
-          </Label>
-          <Label>
-            Y percent
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={position.y_percent}
-              onChange={(event) =>
-                updatePosition({
-                  ...position,
-                  y_percent: Number(event.currentTarget.value),
-                })
-              }
-            />
-          </Label>
+          <VariableNumericInput
+            label="X percent"
+            min={0}
+            max={100}
+            value={position.x_percent}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              updatePosition({
+                ...position,
+                x_percent: val as any,
+              });
+            }}
+          />
+          <VariableNumericInput
+            label="Y percent"
+            min={0}
+            max={100}
+            value={position.y_percent}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              updatePosition({
+                ...position,
+                y_percent: val as any,
+              });
+            }}
+          />
         </>
       ) : null}
 
       {position.mode === "offset" ? (
         <>
-          <Label>
-            X offset px
-            <Input
-              type="number"
-              value={position.x_px}
-              onChange={(event) =>
-                updatePosition({
-                  ...position,
-                  x_px: Number(event.currentTarget.value),
-                })
-              }
-            />
-          </Label>
-          <Label>
-            Y offset px
-            <Input
-              type="number"
-              value={position.y_px}
-              onChange={(event) =>
-                updatePosition({
-                  ...position,
-                  y_px: Number(event.currentTarget.value),
-                })
-              }
-            />
-          </Label>
+          <VariableNumericInput
+            label="X offset px"
+            value={position.x_px}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              updatePosition({
+                ...position,
+                x_px: val as any,
+              });
+            }}
+          />
+          <VariableNumericInput
+            label="Y offset px"
+            value={position.y_px}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              updatePosition({
+                ...position,
+                y_px: val as any,
+              });
+            }}
+          />
         </>
       ) : null}
     </>
@@ -421,14 +413,12 @@ function DragEndpointSourceFields({
       </div>
       {targetSource === "ref" ? (
         <>
-          <Label>
-            {refLabel}
-            <Input
-              value={refValue ?? ""}
-              onChange={(event) => updateRef(event.currentTarget.value)}
-              placeholder="Output name from Find Element"
-            />
-          </Label>
+          <TemplateTextField
+            label={refLabel}
+            value={refValue ?? ""}
+            onChange={(val) => updateRef(val)}
+            placeholder="Output name from Find Element"
+          />
           <p className="text-xs leading-5 text-[var(--app-text-muted)]">
             This endpoint uses the element resolved by a previous Find Element node in this run.
           </p>

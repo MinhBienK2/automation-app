@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import type { ActionConfig } from "../../../types/workflow";
-import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
-import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
+import { TemplateTextField, TemplateTextareaField, type VariableOption } from "./TemplateTextField";
+import { VariableNumericInput } from "./VariableNumericInput";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -23,15 +23,13 @@ export function CoreActionFields({
     case "navigate":
       return (
         <ActionConfigFieldGroup title="Navigation target">
-          <Label>
-            URL
-            <Input
-              value={config.config.url}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "url", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <TemplateTextField
+            label="URL"
+            value={config.config.url}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "url", val))
+            }
+          />
         </ActionConfigFieldGroup>
       );
     case "wait":
@@ -61,19 +59,19 @@ export function CoreActionFields({
           </ActionConfigFieldGroup>
           {config.config.condition === "duration" ? (
             <ActionConfigFieldGroup title="Duration wait">
-              <Label>
-                Duration ms
-                <Input
-                  min="1"
-                  type="number"
-                  value={config.config.duration_ms ?? 1000}
-                  onChange={(event) =>
-                    onChange(
-                      updateActionConfigField(config, "duration_ms", event.currentTarget.value),
-                    )
-                  }
-                />
-              </Label>
+              <VariableNumericInput
+                label="Duration ms"
+                value={config.config.duration_ms}
+                min={1}
+                onChange={(nextVal) => {
+                  const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                    ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                      ? nextVal
+                      : Number(nextVal)
+                    : null;
+                  onChange(updateActionConfigField(config, "duration_ms", val));
+                }}
+              />
             </ActionConfigFieldGroup>
           ) : null}
           {config.config.condition.startsWith("element_") ? (
@@ -83,28 +81,24 @@ export function CoreActionFields({
           ) : null}
           {config.config.condition === "text_visible" ? (
             <ActionConfigFieldGroup title="Text wait">
-              <Label>
-                Text
-                <Input
-                  value={config.config.text ?? ""}
-                  onChange={(event) =>
-                    onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-                  }
-                />
-              </Label>
+              <TemplateTextField
+                label="Text"
+                value={config.config.text ?? ""}
+                onChange={(val) =>
+                  onChange(updateActionConfigField(config, "text", val))
+                }
+              />
             </ActionConfigFieldGroup>
           ) : null}
           {config.config.condition === "url_contains" ? (
             <ActionConfigFieldGroup title="URL wait">
-              <Label>
-                URL contains
-                <Input
-                  value={config.config.url ?? ""}
-                  onChange={(event) =>
-                    onChange(updateActionConfigField(config, "url", event.currentTarget.value))
-                  }
-                />
-              </Label>
+              <TemplateTextField
+                label="URL contains"
+                value={config.config.url ?? ""}
+                onChange={(val) =>
+                  onChange(updateActionConfigField(config, "url", val))
+                }
+              />
             </ActionConfigFieldGroup>
           ) : null}
         </>
@@ -112,28 +106,32 @@ export function CoreActionFields({
     case "random_wait":
       return (
         <ActionConfigFieldGroup title="Wait range">
-          <Label>
-            Minimum wait ms
-            <Input
-              min="1"
-              type="number"
-              value={config.config.min_ms}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "min_ms", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Maximum wait ms
-            <Input
-              min="1"
-              type="number"
-              value={config.config.max_ms}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "max_ms", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <VariableNumericInput
+            label="Minimum wait ms"
+            value={config.config.min_ms}
+            min={1}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              onChange(updateActionConfigField(config, "min_ms", val));
+            }}
+          />
+          <VariableNumericInput
+            label="Maximum wait ms"
+            value={config.config.max_ms}
+            min={1}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              onChange(updateActionConfigField(config, "max_ms", val));
+            }}
+          />
         </ActionConfigFieldGroup>
       );
     case "input_text":

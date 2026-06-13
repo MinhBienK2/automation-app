@@ -4,6 +4,8 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
+import { TemplateTextField } from "./TemplateTextField";
+import { VariableNumericInput } from "./VariableNumericInput";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -22,66 +24,64 @@ export function BrowserActionFields({
     case "open_new_tab":
       return (
         <ActionConfigFieldGroup title="Tab target">
-          <Label>
-            URL
-            <Input
-              value={config.config.url ?? ""}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "url", event.currentTarget.value))
-              }
-              placeholder="Optional URL"
-            />
-          </Label>
+          <TemplateTextField
+            label="URL"
+            value={config.config.url ?? ""}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "url", val))
+            }
+            placeholder="Optional URL"
+          />
         </ActionConfigFieldGroup>
       );
     case "switch_tab":
       return (
         <ActionConfigFieldGroup title="Tab selection">
-          <Label>
-            Tab index
-            <Input
-              min="0"
-              type="number"
-              value={config.config.index}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "index", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <VariableNumericInput
+            label="Tab index"
+            value={config.config.index}
+            min={0}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              onChange(updateActionConfigField(config, "index", val));
+            }}
+          />
         </ActionConfigFieldGroup>
       );
     case "close_tab":
       return (
         <ActionConfigFieldGroup title="Tab selection">
-          <Label>
-            Tab index
-            <Input
-              min="0"
-              type="number"
-              value={config.config.index ?? ""}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "index", event.currentTarget.value))
-              }
-              placeholder="Current tab"
-            />
-          </Label>
+          <VariableNumericInput
+            label="Tab index"
+            value={config.config.index}
+            min={0}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              onChange(updateActionConfigField(config, "index", val));
+            }}
+            placeholder="Current tab"
+          />
         </ActionConfigFieldGroup>
       );
     case "accept_dialog":
       return (
         <ActionConfigFieldGroup title="Dialog response">
-          <Label>
-            Prompt text
-            <Input
-              value={config.config.prompt_text ?? ""}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "prompt_text", event.currentTarget.value),
-                )
-              }
-              placeholder="Optional prompt response"
-            />
-          </Label>
+          <TemplateTextField
+            label="Prompt text"
+            value={config.config.prompt_text ?? ""}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "prompt_text", val))
+            }
+            placeholder="Optional prompt response"
+          />
         </ActionConfigFieldGroup>
       );
     case "dismiss_dialog":
@@ -103,19 +103,19 @@ export function BrowserActionFields({
             </Label>
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Download wait">
-            <Label>
-              Timeout ms
-              <Input
-                min="1"
-                type="number"
-                value={config.config.timeout_ms ?? 30000}
-                onChange={(event) =>
-                  onChange(
-                    updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                  )
-                }
-              />
-            </Label>
+            <VariableNumericInput
+              label="Timeout ms"
+              value={config.config.timeout_ms}
+              min={1}
+              onChange={(nextVal) => {
+                const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                  ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                    ? nextVal
+                    : Number(nextVal)
+                  : null;
+                onChange(updateActionConfigField(config, "timeout_ms", val));
+              }}
+            />
           </ActionConfigFieldGroup>
         </>
       );

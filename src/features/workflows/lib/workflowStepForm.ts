@@ -74,7 +74,7 @@ export type ActionConfigField =
 
 const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
 
-const originalNumber = Number;
+const originalNumber = globalThis.Number;
 function Number(val: any): any {
   if (typeof val === "string" && val.trim().startsWith("{{") && val.trim().endsWith("}}")) {
     return val.trim();

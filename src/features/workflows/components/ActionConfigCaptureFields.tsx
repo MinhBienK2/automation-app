@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { TemplateTextField } from "./TemplateTextField";
 import { Select } from "../../../components/ui/select";
 import { SwitchField } from "../../../components/ui/switch";
 import { updateActionConfigField } from "../lib/workflowStepForm";
@@ -27,39 +28,33 @@ export function CaptureActionFields({
       return (
         <>
           <ActionConfigFieldGroup title="Regex source">
-            <Label>
-              Source output
-              <Input
-                value={config.config.source_name}
-                onChange={(event) =>
-                  onChange(
-                    updateActionConfigField(config, "source_name", event.currentTarget.value),
-                  )
-                }
-              />
-            </Label>
+            <TemplateTextField
+              label="Source output"
+              value={config.config.source_name}
+              onChange={(val) =>
+                onChange(
+                  updateActionConfigField(config, "source_name", val),
+                )
+              }
+            />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Regex pattern">
-            <Label>
-              Pattern
-              <Input
-                value={config.config.pattern}
-                onChange={(event) =>
-                  onChange(
-                    updateActionConfigField(config, "pattern", event.currentTarget.value),
-                  )
-                }
-              />
-            </Label>
-            <Label>
-              Flags
-              <Input
-                value={config.config.flags ?? "g"}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "flags", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <TemplateTextField
+              label="Pattern"
+              value={config.config.pattern}
+              onChange={(val) =>
+                onChange(
+                  updateActionConfigField(config, "pattern", val),
+                )
+              }
+            />
+            <TemplateTextField
+              label="Flags"
+              value={config.config.flags ?? "g"}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "flags", val))
+              }
+            />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Regex output">
             <Label>
@@ -95,17 +90,15 @@ export function CaptureActionFields({
         <>
           <DataCaptureFields config={config} onChange={onChange} />
           <ActionConfigFieldGroup title="Extraction attribute">
-            <Label>
-              Attribute
-              <Input
-                value={config.config.attribute}
-                onChange={(event) =>
-                  onChange(
-                    updateActionConfigField(config, "attribute", event.currentTarget.value),
-                  )
-                }
-              />
-            </Label>
+            <TemplateTextField
+              label="Attribute"
+              value={config.config.attribute}
+              onChange={(val) =>
+                onChange(
+                  updateActionConfigField(config, "attribute", val),
+                )
+              }
+            />
           </ActionConfigFieldGroup>
         </>
       );
@@ -113,15 +106,13 @@ export function CaptureActionFields({
       return (
         <>
           <ActionConfigFieldGroup title="Screenshot artifact">
-            <Label>
-              Path
-              <Input
-                value={config.config.path}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "path", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <TemplateTextField
+              label="Path"
+              value={config.config.path}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "path", val))
+              }
+            />
             <Label>
               Full page
               <Select
@@ -156,43 +147,37 @@ export function CaptureActionFields({
       return (
         <>
           <ActionConfigFieldGroup title="Text source">
-            <Label>
-              Source output
-              <Input
-                value={config.config.source_name}
-                onChange={(event) =>
-                  onChange(
-                    updateActionConfigField(config, "source_name", event.currentTarget.value),
-                  )
-                }
-              />
-            </Label>
+            <TemplateTextField
+              label="Source output"
+              value={config.config.source_name}
+              onChange={(val) =>
+                onChange(
+                  updateActionConfigField(config, "source_name", val),
+                )
+              }
+            />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Text artifact">
-            <Label>
-              Path
-              <Input
-                value={config.config.path}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "path", event.currentTarget.value))
-                }
-              />
-            </Label>
-            <Label>
-              Separator
-              <Input
-                value={formatSeparatorInput(config.config.separator ?? "\n")}
-                onChange={(event) =>
-                  onChange(
-                    updateActionConfigField(
-                      config,
-                      "separator",
-                      parseSeparatorInput(event.currentTarget.value),
-                    ),
-                  )
-                }
-              />
-            </Label>
+            <TemplateTextField
+              label="Path"
+              value={config.config.path}
+              onChange={(val) =>
+                onChange(updateActionConfigField(config, "path", val))
+              }
+            />
+            <TemplateTextField
+              label="Separator"
+              value={formatSeparatorInput(config.config.separator ?? "\n")}
+              onChange={(val) =>
+                onChange(
+                  updateActionConfigField(
+                    config,
+                    "separator",
+                    parseSeparatorInput(val),
+                  ),
+                )
+              }
+            />
             <SwitchField
               checked={config.config.include_trailing_newline !== false}
               label="Trailing newline"
