@@ -862,7 +862,7 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByRole("region", { name: "Live Operations" })).toHaveTextContent("Login identity");
     expect(screen.getByRole("region", { name: "Attention Queue" })).toHaveTextContent("Graph needs a start node");
     expect(screen.queryByRole("region", { name: "Execution Activity" })).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Recent Evidence" })).toHaveTextContent("runs/run-1/screenshots/001.png");
+    expect(screen.queryByRole("region", { name: "Recent Evidence" })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Upcoming Schedules" })).toHaveTextContent("Daily audit");
 
     await userEvent.click(screen.getByRole("button", { name: "Refresh Overview" }));
@@ -1031,17 +1031,6 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByRole("region", { name: "Evidence detail" })).toHaveTextContent("runs/run-1/screenshots/001-visit.png");
     expect(screen.queryByRole("button", { name: "Open Run" })).not.toBeInTheDocument();
     expect(screen.getByText("1 malformed evidence item skipped.")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Overview" }));
-    await userEvent.click(await screen.findByRole("button", { name: /001-visit\.png/ }));
-
-    expect(await screen.findByRole("heading", { name: "Evidence Explorer" })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(listEvidenceItems).toHaveBeenLastCalledWith(
-        expect.objectContaining({ focus_evidence_id: "ev-shot" }),
-      );
-    });
-    expect(getEvidenceDetail).toHaveBeenCalledWith("ev-shot");
   });
 
   test("opens evidence identities as historical references with run context", async () => {

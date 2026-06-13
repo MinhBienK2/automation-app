@@ -5,7 +5,6 @@ import type {
   OperationsOverview,
   OperationsNavigationTarget,
   OverviewAttentionItem,
-  OverviewEvidenceItem,
   OverviewLiveRun,
   OverviewUpcomingSchedule,
   CloakBrowserDiagnostics,
@@ -109,23 +108,6 @@ export function OperationsOverviewPage({
         </Panel>
 
 
-        <Panel title="Recent Evidence" icon={<ShieldCheck aria-hidden="true" />} count={overview?.recent_evidence.total}>
-          {overview?.data_warnings.evidence_items_skipped ? (
-            <p className="field-warning">
-              {overview.data_warnings.evidence_items_skipped} malformed evidence item
-              {overview.data_warnings.evidence_items_skipped === 1 ? "" : "s"} skipped.
-            </p>
-          ) : null}
-          {overview?.recent_evidence.items.length ? (
-            <div className="overview-list">
-              {overview.recent_evidence.items.map((item) => (
-                <EvidenceRow key={item.evidence_id} item={item} onNavigate={onNavigate} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="No evidence metadata" body="Generated screenshot and download metadata appears here after runs finish." />
-          )}
-        </Panel>
 
         <Panel title="Upcoming Schedules" icon={<CalendarClock aria-hidden="true" />} count={overview?.upcoming_schedules.total}>
           {overview?.upcoming_schedules.items.length ? (
@@ -275,28 +257,6 @@ function AttentionRow({
   );
 }
 
-function EvidenceRow({
-  item,
-  onNavigate,
-}: {
-  item: OverviewEvidenceItem;
-  onNavigate: (target: OperationsNavigationTarget) => void;
-}) {
-  return (
-    <button
-      className="overview-row"
-      type="button"
-      onClick={() => onNavigate(item.navigation_targets.evidence ?? item.navigation_targets.workflow ?? { type: "workflow", workflow_id: item.workflow.id })}
-    >
-      <span>
-        <strong>{item.artifact_kind}</strong>
-        <small>{item.workflow.name}</small>
-      </span>
-      <span>{item.relative_path_or_label}</span>
-      <span>{item.node_id ?? "-"}</span>
-    </button>
-  );
-}
 
 function ScheduleRow({
   schedule,
