@@ -133,6 +133,10 @@ export function rememberVariableOptions(options: VariableOption[]) {
   );
 }
 
+export function getAvailableVariableOptions(extraOptions: VariableOption[] = []): VariableOption[] {
+  return mergeVariableOptions(extraOptions);
+}
+
 export type { VariableOption };
 
 function highlightTemplateTokens(value: string) {

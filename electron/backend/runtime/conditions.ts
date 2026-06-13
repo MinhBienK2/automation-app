@@ -1,11 +1,13 @@
 import { locatorFor, locatorForRuntimeElementRef } from "./targetResolver.js";
 import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
+import { resolveObjectTemplates } from "./variables.js";
 
 export async function conditionMatches(runtime: RunnerActionRuntime, condition: unknown) {
   if (!condition || typeof condition !== "object" || !("kind" in condition)) {
     throw new Error("Condition kind is required");
   }
-  const typed = condition as {
+  const resolvedCondition = resolveObjectTemplates(condition, runtime.outputs);
+  const typed = resolvedCondition as {
     kind: string;
     name?: string;
     value?: string;

@@ -5,6 +5,8 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { VariableNumericInput } from "./VariableNumericInput";
+
 
 type TargetableElementConfig = Extract<
   ActionConfig,
@@ -181,17 +183,19 @@ export function ElementOptionalFields({
           </Select>
         </Label>
       ) : null}
-      <Label>
-        Timeout ms
-        <Input
-          min="1"
-          type="number"
-          value={optionalConfig.timeout_ms ?? 5000}
-          onChange={(event) =>
-            onChange(updateActionConfigField(config, "timeout_ms", event.currentTarget.value))
-          }
-        />
-      </Label>
+      <VariableNumericInput
+        label="Timeout ms"
+        value={optionalConfig.timeout_ms}
+        min={1}
+        onChange={(nextVal) => {
+          const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+            ? typeof nextVal === "string" && nextVal.startsWith("{{")
+              ? nextVal
+              : Number(nextVal)
+            : null;
+          onChange(updateActionConfigField(config, "timeout_ms", val));
+        }}
+      />
     </>
   );
 }
@@ -277,7 +281,7 @@ export function StructuredTargetFields({
   };
   const updateConstraint = (
     field: "visible" | "enabled" | "contains_text" | "index",
-    nextValue: string,
+    nextValue: any,
   ) => {
     const nextConstraints = {
       ...(constraints ?? {}),
@@ -287,8 +291,10 @@ export function StructuredTargetFields({
             ? null
             : nextValue === "true"
           : field === "index"
-            ? nextValue
-              ? Number(nextValue)
+            ? nextValue !== "" && nextValue !== null && nextValue !== undefined
+              ? typeof nextValue === "string" && nextValue.startsWith("{{")
+                ? nextValue
+                : Number(nextValue)
               : null
             : nextValue || null,
     };
@@ -390,15 +396,12 @@ export function StructuredTargetFields({
               onChange={(event) => updateConstraint("contains_text", event.currentTarget.value)}
             />
           </Label>
-          <Label>
-            {labelPrefix} index
-            <Input
-              min="0"
-              type="number"
-              value={constraints?.index ?? ""}
-              onChange={(event) => updateConstraint("index", event.currentTarget.value)}
-            />
-          </Label>
+          <VariableNumericInput
+            label={`${labelPrefix} index`}
+            value={constraints?.index}
+            min={0}
+            onChange={(nextVal) => updateConstraint("index", nextVal)}
+          />
         </>
       ) : null}
     </>

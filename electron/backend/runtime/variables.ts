@@ -60,3 +60,72 @@ export function renderTemplate(value: string, outputs: Record<string, unknown>) 
     String(outputs[name] ?? ""),
   );
 }
+
+const NUMERIC_KEYS = new Set([
+  "timeout_ms",
+  "duration_ms",
+  "min_ms",
+  "max_ms",
+  "delay_ms",
+  "index",
+  "times",
+  "max_attempts",
+  "width",
+  "height",
+  "latitude",
+  "longitude",
+]);
+
+const NESTED_STEP_KEYS = new Set([
+  "steps",
+  "then_steps",
+  "else_steps",
+  "try_steps",
+  "success_steps",
+  "error_steps",
+  "finally_steps",
+  "primary_steps",
+  "fallback_steps",
+  "failed_steps",
+  "timeout_steps",
+  "cases",
+  "choices",
+  "condition",
+]);
+
+export function resolveObjectTemplates(
+  val: any,
+  outputs: Record<string, unknown>,
+  parentKey?: string,
+): any {
+  if (val === null || val === undefined) return val;
+
+  if (typeof val === "string") {
+    const rendered = renderTemplate(val, outputs);
+    if (parentKey && NUMERIC_KEYS.has(parentKey)) {
+      const parsed = Number(rendered);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+    return rendered;
+  }
+
+  if (Array.isArray(val)) {
+    return val.map((item) => resolveObjectTemplates(item, outputs, parentKey));
+  }
+
+  if (typeof val === "object") {
+    const result: any = {};
+    for (const [key, child] of Object.entries(val)) {
+      if (NESTED_STEP_KEYS.has(key)) {
+        result[key] = child;
+      } else {
+        result[key] = resolveObjectTemplates(child, outputs, key);
+      }
+    }
+    return result;
+  }
+
+  return val;
+}
+
+

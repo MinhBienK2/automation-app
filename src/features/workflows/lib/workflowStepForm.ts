@@ -74,11 +74,20 @@ export type ActionConfigField =
 
 const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
 
+const originalNumber = Number;
+function Number(val: any): any {
+  if (typeof val === "string" && val.trim().startsWith("{{") && val.trim().endsWith("}}")) {
+    return val.trim();
+  }
+  return originalNumber(val);
+}
+
 export function updateActionConfigField(
   config: ActionConfig,
   field: ActionConfigField,
-  value: string,
+  rawValue: string | number | null,
 ): ActionConfig {
+  const value = rawValue === null || rawValue === undefined ? "" : String(rawValue);
   if (field === "target_ref" && actionSupportsTargetRef(config.type)) {
     return {
       ...config,

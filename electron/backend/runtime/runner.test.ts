@@ -2588,6 +2588,73 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
+  test("resolves templates recursively in locator value, index constraint, and timeout_ms", async () => {
+    const fakeContext = new FakeContext();
+    const fakePage = fakeContext.pages()[0];
+    const locatorCalls: any[] = [];
+    
+    fakePage.locator = (selector: string) => {
+      locatorCalls.push(selector);
+      return {
+        click: async () => {},
+        isVisible: async () => true,
+        isEnabled: async () => true,
+        textContent: async () => "matched",
+        nth: (index: number) => {
+          return {
+            click: async () => {},
+            isVisible: async () => true,
+            isEnabled: async () => true,
+            textContent: async () => "matched",
+          };
+        },
+      } as any;
+    };
+    
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(fakeContext),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("setup", "Setup variables", {
+            type: "set_variable",
+            config: {
+              variables: [
+                { name: "myClass", value_type: "text", value: "target-btn" },
+                { name: "myIndex", value_type: "number", value: "2" },
+                { name: "myTimeout", value_type: "number", value: "5000" },
+              ],
+            },
+          }),
+          step("click-dynamic", "Click dynamic button", {
+            type: "click",
+            config: {
+              target: {
+                locators: [
+                  { kind: "css", value: ".{{myClass}}" },
+                ],
+                constraints: {
+                  index: "{{myIndex}}" as any,
+                },
+                iframe: null,
+              },
+              timeout_ms: "{{myTimeout}}" as any,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(locatorCalls).toContain(".target-btn");
+  });
+
+
   test("records repeated loop body traces with stable sequence metadata", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),

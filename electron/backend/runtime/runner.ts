@@ -72,6 +72,8 @@ import {
   recordRunnerEvidence,
   waitForRunnerDownload,
 } from "./runnerEvidence.js";
+import { resolveObjectTemplates } from "./variables.js";
+
 
 export {
   createCloakBrowserDriver,
@@ -387,7 +389,9 @@ export class BrowserWorkflowRunner {
 
   private async executeAction(runtime: Runtime, action: ActionConfig): Promise<void> {
     this.throwIfCancelled(runtime.signal);
-    await executeRegisteredAction(this.runnerActionExecutors(runtime), action);
+    const resolvedAction = structuredClone(action);
+    resolvedAction.config = resolveObjectTemplates(resolvedAction.config, runtime.outputs);
+    await executeRegisteredAction(this.runnerActionExecutors(runtime), resolvedAction);
   }
 
   private runnerActionExecutors(runtime: Runtime) {
