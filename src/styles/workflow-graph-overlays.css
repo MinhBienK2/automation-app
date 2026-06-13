@@ -120,6 +120,13 @@
   align-items: end;
 }
 
+.graph-inspector-drawer .variable-row-grid {
+  min-width: 0;
+  grid-template-columns: 1fr 86px 1.2fr 32px;
+  gap: 6px;
+  align-items: center;
+}
+
 .variable-row-heading {
   color: #667d8d;
   font-size: 11px;

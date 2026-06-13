@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect, useId } from "react";
 import { createPortal } from "react-dom";
-import { Braces } from "lucide-react";
+import { Braces, Calculator } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -129,6 +129,45 @@ export function TemplateTextField({
     }, 0);
   }
 
+  function insertMath() {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const start = input.selectionStart ?? value.length;
+    const end = input.selectionEnd ?? value.length;
+    const selectedText = value.slice(start, end);
+
+    if (!value.trim().startsWith("=")) {
+      const mathText = selectedText ? `(${selectedText} + 1)` : `(1 + 1)`;
+      const newValue = `=${value.slice(0, start)}${mathText}${value.slice(end)}`;
+      onChange(newValue);
+      
+      setTimeout(() => {
+        input.focus();
+        if (selectedText) {
+          input.setSelectionRange(0, newValue.length);
+        } else {
+          const selectStart = 1 + start;
+          const selectEnd = selectStart + 5;
+          input.setSelectionRange(selectStart, selectEnd);
+        }
+      }, 0);
+    } else {
+      const mathText = selectedText ? `(${selectedText} + 1)` : `(1 + 1)`;
+      const newValue = `${value.slice(0, start)}${mathText}${value.slice(end)}`;
+      onChange(newValue);
+      
+      setTimeout(() => {
+        input.focus();
+        if (selectedText) {
+          input.setSelectionRange(start, start + mathText.length);
+        } else {
+          input.setSelectionRange(start, start + 5);
+        }
+      }, 0);
+    }
+  }
+
   const handleScroll = (e: React.UIEvent<HTMLInputElement>) => {
     if (backdropRef.current) {
       backdropRef.current.scrollLeft = e.currentTarget.scrollLeft;
@@ -142,17 +181,29 @@ export function TemplateTextField({
       {hasLabel && (
         <div className="flex items-center justify-between">
           <Label htmlFor={inputId} className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
-          <Button
-            aria-expanded={open}
-            aria-label={`Insert variable for ${label}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setOpen((current) => !current)}
-            className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-          >
-            <Braces className="h-3 w-3" />
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              aria-label={`Insert math for ${label}`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={insertMath}
+              className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+            >
+              <Calculator className="h-3 w-3" />
+            </Button>
+            <Button
+              aria-expanded={open}
+              aria-label={`Insert variable for ${label}`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setOpen((current) => !current)}
+              className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+            >
+              <Braces className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
       )}
 
@@ -171,17 +222,29 @@ export function TemplateTextField({
           onChange={(event) => onChange(event.currentTarget.value)}
         />
         {!hasLabel && (
-          <Button
-            aria-expanded={open}
-            aria-label="Insert variable"
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setOpen((current) => !current)}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)] z-[3]"
-          >
-            <Braces className="h-3 w-3" />
-          </Button>
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1 z-[3]">
+            <Button
+              aria-label="Insert math"
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={insertMath}
+              className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+            >
+              <Calculator className="h-3 w-3" />
+            </Button>
+            <Button
+              aria-expanded={open}
+              aria-label="Insert variable"
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setOpen((current) => !current)}
+              className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+            >
+              <Braces className="h-3 w-3" />
+            </Button>
+          </div>
         )}
       </div>
 
@@ -337,6 +400,45 @@ export function TemplateTextareaField({
     }, 0);
   }
 
+  function insertMath() {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart ?? value.length;
+    const end = textarea.selectionEnd ?? value.length;
+    const selectedText = value.slice(start, end);
+
+    if (!value.trim().startsWith("=")) {
+      const mathText = selectedText ? `(${selectedText} + 1)` : `(1 + 1)`;
+      const newValue = `=${value.slice(0, start)}${mathText}${value.slice(end)}`;
+      onChange(newValue);
+      
+      setTimeout(() => {
+        textarea.focus();
+        if (selectedText) {
+          textarea.setSelectionRange(0, newValue.length);
+        } else {
+          const selectStart = 1 + start;
+          const selectEnd = selectStart + 5;
+          textarea.setSelectionRange(selectStart, selectEnd);
+        }
+      }, 0);
+    } else {
+      const mathText = selectedText ? `(${selectedText} + 1)` : `(1 + 1)`;
+      const newValue = `${value.slice(0, start)}${mathText}${value.slice(end)}`;
+      onChange(newValue);
+      
+      setTimeout(() => {
+        textarea.focus();
+        if (selectedText) {
+          textarea.setSelectionRange(start, start + mathText.length);
+        } else {
+          textarea.setSelectionRange(start, start + 5);
+        }
+      }, 0);
+    }
+  }
+
   const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
     if (backdropRef.current) {
       backdropRef.current.scrollTop = e.currentTarget.scrollTop;
@@ -348,17 +450,29 @@ export function TemplateTextareaField({
     <div className="space-y-1.5" ref={containerRef}>
       <div className="flex items-center justify-between">
         <Label htmlFor={textareaId} className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
-        <Button
-          aria-expanded={open}
-          aria-label={`Insert variable for ${label}`}
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setOpen((current) => !current)}
-          className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-        >
-          <Braces className="h-3 w-3" />
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            aria-label={`Insert math for ${label}`}
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={insertMath}
+            className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+          >
+            <Calculator className="h-3 w-3" />
+          </Button>
+          <Button
+            aria-expanded={open}
+            aria-label={`Insert variable for ${label}`}
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setOpen((current) => !current)}
+            className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+          >
+            <Braces className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
 
       <div className="highlight-textarea-container">
@@ -442,14 +556,33 @@ export function getAvailableVariableOptions(extraOptions: VariableOption[] = [])
 export type { VariableOption };
 
 function highlightTemplateTokens(value: string) {
+  const isMath = value.trim().startsWith("=");
   const parts = value.split(/(\{\{\s*[a-zA-Z0-9_.:-]+\s*\}\})/g);
-  return parts.map((part, index) =>
-    /^\{\{\s*[a-zA-Z0-9_.:-]+\s*\}\}$/.test(part) ? (
-      <span className="template-token-highlight text-[var(--app-accent)]" key={`${part}-${index}`}>
-        {part}
-      </span>
-    ) : (
-      <span key={`${part}-${index}`}>{part}</span>
-    ),
-  );
+  return parts.map((part, index) => {
+    if (/^\{\{\s*[a-zA-Z0-9_.:-]+\s*\}\}$/.test(part)) {
+      return (
+        <span className="template-token-highlight text-[var(--app-accent)]" key={`${part}-${index}`}>
+          {part}
+        </span>
+      );
+    } else {
+      if (isMath) {
+        const subparts = part.split(/([=()])/g);
+        return (
+          <span key={`${part}-${index}`}>
+            {subparts.map((subpart, subIndex) =>
+              /^[=()]$/.test(subpart) ? (
+                <span className="math-token-highlight" key={`${subpart}-${subIndex}`}>
+                  {subpart}
+                </span>
+              ) : (
+                subpart
+              ),
+            )}
+          </span>
+        );
+      }
+      return <span key={`${part}-${index}`}>{part}</span>;
+    }
+  });
 }

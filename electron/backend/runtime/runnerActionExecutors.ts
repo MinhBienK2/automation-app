@@ -31,6 +31,7 @@ import {
   submitFormTarget,
 } from "./interactionActions.js";
 import {
+  evaluateMathInObject,
   flattenObject,
   renderTemplate,
   setVariables,
@@ -481,7 +482,8 @@ export function createRunnerActionExecutors(
     set_json_variables: async (action) => {
       const parsed = JSON.parse(renderTemplate(action.config.json, runtime.outputs));
       if (!isPlainRecord(parsed)) throw new Error("JSON variables must be an object");
-      flattenObject(runtime.outputs, "", parsed);
+      const evaluated = evaluateMathInObject(parsed);
+      flattenObject(runtime.outputs, "", evaluated);
     },
     assert_element: async (action) => {
       const locator = await deps.locatorForAction(runtime, action.config);

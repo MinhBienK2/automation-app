@@ -142,10 +142,33 @@ describe("TemplateTextField", () => {
     // Should render the compact trigger button
     const trigger = screen.getByRole("button", { name: "Insert variable" });
     expect(trigger).toBeInTheDocument();
-    expect(trigger).toHaveClass("absolute");
+    expect(trigger.parentElement).toHaveClass("absolute");
 
     // Click trigger and verify popover opens
     await user.click(trigger);
     expect(screen.getByRole("listbox")).toBeInTheDocument();
+  });
+
+  test("highlights math prefix '=' and parentheses '()' inside a math expression", () => {
+    render(
+      <TemplateTextField
+        label="Math test"
+        value="=(1 + {{count}})"
+        onChange={vi.fn()}
+      />
+    );
+
+    const equalSign = screen.getByText("=");
+    expect(equalSign).toBeInTheDocument();
+    expect(equalSign).toHaveClass("math-token-highlight");
+
+    const openParen = screen.getByText("(");
+    const closeParen = screen.getByText(")");
+    expect(openParen).toHaveClass("math-token-highlight");
+    expect(closeParen).toHaveClass("math-token-highlight");
+
+    const tokens = screen.getAllByText("{{count}}");
+    const countToken = tokens.find((el) => el.tagName === "SPAN");
+    expect(countToken).toHaveClass("template-token-highlight");
   });
 });

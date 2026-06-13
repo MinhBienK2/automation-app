@@ -1040,7 +1040,7 @@
 }
 
 .highlight-input-element-compact {
-  padding-right: 32px !important;
+  padding-right: 54px !important;
 }
 
 .highlight-textarea-container {
@@ -1100,5 +1100,10 @@
 
 .template-token-highlight {
   color: #32d3e6 !important; /* Active/control cyan */
+  font-weight: 500;
+}
+
+.math-token-highlight {
+  color: var(--app-warning) !important; /* Attention amber */
   font-weight: 500;
 }

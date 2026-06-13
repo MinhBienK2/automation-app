@@ -29,9 +29,61 @@ export function parseVariableValue(
 ) {
   const rendered = renderTemplate(value, outputs);
   if (valueType === "json") return JSON.parse(rendered);
-  if (valueType === "number") return Number(rendered);
+  if (valueType === "number") {
+    const trimmed = rendered.trim();
+    if (trimmed.startsWith("=")) {
+      const expression = trimmed.slice(1);
+      const sanitized = expression.replace(/[^0-9+\-*/().\s]/g, "");
+      try {
+        const result = new Function(`return (${sanitized});`)();
+        if (typeof result === "number" && !Number.isNaN(result)) {
+          return result;
+        }
+      } catch {
+        // fallback
+      }
+      return Number(expression);
+    }
+    return Number(rendered);
+  }
   if (valueType === "boolean") return rendered === "true";
   return rendered;
+}
+
+export function tryEvaluateMathString(val: string): unknown {
+  const trimmed = val.trim();
+  if (trimmed.startsWith("=")) {
+    const expression = trimmed.slice(1);
+    if (!/^[0-9+\-*/().\s]+$/.test(expression)) return val;
+    if (!/[0-9]/.test(expression)) return val;
+
+    try {
+      const result = new Function(`return (${expression});`)();
+      if (typeof result === "number" && !Number.isNaN(result)) {
+        return result;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return val;
+}
+
+export function evaluateMathInObject(val: any): any {
+  if (typeof val === "string") {
+    return tryEvaluateMathString(val);
+  }
+  if (Array.isArray(val)) {
+    return val.map(evaluateMathInObject);
+  }
+  if (val !== null && typeof val === "object") {
+    const result: any = {};
+    for (const [key, child] of Object.entries(val)) {
+      result[key] = evaluateMathInObject(child);
+    }
+    return result;
+  }
+  return val;
 }
 
 export function flattenObject(outputs: Record<string, unknown>, prefix: string, value: unknown) {

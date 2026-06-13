@@ -75,8 +75,9 @@ describe("ActionConfigEditor", () => {
     await userEvent.click(screen.getByRole("option", { name: "roles Set JSON Variables" }));
 
     expect(screen.getByLabelText("Text")).toHaveValue("{{roles}}");
-    expect(within(screen.getByLabelText("Text token preview")).getByText("{{roles}}"))
-      .toHaveClass("template-token-highlight");
+    const tokens = screen.getAllByText("{{roles}}");
+    const spanToken = tokens.find((el) => el.tagName === "SPAN");
+    expect(spanToken).toHaveClass("template-token-highlight");
     expect(onChange).toHaveBeenLastCalledWith({
       type: "input_text",
       config: {

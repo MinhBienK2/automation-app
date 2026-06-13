@@ -25,7 +25,7 @@ import {
 } from "./WorkflowGraphConditionFields";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
-import type { VariableOption } from "./TemplateTextField";
+import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 import {
   arrayConfig,
   booleanConfig,
@@ -644,18 +644,17 @@ export function NodeConfigFields({
       return (
         <div className="graph-config-fields">
           <ActionConfigFieldGroup title="JSON variables">
-            <Label>
-              JSON variables
-              <Textarea
-                value={stringConfig(node.config, "json", "{\n  \"name\": \"value\"\n}")}
-                onChange={(event) =>
-                  updateConfig({
-                    ...objectConfig(node.config),
-                    json: event.currentTarget.value,
-                  })
-                }
-              />
-            </Label>
+            <TemplateTextareaField
+              label="JSON variables"
+              value={stringConfig(node.config, "json", "{\n  \"name\": \"value\"\n}")}
+              onChange={(value) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  json: value,
+                })
+              }
+              variableOptions={variableOptions}
+            />
           </ActionConfigFieldGroup>
         </div>
       );
