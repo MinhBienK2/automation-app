@@ -346,7 +346,7 @@ describe("desktop CI/CD", () => {
     expect(topLevelFiles).toEqual([
       "commandHelpers.test.ts",
       "commandHelpers.ts",
-      "commands.test.ts",
+      "commands.testHelpers.ts",
       "commands.ts",
     ]);
     expect(topLevelDirectories).toEqual(

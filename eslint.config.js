@@ -62,6 +62,7 @@ export default [
       "electron/backend/projects/**/*.{ts,tsx}",
       "electron/backend/recording/**/*.{ts,tsx}",
       "electron/backend/commands/**/*.{ts,tsx}",
+      "electron/backend/commands.testHelpers.ts",
       "electron/backend/runtime/**/*.{ts,tsx}",
       "electron/backend/services/**/*.{ts,tsx}",
       "electron/backend/scheduling/**/*.{ts,tsx}",
