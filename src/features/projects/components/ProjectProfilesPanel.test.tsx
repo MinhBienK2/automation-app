@@ -94,7 +94,7 @@ describe("ProjectProfilesPanel", () => {
     expect(within(list).getByText("Profile A")).toBeInTheDocument();
     expect(screen.getByText("Used by 1 workflow")).toBeInTheDocument();
 
-    const editBtn = screen.getByRole("button", { name: "Configure" });
+    const editBtn = screen.getByRole("button", { name: "Configure profile Profile A" });
     await user.click(editBtn);
 
     const editDialog = screen.getByRole("dialog", { name: /Profile Configuration: Profile A/i });
@@ -127,7 +127,7 @@ describe("ProjectProfilesPanel", () => {
       />,
     );
 
-    const editBtn = screen.getByRole("button", { name: "Configure" });
+    const editBtn = screen.getByRole("button", { name: "Configure profile Profile A" });
     await user.click(editBtn);
 
     const editDialog = screen.getByRole("dialog", { name: /Profile Configuration: Profile A/i });
@@ -209,7 +209,7 @@ describe("ProjectProfilesPanel", () => {
       />,
     );
 
-    const editBtn = screen.getByRole("button", { name: "Configure" });
+    const editBtn = screen.getByRole("button", { name: "Configure profile Profile A" });
     await user.click(editBtn);
 
     const editDialog = screen.getByRole("dialog", { name: /Profile Configuration: Profile A/i });

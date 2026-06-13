@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Fingerprint } from "lucide-react";
+import { Plus, Trash2, Fingerprint, Pencil } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
 import { IconButton } from "../../../components/ui/icon-button";
@@ -170,17 +170,17 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
                 </div>
 
                 <div className="row-actions">
-                  <Button
+                  <IconButton
+                    label={`Configure profile ${env.name}`}
                     type="button"
                     variant="secondary"
-                    size="sm"
                     onClick={() => {
                       setSelectedEnvId(env.id);
                       setEditDialogOpen(true);
                     }}
                   >
-                    Configure
-                  </Button>
+                    <Pencil aria-hidden="true" />
+                  </IconButton>
                   <IconButton
                     label={`Delete profile ${env.name}`}
                     type="button"

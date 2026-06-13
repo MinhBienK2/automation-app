@@ -1039,7 +1039,7 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByRole("region", { name: "Browser profiles list" })).toHaveTextContent("Profile A");
 
     const user = userEvent.setup();
-    const configureBtn = screen.getByRole("button", { name: "Configure" });
+    const configureBtn = screen.getByRole("button", { name: "Configure profile Profile A" });
     await user.click(configureBtn);
 
     const dialog = screen.getByRole("dialog", { name: /Profile Configuration: Profile A/i });
