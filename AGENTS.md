@@ -31,20 +31,29 @@ Before changing `src/App.css`, layout structure, or user-facing component stylin
 Preserve the existing Supabase-inspired dark theme unless the user explicitly requests a different visual direction. For UI changes, final summaries should mention whether `DESIGN.md` was consulted and call out any intentional deviations.
 
 ## Project Structure
-- Frontend UI lives in `src/App.tsx`, `src/App.css`, `src/layouts/`, and `src/features/workflows/`; tests use Vitest and Testing Library next to feature, layout, lib, and CSS files.
-- Electron IPC lives in `electron/ipc.ts`, `electron/preload.cts`, `electron/main.ts`, and typed wrappers in `src/lib/workflowApi.ts`.
-- Electron backend commands, SQLite persistence, graph compiler, and CloakBrowser runner live under `electron/backend/`.
-- Agent source-of-truth docs live under `docs/`; historical plans/specs live under `docs/superpowers/`; smoke checklist lives in `README.md`.
+- Frontend composition root is `src/app/App.tsx`. Feature code: `src/features/{feature-name}/{state,components,pages,data,lib}/`.
+- Electron IPC lives in `electron/ipc.ts`, preload in `electron/preload.cts`, and backend commands in `electron/backend/commands/{domain}Commands.ts`.
+- Database persistence, graph compiler, and runner live under `electron/backend/`.
+- Docs live under `docs/`; router is `docs/task-routes.md`.
+
+## File Size Limits (Enforced by ESLint)
+- Source files: max 300 lines (excluding blank lines and comments). Tests and pure data are exempt.
+- Split files before they exceed 300 lines. Run `npm run lint`.
 
 ## Do NOT
 - Read all docs by default — use `docs/task-routes.md` as the router.
+- Add state or business logic to `src/app/App.tsx` (only hook composition & routing).
 - Duplicate TypeScript type shapes or command names into docs prose.
-- Add UI state, SQL, or browser API details to command-boundary docs.
-- Rewrite existing graph links or edge waits when changing graph defaults.
+- Rewrite existing graph links or edge waits when changing defaults.
 
 ## Key Conventions
 - Layer map: `docs/architecture/overview.md`. Read it for broad or unclear tasks.
-- Add or update focused tests when changing validation, commands, persistence, runner behavior, or user-visible workflow UI.
-- Prefer existing action config variants and command names; update TypeScript DTOs and Electron backend handlers together when adding an action.
-- Keep the desktop smoke checklist in `README.md` accurate when workflow behavior changes.
+- Add/update tests when changing validation, commands, persistence, runner, or UI.
+- Run `npm run lint` and `npx tsc --noEmit` before committing.
+
+## Commit Attribution
+AI commits MUST include:
+```
+Co-Authored-By: Antigravity AI <noreply@example.com>
+```
 

@@ -1,0 +1,206 @@
+import { useState, useCallback } from "react";
+import type {
+  ProjectWorkspaceAPI,
+} from "../../../shared/types/workspaceContracts";
+import type {
+  Project,
+  ProjectEnvironment,
+} from "../../../types/workflow";
+import {
+  listProjects,
+  listProjectEnvironments,
+  createProject as createProjectCommand,
+  updateProject as updateProjectCommand,
+  duplicateProject as duplicateProjectCommand,
+  deleteProject as deleteProjectCommand,
+  listSubflows,
+} from "../../../lib/workflowApi";
+import { commandMessage } from "../../../lib/workflowUi";
+
+export interface ProjectWorkspaceDeps {
+  setAppError: (error: string) => void;
+  showToast: (message: string) => void;
+  loadWorkflows: () => Promise<void>;
+  setSubflows: (subflows: any[]) => void;
+  setSubflowsLoading: (loading: boolean) => void;
+}
+
+export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspaceAPI {
+  const { setAppError, showToast, loadWorkflows, setSubflows, setSubflowsLoading } = deps;
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [projectCollection, setProjectCollectionState] = useState<"workflows" | "subflows" | "settings">("workflows");
+  const [projectEnvironments, setProjectEnvironments] = useState<ProjectEnvironment[]>([]);
+
+  const loadProjectModel = useCallback(async () => {
+    try {
+      const loadedProjects = await listProjects();
+      setProjects(loadedProjects);
+      const projectId =
+        selectedProjectId && loadedProjects.some((project) => project.id === selectedProjectId)
+          ? selectedProjectId
+          : loadedProjects[0]?.id ?? null;
+      setSelectedProjectId(projectId);
+      if (!projectId) {
+        setProjectEnvironments([]);
+        return { projects: loadedProjects, environments: [] };
+      }
+      const environments = await listProjectEnvironments(projectId);
+      setProjectEnvironments(environments);
+      return { projects: loadedProjects, environments };
+    } catch (error) {
+      setAppError(commandMessage(error));
+      return { projects: [], environments: [] };
+    }
+  }, [selectedProjectId, setAppError]);
+
+  const currentProjectId = useCallback(() => {
+    return (
+      selectedProjectId ??
+      projects[0]?.id ??
+      projectEnvironments[0]?.project_id ??
+      null
+    );
+  }, [selectedProjectId, projects, projectEnvironments]);
+
+  const ensureProjectId = useCallback(async () => {
+    const existingProjectId = currentProjectId();
+    if (existingProjectId) return existingProjectId;
+    const loaded = await loadProjectModel();
+    const projectId = loaded.projects[0]?.id ?? null;
+    setSelectedProjectId(projectId);
+    if (!projectId) {
+      throw new Error("No projects available");
+    }
+    return projectId;
+  }, [currentProjectId, loadProjectModel]);
+
+  const loadSubflowsForProject = useCallback(async (projectId: string) => {
+    setSubflowsLoading(true);
+    try {
+      const items = await listSubflows(projectId);
+      setSubflows(items);
+      setAppError("");
+      return items;
+    } catch (error) {
+      setAppError(commandMessage(error));
+      return [];
+    } finally {
+      setSubflowsLoading(false);
+    }
+  }, [setSubflows, setSubflowsLoading, setAppError]);
+
+  const setProjectCollection = useCallback((collection: "workflows" | "subflows" | "settings") => {
+    setProjectCollectionState(collection);
+    const projectId = currentProjectId();
+    if (projectId && (collection === "subflows" || collection === "settings")) {
+      void loadSubflowsForProject(projectId);
+    }
+  }, [currentProjectId, loadSubflowsForProject]);
+
+  const selectProject = useCallback(async (projectId: string) => {
+    setAppError("");
+    if (projectId !== selectedProjectId) {
+      setProjectCollectionState("workflows");
+    }
+    setSelectedProjectId(projectId);
+    try {
+      const environments = await listProjectEnvironments(projectId);
+      setProjectEnvironments(environments);
+      await loadSubflowsForProject(projectId);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }, [selectedProjectId, loadSubflowsForProject, setAppError]);
+
+  const createProject = useCallback(async (input: { name: string; description?: string | null }) => {
+    setAppError("");
+    try {
+      const project = await createProjectCommand(input);
+      setSelectedProjectId(project.id);
+      setProjectCollectionState("workflows");
+      setProjects(await listProjects());
+      await loadWorkflows();
+      setProjectEnvironments(await listProjectEnvironments(project.id));
+      const subflowItems = await listSubflows(project.id);
+      setSubflows(subflowItems);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }, [loadWorkflows, setSubflows, setAppError]);
+
+  const updateProject = useCallback(async (
+    projectId: string,
+    input: { name?: string; description?: string | null },
+  ) => {
+    setAppError("");
+    try {
+      const project = await updateProjectCommand(projectId, input);
+      setSelectedProjectId(project.id);
+      setProjects(await listProjects());
+      showToast("Project updated.");
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }, [showToast, setAppError]);
+
+  const duplicateProject = useCallback(async (projectId: string) => {
+    setAppError("");
+    try {
+      const project = await duplicateProjectCommand(projectId);
+      setSelectedProjectId(project.id);
+      setProjectCollectionState("settings");
+      setProjects(await listProjects());
+      setProjectEnvironments(await listProjectEnvironments(project.id));
+      const subflowItems = await listSubflows(project.id);
+      setSubflows(subflowItems);
+      await loadWorkflows();
+      showToast("Project duplicated.");
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }, [loadWorkflows, setSubflows, showToast, setAppError]);
+
+  const deleteProject = useCallback(async (projectId: string) => {
+    setAppError("");
+    try {
+      await deleteProjectCommand(projectId);
+      const loadedProjects = await listProjects();
+      const nextProjectId = loadedProjects[0]?.id ?? null;
+      setProjects(loadedProjects);
+      setSelectedProjectId(nextProjectId);
+      if (nextProjectId) {
+        setProjectEnvironments(await listProjectEnvironments(nextProjectId));
+        const subflowItems = await listSubflows(nextProjectId);
+        setSubflows(subflowItems);
+      } else {
+        setProjectEnvironments([]);
+        setSubflows([]);
+      }
+      await loadWorkflows();
+      showToast("Project deleted.");
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }, [loadWorkflows, setSubflows, showToast, setAppError]);
+
+  return {
+    projects,
+    selectedProjectId,
+    projectCollection,
+    projectEnvironments,
+    setSelectedProjectId,
+    setProjectCollection,
+    setProjectEnvironments,
+    setProjects,
+    loadProjectModel,
+    currentProjectId,
+    ensureProjectId,
+    selectProject,
+    createProject,
+    updateProject,
+    duplicateProject,
+    deleteProject,
+  };
+}
