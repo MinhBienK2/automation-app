@@ -4,7 +4,6 @@ import { Braces } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Textarea } from "../../../components/ui/textarea";
 
 
 type VariableOption = {
@@ -63,8 +62,19 @@ export function TemplateTextField({
   const updateCoords = () => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
+      const popoverHeight = popoverRef.current ? popoverRef.current.offsetHeight : 240;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      let top;
+      if (spaceBelow < popoverHeight && spaceAbove > spaceBelow) {
+        top = rect.top - popoverHeight - 4 + window.scrollY;
+      } else {
+        top = rect.bottom + 4 + window.scrollY;
+      }
+
       setPopoverCoords({
-        top: rect.bottom + window.scrollY,
+        top,
         left: rect.left + window.scrollX,
         width: rect.width,
       });
@@ -74,14 +84,17 @@ export function TemplateTextField({
   useEffect(() => {
     if (open) {
       updateCoords();
+      const timer = setTimeout(updateCoords, 0);
       window.addEventListener("resize", updateCoords);
       window.addEventListener("scroll", updateCoords, true);
+      
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("resize", updateCoords);
+        window.removeEventListener("scroll", updateCoords, true);
+      };
     }
-    return () => {
-      window.removeEventListener("resize", updateCoords);
-      window.removeEventListener("scroll", updateCoords, true);
-    };
-  }, [open]);
+  }, [open, query]);
 
   useEffect(() => {
     if (!open) return;
@@ -160,7 +173,7 @@ export function TemplateTextField({
           ref={popoverRef}
           className="variable-picker absolute z-[9999] bg-[#0b1016] border border-[#233240] rounded-md shadow-lg p-2 flex flex-col gap-2"
           style={{
-            top: popoverCoords.top + 4,
+            top: popoverCoords.top,
             left: popoverCoords.left,
             width: popoverCoords.width,
           }}
@@ -216,7 +229,13 @@ export function TemplateTextareaField({
 }: TemplateTextareaFieldProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0, width: 0 });
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const backdropRef = useRef<HTMLDivElement | null>(null);
+  const textareaId = useId();
+
   const normalizedQuery = query.trim().toLowerCase();
   const allOptions = useMemo(() => mergeVariableOptions(variableOptions), [variableOptions]);
   const options = useMemo(
@@ -231,6 +250,58 @@ export function TemplateTextareaField({
     [allOptions, normalizedQuery],
   );
 
+  const updateCoords = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const popoverHeight = popoverRef.current ? popoverRef.current.offsetHeight : 240;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      let top;
+      if (spaceBelow < popoverHeight && spaceAbove > spaceBelow) {
+        top = rect.top - popoverHeight - 4 + window.scrollY;
+      } else {
+        top = rect.bottom + 4 + window.scrollY;
+      }
+
+      setPopoverCoords({
+        top,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      updateCoords();
+      const timer = setTimeout(updateCoords, 0);
+      window.addEventListener("resize", updateCoords);
+      window.addEventListener("scroll", updateCoords, true);
+      
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("resize", updateCoords);
+        window.removeEventListener("scroll", updateCoords, true);
+      };
+    }
+  }, [open, query]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        popoverRef.current?.contains(e.target as Node) ||
+        containerRef.current?.contains(e.target as Node)
+      ) {
+        return;
+      }
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   function insertVariable(name: string) {
     const token = `{{${name}}}`;
     const textarea = textareaRef.current;
@@ -239,63 +310,97 @@ export function TemplateTextareaField({
     onChange(`${value.slice(0, start)}${token}${value.slice(end)}`);
     setOpen(false);
     setQuery("");
+
+    setTimeout(() => {
+      if (textarea) {
+        textarea.focus();
+        const newPos = start + token.length;
+        textarea.setSelectionRange(newPos, newPos);
+      }
+    }, 0);
   }
 
+  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (backdropRef.current) {
+      backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+      backdropRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+  };
+
   return (
-    <div className="template-field">
-      <Label>
-        {label}
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          placeholder={placeholder}
-          onChange={(event) => onChange(event.currentTarget.value)}
-        />
-      </Label>
-      <div className="template-field-actions">
+    <div className="space-y-1.5" ref={containerRef}>
+      <div className="flex items-center justify-between">
+        <Label htmlFor={textareaId} className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
         <Button
           aria-expanded={open}
           aria-label={`Insert variable for ${label}`}
           type="button"
-          variant="secondary"
+          variant="ghost"
           size="sm"
           onClick={() => setOpen((current) => !current)}
+          className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
         >
-          Insert variable
+          <Braces className="h-3 w-3" />
         </Button>
       </div>
-      {open ? (
-        <div className="variable-picker" role="listbox" aria-label={`${label} variables`}>
+
+      <div className="highlight-textarea-container">
+        <div ref={backdropRef} className="highlight-textarea-backdrop">
+          {highlightTemplateTokens(value)}
+        </div>
+        <textarea
+          id={textareaId}
+          ref={textareaRef}
+          className="highlight-textarea-element"
+          value={value}
+          placeholder={placeholder}
+          onScroll={handleScroll}
+          onChange={(event) => onChange(event.currentTarget.value)}
+        />
+      </div>
+
+      {open && createPortal(
+        <div
+          ref={popoverRef}
+          className="variable-picker absolute z-[9999] bg-[#0b1016] border border-[#233240] rounded-md shadow-lg p-2 flex flex-col gap-2"
+          style={{
+            top: popoverCoords.top,
+            left: popoverCoords.left,
+            width: popoverCoords.width,
+          }}
+          role="listbox"
+          aria-label={`${label} variables`}
+        >
           <Input
             aria-label="Search variables"
             value={query}
             placeholder="Search variables..."
             onChange={(event) => setQuery(event.currentTarget.value)}
+            className="h-8 text-xs"
           />
-          <div className="variable-picker-options">
+          <div className="variable-picker-options max-h-48 overflow-y-auto flex flex-col gap-0.5">
             {options.map((option) => (
               <button
                 aria-label={`${option.name} ${option.source}`}
                 key={`${option.source}:${option.name}`}
                 role="option"
                 type="button"
+                className="w-full text-left px-2 py-1.5 hover:bg-[#121c26] text-xs text-[var(--app-text)] rounded flex justify-between items-center"
                 onClick={() => insertVariable(option.name)}
               >
-                <span>{option.name}</span>
-                <small>{option.source}</small>
+                <span className="font-mono">{option.name}</span>
+                <small className="text-[9px] text-[var(--app-text-muted)]">{option.source}</small>
               </button>
             ))}
+            {options.length === 0 && (
+              <p className="text-xs text-[var(--app-text-muted)] p-2 text-center">No variables found</p>
+            )}
           </div>
-        </div>
-      ) : null}
-      {value.includes("{{") ? (
-        <div className="template-preview" aria-label={`${label} token preview`}>
-          {highlightTemplateTokens(value)}
-        </div>
-      ) : null}
+        </div>,
+        document.body
+      )}
     </div>
-  );
-}
+  );}
 
 function mergeVariableOptions(options: VariableOption[]) {
   const seen = new Set<string>();

@@ -1039,11 +1039,62 @@
   box-sizing: border-box;
 }
 
+.highlight-textarea-container {
+  position: relative;
+  width: 100%;
+  min-height: 80px;
+  display: flex;
+  background-color: #121c26; /* Surface */
+  border: 1px solid #233240; /* Border */
+  border-radius: 4px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.highlight-textarea-container:focus-within {
+  border-color: #314758; /* Emphasized border */
+  box-shadow: 0 0 0 2px rgba(50, 211, 230, 0.25); /* Focus ring using Active/control cyan */
+}
+
+.highlight-textarea-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: hidden;
+  pointer-events: none;
+  color: #9aaebd; /* Secondary text */
+  box-sizing: border-box;
+}
+
+.highlight-textarea-element {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  min-height: 80px;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  padding: 8px 12px !important;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  caret-color: #e7eef5 !important; /* Primary text */
+  box-sizing: border-box;
+  resize: vertical;
+}
+
 .template-token-highlight {
   color: #32d3e6 !important; /* Active/control cyan */
   font-weight: 500;
-  background: rgba(50, 211, 230, 0.12);
-  border-radius: 2px;
-  padding: 0 2px;
-  margin: 0 -2px;
 }

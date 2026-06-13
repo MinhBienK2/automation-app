@@ -1671,13 +1671,13 @@ describe("Workflow graph editor integration", () => {
     );
     await userEvent.click(within(editor).getByRole("button", { name: "Insert variable for Text" }));
     await userEvent.click(
-      within(editor).getByRole("option", { name: "session.token Set Variables" }),
+      screen.getByRole("option", { name: "session.token Set Variables" }),
     );
 
     expect(within(editor).getByLabelText("Text")).toHaveValue("{{session.token}}");
-    expect(
-      within(within(editor).getByLabelText("Text token preview")).getByText("{{session.token}}"),
-    ).toHaveClass("template-token-highlight");
+    const tokens = screen.getAllByText("{{session.token}}");
+    const spanToken = tokens.find((el) => el.tagName === "SPAN");
+    expect(spanToken).toHaveClass("template-token-highlight");
   });
 
   test("shows icon graph tools for history and viewport modes", async () => {

@@ -98,10 +98,7 @@
 }
 
 .template-token-highlight {
-  border: 1px solid rgba(50, 211, 230, 0.48);
-  border-radius: 4px;
   color: #32d3e6;
-  padding: 0 3px;
 }
 
 .variable-row-table {
