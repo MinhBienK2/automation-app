@@ -52,13 +52,16 @@ Preserve these unless the task explicitly changes them.
 
 ## Navigation And App Shell
 
-- Sidebar order: Overview, Projects, Evidence, Schedules, Identities, App Settings.
-- Overview is default first screen.
+- Sidebar order: Overview, Projects, Evidence, Schedules, Identities, Setting.
+- Overview is default first screen (includes System Health diagnostics widget).
 - No top command/search header or Alerts shortcut.
 - Sidebar and in-page links are cross-workspace navigation surfaces.
 - Evidence: separate sidebar page between Projects and Schedules. Only broad evidence browser.
 - Identities: separate sidebar page after Schedules. Sanitized DTOs, no raw paths/storage/credentials.
-- App Settings: autosave prefs, XPath cookbook, diagnostics, maintenance, shortcuts. No notification/theme systems.
+- Setting: collapsible navigation group containing:
+  - General: autosave prefs, maintenance commands.
+  - Help: XPath cookbook, graph shortcuts.
+- No notification/theme systems.
 
 ## UI Primitives
 

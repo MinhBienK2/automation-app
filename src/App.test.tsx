@@ -861,7 +861,7 @@ describe("App settings and graph autosave", () => {
     expect(screen.getAllByText("Upcoming Schedules").length).toBeGreaterThan(0);
     expect(screen.getByRole("region", { name: "Live Operations" })).toHaveTextContent("Login identity");
     expect(screen.getByRole("region", { name: "Attention Queue" })).toHaveTextContent("Graph needs a start node");
-    expect(screen.getByRole("region", { name: "Execution Activity" })).toHaveTextContent("2 success");
+    expect(screen.queryByRole("region", { name: "Execution Activity" })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Recent Evidence" })).toHaveTextContent("runs/run-1/screenshots/001.png");
     expect(screen.getByRole("region", { name: "Upcoming Schedules" })).toHaveTextContent("Daily audit");
 
@@ -1349,11 +1349,12 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
+    expect(await screen.findByRole("region", { name: "System Health" })).toHaveTextContent("CloakBrowser");
+    expect(screen.getByRole("region", { name: "System Health" })).toHaveTextContent("GeoIP available");
+
     await userEvent.click(await screen.findByRole("button", { name: "Setting" }));
 
-    expect(await screen.findByRole("region", { name: "Environment readiness" })).toHaveTextContent("CloakBrowser");
-    expect(screen.getByRole("region", { name: "Environment readiness" })).toHaveTextContent("GeoIP available");
-    expect(screen.getByRole("region", { name: "Maintenance" })).toHaveTextContent("Cleanup Orphaned Profiles");
+    expect(await screen.findByRole("region", { name: "Maintenance" })).toHaveTextContent("Cleanup Orphaned Profiles");
 
     await userEvent.click(screen.getByRole("button", { name: "Install CloakBrowser Binary" }));
     await userEvent.click(screen.getByRole("button", { name: "Cleanup Orphaned Profiles" }));

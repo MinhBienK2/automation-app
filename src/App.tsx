@@ -479,6 +479,7 @@ function App() {
     void loadSchedules();
     void runWorkspace.refreshRunStates();
     void loadOperationsOverview();
+    void loadSettingsDiagnostics();
   }, []);
 
   // --- Run polling ---
@@ -628,6 +629,10 @@ function App() {
           onRefresh={loadOperationsOverview}
           onOpenWorkflows={() => nav.openProjects("workflows")}
           onNavigate={navigateFromOverview}
+          diagnostics={settingsDiagnostics}
+          diagnosticsLoading={settingsDiagnosticsLoading}
+          diagnosticsError={settingsDiagnosticsError}
+          onRefreshDiagnostics={loadSettingsDiagnostics}
         />
       ) : nav.screen === "evidence" ? (
         <EvidenceExplorerPage
@@ -674,12 +679,8 @@ function App() {
       ) : nav.screen === "settings" ? (
         <SettingsPage
           graphAutosaveEnabled={graphAutosaveEnabled}
-          diagnostics={settingsDiagnostics}
-          diagnosticsLoading={settingsDiagnosticsLoading}
-          diagnosticsError={settingsDiagnosticsError}
           maintenanceMessage={settingsMaintenanceMessage}
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
-          onRefreshDiagnostics={loadSettingsDiagnostics}
           onInstallBinary={installSettingsBrowserBinary}
           onCleanupProfiles={cleanupSettingsBrowserProfiles}
         />

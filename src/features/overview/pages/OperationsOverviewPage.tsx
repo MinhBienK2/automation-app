@@ -8,6 +8,7 @@ import type {
   OverviewEvidenceItem,
   OverviewLiveRun,
   OverviewUpcomingSchedule,
+  CloakBrowserDiagnostics,
 } from "../../../types/workflow";
 
 type OperationsOverviewPageProps = {
@@ -18,6 +19,10 @@ type OperationsOverviewPageProps = {
   onRefresh: () => void;
   onOpenWorkflows: () => void;
   onNavigate: (target: OperationsNavigationTarget) => void;
+  diagnostics: CloakBrowserDiagnostics | null;
+  diagnosticsLoading: boolean;
+  diagnosticsError: string;
+  onRefreshDiagnostics: () => void | Promise<void>;
 };
 
 export function OperationsOverviewPage({
@@ -28,6 +33,10 @@ export function OperationsOverviewPage({
   onRefresh,
   onOpenWorkflows,
   onNavigate,
+  diagnostics,
+  diagnosticsLoading,
+  diagnosticsError,
+  onRefreshDiagnostics,
 }: OperationsOverviewPageProps) {
   const metrics = overview?.metrics;
 
@@ -99,31 +108,6 @@ export function OperationsOverviewPage({
           )}
         </Panel>
 
-        <Panel title="Execution Activity" icon={<ShieldCheck aria-hidden="true" />} count={overview?.activity.length}>
-          {overview?.activity.length ? (
-            <div className="activity-strip" aria-label="Execution activity buckets">
-              {overview.activity.map((bucket) => {
-                const total = bucket.succeeded + bucket.failed + bucket.blocked + bucket.schedule_attention;
-                return (
-                  <div className="activity-bucket" key={bucket.bucket_start_utc}>
-                    <span className="activity-hour">{formatHour(bucket.bucket_start_utc)}</span>
-                    <span className="activity-bar" aria-label={`${total} events`}>
-                      <i className="activity-success" style={{ flexGrow: bucket.succeeded }} />
-                      <i className="activity-failed" style={{ flexGrow: bucket.failed }} />
-                      <i className="activity-blocked" style={{ flexGrow: bucket.blocked }} />
-                      <i className="activity-schedule" style={{ flexGrow: bucket.schedule_attention }} />
-                    </span>
-                    <span className="activity-caption">
-                      {bucket.succeeded} success / {bucket.failed} failed / {bucket.blocked} blocked / {bucket.schedule_attention} schedule
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <EmptyState title="No activity today" body="Completed, failed, blocked, and schedule attention events appear by hour." />
-          )}
-        </Panel>
 
         <Panel title="Recent Evidence" icon={<ShieldCheck aria-hidden="true" />} count={overview?.recent_evidence.total}>
           {overview?.data_warnings.evidence_items_skipped ? (
@@ -153,6 +137,57 @@ export function OperationsOverviewPage({
           ) : (
             <EmptyState title="No upcoming schedules" body="Enabled schedules with a next occurrence appear here." />
           )}
+        </Panel>
+
+        <Panel title="System Health" icon={<ShieldCheck aria-hidden="true" />}>
+          {diagnosticsError ? (
+            <p className="field-error" role="alert">
+              {diagnosticsError}
+            </p>
+          ) : null}
+          {diagnosticsLoading && !diagnostics ? (
+            <p className="muted">Loading system readiness...</p>
+          ) : null}
+          {diagnostics ? (
+            <div className="settings-readiness-grid" style={{ gridTemplateColumns: "1fr", gap: "8px" }}>
+              <ReadinessItem
+                label="CloakBrowser"
+                value={
+                  diagnostics.binary.installed
+                    ? `Installed ${diagnostics.binary.version || ""}`
+                    : "Not installed"
+                }
+                tone={diagnostics.binary.installed ? "ready" : "attention"}
+              />
+              <ReadinessItem
+                label="GeoIP"
+                value={diagnostics.geoip_available ? "GeoIP available" : "GeoIP unavailable"}
+                tone={diagnostics.geoip_available ? "ready" : "attention"}
+              />
+              <ReadinessItem
+                label="Headed display"
+                value={diagnostics.headed_display.available ? "Available" : "Unavailable"}
+                tone={diagnostics.headed_display.available ? "ready" : "attention"}
+              />
+              <ReadinessItem
+                label="Fingerprint fonts"
+                value={statusLabel(diagnostics.font_checklist.status)}
+                tone={diagnostics.font_checklist.status === "error" ? "attention" : "ready"}
+              />
+            </div>
+          ) : null}
+          <div style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                void onRefreshDiagnostics();
+              }}
+            >
+              Refresh Health
+            </Button>
+          </div>
         </Panel>
       </div>
     </section>
@@ -297,8 +332,27 @@ function formatDateTime(value: string) {
   return date.toLocaleString();
 }
 
-function formatHour(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleTimeString([], { hour: "2-digit" });
+
+function ReadinessItem({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "ready" | "attention" | "neutral";
+}) {
+  return (
+    <div className={`settings-readiness-item settings-readiness-item-${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function statusLabel(value: string) {
+  return value
+    .split("_")
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }
