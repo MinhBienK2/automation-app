@@ -11,7 +11,7 @@ Run focused unit tests using `npm test -- <path_to_test>`:
 - `npm run test:smoke`: Launches real CloakBrowser binary against local fixtures to verify WebDriver masking, user-agent details, persistent profile cache, and canvas/timezone metrics.
 - `npm run test:fingerprint`: Focused gate for identity mapping and sanitized browser evidence tests.
 - `ci-cd.test.ts`: Guards GHA build configurations, packaging targets, and exact-pinning of CloakBrowser.
-- `scripts/deploy-release.test.mjs`: Tests version bumping and deployment steps.
+- `scripts/deploy/deploy-release.test.mjs`: Tests version bumping and deployment steps.
 
 ## Desktop E2E Tests
 

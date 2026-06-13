@@ -56,7 +56,7 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 
 ### Change Operations Overview
 - **Read**: `domain/product-model.md`, `domain/invariants/workflow-ui.md`, `architecture/frontend.md`, `contracts/electron-ipc.md`
-- **Verify**: `src/features/overview/`, `electron/backend/operations/`, `electron/backend/commands/settingsCommands.ts`
+- **Verify**: `src/features/overview/`, `src/features/settings/`, `electron/backend/operations/`, `electron/backend/diagnostics/`, `electron/backend/commands/settingsCommands.ts`
 - **Checks**: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts`, `npx tsc --noEmit`
 
 ### Change Mission Control Navigation
@@ -81,7 +81,7 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 
 ### Change Run Status Or Monitoring
 - **Read**: `domain/execution-semantics.md`, `architecture/frontend.md`, `contracts/run-state.md`
-- **Verify**: `src/features/workflows/components/RunStatusBar.tsx`, `RunIssuePanel.tsx`, `RunMonitorDrawer.tsx`, `src/lib/workflowUi.ts`, `electron/backend/runtime/runManager.ts`
+- **Verify**: `src/features/workflows/components/RunStatusBar.tsx`, `RunIssuePanel.tsx`, `RunMonitorDrawer.tsx`, `src/features/runs/`, `src/lib/workflowUi.ts`, `electron/backend/runtime/runManager.ts`
 - **Checks**: `npm test -- src/features/workflows/pages/`, `npm test -- electron/backend/commands.test.ts`
 
 ### Fix A Bug

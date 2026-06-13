@@ -9,7 +9,7 @@ const USAGE = `
 Automates task routing, limits token consumption, and enforces TDD/Docs requirements.
 
 \x1b[1mUsage:\x1b[0m
-  node scripts/agent-router.mjs [options]
+  node scripts/agent/agent-router.mjs [options]
 
 \x1b[1mOptions:\x1b[0m
   --file <path>    Find and display the route details for a specific file.
@@ -184,8 +184,18 @@ function runChecksForRoutes(matchedRoutes) {
 
   console.log(bold('\nRunning verification checks...'));
 
+  // Run Route Mapping Validation
+  console.log(info('\nStep 1: Running Route Mapping Validation...'));
+  try {
+    execSync('node scripts/agent/validate-routes.mjs', { stdio: 'inherit' });
+    console.log(success('Route mapping validation passed!'));
+  } catch (err) {
+    console.error(error('Route mapping validation failed. Please ensure all directories are mapped in task-routes.md.'));
+    process.exit(1);
+  }
+
   // Run TypeScript check
-  console.log(info('\nStep 1: Running TypeScript Compiler Check...'));
+  console.log(info('\nStep 2: Running TypeScript Compiler Check...'));
   try {
     execSync('npx tsc --noEmit', { stdio: 'inherit' });
     console.log(success('TypeScript compilation check passed!'));

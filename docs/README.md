@@ -12,7 +12,7 @@ This directory is for coding agents working in this repository.
 ## Execution Loop
 
 1. Read this file.
-2. Run `node scripts/agent-router.mjs --diff` (or `--file <path>` / `--query <text>`) to automatically identify the matching route, documentation to read, and unit tests to run.
+2. Run `node scripts/agent/agent-router.mjs --diff` (or `--file <path>` / `--query <text>`) to automatically identify the matching route, documentation to read, and unit tests to run.
 3. Read only the documentation files output by the router. For broad or unclear work, read the product/planning route first, or refer to `docs/ARCHITECTURE_QUICK_REF.md` for a quick file mapping.
 4. Inspect the listed source files before editing.
 5. Use `.agents/skills/test-driven-development` before behavior-changing code.

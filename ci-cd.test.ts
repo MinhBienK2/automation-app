@@ -25,8 +25,8 @@ const packageJsonPath = path.join(currentDir, "package.json");
 const packageLockPath = path.join(currentDir, "package-lock.json");
 const backendDir = path.join(currentDir, "electron/backend");
 const preloadPath = path.join(currentDir, "electron/preload.cts");
-const releaseManifestScriptPath = path.join(currentDir, "scripts/generate-release-manifest.mjs");
-const releaseSbomScriptPath = path.join(currentDir, "scripts/generate-release-sbom.mjs");
+const releaseManifestScriptPath = path.join(currentDir, "scripts/deploy/generate-release-manifest.mjs");
+const releaseSbomScriptPath = path.join(currentDir, "scripts/deploy/generate-release-sbom.mjs");
 
 async function readYamlFile(filePath: string) {
   const source = await readFile(filePath, "utf8");
@@ -321,7 +321,7 @@ describe("desktop CI/CD", () => {
     expect(packageJson.scripts["electron:pack:linux"]).toContain("--linux");
     expect(packageJson.scripts["release:sbom"]).toContain("generate-release-sbom.mjs");
     expect(packageJson.scripts["release:manifest"]).toContain("generate-release-manifest.mjs");
-    expect(packageJson.scripts.deploy).toBe("node scripts/deploy-release.mjs");
+    expect(packageJson.scripts.deploy).toBe("node scripts/deploy/deploy-release.mjs");
     expect(packageJson.build.mac?.target).toEqual(expect.arrayContaining(["dmg", "zip"]));
     expect(packageJson.build.mac?.hardenedRuntime).toBe(true);
     expect(packageJson.build.win?.target).toEqual(expect.arrayContaining(["nsis", "zip"]));
