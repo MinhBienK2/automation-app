@@ -1178,6 +1178,22 @@ describe("Electron workflow command handlers", () => {
     expect(closeRetainedSession).toHaveBeenCalledWith("workflow-identity", "profile-current");
   });
 
+  test("filters getIdentityLabOverview by project_id", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const projectA = projectHandlers.createProject({ name: "Project A" });
+    const projectB = projectHandlers.createProject({ name: "Project B" });
+    const workflows = handlers.listWorkflows();
+    const workflowA = workflows.find(w => w.project_id === projectA.id)!;
+    const workflowB = workflows.find(w => w.project_id === projectB.id)!;
+    const overviewA = await handlers.getIdentityLabOverview({ project_id: projectA.id });
+    expect(overviewA.items.map(item => item.workflow_ref.id)).toContain(workflowA.id);
+    expect(overviewA.items.map(item => item.workflow_ref.id)).not.toContain(workflowB.id);
+    const overviewB = await handlers.getIdentityLabOverview({ project_id: projectB.id });
+    expect(overviewB.items.map(item => item.workflow_ref.id)).toContain(workflowB.id);
+    expect(overviewB.items.map(item => item.workflow_ref.id)).not.toContain(workflowA.id);
+  });
+
   test("resolves stale managed identity targets with historical run context", async () => {
     const { handlers, database } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Rotated identity flow");

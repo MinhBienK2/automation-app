@@ -165,6 +165,7 @@ export type IdentityLabOverviewRequest = {
   search?: string | null;
   selected_target?: IdentityLabTarget | null;
   limits?: { identities?: number | null; rotation_history?: number | null } | null;
+  project_id?: string | null;
 };
 
 export type ManagedIdentitySummary = {

@@ -32,12 +32,16 @@ export function useIdentityLabWorkspace({
     window.setTimeout(() => setToastMessage(""), toastTimeoutMs);
   }
 
-  async function loadIdentityLabOverview(nextTarget: IdentityLabTarget | null = target) {
+  async function loadIdentityLabOverview(
+    nextTarget: IdentityLabTarget | null = target,
+    projectId?: string | null
+  ) {
     setLoading(true);
     try {
-      const loadedOverview = await getIdentityLabOverview(
-        nextTarget ? { selected_target: nextTarget } : {},
-      );
+      const loadedOverview = await getIdentityLabOverview({
+        ...(nextTarget ? { selected_target: nextTarget } : {}),
+        project_id: projectId ?? null,
+      });
       setOverview(loadedOverview);
       setTarget(targetFromOverview(loadedOverview, nextTarget));
       setAppError("");
@@ -48,17 +52,17 @@ export function useIdentityLabWorkspace({
     }
   }
 
-  async function closeIdentitySession(workflowId: string, profileName: string) {
+  async function closeIdentitySession(workflowId: string, profileName: string, projectId?: string | null) {
     setAppError("");
     try {
       await closeIdentityRetainedSession(workflowId, profileName);
-      await loadIdentityLabOverview(target);
+      await loadIdentityLabOverview(target, projectId);
     } catch (error) {
       setAppError(commandMessage(error));
     }
   }
 
-  async function resetIdentityFromLab(workflowId: string) {
+  async function resetIdentityFromLab(workflowId: string, projectId?: string | null) {
     setAppError("");
     try {
       const rotated = await resetWorkflowBrowserIdentity(workflowId);
@@ -68,7 +72,7 @@ export function useIdentityLabWorkspace({
         identity_id: rotated.browser_launch.identity_id,
       };
       await onIdentityReset();
-      await loadIdentityLabOverview(nextTarget);
+      await loadIdentityLabOverview(nextTarget, projectId);
       showToast("Browser identity reset.");
     } catch (error) {
       setAppError(commandMessage(error));

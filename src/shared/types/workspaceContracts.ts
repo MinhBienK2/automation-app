@@ -21,7 +21,7 @@ import type {
   WorkflowSettingsSaveStatus,
 } from "../../lib/appState";
 
-export type AppScreen = "overview" | "projects" | "detail" | "subflow-detail" | "settings" | "schedules" | "identities" | "settings-help";
+export type AppScreen = "overview" | "projects" | "detail" | "subflow-detail" | "settings" | "schedules" | "settings-help";
 export type OverviewFocus = "attention" | "recent_evidence" | "live_runs" | null;
 export type WorkflowDialogMode = "create" | "edit" | null;
 export type SubflowBackTarget =
@@ -35,12 +35,11 @@ export interface AppNavigationAPI {
   setScreen: (screen: AppScreen) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setOverviewFocus: (focus: OverviewFocus) => void;
-  openProjects: (collection?: "workflows" | "subflows" | "settings") => void;
+  openProjects: (collection?: "workflows" | "subflows" | "profiles" | "settings") => void;
   openOverview: (focus?: OverviewFocus) => void;
   openSettings: () => void;
   openSettingsHelp: () => void;
   openSchedules: () => void;
-  openIdentities: (target?: any) => void;
   navigateToMissionControlTarget: (target: any) => void;
   backToList: () => void;
   backFromSubflowDetail: () => void;
@@ -49,11 +48,11 @@ export interface AppNavigationAPI {
 export interface ProjectWorkspaceAPI {
   projects: Project[];
   selectedProjectId: string | null;
-  projectCollection: "workflows" | "subflows" | "settings";
+  projectCollection: "workflows" | "subflows" | "profiles" | "settings";
   projectEnvironments: ProjectEnvironment[];
   
   setSelectedProjectId: (id: string | null) => void;
-  setProjectCollection: (collection: "workflows" | "subflows" | "settings") => void;
+  setProjectCollection: (collection: "workflows" | "subflows" | "profiles" | "settings") => void;
   setProjectEnvironments: (environments: ProjectEnvironment[]) => void;
   setProjects: (projects: Project[]) => void;
 
