@@ -28,16 +28,15 @@
 | Package import/export, sanitization | Backend |
 | Schedule CRUD, ticking, event history | Backend |
 | Operations Overview aggregation | Backend |
-| Evidence aggregation, artifact path validation | Backend |
 | Identity Lab read model, retained-session close | Backend |
 | CloakBrowser diagnostics, binary/profile lifecycle | Backend |
 | Recorder session, normalization, draft generation | Backend |
 
 ## Renderer Restrictions
 
-- No absolute original artifact paths — evidence commands use evidence ids.
+- No absolute original artifact paths.
 - No proxy passwords, cookies, localStorage, sessionStorage, profile contents.
-- No raw run outputs through Identity Lab or Evidence boundaries.
+- No raw run outputs through Identity Lab boundaries.
 - Recorder DTOs: no browser secrets, no captured password/secret values.
 - Profile diagnostic sizes: bounded approximations, not unbounded scans.
 
@@ -54,7 +53,6 @@ For the full command list, see `electron/ipc.ts`. Key patterns:
 - **Subflow**: `createSubflow`, `listSubflows`, `getSubflow`, `updateSubflow`, `getSubflowGraph`, `saveSubflowGraph`, `duplicateSubflow`, `deleteSubflow`, `getSubflowUsage`
 - **Package**: `exportWorkflowPackage`, `previewWorkflowPackage`, `importWorkflowPackage`, `exportProjectPackage`, `previewProjectPackage`, `importProjectPackage`
 - **Schedule**: `listSchedules`, `getSchedule`, `createSchedule`, `updateSchedule`, `deleteSchedule`, `enableSchedule`, `disableSchedule`, `listScheduleEvents`, `validateSchedule`
-- **Evidence**: `listEvidenceItems`, `getEvidenceDetail`, `getEvidenceScreenshotPreview`, `revealEvidenceArtifact`, `exportEvidenceBundle`
 - **Identity**: `getIdentityLabOverview`, `getIdentityLabDetail`, `closeIdentityRetainedSession`
 - **Recording**: `startRecordingSession`, `getRecordingSession`, `stopRecordingSession`, `listRecordingEvents`, `discardRecordingSession`, `generateRecordingDraft`, `getRecordingDraft`, `saveRecordingDraft`
 - **Diagnostics**: `getCloakBrowserDiagnostics`, `installCloakBrowserBinary`, `cleanupOrphanedBrowserProfiles`, `dryRunValidateConfig`

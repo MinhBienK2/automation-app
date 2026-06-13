@@ -10,7 +10,6 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 |------|-------------|
 | Top-level orchestration | `src/App.tsx` |
 | Overview | `src/features/overview/` |
-| Evidence | `src/features/evidence/` |
 | Identities | `src/features/identities/` |
 | Projects | `src/features/projects/` |
 | Schedules | `src/features/schedules/` |

@@ -17,7 +17,7 @@ The Electron IPC bridge is the contract between the React renderer and the Node/
 | Services | `workflowSettingsService.ts`, `workflowPackageService.ts`, `projectPackageService.ts` |
 | Project cascades | `electron/backend/projects/projectCommandCascades.ts` |
 | Persistence | `electron/backend/persistence/database.ts`, `workflowRepository.ts` |
-| Read models | `operationsRepository.ts`, `evidenceRepository.ts`, `identityRepository.ts` |
+| Read models | `operationsRepository.ts`, `identityRepository.ts` |
 | Recording | `recordingDraftCommands.ts`, `reviewReconciliation.ts` |
 | Diagnostics | `cloakBrowserDiagnostics.ts` |
 
@@ -27,7 +27,7 @@ The Electron IPC bridge is the contract between the React renderer and the Node/
 - `electron/ipc.ts` is the canonical channel map (preload derives from it).
 - Conversion from domain/runner errors → `CommandError { message, field? }`.
 - Delegating validation to owning domain services before persistence/execution.
-- All CRUD command logic (project, profile, workflow, subflow, settings, schedule, evidence, identity).
+- All CRUD command logic (project, profile, workflow, subflow, settings, schedule, identity).
 - Graph load/save/validate/compile/run commands.
 - Import/export, duplicate, batch run, recorder lifecycle/draft commands.
 - Native file dialogs and file writes for export flows.

@@ -13,12 +13,7 @@ import type {
   RecordingWorkflowDraft,
   OperationsOverview,
   OperationsOverviewRequest,
-  EvidenceBundleExportRequest,
-  EvidenceBundleExportResult,
-  EvidenceDetail,
-  EvidenceListRequest,
-  EvidencePage,
-  EvidenceScreenshotPreview,
+
   IdentityLabDetail,
   IdentityLabOverview,
   IdentityLabOverviewRequest,
@@ -146,15 +141,7 @@ export type WorkflowElectronBridge = {
   getOperationsOverview(
     request: OperationsOverviewRequest,
   ): Promise<OperationsOverview>;
-  listEvidenceItems(request?: EvidenceListRequest): Promise<EvidencePage>;
-  getEvidenceDetail(evidenceId: string): Promise<EvidenceDetail>;
-  getEvidenceScreenshotPreview(
-    evidenceId: string,
-  ): Promise<EvidenceScreenshotPreview>;
-  revealEvidenceArtifact(evidenceId: string): Promise<void>;
-  exportEvidenceBundle(
-    request: EvidenceBundleExportRequest,
-  ): Promise<EvidenceBundleExportResult>;
+
   getIdentityLabOverview(
     request?: IdentityLabOverviewRequest,
   ): Promise<IdentityLabOverview>;

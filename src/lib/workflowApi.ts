@@ -5,8 +5,6 @@ import type {
   RecordingGenerateDraftOptions,
   RecordingSaveDraftInput,
   RecorderStartSessionInput,
-  EvidenceBundleExportRequest,
-  EvidenceListRequest,
   IdentityLabOverviewRequest,
   IdentityLabTarget,
   OperationsOverviewRequest,
@@ -265,25 +263,7 @@ export function getOperationsOverview(request: OperationsOverviewRequest) {
   return bridge().getOperationsOverview(request);
 }
 
-export function listEvidenceItems(request: EvidenceListRequest = {}) {
-  return bridge().listEvidenceItems(request);
-}
 
-export function getEvidenceDetail(evidenceId: string) {
-  return bridge().getEvidenceDetail(evidenceId);
-}
-
-export function getEvidenceScreenshotPreview(evidenceId: string) {
-  return bridge().getEvidenceScreenshotPreview(evidenceId);
-}
-
-export function revealEvidenceArtifact(evidenceId: string) {
-  return bridge().revealEvidenceArtifact(evidenceId);
-}
-
-export function exportEvidenceBundle(request: EvidenceBundleExportRequest) {
-  return bridge().exportEvidenceBundle(request);
-}
 
 export function getIdentityLabOverview(request: IdentityLabOverviewRequest = {}) {
   return bridge().getIdentityLabOverview(request);

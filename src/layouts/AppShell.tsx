@@ -4,10 +4,9 @@ import type { AppScreen } from "../shared/types/workspaceContracts";
 
 type AppShellProps = {
   children: ReactNode;
-  activeItem: "overview" | "projects" | "evidence" | "schedules" | "identities" | "settings";
+  activeItem: "overview" | "projects" | "schedules" | "identities" | "settings";
   sidebarCollapsed: boolean;
   onOpenOverview: () => void;
-  onOpenEvidence: () => void;
   onOpenIdentities: () => void;
   onOpenProjects: () => void;
   onOpenSchedules: () => void;
@@ -22,7 +21,6 @@ export function AppShell({
   children,
   sidebarCollapsed,
   onOpenOverview,
-  onOpenEvidence,
   onOpenIdentities,
   onOpenProjects,
   onOpenSchedules,
@@ -37,7 +35,6 @@ export function AppShell({
         activeItem={activeItem}
         collapsed={sidebarCollapsed}
         onOpenOverview={onOpenOverview}
-        onOpenEvidence={onOpenEvidence}
         onOpenIdentities={onOpenIdentities}
         onOpenProjects={onOpenProjects}
         onOpenSchedules={onOpenSchedules}

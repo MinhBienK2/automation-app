@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { SettingsHelpPage } from "./features/settings/pages/SettingsHelpPage";
 import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnostics";
-import { EvidenceExplorerPage } from "./features/evidence/pages/EvidenceExplorerPage";
 import { IdentityLabPage } from "./features/identities/pages/IdentityLabPage";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
 import { useOperationsOverviewWorkspace } from "./features/overview/useOperationsOverviewWorkspace";
@@ -46,7 +45,6 @@ import { RecordingReviewDialog } from "./features/workflows/components/Recording
 import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
 import { UnsavedChangesDialog } from "./components/ui/unsaved-changes-dialog";
 import { AppPackageDialogs } from "./AppPackageDialogs";
-import { useEvidenceWorkspace } from "./features/evidence/useEvidenceWorkspace";
 import {
   useAppPackageDialogs,
   workflowPackageSections,
@@ -107,24 +105,6 @@ function App() {
   const [activeRunWorkflowName, setActiveRunWorkflowName] = useState<string | null>(null);
 
   // --- Sub-hooks ---
-  const {
-    page: evidencePage,
-    query: evidenceQuery,
-    loading: evidenceLoading,
-    selectedEvidenceId,
-    detail: evidenceDetail,
-    detailLoading: evidenceDetailLoading,
-    detailError: evidenceDetailError,
-    preview: evidencePreview,
-    exportResult: evidenceExportResult,
-    loadEvidencePage,
-    updateEvidenceQuery,
-    selectEvidence,
-    previewEvidenceScreenshot,
-    revealEvidence,
-    exportSelectedEvidence,
-    setDetailError: setEvidenceDetailError,
-  } = useEvidenceWorkspace({ setAppError });
 
   const {
     overview: operationsOverview,
@@ -323,9 +303,6 @@ function App() {
     detail: workflowsWorkspace.detail,
     openWorkflow: workflowsWorkspace.openWorkflow,
     performOpenWorkflow: workflowsWorkspace.performOpenWorkflow,
-    loadEvidencePage,
-    evidenceQuery,
-    setEvidenceDetailError,
     identityLabTarget,
     setIdentityLabTarget,
     loadIdentityLabOverview,
@@ -502,10 +479,6 @@ function App() {
     nav.openIdentities({ type: "managed", workflow_id: workflowId, identity_id: identityId });
   }, [nav]);
 
-  const openIdentityEvidence = useCallback((workflowId: string, identityId: string) => {
-    nav.openEvidence({ workflow_id: workflowId, identity_id: identityId });
-  }, [nav]);
-
   const openIdentityWorkflowSettings = useCallback((workflowId: string) => {
     nav.navigateToMissionControlTarget({ type: "workflow", mode: "settings", workflow_id: workflowId });
   }, [nav]);
@@ -601,9 +574,7 @@ function App() {
             ? "schedules"
           : nav.screen === "projects" || nav.screen === "detail" || nav.screen === "subflow-detail"
               ? "projects"
-              : nav.screen === "evidence"
-                ? "evidence"
-                : nav.screen === "identities"
+              : nav.screen === "identities"
                   ? "identities"
               : nav.screen === "overview"
                 ? "overview"
@@ -611,7 +582,6 @@ function App() {
       }
       sidebarCollapsed={nav.sidebarCollapsed}
       onOpenOverview={() => nav.openOverview()}
-      onOpenEvidence={() => nav.openEvidence({})}
       onOpenIdentities={() => nav.openIdentities(null)}
       onOpenProjects={() => nav.openProjects(projectsWorkspace.projectCollection)}
       onOpenSchedules={nav.openSchedules}
@@ -634,27 +604,6 @@ function App() {
           diagnosticsError={settingsDiagnosticsError}
           onRefreshDiagnostics={loadSettingsDiagnostics}
         />
-      ) : nav.screen === "evidence" ? (
-        <EvidenceExplorerPage
-          page={evidencePage}
-          detail={evidenceDetail}
-          preview={evidencePreview}
-          loading={evidenceLoading}
-          detailLoading={evidenceDetailLoading}
-          error={appError}
-          detailError={evidenceDetailError}
-          query={evidenceQuery}
-          selectedEvidenceId={selectedEvidenceId}
-          exportResult={evidenceExportResult}
-          onQueryChange={updateEvidenceQuery}
-          onRefresh={() => loadEvidencePage(evidenceQuery)}
-          onSelectEvidence={selectEvidence}
-          onPreviewScreenshot={previewEvidenceScreenshot}
-          onRevealArtifact={revealEvidence}
-          onExportSelection={exportSelectedEvidence}
-          onNavigate={navigateFromOverview}
-          onOpenIdentity={openIdentityTarget}
-        />
       ) : nav.screen === "identities" ? (
         <IdentityLabPage
           overview={identityLabOverview}
@@ -663,7 +612,6 @@ function App() {
           selectedIdentityId={identityLabOverview?.selected?.identity_ref.id ?? identityLabTarget?.identity_id ?? null}
           onRefresh={() => loadIdentityLabOverview(identityLabTarget)}
           onSelect={selectIdentity}
-          onOpenEvidence={openIdentityEvidence}
           onOpenWorkflow={(workflowId) => {
             void workflowsWorkspace.openWorkflow(workflowId);
           }}

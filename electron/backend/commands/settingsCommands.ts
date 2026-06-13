@@ -6,8 +6,6 @@ import type {
   CloakBrowserDiagnostics,
   BrowserProfileCleanupResult,
   OperationsOverviewRequest,
-  EvidenceListRequest,
-  EvidenceBundleExportRequest,
   IdentityLabOverviewRequest,
   IdentityLabTarget,
 } from "../../../src/types/workflow.js";
@@ -26,7 +24,6 @@ export function createSettingsCommands(deps: CommandDeps) {
     runner,
     identityRepository,
     operationsRepository,
-    evidenceRepository,
     requireWorkflow,
     getSettings,
     saveSettings,
@@ -151,25 +148,7 @@ export function createSettingsCommands(deps: CommandDeps) {
       return operationsRepository.getOverview(request, runManager.listRunStates());
     },
 
-    listEvidenceItems(request: EvidenceListRequest = {}) {
-      return evidenceRepository.listEvidenceItems(request);
-    },
 
-    getEvidenceDetail(evidenceId: string) {
-      return evidenceRepository.getEvidenceDetail(evidenceId);
-    },
-
-    getEvidenceScreenshotPreview(evidenceId: string) {
-      return evidenceRepository.getEvidenceScreenshotPreview(evidenceId);
-    },
-
-    revealEvidenceArtifact(evidenceId: string) {
-      return evidenceRepository.revealEvidenceArtifact(evidenceId);
-    },
-
-    exportEvidenceBundle(request: EvidenceBundleExportRequest) {
-      return evidenceRepository.exportEvidenceBundle(request);
-    },
 
     getIdentityLabOverview(request: IdentityLabOverviewRequest = {}) {
       return identityRepository.getOverview(request);

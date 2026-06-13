@@ -15,9 +15,8 @@ import type {
   Subflow,
 } from "../../../src/types/workflow.js";
 import { WorkflowRepository } from "../persistence/workflowRepository.js";
-import { WorkflowScheduleRepository } from "../scheduling/workflowScheduleRepository.js";
 import { OperationsRepository } from "../operations/operationsRepository.js";
-import { EvidenceRepository } from "../evidence/evidenceRepository.js";
+import { WorkflowScheduleRepository } from "../scheduling/workflowScheduleRepository.js";
 import { RunManager } from "../runtime/runManager.js";
 import { IdentityRepository } from "../identity/identityRepository.js";
 import { WorkflowSettingsService } from "../services/workflowSettingsService.js";
@@ -35,8 +34,6 @@ export type CommandContext = {
   recorderUsesDefaultDriver?: boolean;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
   saveProjectPackageFile?: (packageValue: ProjectPackage) => Promise<string | null>;
-  revealEvidenceArtifact?: (absolutePath: string) => void | Promise<void>;
-  selectEvidenceBundleDirectory?: () => Promise<string | null>;
   defaultFingerprintFontsDir?: string | null | (() => string | null);
 };
 
@@ -45,7 +42,6 @@ export type CommandDeps = {
   repository: WorkflowRepository;
   scheduleRepository: WorkflowScheduleRepository;
   operationsRepository: OperationsRepository;
-  evidenceRepository: EvidenceRepository;
   runner: RunnerCommandPort;
   runManager: RunManager;
   identityRepository: IdentityRepository;

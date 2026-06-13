@@ -50,11 +50,7 @@ export const workflowIpcChannels = {
   getRunState: "workflow:getRunState",
   listRunStates: "workflow:listRunStates",
   getOperationsOverview: "workflow:getOperationsOverview",
-  listEvidenceItems: "workflow:listEvidenceItems",
-  getEvidenceDetail: "workflow:getEvidenceDetail",
-  getEvidenceScreenshotPreview: "workflow:getEvidenceScreenshotPreview",
-  revealEvidenceArtifact: "workflow:revealEvidenceArtifact",
-  exportEvidenceBundle: "workflow:exportEvidenceBundle",
+
   getIdentityLabOverview: "workflow:getIdentityLabOverview",
   getIdentityLabDetail: "workflow:getIdentityLabDetail",
   closeIdentityRetainedSession: "workflow:closeIdentityRetainedSession",

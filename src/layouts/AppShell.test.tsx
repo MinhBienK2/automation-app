@@ -55,7 +55,6 @@ describe("App shell", () => {
     expect(navItems).toEqual([
       "Overview",
       "Projects",
-      "Evidence",
       "Schedules",
       "Identities",
       "Setting",

@@ -6,7 +6,6 @@ import type {
   SubflowBackTarget,
 } from "../shared/types/workspaceContracts";
 import type {
-  EvidenceListRequest,
   IdentityLabTarget,
   MissionControlTarget,
   WorkflowSummary,
@@ -37,9 +36,6 @@ export interface AppNavigationDeps {
   detail: any;
   openWorkflow: (id: string) => Promise<void>;
   performOpenWorkflow: (id: string) => Promise<void>;
-  loadEvidencePage: (query: any) => Promise<any>;
-  evidenceQuery: any;
-  setEvidenceDetailError: (error: string) => void;
   identityLabTarget: any;
   setIdentityLabTarget: (target: any) => void;
   loadIdentityLabOverview: (target: any) => Promise<any>;
@@ -77,9 +73,6 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     detail,
     openWorkflow,
     performOpenWorkflow,
-    loadEvidencePage,
-    evidenceQuery,
-    setEvidenceDetailError,
     identityLabTarget,
     setIdentityLabTarget,
     loadIdentityLabOverview,
@@ -198,16 +191,6 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     setAppError,
   ]);
 
-  const performOpenEvidence = useCallback((nextQuery: EvidenceListRequest = evidenceQuery) => {
-    setScreen("evidence");
-    setAppError("");
-    setEvidenceDetailError("");
-    void loadEvidencePage(nextQuery);
-  }, [evidenceQuery, loadEvidencePage, setEvidenceDetailError, setAppError]);
-
-  const openEvidence = useCallback((nextQuery: EvidenceListRequest = evidenceQuery) => {
-    void requestGraphExitNavigation(() => performOpenEvidence(nextQuery));
-  }, [requestGraphExitNavigation, performOpenEvidence, evidenceQuery]);
 
   const performOpenIdentities = useCallback((target: IdentityLabTarget | null = identityLabTarget) => {
     setScreen("identities");
@@ -299,13 +282,6 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
       await performOpenWorkflow(target.workflow_id);
       return;
     }
-    if (target.type === "evidence") {
-      performOpenEvidence({
-        ...(target.filters ?? {}),
-        ...(target.evidence_id ? { focus_evidence_id: target.evidence_id } : {}),
-      });
-      return;
-    }
     if (target.type === "identity") {
       performOpenIdentities(target.target);
       return;
@@ -314,16 +290,18 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
       await openScheduleTarget(target.schedule_id, target.schedule_event_id);
       return;
     }
-    await performOpenWorkflow(target.workflow_id);
-    if (target.node_id) {
-      setSelectedGraphNodeId(target.node_id);
+    if (target.type === "graph_issue") {
+      await performOpenWorkflow(target.workflow_id);
+      if (target.node_id) {
+        setSelectedGraphNodeId(target.node_id);
+      }
+      return;
     }
   }, [
     performOpenProjects,
     loadWorkflows,
     openWorkflowSettingsById,
     performOpenWorkflow,
-    performOpenEvidence,
     performOpenIdentities,
     openScheduleTarget,
     setSelectedGraphNodeId,
@@ -345,7 +323,6 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     openSettings,
     openSettingsHelp,
     openSchedules,
-    openEvidence,
     openIdentities,
     navigateToMissionControlTarget,
     backToList,

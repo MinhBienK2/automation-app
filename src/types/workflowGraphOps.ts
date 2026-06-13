@@ -7,7 +7,7 @@ import type {
   WorkflowCondition,
   WorkflowGraphMigrationNote,
 } from "./workflowCore.js";
-import type { EvidenceListRequest, IdentityLabTarget } from "./workflowEvidenceRecording.js";
+import type { IdentityLabTarget } from "./workflowEvidenceRecording.js";
 
 export type WorkflowRunSource = "manual" | "schedule";
 
@@ -230,8 +230,7 @@ export type OperationsNavigationTarget =
       workflow_id: string;
       mode?: "list" | "detail" | "graph" | "settings";
     }
-  | { type: "schedule"; schedule_id: string }
-  | { type: "evidence"; evidence_id: string };
+  | { type: "schedule"; schedule_id: string };
 
 export type MissionControlTarget =
   | { type: "overview"; focus?: "attention" | "recent_evidence" | "live_runs" }
@@ -240,7 +239,6 @@ export type MissionControlTarget =
       workflow_id: string;
       mode?: "list" | "detail" | "graph" | "settings";
     }
-  | { type: "evidence"; evidence_id?: string | null; filters?: EvidenceListRequest | null }
   | { type: "identity"; target: IdentityLabTarget }
   | { type: "schedule"; schedule_id?: string | null; schedule_event_id?: string | null }
   | {
@@ -321,7 +319,6 @@ export type OverviewEvidenceItem = {
   node_id?: string | null;
   navigation_targets: {
     workflow?: OperationsNavigationTarget;
-    evidence?: OperationsNavigationTarget;
   };
 };
 

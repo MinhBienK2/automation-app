@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "../components/ui/button";
-import { CalendarClock, Files, Fingerprint, Folder, Gauge, Settings, ChevronDown, ChevronRight } from "lucide-react";
+import { CalendarClock, Fingerprint, Folder, Gauge, Settings, ChevronDown, ChevronRight } from "lucide-react";
 import type { AppScreen } from "../shared/types/workspaceContracts";
 
-type AppSidebarActiveItem = "overview" | "projects" | "evidence" | "schedules" | "identities" | "settings";
+type AppSidebarActiveItem = "overview" | "projects" | "schedules" | "identities" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
   collapsed: boolean;
   onOpenOverview: () => void;
-  onOpenEvidence: () => void;
   onOpenIdentities: () => void;
   onOpenProjects: () => void;
   onOpenSchedules: () => void;
@@ -57,7 +56,6 @@ export function AppSidebar({
   activeItem,
   collapsed,
   onOpenOverview,
-  onOpenEvidence,
   onOpenIdentities,
   onOpenProjects,
   onOpenSchedules,
@@ -107,19 +105,7 @@ export function AppSidebar({
           <Folder aria-hidden="true" className="sidebar-item-icon" />
           <span>Projects</span>
         </Button>
-        <Button
-          className={
-            activeItem === "evidence"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="ghost"
-          type="button"
-          onClick={onOpenEvidence}
-        >
-          <Files aria-hidden="true" className="sidebar-item-icon" />
-          <span>Evidence</span>
-        </Button>
+
         <Button
           className={
             activeItem === "schedules"

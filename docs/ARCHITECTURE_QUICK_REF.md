@@ -12,7 +12,6 @@ This document maps domain concepts to the corresponding modularized state hooks 
 - **Projects**: [useProjectWorkspace.ts](file:///home/minhbien/Documents/automation_app/src/features/projects/state/useProjectWorkspace.ts)
 - **Subflows**: [useSubflowWorkspace.ts](file:///home/minhbien/Documents/automation_app/src/features/subflows/state/useSubflowWorkspace.ts)
 - **Navigation**: [useAppNavigation.ts](file:///home/minhbien/Documents/automation_app/src/app/useAppNavigation.ts)
-- **Evidence**: [useEvidenceWorkspace.ts](file:///home/minhbien/Documents/automation_app/src/features/evidence/useEvidenceWorkspace.ts)
 - **Identities**: [useIdentityLabWorkspace.ts](file:///home/minhbien/Documents/automation_app/src/features/identities/useIdentityLabWorkspace.ts)
 - **Schedules**: [useSchedulesWorkspace.ts](file:///home/minhbien/Documents/automation_app/src/features/schedules/useSchedulesWorkspace.ts)
 

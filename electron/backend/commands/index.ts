@@ -4,7 +4,6 @@ import { validateWorkflowGraph as validateGraph } from "../graph/compiler.js";
 import { BrowserWorkflowRunner } from "../runtime/runner.js";
 import { createScheduleCommandHandlers } from "../scheduling/scheduleCommands.js";
 import { RunManager } from "../runtime/runManager.js";
-import { EvidenceRepository } from "../evidence/evidenceRepository.js";
 import { IdentityRepository } from "../identity/identityRepository.js";
 import { createProjectCommandCascades } from "../projects/projectCommandCascades.js";
 import { ProjectPackageService } from "../services/projectPackageService.js";
@@ -50,12 +49,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
   const scheduleRepository = new WorkflowScheduleRepository(context.database);
   const operationsRepository = new OperationsRepository(context.database);
-  const evidenceRepository = new EvidenceRepository({
-    database: context.database,
-    appPaths: context.appPaths,
-    revealEvidenceArtifact: context.revealEvidenceArtifact,
-    selectEvidenceBundleDirectory: context.selectEvidenceBundleDirectory,
-  });
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
   const recorderBrowserSessionManager = new BrowserSessionManager({
     appPaths: context.appPaths,
@@ -538,7 +531,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     repository,
     scheduleRepository,
     operationsRepository,
-    evidenceRepository,
     runner,
     runManager,
     identityRepository,

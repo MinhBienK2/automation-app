@@ -432,7 +432,6 @@ function evidenceItemsFromRun(row: RunRow, limit: number) {
       node_id: stringValue(record?.node_id),
       navigation_targets: {
         workflow: { type: "workflow", workflow_id: row.workflow_id },
-        evidence: { type: "evidence", evidence_id: evidenceId(row.id, artifactKind, path) },
       },
     });
     if (items.length >= limit) break;

@@ -36,14 +36,9 @@ import {
   listRecordingEvents,
   getCloakBrowserDiagnostics,
   getOperationsOverview,
-  listEvidenceItems,
   listProjects,
   listProjectEnvironments,
   listSubflows,
-  getEvidenceDetail,
-  getEvidenceScreenshotPreview,
-  revealEvidenceArtifact,
-  exportEvidenceBundle,
   getIdentityLabOverview,
   getIdentityLabDetail,
   closeIdentityRetainedSession,
@@ -126,11 +121,7 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.getRecordingDraft.mockResolvedValue(undefined);
     workflowBridgeMock.saveRecordingDraft.mockResolvedValue(undefined);
     workflowBridgeMock.getOperationsOverview.mockResolvedValue(undefined);
-    workflowBridgeMock.listEvidenceItems.mockResolvedValue(undefined);
-    workflowBridgeMock.getEvidenceDetail.mockResolvedValue(undefined);
-    workflowBridgeMock.getEvidenceScreenshotPreview.mockResolvedValue(undefined);
-    workflowBridgeMock.revealEvidenceArtifact.mockResolvedValue(undefined);
-    workflowBridgeMock.exportEvidenceBundle.mockResolvedValue(undefined);
+
     workflowBridgeMock.getIdentityLabOverview.mockResolvedValue(undefined);
     workflowBridgeMock.getIdentityLabDetail.mockResolvedValue(undefined);
     workflowBridgeMock.closeIdentityRetainedSession.mockResolvedValue(undefined);
@@ -248,16 +239,7 @@ describe("workflow API phase ten commands", () => {
       day_end_utc: "2026-05-28T00:00:00.000Z",
       timezone_label: "UTC",
     });
-    await listEvidenceItems({
-      types: ["screenshot"],
-      sources: ["manual"],
-      search: "checkout",
-      limit: 25,
-    });
-    await getEvidenceDetail("ev-1");
-    await getEvidenceScreenshotPreview("ev-1");
-    await revealEvidenceArtifact("ev-1");
-    await exportEvidenceBundle({ evidence_ids: ["ev-1"] });
+
     await getIdentityLabOverview({ selected_target: { type: "managed", workflow_id: "workflow-1", identity_id: "bi_1" } });
     await getIdentityLabDetail({ type: "managed", workflow_id: "workflow-1", identity_id: "bi_1" });
     await closeIdentityRetainedSession("workflow-1", "profile-1");
@@ -384,18 +366,7 @@ describe("workflow API phase ten commands", () => {
       day_end_utc: "2026-05-28T00:00:00.000Z",
       timezone_label: "UTC",
     });
-    expect(workflowBridgeMock.listEvidenceItems).toHaveBeenCalledWith({
-      types: ["screenshot"],
-      sources: ["manual"],
-      search: "checkout",
-      limit: 25,
-    });
-    expect(workflowBridgeMock.getEvidenceDetail).toHaveBeenCalledWith("ev-1");
-    expect(workflowBridgeMock.getEvidenceScreenshotPreview).toHaveBeenCalledWith("ev-1");
-    expect(workflowBridgeMock.revealEvidenceArtifact).toHaveBeenCalledWith("ev-1");
-    expect(workflowBridgeMock.exportEvidenceBundle).toHaveBeenCalledWith({
-      evidence_ids: ["ev-1"],
-    });
+
     expect(workflowBridgeMock.getIdentityLabOverview).toHaveBeenCalledWith({
       selected_target: { type: "managed", workflow_id: "workflow-1", identity_id: "bi_1" },
     });

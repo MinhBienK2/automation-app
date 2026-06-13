@@ -114,10 +114,7 @@ export function operationsTargetToMissionTarget(
       ...(target.mode ? { mode: target.mode } : {}),
     };
   }
-  if (target.type === "schedule") {
-    return { type: "schedule", schedule_id: target.schedule_id };
-  }
-  return { type: "evidence", evidence_id: target.evidence_id };
+  return { type: "schedule", schedule_id: target.schedule_id };
 }
 
 export function formatMaintenanceBytes(bytes: number) {

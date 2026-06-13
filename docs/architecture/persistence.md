@@ -14,7 +14,6 @@ Electron/Node now owns the production persistence layer.
 - Electron workflow repository: `electron/backend/persistence/workflowRepository.ts`
 - Electron schedule repository: `electron/backend/scheduling/workflowScheduleRepository.ts`
 - Electron operations read model: `electron/backend/operations/operationsRepository.ts`
-- Electron evidence read model: `electron/backend/evidence/evidenceRepository.ts`
 - Electron command handlers: `electron/backend/commands.ts`
 
 ## Current Behavior
@@ -101,11 +100,7 @@ Electron/Node now owns the production persistence layer.
   and persisted timestamps remain UTC. Overview recent evidence is bounded at
   the returned DTO page, not by a fixed newest-run scan window that can hide
   older matching evidence behind newer output-only runs.
-- `EvidenceRepository` owns bounded evidence result pages over matching
-  persisted run outputs and run steps without a fixed newest-run ceiling before
-  filtering. It derives typed evidence items on read rather than maintaining a
-  separate projection table, and validates run-scoped artifact paths before
-  preview/reveal/export.
+
 - `IdentityRepository` derives managed identity run/evidence summaries by
   matching workflow id plus persisted identity snapshots and counting only
   valid run-scoped evidence metadata. Historical identity lookup scans matching
@@ -127,7 +122,7 @@ Electron/Node now owns the production persistence layer.
   project-environment rows, and subflow rows.
 - Persistence of workflow schedule rows and schedule event rows.
 - Persistence of operational attention rows and bounded operations read queries.
-- Persistence of durable run source and bounded evidence read queries.
+- Persistence of durable run source.
 
 ## Does Not Belong Here
 

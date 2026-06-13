@@ -128,16 +128,7 @@ const workflowApi: WorkflowElectronBridge = {
   listRunStates: () => invokeWorkflow("listRunStates"),
   getOperationsOverview: (request) =>
     invokeWorkflow("getOperationsOverview", request),
-  listEvidenceItems: (request) =>
-    invokeWorkflow("listEvidenceItems", request),
-  getEvidenceDetail: (evidenceId) =>
-    invokeWorkflow("getEvidenceDetail", evidenceId),
-  getEvidenceScreenshotPreview: (evidenceId) =>
-    invokeWorkflow("getEvidenceScreenshotPreview", evidenceId),
-  revealEvidenceArtifact: (evidenceId) =>
-    invokeWorkflow("revealEvidenceArtifact", evidenceId),
-  exportEvidenceBundle: (request) =>
-    invokeWorkflow("exportEvidenceBundle", request),
+
   getIdentityLabOverview: (request) =>
     invokeWorkflow("getIdentityLabOverview", request),
   getIdentityLabDetail: (target) =>

@@ -22,7 +22,6 @@ type IdentityLabPageProps = {
   selectedIdentityId: string | null;
   onRefresh: () => void;
   onSelect: (workflowId: string, identityId: string) => void;
-  onOpenEvidence: (workflowId: string, identityId: string) => void;
   onOpenWorkflow: (workflowId: string) => void;
   onOpenWorkflowSettings: (workflowId: string) => void;
   onCloseRetainedSession: (workflowId: string, profileName: string) => void;
@@ -37,7 +36,6 @@ export function IdentityLabPage({
   selectedIdentityId,
   onRefresh,
   onSelect,
-  onOpenEvidence,
   onOpenWorkflow,
   onOpenWorkflowSettings,
   onCloseRetainedSession,
@@ -110,9 +108,6 @@ export function IdentityLabPage({
                 </div>
               </header>
               <div className="identity-actions">
-                <Button type="button" variant="secondary" onClick={() => onOpenEvidence(detail.workflow_ref.id, detail.identity_ref.id)}>
-                  Open Evidence
-                </Button>
                 <Button type="button" variant="secondary" onClick={() => onOpenWorkflowSettings(detail.workflow_ref.id)}>
                   Open Workflow Settings
                 </Button>
@@ -167,13 +162,7 @@ export function IdentityLabPage({
                   <div><dt>Fonts</dt><dd>{detail.diagnostics.font_status}</dd></div>
                 </dl>
               </Section>
-              <Section title="Evidence">
-                <p className="muted">
-                  {detail.evidence_summary.total
-                    ? `${detail.evidence_summary.total} matching evidence item${detail.evidence_summary.total === 1 ? "" : "s"}.`
-                    : "No recent evidence for this identity yet."}
-                </p>
-              </Section>
+
               <Section title="Rotation History">
                 {detail.rotation_history.length ? (
                   <div className="identity-history-list">
