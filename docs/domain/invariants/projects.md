@@ -19,7 +19,7 @@ Preserve these unless the task explicitly changes them.
 
 ## Project Settings
 
-- `Project identity` heading, `Project details` group.
+- `Project Settings` heading, `Project details` group.
 - Project details: editable name, Save, Duplicate project, Export project, Delete project.
 - Duplicate: independent copy with copied workflows/subflows, remapped Call Subflow refs, fresh identities/profiles.
 - Export: `.project.json` via native Save dialog, sanitized sensitive/local Browser Launch fields.

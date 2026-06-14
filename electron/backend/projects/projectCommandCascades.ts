@@ -134,7 +134,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
       const profileName = browserProfileKey(settings);
       if (profileName && deps.retainedSessionActiveFor(workflow.id, profileName)) {
         throw commandError(
-          "Close the retained browser session before resetting this project identity",
+          "Close the retained browser session before resetting this project settings",
           "browser_launch.profile_dir",
         );
       }

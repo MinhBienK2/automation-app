@@ -110,7 +110,6 @@ describe("Workflow list integration", () => {
     await openWorkflows();
 
     expect(await screen.findByText("No workflows yet")).toBeInTheDocument();
-    expect(screen.getByText("Mission Control Workspace")).toBeInTheDocument();
     expect(screen.queryByText("Workflow Automation Manager")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("New workflow name")).not.toBeInTheDocument();
 

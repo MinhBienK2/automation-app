@@ -574,7 +574,7 @@ describe("App settings and graph autosave", () => {
         package: projectPackage,
       });
     });
-    const projectSettings = await screen.findByRole("region", { name: "Project identity" });
+    const projectSettings = await screen.findByRole("region", { name: "Project Settings" });
     expect(within(projectSettings).queryByText("Import project")).not.toBeInTheDocument();
 
     const file = new File([JSON.stringify(projectPackage)], "owned-lab.project.json", {
@@ -676,7 +676,7 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     await openProjectTab("Settings");
-    expect(await screen.findByRole("heading", { name: "Project identity" }))
+    expect(await screen.findByRole("heading", { name: "Project Settings" }))
       .toBeInTheDocument();
 
     const projectList = await screen.findByRole("complementary", { name: "Project list" });

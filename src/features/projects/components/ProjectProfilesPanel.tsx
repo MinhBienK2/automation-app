@@ -121,7 +121,6 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
       <div role="group" aria-label="Browser Profiles" style={{ display: "contents" }}>
       <header className="app-header">
         <div>
-          <p className="eyebrow">Project Settings</p>
           <h1>Browser Profiles</h1>
         </div>
         <div className="page-header-actions">

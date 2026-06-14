@@ -107,12 +107,11 @@ export function ProjectEnvironmentSettings({
   return (
     <section
       className="panel settings-panel settings-project-environments-panel"
-      aria-label="Project identity"
+      aria-label="Project Settings"
     >
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Project Settings</p>
-          <h2>Project identity</h2>
+          <h2>Project Settings</h2>
         </div>
       </div>
 

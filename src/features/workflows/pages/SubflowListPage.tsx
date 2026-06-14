@@ -76,7 +76,6 @@ export function SubflowListPage({
     <section className="app-screen workflow-list-screen">
       <header className="app-header">
         <div>
-          <p className="eyebrow">Project Library</p>
           <h1>Subflows</h1>
         </div>
         <div className="page-header-actions">

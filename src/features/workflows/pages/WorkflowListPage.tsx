@@ -82,7 +82,6 @@ export function WorkflowListPage({
     <section className="app-screen workflow-list-screen">
       <header className="app-header">
         <div>
-          <p className="eyebrow">Mission Control Workspace</p>
           <h1>Workflows</h1>
         </div>
         <div className="page-header-actions">
