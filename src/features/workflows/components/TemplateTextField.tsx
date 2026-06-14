@@ -571,8 +571,8 @@ export function rememberVariableOptions(_options: VariableOption[]) {
   // Deprecated: No longer needed as we use VariableOptionsContext to retrieve active variables reactively
 }
 
-export function getAvailableVariableOptions(extraOptions: VariableOption[] = []): VariableOption[] {
-  return mergeVariableOptions(extraOptions, []);
+export function getAvailableVariableOptions(extraOptions: VariableOption[] = [], contextOptions: VariableOption[] = []): VariableOption[] {
+  return mergeVariableOptions(extraOptions, contextOptions);
 }
 
 export type { VariableOption };

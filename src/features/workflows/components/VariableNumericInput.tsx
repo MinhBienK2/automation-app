@@ -1,10 +1,10 @@
-import { useState, useMemo, useId } from "react";
+import { useState, useMemo, useId, useContext } from "react";
 import { Hash, Braces } from "lucide-react";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Button } from "../../../components/ui/button";
 import { Select } from "../../../components/ui/select";
-import { getAvailableVariableOptions, type VariableOption } from "./TemplateTextField";
+import { getAvailableVariableOptions, VariableOptionsContext, type VariableOption } from "./TemplateTextField";
 
 type VariableNumericInputProps = {
   label: string;
@@ -28,7 +28,8 @@ export function VariableNumericInput({
   variableOptions,
 }: VariableNumericInputProps) {
   const inputId = useId();
-  const options = useMemo(() => getAvailableVariableOptions(variableOptions), [variableOptions]);
+  const contextOptions = useContext(VariableOptionsContext);
+  const options = useMemo(() => getAvailableVariableOptions(variableOptions, contextOptions), [variableOptions, contextOptions]);
   const isVar = typeof value === "string" && value.startsWith("{{") && value.endsWith("}}");
   const [localVarMode, setLocalVarMode] = useState(isVar);
 
