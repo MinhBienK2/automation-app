@@ -78,12 +78,12 @@ describe("TemplateTextField", () => {
     // system.loop.index should be present
     expect(screen.getByRole("option", { name: /system.loop.index/i })).toBeInTheDocument();
 
-    // Click an option in the portal popover (last_error)
-    const option = screen.getByRole("option", { name: /last_error/i });
+    // Click an option in the portal popover (system.last_error)
+    const option = screen.getByRole("option", { name: /system.last_error/i });
     await user.click(option);
 
     // onChange should be called with updated value
-    expect(handleChange).toHaveBeenCalledWith("hello {{var1}} world{{last_error}}");
+    expect(handleChange).toHaveBeenCalledWith("hello {{var1}} world{{system.last_error}}");
   });
 
   test("does not render math button in textarea when showMath is false", () => {

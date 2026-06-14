@@ -1973,6 +1973,52 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
+  test("populates system.last_error and last_error during try_catch execution", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("try-catch", "Try Catch", {
+            type: "try_catch",
+            config: {
+              try_steps: [
+                {
+                  type: "assert_element",
+                  config: { xpath: "#missing", state: "attached", timeout_ms: 10 },
+                  graph_node_id: "fail-step",
+                },
+              ],
+              error_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "last_err", value_type: "text", value: "{{system.last_error}}" },
+                      { name: "legacy_err", value_type: "text", value: "{{last_error}}" },
+                    ],
+                  },
+                  graph_node_id: "handle-err",
+                },
+              ],
+              finally_steps: [],
+              success_steps: [],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.last_err).toContain("Element is not attached");
+    expect(result.outputs?.legacy_err).toContain("Element is not attached");
+  });
+
   test("keeps break and continue scoped to the current loop", async () => {
     const progress: Array<Partial<RunState>> = [];
     const runner = new BrowserWorkflowRunner({

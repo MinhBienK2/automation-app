@@ -75,17 +75,17 @@ describe("ActionConfigEditor", () => {
     expect(screen.queryByRole("option", { name: /roles/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /user.name/i })).not.toBeInTheDocument();
     
-    await userEvent.click(screen.getByRole("option", { name: "last_error System outputs" }));
+    await userEvent.click(screen.getByRole("option", { name: "system.last_error System outputs" }));
 
-    expect(screen.getByLabelText("Text")).toHaveValue("{{last_error}}");
-    const tokens = screen.getAllByText("{{last_error}}");
+    expect(screen.getByLabelText("Text")).toHaveValue("{{system.last_error}}");
+    const tokens = screen.getAllByText("{{system.last_error}}");
     const spanToken = tokens.find((el) => el.tagName === "SPAN");
     expect(spanToken).toHaveClass("template-token-highlight");
     expect(onChange).toHaveBeenLastCalledWith({
       type: "input_text",
       config: {
         xpath: "//*[@name='role']",
-        text: "{{last_error}}",
+        text: "{{system.last_error}}",
         clear_before_input: true,
       },
     });

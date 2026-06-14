@@ -804,6 +804,9 @@ export function createRunnerActionExecutors(
         await deps.executeActions(runtime, action.config.try_steps);
         await deps.executeActions(runtime, action.config.success_steps);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        runtime.outputs["last_error"] = message;
+        runtime.outputs["system.last_error"] = message;
         if (action.config.error_steps.length === 0) throw error;
         await deps.executeActions(runtime, action.config.error_steps);
       } finally {

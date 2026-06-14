@@ -16,7 +16,7 @@ export const VariableOptionsContext = createContext<VariableOption[]>([]);
 const defaultVariableOptions: VariableOption[] = [
   { name: "system.loop.index", source: "Loop current item" },
   { name: "system.loop.number", source: "Loop current item" },
-  { name: "last_error", source: "System outputs" },
+  { name: "system.last_error", source: "System outputs" },
 ];
 
 export interface TemplateTextFieldRef {
