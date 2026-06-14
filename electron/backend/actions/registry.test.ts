@@ -76,6 +76,7 @@ describe("backend action registry", () => {
       "continue_loop",
       "stop_workflow",
       "transform_variable",
+      "update_variable",
       "assert_output",
       "domain_allowlist",
       "set_cookie",

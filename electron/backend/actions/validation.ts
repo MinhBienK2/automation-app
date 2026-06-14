@@ -347,6 +347,26 @@ const actionValidators = createActionValidatorMap({
       return validationError("json", "JSON variables must be valid JSON");
     }
   },
+  update_variable: (config) => {
+    return firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      validateRequiredEnumValue(
+        config.config.operation,
+        ["push", "merge"],
+        "operation",
+        "Operation must be push or merge",
+      ),
+      config.config.operation === "push"
+        ? validateRequiredEnumValue(
+            config.config.value_type,
+            ["text", "json", "number", "boolean"],
+            "value_type",
+            "Value type must be text, json, number, or boolean",
+          )
+        : null,
+      requiredActionString(config.config.value, "value", "Value is required"),
+    );
+  },
   assert_element: (config) =>
     firstValidation(
       validateElementTargetSource(config.config),

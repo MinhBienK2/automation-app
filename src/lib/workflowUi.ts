@@ -73,6 +73,7 @@ export const actionLabels: Record<ActionType, string> = {
   continue_loop: "Continue Loop",
   stop_workflow: "Stop Workflow",
   transform_variable: "Transform Variable",
+  update_variable: "Update Variable",
   assert_output: "Assert Output",
   domain_allowlist: "Domain Allowlist",
   set_cookie: "Set Cookie",

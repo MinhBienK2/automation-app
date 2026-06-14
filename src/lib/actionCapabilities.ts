@@ -71,6 +71,7 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   continue_loop: "graph_internal",
   stop_workflow: "graph_internal",
   transform_variable: "graph_internal",
+  update_variable: "graph_internal",
   assert_output: "graph_internal",
   domain_allowlist: "graph_internal",
   set_cookie: "implemented",

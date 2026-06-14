@@ -31,6 +31,7 @@ export type ActionConfigField =
   | "name"
   | "option_text"
   | "origin"
+  | "operation"
   | "output_name"
   | "append"
   | "path"
@@ -183,6 +184,8 @@ export function updateActionConfigField(
       return updateWaitForDownloadConfigField(config, field, value);
     case "set_variable":
       return { type: "set_variable", config: { ...config.config, [field]: value } };
+    case "update_variable":
+      return { type: "update_variable", config: { ...config.config, [field]: value } };
     case "set_json_variables":
       return { type: "set_json_variables", config: { json: value } };
     case "assert_element":

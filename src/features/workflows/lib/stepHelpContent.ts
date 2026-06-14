@@ -55,6 +55,7 @@ type PhaseOneActionType =
   | "wait_for_download"
   | "set_variable"
   | "set_json_variables"
+  | "update_variable"
   | "assert_element"
   | "assert_text"
   | "graph_noop"
@@ -582,6 +583,12 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
     "Set JSON Variables",
     "save structured JSON values",
     "lưu biến JSON",
+    "variable",
+  ),
+  update_variable: elementHelp(
+    "Update Variable",
+    "update existing variables (push/merge)",
+    "cập nhật biến",
     "variable",
   ),
   assert_element: elementHelp("Assert Element", "require an element state", "kiểm tra element", "assert"),

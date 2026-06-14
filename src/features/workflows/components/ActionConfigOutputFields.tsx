@@ -5,7 +5,7 @@ import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
-import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
+import { TemplateTextField, TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
 import { VariableNumericInput } from "./VariableNumericInput";
 
@@ -40,6 +40,56 @@ export function OutputActionFields({
               onChange(updateActionConfigField(config, "json", val))
             }
             showMath={false}
+          />
+        </ActionConfigFieldGroup>
+      );
+    case "update_variable":
+      return (
+        <ActionConfigFieldGroup title="Update Variable Settings">
+          <TemplateTextField
+            label="Variable name"
+            value={config.config.name ?? ""}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "name", val))
+            }
+            variableOptions={variableOptions}
+          />
+          <Label>
+            Operation
+            <Select
+              value={config.config.operation ?? "push"}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "operation", event.currentTarget.value))
+              }
+            >
+              <option value="push">Push (append to array)</option>
+              <option value="merge">Merge (merge JSON object)</option>
+            </Select>
+          </Label>
+          {(config.config.operation ?? "push") === "push" && (
+            <Label>
+              Value type
+              <Select
+                value={config.config.value_type ?? "text"}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "value_type", event.currentTarget.value))
+                }
+              >
+                <option value="text">Text</option>
+                <option value="json">JSON</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+              </Select>
+            </Label>
+          )}
+          <TemplateTextareaField
+            label={(config.config.operation ?? "push") === "merge" ? "JSON value to merge" : "Value to push"}
+            value={config.config.value ?? ""}
+            onChange={(val) =>
+              onChange(updateActionConfigField(config, "value", val))
+            }
+            variableOptions={variableOptions}
+            showMath={(config.config.operation ?? "push") === "push" && config.config.value_type === "number"}
           />
         </ActionConfigFieldGroup>
       );

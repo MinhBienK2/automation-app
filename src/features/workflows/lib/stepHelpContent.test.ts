@@ -336,6 +336,7 @@ describe("step help content", () => {
       "stop_workflow",
       "set_variable",
       "set_json_variables",
+      "update_variable",
       "transform_variable",
       "assert_output",
       "domain_allowlist",

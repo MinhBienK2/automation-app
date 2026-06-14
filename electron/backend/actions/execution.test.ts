@@ -77,6 +77,7 @@ describe("backend action execution registry", () => {
       continue_loop: async () => calls.push("continue_loop"),
       stop_workflow: async () => calls.push("stop_workflow"),
       transform_variable: async () => calls.push("transform_variable"),
+      update_variable: async () => calls.push("update_variable"),
       assert_output: async () => calls.push("assert_output"),
       domain_allowlist: async () => calls.push("domain_allowlist"),
       set_cookie: async () => calls.push("set_cookie"),

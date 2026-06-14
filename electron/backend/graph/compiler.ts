@@ -373,6 +373,18 @@ function compilePath(
       }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
+    case "update_variable": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const operation = requiredString(node.config, "operation", "Operation must be push or merge") as "push" | "merge";
+      const value = requiredString(node.config, "value", "Value is required");
+      const value_type = stringField(node.config, "value_type") as any;
+      steps.push(step(node, {
+        type: "update_variable",
+        config: { name, operation, value, value_type },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
     case "transform_variable":
       steps.push(step(node, {
         type: "transform_variable",
@@ -721,6 +733,7 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "action":
     case "set_variable":
     case "set_json_variables":
+    case "update_variable":
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":

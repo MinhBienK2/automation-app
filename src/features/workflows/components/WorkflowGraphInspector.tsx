@@ -396,6 +396,13 @@ function collectVariableOptions(graph: WorkflowGraph): VariableOption[] {
       }
     }
 
+    if (node.node_type === "update_variable") {
+      const name = objectConfig(node.config).name;
+      if (typeof name === "string" && name.trim()) {
+        options.push({ name: name.trim(), source: "Update Variable" });
+      }
+    }
+
     if (node.node_type === "action" && isActionConfig(node.config)) {
       const outputName = outputNameForAction(node.config);
       if (outputName) options.push({ name: outputName, source: node.label });

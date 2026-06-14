@@ -33,6 +33,7 @@ import {
 import {
   evaluateMathInObject,
   flattenObject,
+  parseVariableValue,
   renderTemplate,
   setVariables,
   writeVariableValue,
@@ -484,6 +485,34 @@ export function createRunnerActionExecutors(
       if (!isPlainRecord(parsed)) throw new Error("JSON variables must be an object");
       const evaluated = evaluateMathInObject(parsed);
       flattenObject(runtime.outputs, "", evaluated);
+    },
+    update_variable: async (action) => {
+      const { name, operation, value, value_type } = action.config;
+      if (!name) return;
+
+      if (operation === "push") {
+        const array = Array.isArray(runtime.outputs[name])
+          ? (runtime.outputs[name] as unknown[])
+          : [];
+        const parsedValue = parseVariableValue(
+          value_type ?? "text",
+          value ?? "",
+          runtime.outputs,
+        );
+        const newArray = [...array, parsedValue];
+        writeVariableValue(runtime.outputs, name, newArray);
+      } else if (operation === "merge") {
+        const existing = runtime.outputs[name];
+        const targetObj = isPlainRecord(existing) ? existing : {};
+        const rendered = renderTemplate(value ?? "{}", runtime.outputs);
+        const parsedValue = JSON.parse(rendered);
+        if (!isPlainRecord(parsedValue)) {
+          throw new Error("Merged value must be a JSON object");
+        }
+        const newObj = { ...targetObj, ...parsedValue };
+        const evaluated = evaluateMathInObject(newObj);
+        writeVariableValue(runtime.outputs, name, evaluated);
+      }
     },
     assert_element: async (action) => {
       const locator = await deps.locatorForAction(runtime, action.config);

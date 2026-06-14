@@ -377,6 +377,20 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("JSON variables", "The JSON root must be an object.", ["Nested objects flatten into dot paths; arrays stay whole."]),
     ], "en"),
   },
+  update_variable: {
+    vi: nodeWithFields("Update Variable", "Cập nhật giá trị vào biến có sẵn (push hoặc merge).", [
+      field("Variable name", "Tên biến hiện có cần cập nhật.", []),
+      field("Operation", "Phương thức cập nhật: push (thêm vào mảng) hoặc merge (gộp object JSON).", []),
+      field("Value", "Giá trị mới hoặc chuỗi JSON cần push/merge. Cho phép dùng template {{ A }}.", []),
+      field("Value type", "Kiểu dữ liệu của giá trị khi thực hiện push (text, JSON, number, boolean).", []),
+    ]),
+    en: nodeWithFields("Update Variable", "Update an existing variable value (push or merge).", [
+      field("Variable name", "Name of the existing variable to update.", []),
+      field("Operation", "Update operation: push (append to array) or merge (merge JSON object).", []),
+      field("Value", "The new value or JSON string to push/merge. Supports {{ A }} templates.", []),
+      field("Value type", "The data type of the value to push (text, JSON, number, boolean).", []),
+    ], "en"),
+  },
   transform_variable: {
     vi: nodeWithFields("Transform Variable", "Tạo output mới từ output có sẵn.", [
       field("Source output", "Output đầu vào.", ["Phải được tạo trước khi node này chạy."]),

@@ -57,6 +57,7 @@ const supportedGraphNodeTypes = new Set<string>([
   "stop_workflow",
   "set_variable",
   "set_json_variables",
+  "update_variable",
   "transform_variable",
   "assert_output",
   "domain_allowlist",
@@ -337,6 +338,23 @@ function pushNodeSemanticIssues(
         const validation = validateActionConfig({ type: "set_json_variables", config: { json } });
         if (validation) issues.push(error(node.id, null, validation.message));
       }
+      break;
+    }
+    case "update_variable": {
+      const name = stringField(node.config, "name");
+      const operation = stringField(node.config, "operation");
+      const value = stringField(node.config, "value");
+      const value_type = stringField(node.config, "value_type");
+      const validation = validateActionConfig({
+        type: "update_variable",
+        config: {
+          name: name ?? "",
+          operation: operation as any,
+          value: value ?? "",
+          value_type: value_type as any,
+        },
+      });
+      if (validation) issues.push(error(node.id, null, validation.message));
       break;
     }
     case "transform_variable":

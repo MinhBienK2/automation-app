@@ -46,6 +46,7 @@ export type ActionType =
   | "wait_for_download"
   | "set_variable"
   | "set_json_variables"
+  | "update_variable"
   | "assert_element"
   | "assert_text"
   | "graph_noop"
@@ -695,6 +696,15 @@ export type ActionConfig =
       };
     }
   | { type: "set_json_variables"; config: { json: string } }
+  | {
+      type: "update_variable";
+      config: {
+        name: string;
+        operation: "push" | "merge";
+        value: string;
+        value_type?: VariableValueType | null;
+      };
+    }
   | {
       type: "assert_element";
       config: {

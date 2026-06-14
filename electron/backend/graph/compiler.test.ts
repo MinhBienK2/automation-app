@@ -252,6 +252,14 @@ describe("TypeScript graph compiler parity", () => {
             variables: [{ name: "row.status", value_type: "text", value: "done" }],
           },
         }),
+        graphNode("update-var", "update_variable", {
+          config: {
+            name: "row.tags",
+            operation: "push",
+            value: "completed",
+            value_type: "text",
+          },
+        }),
         graphNode("retry", "retry", { config: { max_attempts: 3, delay_ms: 50 } }),
         graphNode("retry-click", "action", { config: clickAction("//retry") }),
         graphNode("stop", "stop_workflow", {
@@ -263,6 +271,7 @@ describe("TypeScript graph compiler parity", () => {
         edge("if-node", "true", "click", "in"),
         edge("if-node", "done", "loop", "in"),
         edge("loop", "loop", "set-var", "in"),
+        edge("set-var", "out", "update-var", "in"),
         edge("loop", "done", "retry", "in"),
         edge("retry", "try", "retry-click", "in"),
         edge("retry", "success", "stop", "in"),
@@ -309,6 +318,17 @@ describe("TypeScript graph compiler parity", () => {
                   variables: [
                     { name: "row.status", value_type: "text", value: "done" },
                   ],
+                },
+              },
+              {
+                type: "update_variable",
+                graph_node_id: "update-var",
+                graph_label: "Update Var",
+                config: {
+                  name: "row.tags",
+                  operation: "push",
+                  value: "completed",
+                  value_type: "text",
                 },
               },
             ],

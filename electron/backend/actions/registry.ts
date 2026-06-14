@@ -108,6 +108,7 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("continue_loop", "graph_internal"),
   definition("stop_workflow", "graph_internal"),
   definition("transform_variable", "graph_internal"),
+  definition("update_variable", "graph_internal"),
   definition("assert_output", "graph_internal"),
   definition("domain_allowlist", "graph_internal"),
   definition("set_cookie", "browser_context"),

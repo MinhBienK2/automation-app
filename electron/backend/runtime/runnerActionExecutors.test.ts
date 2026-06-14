@@ -126,7 +126,86 @@ describe("runnerActionExecutors", () => {
       },
     ]);
   });
+
+  test("updates variables via push and merge operations", async () => {
+    const runtime = minimalRuntime({
+      outputs: {
+        existing_array: [1, 2],
+        existing_obj: { a: 1 },
+      },
+    });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    // 1. push text into existing array
+    await executeRegisteredAction(executors, {
+      type: "update_variable",
+      config: {
+        name: "existing_array",
+        operation: "push",
+        value: "three",
+        value_type: "text",
+      },
+    } as never);
+
+    expect(runtime.outputs.existing_array).toEqual([1, 2, "three"]);
+
+    // 2. push json object into existing array
+    await executeRegisteredAction(executors, {
+      type: "update_variable",
+      config: {
+        name: "existing_array",
+        operation: "push",
+        value: '{"ok": true}',
+        value_type: "json",
+      },
+    } as never);
+
+    expect(runtime.outputs.existing_array).toEqual([1, 2, "three", { ok: true }]);
+
+    // 3. push to non-existent array (should initialize to empty first)
+    await executeRegisteredAction(executors, {
+      type: "update_variable",
+      config: {
+        name: "new_array",
+        operation: "push",
+        value: "42",
+        value_type: "number",
+      },
+    } as never);
+
+    expect(runtime.outputs.new_array).toEqual([42]);
+
+    // 4. merge json object into existing object
+    await executeRegisteredAction(executors, {
+      type: "update_variable",
+      config: {
+        name: "existing_obj",
+        operation: "merge",
+        value: '{"b": 2, "c": "=1 + 2"}',
+      },
+    } as never);
+
+    expect(runtime.outputs.existing_obj).toEqual({ a: 1, b: 2, c: 3 });
+    // Dotted paths should be flattened
+    expect(runtime.outputs["existing_obj.a"]).toBe(1);
+    expect(runtime.outputs["existing_obj.b"]).toBe(2);
+    expect(runtime.outputs["existing_obj.c"]).toBe(3);
+
+    // 5. merge json object into non-existent object (should initialize to empty first)
+    await executeRegisteredAction(executors, {
+      type: "update_variable",
+      config: {
+        name: "new_obj",
+        operation: "merge",
+        value: '{"hello": "world"}',
+      },
+    } as never);
+
+    expect(runtime.outputs.new_obj).toEqual({ hello: "world" });
+    expect(runtime.outputs["new_obj.hello"]).toBe("world");
+  });
 });
+
 
 function minimalRuntime(overrides: Partial<RunnerActionRuntime> = {}): RunnerActionRuntime {
   const page = overrides.page ?? {

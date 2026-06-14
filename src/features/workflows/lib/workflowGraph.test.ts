@@ -108,6 +108,7 @@ describe("workflow graph helpers", () => {
     const ifNode = createDefaultGraphNode("if", { x: 10, y: 20 });
     const variablesNode = createDefaultGraphNode("set_variable", { x: 20, y: 30 });
     const jsonVariablesNode = createDefaultGraphNode("set_json_variables", { x: 30, y: 40 });
+    const updateVariableNode = createDefaultGraphNode("update_variable", { x: 35, y: 45 });
     const mergeNode = createDefaultGraphNode("merge", { x: 40, y: 50 });
     const routerNode = createDefaultGraphNode("router", { x: 50, y: 60 });
     const randomChoiceNode = createDefaultGraphNode("random_choice" as GraphNodeType, { x: 60, y: 70 });
@@ -127,6 +128,13 @@ describe("workflow graph helpers", () => {
     expect(jsonVariablesNode.label).toBe("Set JSON Variables");
     expect(jsonVariablesNode.config).toEqual({
       json: "{\n  \"name\": \"value\"\n}",
+    });
+    expect(updateVariableNode.label).toBe("Update Variable");
+    expect(updateVariableNode.config).toEqual({
+      name: "",
+      operation: "push",
+      value: "",
+      value_type: "text",
     });
     expect(mergeNode.ports.map((port) => `${port.direction}:${port.id}`)).toEqual([
       "input:in",
@@ -228,6 +236,10 @@ describe("workflow graph helpers", () => {
       "done",
     ]);
     expect(nodePorts("set_json_variables").map((port) => port.id)).toEqual([
+      "in",
+      "out",
+    ]);
+    expect(nodePorts("update_variable").map((port) => port.id)).toEqual([
       "in",
       "out",
     ]);

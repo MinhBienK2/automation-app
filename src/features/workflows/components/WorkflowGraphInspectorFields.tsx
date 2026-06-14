@@ -25,7 +25,7 @@ import {
 } from "./WorkflowGraphConditionFields";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
-import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
+import { TemplateTextField, TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 import {
   arrayConfig,
   booleanConfig,
@@ -659,6 +659,79 @@ export function NodeConfigFields({
           </ActionConfigFieldGroup>
         </div>
       );
+    case "update_variable": {
+      const configObj = objectConfig(node.config);
+      const name = stringConfig(node.config, "name", "");
+      const operation = stringConfig(node.config, "operation", "push") as "push" | "merge";
+      const value = stringConfig(node.config, "value", "");
+      const value_type = stringConfig(node.config, "value_type", "text");
+
+      return (
+        <div className="graph-config-fields">
+          <ActionConfigFieldGroup title="Update Variable Settings">
+            <TemplateTextField
+              label="Variable name"
+              value={name}
+              onChange={(value) =>
+                updateConfig({
+                  ...configObj,
+                  name: value,
+                })
+              }
+              placeholder="e.g. A"
+              variableOptions={variableOptions}
+            />
+            <Label>
+              Operation
+              <Select
+                value={operation}
+                onChange={(event) =>
+                  updateConfig({
+                    ...configObj,
+                    operation: event.currentTarget.value,
+                  })
+                }
+              >
+                <option value="push">Push (append to array)</option>
+                <option value="merge">Merge (merge JSON object)</option>
+              </Select>
+            </Label>
+            {operation === "push" && (
+              <Label>
+                Value type
+                <Select
+                  value={value_type}
+                  onChange={(event) =>
+                    updateConfig({
+                      ...configObj,
+                      value_type: event.currentTarget.value,
+                    })
+                  }
+                >
+                  <option value="text">Text</option>
+                  <option value="json">JSON</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Boolean</option>
+                </Select>
+              </Label>
+            )}
+            <TemplateTextareaField
+              label={operation === "merge" ? "JSON value to merge" : "Value to push"}
+              value={value}
+              onChange={(value) =>
+                updateConfig({
+                  ...configObj,
+                  value,
+                })
+              }
+              placeholder={operation === "merge" ? '{"key": "value"}' : "Value"}
+              variableOptions={variableOptions}
+              showMath={operation === "push" && value_type === "number"}
+            />
+          </ActionConfigFieldGroup>
+        </div>
+      );
+    }
     case "transform_variable":
       return (
         <div className="graph-config-fields">

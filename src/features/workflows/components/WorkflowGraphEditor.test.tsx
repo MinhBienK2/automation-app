@@ -63,6 +63,7 @@ const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
   set_variable: true,
   set_json_variables: true,
   transform_variable: true,
+  update_variable: true,
   assert_output: true,
   domain_allowlist: true,
   end_success: true,

@@ -242,4 +242,90 @@ describe("backend action validation registry", () => {
       message: "Target ref is required",
     });
   });
+
+  test("validates update_variable action configs", () => {
+    expect(
+      validateActionConfig({
+        type: "update_variable",
+        config: {
+          name: "my_array",
+          operation: "push",
+          value: "new_item",
+          value_type: "text",
+        },
+      } as never),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "update_variable",
+        config: {
+          name: "my_object",
+          operation: "merge",
+          value: '{"foo": "bar"}',
+        },
+      } as never),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "update_variable",
+        config: {
+          name: "",
+          operation: "push",
+          value: "new_item",
+          value_type: "text",
+        },
+      } as never),
+    ).toEqual({
+      field: "name",
+      message: "Variable name is required",
+    });
+
+    expect(
+      validateActionConfig({
+        type: "update_variable",
+        config: {
+          name: "my_array",
+          operation: "invalid_op",
+          value: "new_item",
+          value_type: "text",
+        },
+      } as never),
+    ).toEqual({
+      field: "operation",
+      message: "Operation must be push or merge",
+    });
+
+    expect(
+      validateActionConfig({
+        type: "update_variable",
+        config: {
+          name: "my_array",
+          operation: "push",
+          value: "",
+          value_type: "text",
+        },
+      } as never),
+    ).toEqual({
+      field: "value",
+      message: "Value is required",
+    });
+
+    expect(
+      validateActionConfig({
+        type: "update_variable",
+        config: {
+          name: "my_array",
+          operation: "push",
+          value: "new_item",
+          value_type: "invalid_type",
+        },
+      } as never),
+    ).toEqual({
+      field: "value_type",
+      message: "Value type must be text, json, number, or boolean",
+    });
+  });
 });
+

@@ -195,6 +195,11 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       };
     case "set_json_variables":
       return { type: actionType, config: { json: "{\n  \"name\": \"value\"\n}" } };
+    case "update_variable":
+      return {
+        type: actionType,
+        config: { name: "", operation: "push", value: "", value_type: "text" },
+      };
     case "assert_element":
       return {
         type: actionType,

@@ -493,6 +493,7 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "merge":
     case "set_variable":
     case "set_json_variables":
+    case "update_variable":
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
@@ -1079,6 +1080,8 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { variables: [{ name: "name", value_type: "text", value: "" }] };
     case "set_json_variables":
       return { json: "{\n  \"name\": \"value\"\n}" };
+    case "update_variable":
+      return { name: "", operation: "push", value: "", value_type: "text" };
     case "transform_variable":
       return { source_name: "input", target_name: "output", expression: "" };
     case "assert_output":

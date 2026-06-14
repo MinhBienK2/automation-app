@@ -320,6 +320,8 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Name", "Type", "Value"];
     case "set_json_variables":
       return ["JSON variables"];
+    case "update_variable":
+      return ["Variable name", "Operation", "Value", "Value type"];
     case "assert_element":
       return [...targetSourceFields, "State"];
     case "assert_text":

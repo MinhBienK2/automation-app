@@ -416,6 +416,7 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "set_variable":
     case "set_json_variables":
     case "transform_variable":
+    case "update_variable":
     case "assert_output":
     case "domain_allowlist":
       return ["out"];
