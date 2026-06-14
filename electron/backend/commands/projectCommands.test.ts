@@ -432,5 +432,13 @@ describe("Projects, Environments, and Subflows integration", () => {
     expect("forkWorkflowSession" in handlers).toBe(false);
   });
 
+  test("projectCommands.ts should not contain CommonJS require statements", async () => {
+    const filePath = path.join(__dirname, "projectCommands.ts");
+    const content = await fs.readFile(filePath, "utf8");
+    expect(content).not.toContain('require("');
+    expect(content).not.toContain("require('");
+  });
 
 });
+
+

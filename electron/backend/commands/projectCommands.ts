@@ -6,6 +6,7 @@ import type {
 } from "../../../src/types/workflow.js";
 import { commandError } from "../commandHelpers.js";
 import type { CommandDeps } from "./types.js";
+import { randomUUID } from "node:crypto";
 import nodeFs from "node:fs";
 import path from "node:path";
 import { sanitizePathSegment } from "../evidence/artifacts.js";
@@ -83,7 +84,7 @@ export function createProjectCommands(deps: CommandDeps) {
     const now = new Date().toISOString();
     const defaultLaunch = deps.settingsService.defaultWorkflowSettings(
       {
-        id: `profile-${require("node:crypto").randomUUID()}`,
+        id: `profile-${randomUUID()}`,
         name,
         created_at: now,
         updated_at: now,
