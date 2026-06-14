@@ -4,24 +4,24 @@ import path from "node:path";
 import { afterEach, vi } from "vitest";
 import {
   createWorkflowCommandHandlers,
-  deriveFingerprintSeedFromIdentityId,
-} from "./commands";
+} from "./commands.js";
 import {
   createAppPaths,
   initializeDatabase,
-} from "./persistence/database";
+} from "./persistence/database.js";
 import type {
   GraphNodeType,
   ProjectPackage,
   RunState,
   WorkflowGraph,
   WorkflowSettings,
-} from "../../src/types/workflow";
+} from "../../src/types/workflow.js";
 import type {
   BrowserDriver,
   BrowserDriverContext,
+  BrowserDriverLocator,
   BrowserDriverPage,
-} from "./browser/sessionManager";
+} from "./browser/sessionManager.js";
 
 export type ProjectWorkflow = {
   id: string;
@@ -120,12 +120,12 @@ export class FakeRecordingDriver implements BrowserDriver {
 
   constructor(private readonly context: FakeRecordingContext) {}
 
-  async launch(options: Record<string, unknown>) {
+  async launch(options: Record<string, unknown>): Promise<BrowserDriverContext> {
     this.launches.push({ kind: "temporary", options });
     return this.context;
   }
 
-  async launchPersistent(options: Record<string, unknown> & { userDataDir: string }) {
+  async launchPersistent(options: Record<string, unknown> & { userDataDir: string }): Promise<BrowserDriverContext> {
     this.launches.push({ kind: "persistent", options });
     return this.context;
   }
@@ -136,11 +136,11 @@ export class FakeRecordingContext implements BrowserDriverContext {
 
   constructor(readonly page: FakeRecordingPage) {}
 
-  pages() {
+  pages(): BrowserDriverPage[] {
     return [this.page];
   }
 
-  newPage() {
+  async newPage(): Promise<BrowserDriverPage> {
     return this.page;
   }
 
@@ -163,15 +163,18 @@ export class FakeRecordingPage implements BrowserDriverPage {
     this.frameNavigated?.({ url: () => url });
   }
 
-  locator() {
+  locator(_selector: string): BrowserDriverLocator {
     throw new Error("Not implemented");
   }
 
-  async evaluate(script?: string | (() => unknown)) {
-    if (typeof script === "string" && script.includes("__wamRecorderBufferedEvents.splice")) {
-      return this.bufferedPayloads.splice(0);
+  async evaluate<R = unknown, A = unknown>(
+    pageFunction: string | ((arg?: A) => R | Promise<R>),
+    _arg?: A,
+  ): Promise<R> {
+    if (typeof pageFunction === "string" && pageFunction.includes("__wamRecorderBufferedEvents.splice")) {
+      return this.bufferedPayloads.splice(0) as unknown as R;
     }
-    return undefined;
+    return undefined as unknown as R;
   }
 
   async addInitScript(script: string) {
@@ -181,15 +184,15 @@ export class FakeRecordingPage implements BrowserDriverPage {
   async exposeFunction(
     name: string,
     callback: (payload: Record<string, unknown>) => void | Promise<void>,
-  ) {
+  ): Promise<void> {
     if (name === "__wamRecorderCapture") {
       this.exposedCapture = callback;
     }
   }
 
-  on(eventName: "framenavigated", handler: (frame: { url(): string }) => void) {
+  on(eventName: string, handler: (...args: never[]) => void | Promise<void>) {
     if (eventName === "framenavigated") {
-      this.frameNavigated = handler;
+      this.frameNavigated = handler as unknown as (frame: { url(): string }) => void;
     }
   }
 
