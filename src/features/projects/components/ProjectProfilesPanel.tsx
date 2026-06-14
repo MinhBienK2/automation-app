@@ -59,6 +59,7 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
     onCreateProjectEnvironment,
     onUpdateProjectEnvironment,
     onDeleteProjectEnvironment,
+    onOpenWorkflow,
   } = props;
 
   const [selectedEnvId, setSelectedEnvId] = useState<string | null>(null);
@@ -70,6 +71,7 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const selectedEnv = projectEnvironments.find((e) => e.id === selectedEnvId) || null;
+  const associatedWorkflows = selectedEnv ? workflows.filter((w) => w.environment_id === selectedEnv.id) : [];
 
   // Sync environment changes & name/launch draft when the selected environment changes
   useEffect(() => {
@@ -228,6 +230,48 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
                     onChange={(e) => setProfileNameDraft(e.target.value)}
                   />
                 </label>
+              </SettingsFieldGroup>
+
+              {/* Associated Workflows */}
+              <SettingsFieldGroup
+                title="Associated Workflows"
+                description="Workflows utilizing this browser profile."
+              >
+                {associatedWorkflows.length === 0 ? (
+                  <p className="muted settings-field-group-wide" style={{ fontSize: "13px", margin: 0 }}>
+                    This profile is not used by any workflows.
+                  </p>
+                ) : (
+                  <div className="settings-field-group-wide" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {associatedWorkflows.map((w) => (
+                      <div
+                        key={w.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px 12px",
+                          borderRadius: "6px",
+                          background: "#0b1016",
+                          border: "1px solid #233240"
+                        }}
+                      >
+                        <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--app-text)" }}>{w.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            onOpenWorkflow(w.id);
+                            setEditDialogOpen(false);
+                          }}
+                        >
+                          Open Workflow
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </SettingsFieldGroup>
 
               {/* Proxy Settings */}

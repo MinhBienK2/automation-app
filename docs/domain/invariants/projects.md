@@ -15,7 +15,7 @@ Preserve these unless the task explicitly changes them.
 
 - Scoped browser profiles list showing used counts, session statuses, and recent failures.
 - CRUD: add profiles, rename inline, delete unused after confirmation.
-- Editable configuration options for the selected profile: Proxy (enabled, server, username, password), Timezone/Locale (with GeoIP toggle), WebRTC policy, Headless mode, Humanize settings (with presets), and Custom Fonts directory.
+- Editable configuration options for the selected profile: Proxy (enabled, server, username, password), Timezone/Locale (with GeoIP toggle), WebRTC policy, Headless mode, Humanize settings (with presets), and Custom Fonts directory. Additionally shows associated workflows utilizing this profile, with quick links to open/navigate directly to them.
 
 ## Project Settings
 

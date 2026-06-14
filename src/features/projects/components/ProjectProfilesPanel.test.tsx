@@ -254,4 +254,44 @@ describe("ProjectProfilesPanel", () => {
       }),
     });
   });
+
+  test("lists associated workflows and allows navigation to them", async () => {
+    const user = userEvent.setup();
+    const onOpenWorkflow = vi.fn();
+
+    render(
+      <ProjectProfilesPanel
+        project={project}
+        projectEnvironments={environments}
+        workflows={workflows}
+        overview={null}
+        loading={false}
+        error=""
+        onRefresh={vi.fn()}
+        onSelectIdentity={vi.fn()}
+        onOpenWorkflow={onOpenWorkflow}
+        onOpenWorkflowSettings={vi.fn()}
+        onCloseRetainedSession={vi.fn()}
+        onResetIdentity={vi.fn()}
+        onOpenIdentityTarget={vi.fn()}
+        onCreateProjectEnvironment={vi.fn()}
+        onUpdateProjectEnvironment={vi.fn()}
+        onDeleteProjectEnvironment={vi.fn()}
+      />,
+    );
+
+    const editBtn = screen.getByRole("button", { name: "Configure profile Profile A" });
+    await user.click(editBtn);
+
+    const editDialog = screen.getByRole("dialog", { name: /Profile Configuration: Profile A/i });
+    expect(within(editDialog).getByText("Workflow A")).toBeInTheDocument();
+
+    const openBtn = within(editDialog).getByRole("button", { name: "Open Workflow" });
+    await user.click(openBtn);
+
+    expect(onOpenWorkflow).toHaveBeenCalledWith("workflow-1");
+    // Verify dialog is closed
+    expect(screen.queryByRole("dialog", { name: /Profile Configuration: Profile A/i })).not.toBeInTheDocument();
+  });
 });
+
