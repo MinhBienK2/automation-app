@@ -101,6 +101,8 @@ type WorkflowGraphEditorProps = {
   onSaveGraph?: () => void;
   onValidateGraph?: () => void;
   defaultEdgeDelay?: GraphEdgeDelay | null;
+  initialVariables?: Array<{ name: string; value: string }> | null;
+  profileVariables?: Array<{ name: string; value: string }> | null;
 };
 
 export type GraphSelectionRequest = {
@@ -133,6 +135,8 @@ export function WorkflowGraphEditor({
   onOpenSubflowDetail,
   onSaveGraph,
   onValidateGraph,
+  initialVariables,
+  profileVariables,
 }: WorkflowGraphEditorProps) {
   const [isActionPaletteOpen, setIsActionPaletteOpen] = useState(false);
   const [isSubflowPaletteOpen, setIsSubflowPaletteOpen] = useState(false);
@@ -952,6 +956,8 @@ export function WorkflowGraphEditor({
               selectedEdge={selectedEdge}
               selectedNode={selectedNode}
               subflowOptions={subflowOptions}
+              initialVariables={initialVariables}
+              profileVariables={profileVariables}
               onCopySelection={copySelection}
               onCreateSubflowFromSelection={
                 graphKind === "workflow" && onCreateSubflowFromSelection

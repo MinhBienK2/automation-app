@@ -54,6 +54,7 @@ type WorkflowDetailPageProps = {
   onSaveGraph: () => void;
   onValidateGraph: () => void;
   initialVariables?: Array<{ name: string; value: string }> | null;
+  profileVariables?: Array<{ name: string; value: string }> | null;
 };
 
 export function WorkflowDetailPage({
@@ -87,6 +88,7 @@ export function WorkflowDetailPage({
   onSaveGraph,
   onValidateGraph,
   initialVariables,
+  profileVariables,
 }: WorkflowDetailPageProps) {
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
@@ -396,6 +398,8 @@ export function WorkflowDetailPage({
             onSelectedNodeChange={onSelectedGraphNodeChange}
             onSaveGraph={onSaveGraph}
             onValidateGraph={onValidateGraph}
+            initialVariables={initialVariables}
+            profileVariables={profileVariables}
           />
         </>
       ) : null}

@@ -80,4 +80,31 @@ describe("collectVariableOptions", () => {
     expect(names).toContain("varB");
     expect(names).toContain("varC");
   });
+
+  test("collects initial variables from settings and profile variables", () => {
+    const initialVariables = [
+      { name: "settingsVar1", value_type: "text" as const, value: "val1" },
+      { name: "settingsVar2", value_type: "text" as const, value: "val2" },
+    ];
+    const profileVariables = [
+      { name: "profileVar1", value_type: "text" as const, value: "val3", persist: false },
+    ];
+
+    const options = collectVariableOptions(graph, nodeB, initialVariables, profileVariables);
+    const names = options.map((opt) => opt.name);
+
+    // Should include upstream nodes
+    expect(names).toContain("varA");
+    
+    // Should include settings variables
+    expect(names).toContain("settingsVar1");
+    expect(names).toContain("settingsVar2");
+
+    // Should include profile variables
+    expect(names).toContain("profileVar1");
+
+    // Check sources
+    expect(options.find((opt) => opt.name === "settingsVar1")?.source).toBe("Workflow Settings Env");
+    expect(options.find((opt) => opt.name === "profileVar1")?.source).toBe("Profile Env");
+  });
 });

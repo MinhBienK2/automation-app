@@ -574,6 +574,10 @@ function App() {
       )
     : projectsWorkspace.browserProfiles;
 
+  const activeProfileId = workflowsWorkspace.detail?.workflow.browser_profile_id;
+  const activeProfile = selectedBrowserProfiles.find((profile) => profile.id === activeProfileId);
+  const profileVariables = activeProfile?.environment?.variables ?? null;
+
   return (
     <AppShell
       activeItem={
@@ -784,6 +788,7 @@ function App() {
             liveRunEnabled={workflowSettings?.graph_defaults?.live_run_enabled ?? true}
             liveRunFollowCurrent={workflowSettings?.graph_defaults?.live_run_follow_current ?? false}
             initialVariables={workflowSettings?.environment?.initial_variables}
+            profileVariables={profileVariables}
             onBack={nav.backToList}
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={() => runWorkspace.stopRun(detailRunSnapshot?.run_id ?? "")}

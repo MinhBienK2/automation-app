@@ -45,6 +45,8 @@ type WorkflowGraphInspectorProps = {
   onClose: () => void;
   onUpdateEdge: (edge: GraphEdge) => void;
   onUpdateNode: (node: GraphNode) => void;
+  initialVariables?: Array<{ name: string; value: string }> | null;
+  profileVariables?: Array<{ name: string; value: string }> | null;
 };
 
 export function WorkflowGraphInspector({
@@ -68,8 +70,10 @@ export function WorkflowGraphInspector({
   onClose,
   onUpdateEdge,
   onUpdateNode,
+  initialVariables,
+  profileVariables,
 }: WorkflowGraphInspectorProps) {
-  const variableOptions = collectVariableOptions(graph, selectedNode);
+  const variableOptions = collectVariableOptions(graph, selectedNode, initialVariables, profileVariables);
   const [runErrorDetailsVisible, setRunErrorDetailsVisible] = useState(false);
   const selectedRunError =
     selectedNode && runState.error?.step_id === selectedNode.id
@@ -371,8 +375,29 @@ function copyRunError(reason: string) {
   void navigator.clipboard?.writeText(reason);
 }
 
-export function collectVariableOptions(graph: WorkflowGraph, selectedNode?: GraphNode | null): VariableOption[] {
+export function collectVariableOptions(
+  graph: WorkflowGraph,
+  selectedNode?: GraphNode | null,
+  initialVariables?: Array<{ name: string; value: string }> | null,
+  profileVariables?: Array<{ name: string; value: string }> | null,
+): VariableOption[] {
   const options: VariableOption[] = [];
+
+  if (initialVariables) {
+    for (const v of initialVariables) {
+      if (v.name?.trim()) {
+        options.push({ name: v.name.trim(), source: "Workflow Settings Env" });
+      }
+    }
+  }
+
+  if (profileVariables) {
+    for (const v of profileVariables) {
+      if (v.name?.trim()) {
+        options.push({ name: v.name.trim(), source: "Profile Env" });
+      }
+    }
+  }
 
   let allowedNodeIds: Set<string> | null = null;
   if (selectedNode) {
