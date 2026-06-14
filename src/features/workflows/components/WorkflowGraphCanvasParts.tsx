@@ -149,7 +149,11 @@ function graphNodeCategory(nodeType: GraphNodeType) {
   if (
     nodeType === "set_variable" ||
     nodeType === "set_json_variables" ||
-    nodeType === "update_variable" ||
+    nodeType === "update_number_variable" ||
+    nodeType === "update_text_variable" ||
+    nodeType === "update_flag_variable" ||
+    nodeType === "update_list_variable" ||
+    nodeType === "update_object_variable" ||
     nodeType === "transform_variable" ||
     nodeType === "assert_output" ||
     nodeType === "domain_allowlist"
@@ -253,7 +257,11 @@ function portUsageText(nodeType: GraphNodeType, port: GraphPort) {
       return actionPortUsage(port);
     case "set_variable":
     case "set_json_variables":
-    case "update_variable":
+    case "update_number_variable":
+    case "update_text_variable":
+    case "update_flag_variable":
+    case "update_list_variable":
+    case "update_object_variable":
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
@@ -409,8 +417,16 @@ function utilityNodeVerb(nodeType: GraphNodeType) {
       return "ghi biến";
     case "set_json_variables":
       return "ghi biến từ JSON";
-    case "update_variable":
-      return "cập nhật biến";
+    case "update_number_variable":
+      return "cập nhật biến số";
+    case "update_text_variable":
+      return "cập nhật biến chữ";
+    case "update_flag_variable":
+      return "cập nhật biến flag";
+    case "update_list_variable":
+      return "cập nhật biến danh sách";
+    case "update_object_variable":
+      return "cập nhật biến đối tượng";
     case "transform_variable":
       return "biến đổi biến";
     case "assert_output":

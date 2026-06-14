@@ -243,14 +243,45 @@ describe("backend action validation registry", () => {
     });
   });
 
-  test("validates update_variable action configs", () => {
+  test("validates new update variable action configs", () => {
     expect(
       validateActionConfig({
-        type: "update_variable",
+        type: "update_number_variable",
         config: {
-          name: "my_array",
+          name: "my_number",
+          operation: "increment",
+        },
+      } as never),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "update_text_variable",
+        config: {
+          name: "my_text",
+          operation: "append",
+          value: "some text",
+        },
+      } as never),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "update_flag_variable",
+        config: {
+          name: "my_flag",
+          operation: "toggle",
+        },
+      } as never),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "update_list_variable",
+        config: {
+          name: "my_list",
           operation: "push",
-          value: "new_item",
+          value: "item",
           value_type: "text",
         },
       } as never),
@@ -258,7 +289,7 @@ describe("backend action validation registry", () => {
 
     expect(
       validateActionConfig({
-        type: "update_variable",
+        type: "update_object_variable",
         config: {
           name: "my_object",
           operation: "merge",
@@ -267,65 +298,87 @@ describe("backend action validation registry", () => {
       } as never),
     ).toBeNull();
 
+    // update_number_variable
     expect(
       validateActionConfig({
-        type: "update_variable",
-        config: {
-          name: "",
-          operation: "push",
-          value: "new_item",
-          value_type: "text",
-        },
+        type: "update_number_variable",
+        config: { name: "", operation: "increment" },
       } as never),
-    ).toEqual({
-      field: "name",
-      message: "Variable name is required",
-    });
+    ).toEqual({ field: "name", message: "Variable name is required" });
 
     expect(
       validateActionConfig({
-        type: "update_variable",
-        config: {
-          name: "my_array",
-          operation: "invalid_op",
-          value: "new_item",
-          value_type: "text",
-        },
+        type: "update_number_variable",
+        config: { name: "counter", operation: "invalid_op" },
       } as never),
-    ).toEqual({
-      field: "operation",
-      message: "Operation must be push or merge",
-    });
+    ).toEqual({ field: "operation", message: "Operation must be increment, decrement, add, subtract, multiply, or divide" });
 
     expect(
       validateActionConfig({
-        type: "update_variable",
-        config: {
-          name: "my_array",
-          operation: "push",
-          value: "",
-          value_type: "text",
-        },
+        type: "update_number_variable",
+        config: { name: "counter", operation: "add", value: "" },
       } as never),
-    ).toEqual({
-      field: "value",
-      message: "Value is required",
-    });
+    ).toEqual({ field: "value", message: "Value is required" });
+
+    // update_text_variable
+    expect(
+      validateActionConfig({
+        type: "update_text_variable",
+        config: { name: "my_text", operation: "append", value: "" },
+      } as never),
+    ).toEqual({ field: "value", message: "Value is required" });
 
     expect(
       validateActionConfig({
-        type: "update_variable",
-        config: {
-          name: "my_array",
-          operation: "push",
-          value: "new_item",
-          value_type: "invalid_type",
-        },
+        type: "update_text_variable",
+        config: { name: "my_text", operation: "replace", value: "new", search_pattern: "" },
       } as never),
-    ).toEqual({
-      field: "value_type",
-      message: "Value type must be text, json, number, or boolean",
-    });
+    ).toEqual({ field: "search_pattern", message: "Search pattern is required" });
+
+    // update_flag_variable
+    expect(
+      validateActionConfig({
+        type: "update_flag_variable",
+        config: { name: "my_flag", operation: "invalid" },
+      } as never),
+    ).toEqual({ field: "operation", message: "Operation must be toggle, set_true, or set_false" });
+
+    // update_list_variable
+    expect(
+      validateActionConfig({
+        type: "update_list_variable",
+        config: { name: "my_list", operation: "push", value: "", value_type: "text" },
+      } as never),
+    ).toEqual({ field: "value", message: "Value is required" });
+
+    expect(
+      validateActionConfig({
+        type: "update_list_variable",
+        config: { name: "my_list", operation: "push", value: "item", value_type: "invalid" },
+      } as never),
+    ).toEqual({ field: "value_type", message: "Value type must be text, json, number, or boolean" });
+
+    expect(
+      validateActionConfig({
+        type: "update_list_variable",
+        config: { name: "my_list", operation: "remove_by_index", index: null },
+      } as never),
+    ).toEqual({ field: "index", message: "Index is required" });
+
+    // update_object_variable
+    expect(
+      validateActionConfig({
+        type: "update_object_variable",
+        config: { name: "my_obj", operation: "merge", value: "{" },
+      } as never),
+    ).toEqual({ field: "value", message: "JSON variables must be valid JSON" });
+
+    expect(
+      validateActionConfig({
+        type: "update_object_variable",
+        config: { name: "my_obj", operation: "set_key", property_key: "", property_value: "val", property_value_type: "text" },
+      } as never),
+    ).toEqual({ field: "property_key", message: "Property key is required" });
   });
 });
 

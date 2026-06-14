@@ -252,7 +252,7 @@ describe("TypeScript graph compiler parity", () => {
             variables: [{ name: "row.status", value_type: "text", value: "done" }],
           },
         }),
-        graphNode("update-var", "update_variable", {
+        graphNode("update-var", "update_list_variable", {
           config: {
             name: "row.tags",
             operation: "push",
@@ -321,7 +321,7 @@ describe("TypeScript graph compiler parity", () => {
                 },
               },
               {
-                type: "update_variable",
+                type: "update_list_variable",
                 graph_node_id: "update-var",
                 graph_label: "Update Var",
                 config: {
@@ -329,6 +329,7 @@ describe("TypeScript graph compiler parity", () => {
                   operation: "push",
                   value: "completed",
                   value_type: "text",
+                  index: null,
                 },
               },
             ],

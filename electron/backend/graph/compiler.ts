@@ -373,14 +373,62 @@ function compilePath(
       }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
-    case "update_variable": {
+    case "update_number_variable": {
       const name = requiredString(node.config, "name", "Variable name is required");
-      const operation = requiredString(node.config, "operation", "Operation must be push or merge") as "push" | "merge";
-      const value = requiredString(node.config, "value", "Value is required");
-      const value_type = stringField(node.config, "value_type") as any;
+      const operation = requiredString(node.config, "operation", "Operation must be increment, decrement, add, subtract, multiply, or divide") as any;
+      const value = stringField(node.config, "value");
       steps.push(step(node, {
-        type: "update_variable",
-        config: { name, operation, value, value_type },
+        type: "update_number_variable",
+        config: { name, operation, value },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "update_text_variable": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const operation = requiredString(node.config, "operation", "Operation must be append, prepend, replace, uppercase, lowercase, or trim") as any;
+      const value = stringField(node.config, "value");
+      const search_pattern = stringField(node.config, "search_pattern");
+      steps.push(step(node, {
+        type: "update_text_variable",
+        config: { name, operation, value, search_pattern },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "update_flag_variable": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const operation = requiredString(node.config, "operation", "Operation must be toggle, set_true, or set_false") as any;
+      steps.push(step(node, {
+        type: "update_flag_variable",
+        config: { name, operation },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "update_list_variable": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const operation = requiredString(node.config, "operation", "Operation must be push, unshift, push_unique, pop, shift, remove_by_index, or remove_by_value") as any;
+      const value = stringField(node.config, "value");
+      const value_type = stringField(node.config, "value_type") as any;
+      const index = stringField(node.config, "index") ?? (typeof asRecord(node.config).index === "number" ? asRecord(node.config).index : null) as any;
+      steps.push(step(node, {
+        type: "update_list_variable",
+        config: { name, operation, value, value_type, index },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "update_object_variable": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const operation = requiredString(node.config, "operation", "Operation must be merge, deep_merge, set_key, or delete_key") as any;
+      const value = stringField(node.config, "value");
+      const property_key = stringField(node.config, "property_key");
+      const property_value = stringField(node.config, "property_value");
+      const property_value_type = stringField(node.config, "property_value_type") as any;
+      steps.push(step(node, {
+        type: "update_object_variable",
+        config: { name, operation, value, property_key, property_value, property_value_type },
       }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
@@ -733,7 +781,11 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "action":
     case "set_variable":
     case "set_json_variables":
-    case "update_variable":
+    case "update_number_variable":
+    case "update_text_variable":
+    case "update_flag_variable":
+    case "update_list_variable":
+    case "update_object_variable":
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":

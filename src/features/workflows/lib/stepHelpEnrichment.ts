@@ -320,8 +320,16 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Name", "Type", "Value"];
     case "set_json_variables":
       return ["JSON variables"];
-    case "update_variable":
-      return ["Variable name", "Operation", "Value", "Value type"];
+    case "update_number_variable":
+      return ["Variable name", "Operation", "Value"];
+    case "update_text_variable":
+      return ["Variable name", "Operation", "Search pattern", "Value"];
+    case "update_flag_variable":
+      return ["Variable name", "Operation"];
+    case "update_list_variable":
+      return ["Variable name", "Operation", "Value type", "Value", "Index"];
+    case "update_object_variable":
+      return ["Variable name", "Operation", "Value", "Property key", "Property value type", "Property value"];
     case "assert_element":
       return [...targetSourceFields, "State"];
     case "assert_text":

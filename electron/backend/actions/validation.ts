@@ -347,16 +347,70 @@ const actionValidators = createActionValidatorMap({
       return validationError("json", "JSON variables must be valid JSON");
     }
   },
-  update_variable: (config) => {
+  update_number_variable: (config) => {
+    const operation = config.config.operation;
+    const needsValue = ["add", "subtract", "multiply", "divide"].includes(operation);
+    return firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      validateRequiredEnumValue(
+        operation,
+        ["increment", "decrement", "add", "subtract", "multiply", "divide"],
+        "operation",
+        "Operation must be increment, decrement, add, subtract, multiply, or divide",
+      ),
+      needsValue
+        ? requiredActionString(config.config.value, "value", "Value is required")
+        : null,
+    );
+  },
+  update_text_variable: (config) => {
+    const operation = config.config.operation;
+    const needsValue = ["append", "prepend", "replace"].includes(operation);
+    const needsSearch = operation === "replace";
+    return firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      validateRequiredEnumValue(
+        operation,
+        ["append", "prepend", "replace", "uppercase", "lowercase", "trim"],
+        "operation",
+        "Operation must be append, prepend, replace, uppercase, lowercase, or trim",
+      ),
+      needsValue
+        ? requiredActionString(config.config.value, "value", "Value is required")
+        : null,
+      needsSearch
+        ? requiredActionString(config.config.search_pattern, "search_pattern", "Search pattern is required")
+        : null,
+    );
+  },
+  update_flag_variable: (config) => {
     return firstValidation(
       requiredActionString(config.config.name, "name", "Variable name is required"),
       validateRequiredEnumValue(
         config.config.operation,
-        ["push", "merge"],
+        ["toggle", "set_true", "set_false"],
         "operation",
-        "Operation must be push or merge",
+        "Operation must be toggle, set_true, or set_false",
       ),
-      config.config.operation === "push"
+    );
+  },
+  update_list_variable: (config) => {
+    const operation = config.config.operation;
+    const needsValue = ["push", "unshift", "push_unique", "remove_by_value"].includes(operation);
+    const needsValueType = ["push", "unshift", "push_unique"].includes(operation);
+    const needsIndex = operation === "remove_by_index";
+    return firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      validateRequiredEnumValue(
+        operation,
+        ["push", "unshift", "push_unique", "pop", "shift", "remove_by_index", "remove_by_value"],
+        "operation",
+        "Operation must be push, unshift, push_unique, pop, shift, remove_by_index, or remove_by_value",
+      ),
+      needsValue
+        ? requiredActionString(config.config.value, "value", "Value is required")
+        : null,
+      needsValueType
         ? validateRequiredEnumValue(
             config.config.value_type,
             ["text", "json", "number", "boolean"],
@@ -364,7 +418,54 @@ const actionValidators = createActionValidatorMap({
             "Value type must be text, json, number, or boolean",
           )
         : null,
-      requiredActionString(config.config.value, "value", "Value is required"),
+      needsIndex
+        ? (config.config.index === null || config.config.index === undefined || String(config.config.index).trim() === ""
+            ? validationError("index", "Index is required")
+            : null)
+        : null,
+    );
+  },
+  update_object_variable: (config) => {
+    const operation = config.config.operation;
+    const isMerge = ["merge", "deep_merge"].includes(operation);
+    const isSetKey = operation === "set_key";
+    const isDeleteKey = operation === "delete_key";
+    
+    if (isMerge) {
+      const valueErr = requiredActionString(config.config.value, "value", "Value is required");
+      if (valueErr) return valueErr;
+      try {
+        const parsed = JSON.parse(config.config.value || "{}");
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          return validationError("value", "JSON variables must be an object");
+        }
+      } catch {
+        return validationError("value", "JSON variables must be valid JSON");
+      }
+    }
+    
+    return firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      validateRequiredEnumValue(
+        operation,
+        ["merge", "deep_merge", "set_key", "delete_key"],
+        "operation",
+        "Operation must be merge, deep_merge, set_key, or delete_key",
+      ),
+      (isSetKey || isDeleteKey)
+        ? requiredActionString(config.config.property_key, "property_key", "Property key is required")
+        : null,
+      isSetKey
+        ? firstValidation(
+            requiredActionString(config.config.property_value, "property_value", "Property value is required"),
+            validateRequiredEnumValue(
+              config.config.property_value_type,
+              ["text", "json", "number", "boolean"],
+              "property_value_type",
+              "Property value type must be text, json, number, or boolean",
+            ),
+          )
+        : null,
     );
   },
   assert_element: (config) =>

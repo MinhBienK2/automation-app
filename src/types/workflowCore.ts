@@ -46,7 +46,11 @@ export type ActionType =
   | "wait_for_download"
   | "set_variable"
   | "set_json_variables"
-  | "update_variable"
+  | "update_number_variable"
+  | "update_text_variable"
+  | "update_flag_variable"
+  | "update_list_variable"
+  | "update_object_variable"
   | "assert_element"
   | "assert_text"
   | "graph_noop"
@@ -697,12 +701,48 @@ export type ActionConfig =
     }
   | { type: "set_json_variables"; config: { json: string } }
   | {
-      type: "update_variable";
+      type: "update_number_variable";
       config: {
         name: string;
-        operation: "push" | "merge";
-        value: string;
+        operation: "increment" | "decrement" | "add" | "subtract" | "multiply" | "divide";
+        value?: string | null;
+      };
+    }
+  | {
+      type: "update_text_variable";
+      config: {
+        name: string;
+        operation: "append" | "prepend" | "replace" | "uppercase" | "lowercase" | "trim";
+        value?: string | null;
+        search_pattern?: string | null;
+      };
+    }
+  | {
+      type: "update_flag_variable";
+      config: {
+        name: string;
+        operation: "toggle" | "set_true" | "set_false";
+      };
+    }
+  | {
+      type: "update_list_variable";
+      config: {
+        name: string;
+        operation: "push" | "unshift" | "push_unique" | "pop" | "shift" | "remove_by_index" | "remove_by_value";
+        value?: string | null;
         value_type?: VariableValueType | null;
+        index?: number | string | null;
+      };
+    }
+  | {
+      type: "update_object_variable";
+      config: {
+        name: string;
+        operation: "merge" | "deep_merge" | "set_key" | "delete_key";
+        value?: string | null;
+        property_key?: string | null;
+        property_value?: string | null;
+        property_value_type?: VariableValueType | null;
       };
     }
   | {

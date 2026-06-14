@@ -532,4 +532,53 @@ describe("workflow step form config helpers", () => {
       config: { key: "token", value: "new" },
     });
   });
+
+  test("updates the five new specialized variable actions", () => {
+    const numConfig: ActionConfig = {
+      type: "update_number_variable",
+      config: { name: "count", operation: "increment" },
+    };
+    const textConfig: ActionConfig = {
+      type: "update_text_variable",
+      config: { name: "msg", operation: "append", value: "init" },
+    };
+    const flagConfig: ActionConfig = {
+      type: "update_flag_variable",
+      config: { name: "flag", operation: "toggle" },
+    };
+    const listConfig: ActionConfig = {
+      type: "update_list_variable",
+      config: { name: "items", operation: "push", index: 1 },
+    };
+    const objConfig: ActionConfig = {
+      type: "update_object_variable",
+      config: { name: "user", operation: "set_key", property_key: "age" },
+    };
+
+    expect(updateActionConfigField(numConfig, "value", "10")).toEqual({
+      type: "update_number_variable",
+      config: { name: "count", operation: "increment", value: "10" },
+    });
+    expect(updateActionConfigField(textConfig, "search_pattern", "foo")).toEqual({
+      type: "update_text_variable",
+      config: { name: "msg", operation: "append", value: "init", search_pattern: "foo" },
+    });
+    expect(updateActionConfigField(flagConfig, "operation", "set_false")).toEqual({
+      type: "update_flag_variable",
+      config: { name: "flag", operation: "set_false" },
+    });
+    expect(updateActionConfigField(listConfig, "index", "2")).toEqual({
+      type: "update_list_variable",
+      config: { name: "items", operation: "push", index: 2 },
+    });
+    expect(updateActionConfigField(listConfig, "index", "{{my_idx}}")).toEqual({
+      type: "update_list_variable",
+      config: { name: "items", operation: "push", index: "{{my_idx}}" },
+    });
+    expect(updateActionConfigField(objConfig, "property_value", "john")).toEqual({
+      type: "update_object_variable",
+      config: { name: "user", operation: "set_key", property_key: "age", property_value: "john" },
+    });
+  });
 });
+

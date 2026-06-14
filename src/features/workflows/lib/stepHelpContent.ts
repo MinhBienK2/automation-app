@@ -55,7 +55,11 @@ type PhaseOneActionType =
   | "wait_for_download"
   | "set_variable"
   | "set_json_variables"
-  | "update_variable"
+  | "update_number_variable"
+  | "update_text_variable"
+  | "update_flag_variable"
+  | "update_list_variable"
+  | "update_object_variable"
   | "assert_element"
   | "assert_text"
   | "graph_noop"
@@ -585,11 +589,30 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
     "lưu biến JSON",
     "variable",
   ),
-  update_variable: elementHelp(
-    "Update Variable",
-    "update existing variables (push/merge)",
-    "cập nhật biến",
-    "variable",
+  update_number_variable: variableHelp(
+    "Update Number Variable",
+    "perform math operations on a number variable",
+    "thực hiện phép toán trên biến số",
+  ),
+  update_text_variable: variableHelp(
+    "Update Text Variable",
+    "perform string operations on a text variable",
+    "thực hiện xử lý chuỗi trên biến chữ",
+  ),
+  update_flag_variable: variableHelp(
+    "Update Flag Variable",
+    "update boolean flag variable",
+    "cập nhật biến flag",
+  ),
+  update_list_variable: variableHelp(
+    "Update List Variable",
+    "perform array operations on a list variable",
+    "thực hiện thao tác mảng trên biến danh sách",
+  ),
+  update_object_variable: variableHelp(
+    "Update Object Variable",
+    "perform JSON object operations on an object variable",
+    "thực hiện thao tác đối tượng trên biến đối tượng",
   ),
   assert_element: elementHelp("Assert Element", "require an element state", "kiểm tra element", "assert"),
   assert_text: elementHelp("Assert Text", "require expected text", "kiểm tra text", "assert"),
@@ -766,6 +789,31 @@ function elementHelp(
       ],
       examples: [`XPath: //*[@data-action='${example}']`],
       commonMistakes: ["XPath must point to the real element that receives the action."],
+    },
+  };
+}
+
+function variableHelp(
+  title: string,
+  enSummary: string,
+  viSummary: string,
+): BilingualStepHelp {
+  return {
+    vi: {
+      title: `Trợ giúp ${title}`,
+      summary: viSummary,
+      useWhen: ["Dùng để quản lý trạng thái và dữ liệu trong quá trình chạy."],
+      fields: [],
+      examples: [],
+      commonMistakes: [],
+    },
+    en: {
+      title: `${title} Help`,
+      summary: enSummary,
+      useWhen: ["Use to manage state and data during execution."],
+      fields: [],
+      examples: [],
+      commonMistakes: [],
     },
   };
 }

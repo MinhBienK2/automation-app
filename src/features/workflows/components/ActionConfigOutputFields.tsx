@@ -43,34 +43,160 @@ export function OutputActionFields({
           />
         </ActionConfigFieldGroup>
       );
-    case "update_variable":
+    case "update_number_variable": {
+      const operation = config.config.operation ?? "increment";
+      const showValue = ["add", "subtract", "multiply", "divide"].includes(operation);
       return (
-        <ActionConfigFieldGroup title="Update Variable Settings">
+        <ActionConfigFieldGroup title="Update Number Variable Settings">
           <TemplateTextField
             label="Variable name"
             value={config.config.name ?? ""}
-            onChange={(val) =>
-              onChange(updateActionConfigField(config, "name", val))
-            }
+            onChange={(val) => onChange(updateActionConfigField(config, "name", val))}
+            placeholder="e.g. counter"
             variableOptions={variableOptions}
           />
           <Label>
             Operation
             <Select
-              value={config.config.operation ?? "push"}
+              value={operation}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "operation", event.currentTarget.value))
               }
             >
-              <option value="push">Push (append to array)</option>
-              <option value="merge">Merge (merge JSON object)</option>
+              <option value="increment">Increment (+1)</option>
+              <option value="decrement">Decrement (-1)</option>
+              <option value="add">Add</option>
+              <option value="subtract">Subtract</option>
+              <option value="multiply">Multiply</option>
+              <option value="divide">Divide</option>
             </Select>
           </Label>
-          {(config.config.operation ?? "push") === "push" && (
+          {showValue && (
+            <TemplateTextField
+              label="Value"
+              value={config.config.value ?? ""}
+              onChange={(val) => onChange(updateActionConfigField(config, "value", val))}
+              placeholder="Value"
+              variableOptions={variableOptions}
+            />
+          )}
+        </ActionConfigFieldGroup>
+      );
+    }
+    case "update_text_variable": {
+      const operation = config.config.operation ?? "append";
+      const showValue = ["append", "prepend", "replace"].includes(operation);
+      const showSearch = operation === "replace";
+      return (
+        <ActionConfigFieldGroup title="Update Text Variable Settings">
+          <TemplateTextField
+            label="Variable name"
+            value={config.config.name ?? ""}
+            onChange={(val) => onChange(updateActionConfigField(config, "name", val))}
+            placeholder="e.g. message"
+            variableOptions={variableOptions}
+          />
+          <Label>
+            Operation
+            <Select
+              value={operation}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "operation", event.currentTarget.value))
+              }
+            >
+              <option value="append">Append</option>
+              <option value="prepend">Prepend</option>
+              <option value="replace">Replace</option>
+              <option value="uppercase">To Uppercase</option>
+              <option value="lowercase">To Lowercase</option>
+              <option value="trim">Trim Whitespace</option>
+            </Select>
+          </Label>
+          {showSearch && (
+            <TemplateTextField
+              label="Search pattern (string or /regex/)"
+              value={config.config.search_pattern ?? ""}
+              onChange={(val) => onChange(updateActionConfigField(config, "search_pattern", val))}
+              placeholder="pattern"
+              variableOptions={variableOptions}
+            />
+          )}
+          {showValue && (
+            <TemplateTextareaField
+              label="Replacement / Value"
+              value={config.config.value ?? ""}
+              onChange={(val) => onChange(updateActionConfigField(config, "value", val))}
+              placeholder="Value"
+              variableOptions={variableOptions}
+            />
+          )}
+        </ActionConfigFieldGroup>
+      );
+    }
+    case "update_flag_variable": {
+      const operation = config.config.operation ?? "toggle";
+      return (
+        <ActionConfigFieldGroup title="Update Flag Variable Settings">
+          <TemplateTextField
+            label="Variable name"
+            value={config.config.name ?? ""}
+            onChange={(val) => onChange(updateActionConfigField(config, "name", val))}
+            placeholder="e.g. isLoggedIn"
+            variableOptions={variableOptions}
+          />
+          <Label>
+            Operation
+            <Select
+              value={operation}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "operation", event.currentTarget.value))
+              }
+            >
+              <option value="toggle">Toggle</option>
+              <option value="set_true">Set True</option>
+              <option value="set_false">Set False</option>
+            </Select>
+          </Label>
+        </ActionConfigFieldGroup>
+      );
+    }
+    case "update_list_variable": {
+      const operation = config.config.operation ?? "push";
+      const value_type = config.config.value_type ?? "text";
+      const showValue = ["push", "unshift", "push_unique", "remove_by_value"].includes(operation);
+      const showValueType = showValue;
+      const showIndex = operation === "remove_by_index";
+      return (
+        <ActionConfigFieldGroup title="Update List Variable Settings">
+          <TemplateTextField
+            label="Variable name"
+            value={config.config.name ?? ""}
+            onChange={(val) => onChange(updateActionConfigField(config, "name", val))}
+            placeholder="e.g. items"
+            variableOptions={variableOptions}
+          />
+          <Label>
+            Operation
+            <Select
+              value={operation}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "operation", event.currentTarget.value))
+              }
+            >
+              <option value="push">Push (Add to end)</option>
+              <option value="unshift">Unshift (Add to start)</option>
+              <option value="push_unique">Push Unique</option>
+              <option value="pop">Pop (Remove from end)</option>
+              <option value="shift">Shift (Remove from start)</option>
+              <option value="remove_by_index">Remove by index</option>
+              <option value="remove_by_value">Remove by value</option>
+            </Select>
+          </Label>
+          {showValueType && (
             <Label>
               Value type
               <Select
-                value={config.config.value_type ?? "text"}
+                value={value_type}
                 onChange={(event) =>
                   onChange(updateActionConfigField(config, "value_type", event.currentTarget.value))
                 }
@@ -82,17 +208,105 @@ export function OutputActionFields({
               </Select>
             </Label>
           )}
-          <TemplateTextareaField
-            label={(config.config.operation ?? "push") === "merge" ? "JSON value to merge" : "Value to push"}
-            value={config.config.value ?? ""}
-            onChange={(val) =>
-              onChange(updateActionConfigField(config, "value", val))
-            }
-            variableOptions={variableOptions}
-            showMath={(config.config.operation ?? "push") === "push" && config.config.value_type === "number"}
-          />
+          {showValue && (
+            <TemplateTextareaField
+              label="Value"
+              value={config.config.value ?? ""}
+              onChange={(val) => onChange(updateActionConfigField(config, "value", val))}
+              placeholder="Value"
+              variableOptions={variableOptions}
+              showMath={value_type === "number"}
+            />
+          )}
+          {showIndex && (
+            <TemplateTextField
+              label="Index (0-based number or variable)"
+              value={config.config.index !== undefined && config.config.index !== null ? String(config.config.index) : ""}
+              onChange={(val) => onChange(updateActionConfigField(config, "index", val))}
+              placeholder="0"
+              variableOptions={variableOptions}
+            />
+          )}
         </ActionConfigFieldGroup>
       );
+    }
+    case "update_object_variable": {
+      const operation = config.config.operation ?? "merge";
+      const property_value_type = config.config.property_value_type ?? "text";
+      const showValue = ["merge", "deep_merge"].includes(operation);
+      const showKey = ["set_key", "delete_key"].includes(operation);
+      const showKeyValue = operation === "set_key";
+      const showKeyValueType = operation === "set_key";
+      return (
+        <ActionConfigFieldGroup title="Update Object Variable Settings">
+          <TemplateTextField
+            label="Variable name"
+            value={config.config.name ?? ""}
+            onChange={(val) => onChange(updateActionConfigField(config, "name", val))}
+            placeholder="e.g. user"
+            variableOptions={variableOptions}
+          />
+          <Label>
+            Operation
+            <Select
+              value={operation}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "operation", event.currentTarget.value))
+              }
+            >
+              <option value="merge">Merge (shallow)</option>
+              <option value="deep_merge">Deep Merge</option>
+              <option value="set_key">Set Key/Property</option>
+              <option value="delete_key">Delete Key/Property</option>
+            </Select>
+          </Label>
+          {showValue && (
+            <TemplateTextareaField
+              label="JSON value to merge"
+              value={config.config.value ?? ""}
+              onChange={(val) => onChange(updateActionConfigField(config, "value", val))}
+              placeholder='{"key": "value"}'
+              variableOptions={variableOptions}
+            />
+          )}
+          {showKey && (
+            <TemplateTextField
+              label="Property key (support dot-path)"
+              value={config.config.property_key ?? ""}
+              onChange={(val) => onChange(updateActionConfigField(config, "property_key", val))}
+              placeholder="e.g. address.city"
+              variableOptions={variableOptions}
+            />
+          )}
+          {showKeyValueType && (
+            <Label>
+              Property value type
+              <Select
+                value={property_value_type}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "property_value_type", event.currentTarget.value))
+                }
+              >
+                <option value="text">Text</option>
+                <option value="json">JSON</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+              </Select>
+            </Label>
+          )}
+          {showKeyValue && (
+            <TemplateTextareaField
+              label="Property value"
+              value={config.config.property_value ?? ""}
+              onChange={(val) => onChange(updateActionConfigField(config, "property_value", val))}
+              placeholder="Value"
+              variableOptions={variableOptions}
+              showMath={property_value_type === "number"}
+            />
+          )}
+        </ActionConfigFieldGroup>
+      );
+    }
     case "assert_element":
       return (
         <>

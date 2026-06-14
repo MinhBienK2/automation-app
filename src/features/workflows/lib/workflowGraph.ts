@@ -493,7 +493,11 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "merge":
     case "set_variable":
     case "set_json_variables":
-    case "update_variable":
+    case "update_number_variable":
+    case "update_text_variable":
+    case "update_flag_variable":
+    case "update_list_variable":
+    case "update_object_variable":
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
@@ -901,6 +905,8 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
   if (nodeType === "set_json_variables") return "Set JSON Variables";
   if (nodeType === "random_choice") return "Random Choice";
   if (nodeType === "call_subflow") return "Call Subflow";
+  if (nodeType === "update_flag_variable") return "Update Flag Variable (Yes/No)";
+  if (nodeType === "update_object_variable") return "Update Object Variable (JSON)";
 
   return nodeType
     .split("_")
@@ -1080,8 +1086,16 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { variables: [{ name: "name", value_type: "text", value: "" }] };
     case "set_json_variables":
       return { json: "{\n  \"name\": \"value\"\n}" };
-    case "update_variable":
-      return { name: "", operation: "push", value: "", value_type: "text" };
+    case "update_number_variable":
+      return { name: "", operation: "increment", value: "" };
+    case "update_text_variable":
+      return { name: "", operation: "append", value: "", search_pattern: "" };
+    case "update_flag_variable":
+      return { name: "", operation: "toggle" };
+    case "update_list_variable":
+      return { name: "", operation: "push", value: "", value_type: "text", index: null };
+    case "update_object_variable":
+      return { name: "", operation: "merge", value: "{\n  \"key\": \"value\"\n}", property_key: "", property_value: "", property_value_type: "text" };
     case "transform_variable":
       return { source_name: "input", target_name: "output", expression: "" };
     case "assert_output":

@@ -57,7 +57,11 @@ const supportedGraphNodeTypes = new Set<string>([
   "stop_workflow",
   "set_variable",
   "set_json_variables",
-  "update_variable",
+  "update_number_variable",
+  "update_text_variable",
+  "update_flag_variable",
+  "update_list_variable",
+  "update_object_variable",
   "transform_variable",
   "assert_output",
   "domain_allowlist",
@@ -340,19 +344,62 @@ function pushNodeSemanticIssues(
       }
       break;
     }
-    case "update_variable": {
-      const name = stringField(node.config, "name");
-      const operation = stringField(node.config, "operation");
-      const value = stringField(node.config, "value");
-      const value_type = stringField(node.config, "value_type");
+    case "update_number_variable": {
+      const name = stringField(node.config, "name") ?? "";
+      const operation = stringField(node.config, "operation") ?? "";
+      const value = stringField(node.config, "value") ?? "";
       const validation = validateActionConfig({
-        type: "update_variable",
-        config: {
-          name: name ?? "",
-          operation: operation as any,
-          value: value ?? "",
-          value_type: value_type as any,
-        },
+        type: "update_number_variable",
+        config: { name, operation: operation as any, value },
+      });
+      if (validation) issues.push(error(node.id, null, validation.message));
+      break;
+    }
+    case "update_text_variable": {
+      const name = stringField(node.config, "name") ?? "";
+      const operation = stringField(node.config, "operation") ?? "";
+      const value = stringField(node.config, "value") ?? "";
+      const search_pattern = stringField(node.config, "search_pattern") ?? "";
+      const validation = validateActionConfig({
+        type: "update_text_variable",
+        config: { name, operation: operation as any, value, search_pattern },
+      });
+      if (validation) issues.push(error(node.id, null, validation.message));
+      break;
+    }
+    case "update_flag_variable": {
+      const name = stringField(node.config, "name") ?? "";
+      const operation = stringField(node.config, "operation") ?? "";
+      const validation = validateActionConfig({
+        type: "update_flag_variable",
+        config: { name, operation: operation as any },
+      });
+      if (validation) issues.push(error(node.id, null, validation.message));
+      break;
+    }
+    case "update_list_variable": {
+      const name = stringField(node.config, "name") ?? "";
+      const operation = stringField(node.config, "operation") ?? "";
+      const value = stringField(node.config, "value") ?? "";
+      const value_type = stringField(node.config, "value_type") ?? "";
+      const index = stringField(node.config, "index") ?? (typeof asRecord(node.config).index === "number" ? asRecord(node.config).index : null) as any;
+      const validation = validateActionConfig({
+        type: "update_list_variable",
+        config: { name, operation: operation as any, value, value_type: value_type as any, index },
+      });
+      if (validation) issues.push(error(node.id, null, validation.message));
+      break;
+    }
+    case "update_object_variable": {
+      const name = stringField(node.config, "name") ?? "";
+      const operation = stringField(node.config, "operation") ?? "";
+      const value = stringField(node.config, "value") ?? "";
+      const property_key = stringField(node.config, "property_key") ?? "";
+      const property_value = stringField(node.config, "property_value") ?? "";
+      const property_value_type = stringField(node.config, "property_value_type") ?? "";
+      const validation = validateActionConfig({
+        type: "update_object_variable",
+        config: { name, operation: operation as any, value, property_key, property_value, property_value_type: property_value_type as any },
       });
       if (validation) issues.push(error(node.id, null, validation.message));
       break;

@@ -659,26 +659,28 @@ export function NodeConfigFields({
           </ActionConfigFieldGroup>
         </div>
       );
-    case "update_variable": {
+    case "update_number_variable": {
       const configObj = objectConfig(node.config);
       const name = stringConfig(node.config, "name", "");
-      const operation = stringConfig(node.config, "operation", "push") as "push" | "merge";
+      const operation = stringConfig(node.config, "operation", "increment") as
+        | "increment"
+        | "decrement"
+        | "add"
+        | "subtract"
+        | "multiply"
+        | "divide";
       const value = stringConfig(node.config, "value", "");
-      const value_type = stringConfig(node.config, "value_type", "text");
+
+      const showValue = ["add", "subtract", "multiply", "divide"].includes(operation);
 
       return (
         <div className="graph-config-fields">
-          <ActionConfigFieldGroup title="Update Variable Settings">
+          <ActionConfigFieldGroup title="Update Number Variable Settings">
             <TemplateTextField
               label="Variable name"
               value={name}
-              onChange={(value) =>
-                updateConfig({
-                  ...configObj,
-                  name: value,
-                })
-              }
-              placeholder="e.g. A"
+              onChange={(val) => updateConfig({ ...configObj, name: val })}
+              placeholder="e.g. counter"
               variableOptions={variableOptions}
             />
             <Label>
@@ -692,11 +694,179 @@ export function NodeConfigFields({
                   })
                 }
               >
-                <option value="push">Push (append to array)</option>
-                <option value="merge">Merge (merge JSON object)</option>
+                <option value="increment">Increment (+1)</option>
+                <option value="decrement">Decrement (-1)</option>
+                <option value="add">Add</option>
+                <option value="subtract">Subtract</option>
+                <option value="multiply">Multiply</option>
+                <option value="divide">Divide</option>
               </Select>
             </Label>
-            {operation === "push" && (
+            {showValue && (
+              <TemplateTextField
+                label="Value"
+                value={value}
+                onChange={(val) => updateConfig({ ...configObj, value: val })}
+                placeholder="Value"
+                variableOptions={variableOptions}
+              />
+            )}
+          </ActionConfigFieldGroup>
+        </div>
+      );
+    }
+    case "update_text_variable": {
+      const configObj = objectConfig(node.config);
+      const name = stringConfig(node.config, "name", "");
+      const operation = stringConfig(node.config, "operation", "append") as
+        | "append"
+        | "prepend"
+        | "replace"
+        | "uppercase"
+        | "lowercase"
+        | "trim";
+      const value = stringConfig(node.config, "value", "");
+      const search_pattern = stringConfig(node.config, "search_pattern", "");
+
+      const showValue = ["append", "prepend", "replace"].includes(operation);
+      const showSearch = operation === "replace";
+
+      return (
+        <div className="graph-config-fields">
+          <ActionConfigFieldGroup title="Update Text Variable Settings">
+            <TemplateTextField
+              label="Variable name"
+              value={name}
+              onChange={(val) => updateConfig({ ...configObj, name: val })}
+              placeholder="e.g. message"
+              variableOptions={variableOptions}
+            />
+            <Label>
+              Operation
+              <Select
+                value={operation}
+                onChange={(event) =>
+                  updateConfig({
+                    ...configObj,
+                    operation: event.currentTarget.value,
+                  })
+                }
+              >
+                <option value="append">Append</option>
+                <option value="prepend">Prepend</option>
+                <option value="replace">Replace</option>
+                <option value="uppercase">To Uppercase</option>
+                <option value="lowercase">To Lowercase</option>
+                <option value="trim">Trim Whitespace</option>
+              </Select>
+            </Label>
+            {showSearch && (
+              <TemplateTextField
+                label="Search pattern (string or /regex/)"
+                value={search_pattern}
+                onChange={(val) => updateConfig({ ...configObj, search_pattern: val })}
+                placeholder="pattern"
+                variableOptions={variableOptions}
+              />
+            )}
+            {showValue && (
+              <TemplateTextareaField
+                label="Replacement / Value"
+                value={value}
+                onChange={(val) => updateConfig({ ...configObj, value: val })}
+                placeholder="Value"
+                variableOptions={variableOptions}
+              />
+            )}
+          </ActionConfigFieldGroup>
+        </div>
+      );
+    }
+    case "update_flag_variable": {
+      const configObj = objectConfig(node.config);
+      const name = stringConfig(node.config, "name", "");
+      const operation = stringConfig(node.config, "operation", "toggle") as "toggle" | "set_true" | "set_false";
+
+      return (
+        <div className="graph-config-fields">
+          <ActionConfigFieldGroup title="Update Flag Variable Settings">
+            <TemplateTextField
+              label="Variable name"
+              value={name}
+              onChange={(val) => updateConfig({ ...configObj, name: val })}
+              placeholder="e.g. isLoggedIn"
+              variableOptions={variableOptions}
+            />
+            <Label>
+              Operation
+              <Select
+                value={operation}
+                onChange={(event) =>
+                  updateConfig({
+                    ...configObj,
+                    operation: event.currentTarget.value,
+                  })
+                }
+              >
+                <option value="toggle">Toggle</option>
+                <option value="set_true">Set True</option>
+                <option value="set_false">Set False</option>
+              </Select>
+            </Label>
+          </ActionConfigFieldGroup>
+        </div>
+      );
+    }
+    case "update_list_variable": {
+      const configObj = objectConfig(node.config);
+      const name = stringConfig(node.config, "name", "");
+      const operation = stringConfig(node.config, "operation", "push") as
+        | "push"
+        | "unshift"
+        | "push_unique"
+        | "pop"
+        | "shift"
+        | "remove_by_index"
+        | "remove_by_value";
+      const value = stringConfig(node.config, "value", "");
+      const value_type = stringConfig(node.config, "value_type", "text");
+      const index = stringConfig(node.config, "index", "");
+
+      const showValue = ["push", "unshift", "push_unique", "remove_by_value"].includes(operation);
+      const showValueType = showValue;
+      const showIndex = operation === "remove_by_index";
+
+      return (
+        <div className="graph-config-fields">
+          <ActionConfigFieldGroup title="Update List Variable Settings">
+            <TemplateTextField
+              label="Variable name"
+              value={name}
+              onChange={(val) => updateConfig({ ...configObj, name: val })}
+              placeholder="e.g. items"
+              variableOptions={variableOptions}
+            />
+            <Label>
+              Operation
+              <Select
+                value={operation}
+                onChange={(event) =>
+                  updateConfig({
+                    ...configObj,
+                    operation: event.currentTarget.value,
+                  })
+                }
+              >
+                <option value="push">Push (Add to end)</option>
+                <option value="unshift">Unshift (Add to start)</option>
+                <option value="push_unique">Push Unique</option>
+                <option value="pop">Pop (Remove from end)</option>
+                <option value="shift">Shift (Remove from start)</option>
+                <option value="remove_by_index">Remove by index</option>
+                <option value="remove_by_value">Remove by value</option>
+              </Select>
+            </Label>
+            {showValueType && (
               <Label>
                 Value type
                 <Select
@@ -715,19 +885,117 @@ export function NodeConfigFields({
                 </Select>
               </Label>
             )}
-            <TemplateTextareaField
-              label={operation === "merge" ? "JSON value to merge" : "Value to push"}
-              value={value}
-              onChange={(value) =>
-                updateConfig({
-                  ...configObj,
-                  value,
-                })
-              }
-              placeholder={operation === "merge" ? '{"key": "value"}' : "Value"}
+            {showValue && (
+              <TemplateTextareaField
+                label="Value"
+                value={value}
+                onChange={(val) => updateConfig({ ...configObj, value: val })}
+                placeholder="Value"
+                variableOptions={variableOptions}
+                showMath={value_type === "number"}
+              />
+            )}
+            {showIndex && (
+              <TemplateTextField
+                label="Index (0-based number or variable)"
+                value={index}
+                onChange={(val) => updateConfig({ ...configObj, index: val })}
+                placeholder="0"
+                variableOptions={variableOptions}
+              />
+            )}
+          </ActionConfigFieldGroup>
+        </div>
+      );
+    }
+    case "update_object_variable": {
+      const configObj = objectConfig(node.config);
+      const name = stringConfig(node.config, "name", "");
+      const operation = stringConfig(node.config, "operation", "merge") as "merge" | "deep_merge" | "set_key" | "delete_key";
+      const value = stringConfig(node.config, "value", "");
+      const property_key = stringConfig(node.config, "property_key", "");
+      const property_value = stringConfig(node.config, "property_value", "");
+      const property_value_type = stringConfig(node.config, "property_value_type", "text");
+
+      const showValue = ["merge", "deep_merge"].includes(operation);
+      const showKey = ["set_key", "delete_key"].includes(operation);
+      const showKeyValue = operation === "set_key";
+      const showKeyValueType = operation === "set_key";
+
+      return (
+        <div className="graph-config-fields">
+          <ActionConfigFieldGroup title="Update Object Variable Settings">
+            <TemplateTextField
+              label="Variable name"
+              value={name}
+              onChange={(val) => updateConfig({ ...configObj, name: val })}
+              placeholder="e.g. user"
               variableOptions={variableOptions}
-              showMath={operation === "push" && value_type === "number"}
             />
+            <Label>
+              Operation
+              <Select
+                value={operation}
+                onChange={(event) =>
+                  updateConfig({
+                    ...configObj,
+                    operation: event.currentTarget.value,
+                  })
+                }
+              >
+                <option value="merge">Merge (shallow)</option>
+                <option value="deep_merge">Deep Merge</option>
+                <option value="set_key">Set Key/Property</option>
+                <option value="delete_key">Delete Key/Property</option>
+              </Select>
+            </Label>
+            {showValue && (
+              <TemplateTextareaField
+                label="JSON value to merge"
+                value={value}
+                onChange={(val) => updateConfig({ ...configObj, value: val })}
+                placeholder='{"key": "value"}'
+                variableOptions={variableOptions}
+              />
+            )}
+            {showKey && (
+              <TemplateTextField
+                label="Property key (support dot-path)"
+                value={property_key}
+                onChange={(val) => updateConfig({ ...configObj, property_key: val })}
+                placeholder="e.g. address.city"
+                variableOptions={variableOptions}
+              />
+            )}
+            {showKeyValueType && (
+              <Label>
+                Property value type
+                <Select
+                  value={property_value_type}
+                  onChange={(event) =>
+                    updateConfig({
+                      ...configObj,
+                      property_value_type: event.currentTarget.value,
+                    })
+                  }
+                >
+                  <option value="text">Text</option>
+                  <option value="json">JSON</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Boolean</option>
+                </Select>
+              </Label>
+            )}
+            {showKeyValue && (
+              <TemplateTextareaField
+                label="Property value"
+                value={property_value}
+                onChange={(val) => updateConfig({ ...configObj, property_value: val })}
+                placeholder="Value"
+                variableOptions={variableOptions}
+                showMath={property_value_type === "number"}
+              />
+            )}
           </ActionConfigFieldGroup>
         </div>
       );

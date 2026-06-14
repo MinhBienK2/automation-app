@@ -53,7 +53,18 @@ export const logicNodeGroups: Array<{
 ];
 
 export const variableNodeGroups = [
-  { label: "Variables", nodes: ["set_variable", "set_json_variables", "update_variable"] },
+  {
+    label: "Variables",
+    nodes: [
+      "set_variable",
+      "set_json_variables",
+      "update_number_variable",
+      "update_text_variable",
+      "update_flag_variable",
+      "update_list_variable",
+      "update_object_variable",
+    ],
+  },
 ] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
 
 export const endNodeGroups = [
@@ -77,10 +88,13 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   fallback: "Try a primary path, then use a fallback path if needed.",
   break_loop: "Exit the current loop and continue after it.",
   continue_loop: "Skip the rest of the loop body and move to the next iteration.",
-  stop_workflow: "Stop execution with a success or failure status.",
   set_variable: "Store multiple workflow values.",
   set_json_variables: "Store structured JSON values.",
-  update_variable: "Update existing variables (push/merge).",
+  update_number_variable: "Update a number variable (increment, add, multiply, etc.).",
+  update_text_variable: "Update a text variable (append, replace, trim, casing).",
+  update_flag_variable: "Update a boolean flag variable (toggle, set true/false).",
+  update_list_variable: "Update a list variable (push, pop, shift, unshift, remove, unique).",
+  update_object_variable: "Update a JSON object variable (merge, set, delete key).",
   transform_variable: "Create an output from an existing value.",
   assert_output: "Require an output value to match an expectation.",
   domain_allowlist: "Restrict navigation to allowed domains.",
@@ -832,7 +846,11 @@ const hiddenActionPickerTypes = new Set<ActionType>([
   "continue_loop",
   "stop_workflow",
   "transform_variable",
-  "update_variable",
+  "update_number_variable",
+  "update_text_variable",
+  "update_flag_variable",
+  "update_list_variable",
+  "update_object_variable",
   "assert_output",
   "domain_allowlist",
 ]);
@@ -904,7 +922,11 @@ export const actionDescriptions: Record<ActionType, string> = {
   wait_for_download: "Wait for a download",
   set_variable: "Store workflow values",
   set_json_variables: "Store JSON values",
-  update_variable: "Update existing variables (push/merge)",
+  update_number_variable: "Update a number variable",
+  update_text_variable: "Update a text variable",
+  update_flag_variable: "Update a flag variable",
+  update_list_variable: "Update a list variable",
+  update_object_variable: "Update an object variable",
   assert_element: "Require an element state",
   assert_text: "Require matching text",
   graph_noop: "Mark graph control flow progress",

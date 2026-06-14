@@ -71,7 +71,11 @@ export type ActionConfigField =
   | "longitude"
   | "permissions"
   | "width"
-  | "xpaths";
+  | "xpaths"
+  | "search_pattern"
+  | "property_key"
+  | "property_value"
+  | "property_value_type";
 
 const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
 
@@ -184,8 +188,19 @@ export function updateActionConfigField(
       return updateWaitForDownloadConfigField(config, field, value);
     case "set_variable":
       return { type: "set_variable", config: { ...config.config, [field]: value } };
-    case "update_variable":
-      return { type: "update_variable", config: { ...config.config, [field]: value } };
+    case "update_number_variable":
+      return { type: "update_number_variable", config: { ...config.config, [field]: value } };
+    case "update_text_variable":
+      return { type: "update_text_variable", config: { ...config.config, [field]: value || null } };
+    case "update_flag_variable":
+      return { type: "update_flag_variable", config: { ...config.config, [field]: value } };
+    case "update_list_variable":
+      if (field === "index") {
+        return { type: "update_list_variable", config: { ...config.config, index: value ? Number(value) : null } };
+      }
+      return { type: "update_list_variable", config: { ...config.config, [field]: value || null } };
+    case "update_object_variable":
+      return { type: "update_object_variable", config: { ...config.config, [field]: value || null } };
     case "set_json_variables":
       return { type: "set_json_variables", config: { json: value } };
     case "assert_element":

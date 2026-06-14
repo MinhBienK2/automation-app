@@ -377,18 +377,74 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("JSON variables", "The JSON root must be an object.", ["Nested objects flatten into dot paths; arrays stay whole."]),
     ], "en"),
   },
-  update_variable: {
-    vi: nodeWithFields("Update Variable", "Cập nhật giá trị vào biến có sẵn (push hoặc merge).", [
-      field("Variable name", "Tên biến hiện có cần cập nhật.", []),
-      field("Operation", "Phương thức cập nhật: push (thêm vào mảng) hoặc merge (gộp object JSON).", []),
-      field("Value", "Giá trị mới hoặc chuỗi JSON cần push/merge. Cho phép dùng template {{ A }}.", []),
-      field("Value type", "Kiểu dữ liệu của giá trị khi thực hiện push (text, JSON, number, boolean).", []),
+  update_number_variable: {
+    vi: nodeWithFields("Cập nhật biến số", "Thực hiện phép toán (cộng, trừ, nhân, chia, tăng, giảm) trên một biến số.", [
+      field("Variable name", "Tên biến số cần cập nhật.", []),
+      field("Operation", "Phép toán cần thực hiện.", []),
+      field("Value", "Giá trị toán hạng (đối với add, subtract, multiply, divide).", []),
     ]),
-    en: nodeWithFields("Update Variable", "Update an existing variable value (push or merge).", [
-      field("Variable name", "Name of the existing variable to update.", []),
-      field("Operation", "Update operation: push (append to array) or merge (merge JSON object).", []),
-      field("Value", "The new value or JSON string to push/merge. Supports {{ A }} templates.", []),
-      field("Value type", "The data type of the value to push (text, JSON, number, boolean).", []),
+    en: nodeWithFields("Update Number Variable", "Perform math operations (add, subtract, multiply, divide, increment, decrement) on a number variable.", [
+      field("Variable name", "Name of the number variable to update.", []),
+      field("Operation", "The math operation to perform.", []),
+      field("Value", "The operand value (for add, subtract, multiply, divide).", []),
+    ], "en"),
+  },
+  update_text_variable: {
+    vi: nodeWithFields("Cập nhật biến chữ", "Thực hiện xử lý chuỗi (thêm đầu, thêm cuối, thay thế, viết hoa, viết thường, cắt khoảng trắng) trên một biến chữ.", [
+      field("Variable name", "Tên biến chữ cần cập nhật.", []),
+      field("Operation", "Thao tác chuỗi cần thực hiện.", []),
+      field("Search pattern", "Mẫu tìm kiếm (chuỗi hoặc regex) khi thay thế.", []),
+      field("Value", "Giá trị chèn thêm hoặc giá trị thay thế.", []),
+    ]),
+    en: nodeWithFields("Update Text Variable", "Perform string operations (append, prepend, replace, uppercase, lowercase, trim) on a text variable.", [
+      field("Variable name", "Name of the text variable to update.", []),
+      field("Operation", "The string operation to perform.", []),
+      field("Search pattern", "The search pattern (string or regex) for replace operation.", []),
+      field("Value", "The value to append, prepend, or replace with.", []),
+    ], "en"),
+  },
+  update_flag_variable: {
+    vi: nodeWithFields("Cập nhật biến flag", "Cập nhật giá trị boolean (toggle, set true, set false) cho một biến flag.", [
+      field("Variable name", "Tên biến flag cần cập nhật.", []),
+      field("Operation", "Thao tác boolean (toggle, set_true, set_false).", []),
+    ]),
+    en: nodeWithFields("Update Flag Variable", "Update boolean flag variable (toggle, set_true, set_false).", [
+      field("Variable name", "Name of the flag variable to update.", []),
+      field("Operation", "The boolean operation to perform.", []),
+    ], "en"),
+  },
+  update_list_variable: {
+    vi: nodeWithFields("Cập nhật biến danh sách", "Thao tác với mảng (thêm, xóa phần tử, loại bỏ trùng lặp).", [
+      field("Variable name", "Tên biến danh sách cần cập nhật.", []),
+      field("Operation", "Thao tác mảng (push, unshift, push_unique, pop, shift, remove_by_index, remove_by_value).", []),
+      field("Value type", "Kiểu dữ liệu của phần tử mới.", []),
+      field("Value", "Giá trị phần tử cần thêm hoặc xóa.", []),
+      field("Index", "Chỉ số phần tử cần xóa (dành cho remove_by_index).", []),
+    ]),
+    en: nodeWithFields("Update List Variable", "Perform array operations (push, unshift, push_unique, pop, shift, remove_by_index, remove_by_value) on a list variable.", [
+      field("Variable name", "Name of the list variable to update.", []),
+      field("Operation", "The array operation to perform.", []),
+      field("Value type", "The data type of the new element.", []),
+      field("Value", "The element value to add or remove.", []),
+      field("Index", "The 0-based index to remove (for remove_by_index).", []),
+    ], "en"),
+  },
+  update_object_variable: {
+    vi: nodeWithFields("Cập nhật biến đối tượng", "Thao tác trên đối tượng JSON (merge, set key, delete key).", [
+      field("Variable name", "Tên biến đối tượng cần cập nhật.", []),
+      field("Operation", "Thao tác đối tượng (merge, deep_merge, set_key, delete_key).", []),
+      field("Value", "Giá trị JSON cần merge hoặc deep merge.", []),
+      field("Property key", "Đường dẫn key cần thao tác (hỗ trợ dot-path).", []),
+      field("Property value type", "Kiểu dữ liệu của key cần set.", []),
+      field("Property value", "Giá trị của key cần set.", []),
+    ]),
+    en: nodeWithFields("Update Object Variable", "Perform JSON object operations (merge, deep_merge, set_key, delete_key) on an object variable.", [
+      field("Variable name", "Name of the object variable to update.", []),
+      field("Operation", "The object operation to perform.", []),
+      field("Value", "The JSON string to merge/deep_merge.", []),
+      field("Property key", "The property key path (supports dot-path).", []),
+      field("Property value type", "The data type of the value to set.", []),
+      field("Property value", "The value to set for the key.", []),
     ], "en"),
   },
   transform_variable: {

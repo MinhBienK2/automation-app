@@ -486,32 +486,209 @@ export function createRunnerActionExecutors(
       const evaluated = evaluateMathInObject(parsed);
       flattenObject(runtime.outputs, "", evaluated);
     },
-    update_variable: async (action) => {
-      const { name, operation, value, value_type } = action.config;
+    update_number_variable: async (action) => {
+      const { name, operation, value } = action.config;
       if (!name) return;
 
-      if (operation === "push") {
-        const array = Array.isArray(runtime.outputs[name])
-          ? (runtime.outputs[name] as unknown[])
-          : [];
+      let existing = Number(runtime.outputs[name]);
+      if (Number.isNaN(existing)) {
+        existing = 0;
+      }
+
+      let newVal = existing;
+      if (operation === "increment") {
+        newVal = existing + 1;
+      } else if (operation === "decrement") {
+        newVal = existing - 1;
+      } else {
+        const parsedVal = Number(parseVariableValue("number", value ?? "0", runtime.outputs));
+        const val = Number.isNaN(parsedVal) ? 0 : parsedVal;
+        if (operation === "add") newVal = existing + val;
+        else if (operation === "subtract") newVal = existing - val;
+        else if (operation === "multiply") newVal = existing * val;
+        else if (operation === "divide") newVal = val !== 0 ? existing / val : 0;
+      }
+
+      writeVariableValue(runtime.outputs, name, newVal);
+    },
+    update_text_variable: async (action) => {
+      const { name, operation, value, search_pattern } = action.config;
+      if (!name) return;
+
+      const existing = String(runtime.outputs[name] ?? "");
+      let newVal = existing;
+
+      if (operation === "append") {
+        newVal = existing + renderTemplate(value ?? "", runtime.outputs);
+      } else if (operation === "prepend") {
+        newVal = renderTemplate(value ?? "", runtime.outputs) + existing;
+      } else if (operation === "replace") {
+        const search = renderTemplate(search_pattern ?? "", runtime.outputs);
+        const replaceVal = renderTemplate(value ?? "", runtime.outputs);
+        let searchRegex: RegExp | string = search;
+        const match = search.match(/^\/(.*?)\/([gimy]*)$/);
+        if (match) {
+          try {
+            searchRegex = new RegExp(match[1], match[2]);
+          } catch {
+            // fallback
+          }
+        }
+        if (typeof searchRegex === "string") {
+          newVal = existing.replaceAll(searchRegex, replaceVal);
+        } else {
+          newVal = existing.replace(searchRegex, replaceVal);
+        }
+      } else if (operation === "uppercase") {
+        newVal = existing.toUpperCase();
+      } else if (operation === "lowercase") {
+        newVal = existing.toLowerCase();
+      } else if (operation === "trim") {
+        newVal = existing.trim();
+      }
+
+      writeVariableValue(runtime.outputs, name, newVal);
+    },
+    update_flag_variable: async (action) => {
+      const { name, operation } = action.config;
+      if (!name) return;
+
+      const existing = Boolean(runtime.outputs[name]);
+      let newVal = existing;
+
+      if (operation === "toggle") {
+        newVal = !existing;
+      } else if (operation === "set_true") {
+        newVal = true;
+      } else if (operation === "set_false") {
+        newVal = false;
+      }
+
+      writeVariableValue(runtime.outputs, name, newVal);
+    },
+    update_list_variable: async (action) => {
+      const { name, operation, value, value_type, index } = action.config;
+      if (!name) return;
+
+      const existing = runtime.outputs[name];
+      const array = Array.isArray(existing) ? [...existing] : [];
+
+      if (["push", "unshift", "push_unique"].includes(operation)) {
         const parsedValue = parseVariableValue(
           value_type ?? "text",
           value ?? "",
           runtime.outputs,
         );
-        const newArray = [...array, parsedValue];
-        writeVariableValue(runtime.outputs, name, newArray);
-      } else if (operation === "merge") {
-        const existing = runtime.outputs[name];
-        const targetObj = isPlainRecord(existing) ? existing : {};
+        if (operation === "push") {
+          array.push(parsedValue);
+        } else if (operation === "unshift") {
+          array.unshift(parsedValue);
+        } else if (operation === "push_unique") {
+          const exists = array.some((item) => {
+            if (
+              typeof item === "object" &&
+              item !== null &&
+              typeof parsedValue === "object" &&
+              parsedValue !== null
+            ) {
+              return JSON.stringify(item) === JSON.stringify(parsedValue);
+            }
+            return item === parsedValue;
+          });
+          if (!exists) {
+            array.push(parsedValue);
+          }
+        }
+      } else if (operation === "pop") {
+        array.pop();
+      } else if (operation === "shift") {
+        array.shift();
+      } else if (operation === "remove_by_index") {
+        const idx = Number(renderTemplate(String(index ?? ""), runtime.outputs));
+        if (!Number.isNaN(idx)) {
+          array.splice(idx, 1);
+        }
+      } else if (operation === "remove_by_value") {
+        const valToRemove = parseVariableValue(
+          value_type ?? "text",
+          value ?? "",
+          runtime.outputs,
+        );
+        const nextArray = array.filter((item) => {
+          if (
+            typeof item === "object" &&
+            item !== null &&
+            typeof valToRemove === "object" &&
+            valToRemove !== null
+          ) {
+            return JSON.stringify(item) !== JSON.stringify(valToRemove);
+          }
+          return item !== valToRemove;
+        });
+        array.length = 0;
+        array.push(...nextArray);
+      }
+
+      writeVariableValue(runtime.outputs, name, array);
+    },
+    update_object_variable: async (action) => {
+      const { name, operation, value, property_key, property_value, property_value_type } = action.config;
+      if (!name) return;
+
+      const existing = runtime.outputs[name];
+      const obj = isPlainRecord(existing) ? { ...existing } : {};
+
+      const cleanFlattenedKeys = (outputs: Record<string, unknown>, varName: string) => {
+        const prefix = varName + ".";
+        for (const key of Object.keys(outputs)) {
+          if (key.startsWith(prefix)) {
+            delete outputs[key];
+          }
+        }
+      };
+
+      const deepMerge = (target: Record<string, any>, source: Record<string, any>): Record<string, any> => {
+        const result = { ...target };
+        for (const [key, val] of Object.entries(source)) {
+          if (isPlainRecord(val) && isPlainRecord(result[key])) {
+            result[key] = deepMerge(result[key], val);
+          } else {
+            result[key] = val;
+          }
+        }
+        return result;
+      };
+
+      if (operation === "merge" || operation === "deep_merge") {
         const rendered = renderTemplate(value ?? "{}", runtime.outputs);
         const parsedValue = JSON.parse(rendered);
         if (!isPlainRecord(parsedValue)) {
           throw new Error("Merged value must be a JSON object");
         }
-        const newObj = { ...targetObj, ...parsedValue };
+        const newObj = operation === "deep_merge" ? deepMerge(obj, parsedValue) : { ...obj, ...parsedValue };
         const evaluated = evaluateMathInObject(newObj);
+        cleanFlattenedKeys(runtime.outputs, name);
         writeVariableValue(runtime.outputs, name, evaluated);
+      } else if (operation === "set_key") {
+        const propKey = renderTemplate(property_key ?? "", runtime.outputs);
+        if (propKey) {
+          const propVal = parseVariableValue(
+            property_value_type ?? "text",
+            property_value ?? "",
+            runtime.outputs,
+          );
+          const newObj = { ...obj, [propKey]: propVal };
+          const evaluated = evaluateMathInObject(newObj);
+          cleanFlattenedKeys(runtime.outputs, name);
+          writeVariableValue(runtime.outputs, name, evaluated);
+        }
+      } else if (operation === "delete_key") {
+        const propKey = renderTemplate(property_key ?? "", runtime.outputs);
+        if (propKey) {
+          delete obj[propKey];
+          cleanFlattenedKeys(runtime.outputs, name);
+          writeVariableValue(runtime.outputs, name, obj);
+        }
       }
     },
     assert_element: async (action) => {

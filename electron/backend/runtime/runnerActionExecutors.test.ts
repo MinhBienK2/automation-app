@@ -127,82 +127,95 @@ describe("runnerActionExecutors", () => {
     ]);
   });
 
-  test("updates variables via push and merge operations", async () => {
+  test("updates variables via new specialized update actions", async () => {
     const runtime = minimalRuntime({
       outputs: {
-        existing_array: [1, 2],
-        existing_obj: { a: 1 },
+        num: 5,
+        txt: "hello",
+        flag: true,
+        list: [10],
+        obj: { x: 1, y: { z: 2 } },
       },
     });
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
-    // 1. push text into existing array
+    // 1. update_number_variable
     await executeRegisteredAction(executors, {
-      type: "update_variable",
-      config: {
-        name: "existing_array",
-        operation: "push",
-        value: "three",
-        value_type: "text",
-      },
+      type: "update_number_variable",
+      config: { name: "num", operation: "increment" },
     } as never);
+    expect(runtime.outputs.num).toBe(6);
 
-    expect(runtime.outputs.existing_array).toEqual([1, 2, "three"]);
-
-    // 2. push json object into existing array
     await executeRegisteredAction(executors, {
-      type: "update_variable",
-      config: {
-        name: "existing_array",
-        operation: "push",
-        value: '{"ok": true}',
-        value_type: "json",
-      },
+      type: "update_number_variable",
+      config: { name: "num", operation: "add", value: "4" },
     } as never);
+    expect(runtime.outputs.num).toBe(10);
 
-    expect(runtime.outputs.existing_array).toEqual([1, 2, "three", { ok: true }]);
-
-    // 3. push to non-existent array (should initialize to empty first)
+    // 2. update_text_variable
     await executeRegisteredAction(executors, {
-      type: "update_variable",
-      config: {
-        name: "new_array",
-        operation: "push",
-        value: "42",
-        value_type: "number",
-      },
+      type: "update_text_variable",
+      config: { name: "txt", operation: "append", value: " world" },
     } as never);
+    expect(runtime.outputs.txt).toBe("hello world");
 
-    expect(runtime.outputs.new_array).toEqual([42]);
-
-    // 4. merge json object into existing object
     await executeRegisteredAction(executors, {
-      type: "update_variable",
-      config: {
-        name: "existing_obj",
-        operation: "merge",
-        value: '{"b": 2, "c": "=1 + 2"}',
-      },
+      type: "update_text_variable",
+      config: { name: "txt", operation: "replace", search_pattern: "world", value: "there" },
     } as never);
+    expect(runtime.outputs.txt).toBe("hello there");
 
-    expect(runtime.outputs.existing_obj).toEqual({ a: 1, b: 2, c: 3 });
-    // Dotted paths should be flattened
-    expect(runtime.outputs["existing_obj.a"]).toBe(1);
-    expect(runtime.outputs["existing_obj.b"]).toBe(2);
-    expect(runtime.outputs["existing_obj.c"]).toBe(3);
-
-    // 5. merge json object into non-existent object (should initialize to empty first)
+    // 3. update_flag_variable
     await executeRegisteredAction(executors, {
-      type: "update_variable",
-      config: {
-        name: "new_obj",
-        operation: "merge",
-        value: '{"hello": "world"}',
-      },
+      type: "update_flag_variable",
+      config: { name: "flag", operation: "toggle" },
     } as never);
+    expect(runtime.outputs.flag).toBe(false);
 
-    expect(runtime.outputs.new_obj).toEqual({ hello: "world" });
-    expect(runtime.outputs["new_obj.hello"]).toBe("world");
+    // 4. update_list_variable
+    await executeRegisteredAction(executors, {
+      type: "update_list_variable",
+      config: { name: "list", operation: "push", value: "20", value_type: "number" },
+    } as never);
+    expect(runtime.outputs.list).toEqual([10, 20]);
+
+    await executeRegisteredAction(executors, {
+      type: "update_list_variable",
+      config: { name: "list", operation: "push_unique", value: "20", value_type: "number" },
+    } as never);
+    expect(runtime.outputs.list).toEqual([10, 20]);
+
+    await executeRegisteredAction(executors, {
+      type: "update_list_variable",
+      config: { name: "list", operation: "push_unique", value: "30", value_type: "number" },
+    } as never);
+    expect(runtime.outputs.list).toEqual([10, 20, 30]);
+
+    // 5. update_object_variable
+    await executeRegisteredAction(executors, {
+      type: "update_object_variable",
+      config: { name: "obj", operation: "merge", value: '{"y": {"w": 3}}' },
+    } as never);
+    expect(runtime.outputs.obj).toEqual({ x: 1, y: { w: 3 } });
+
+    runtime.outputs.obj = { x: 1, y: { z: 2 } };
+    await executeRegisteredAction(executors, {
+      type: "update_object_variable",
+      config: { name: "obj", operation: "deep_merge", value: '{"y": {"w": 3}}' },
+    } as never);
+    expect(runtime.outputs.obj).toEqual({ x: 1, y: { z: 2, w: 3 } });
+
+    await executeRegisteredAction(executors, {
+      type: "update_object_variable",
+      config: { name: "obj", operation: "set_key", property_key: "new_key", property_value: "42", property_value_type: "number" },
+    } as never);
+    expect((runtime.outputs.obj as any).new_key).toBe(42);
+
+    await executeRegisteredAction(executors, {
+      type: "update_object_variable",
+      config: { name: "obj", operation: "delete_key", property_key: "new_key" },
+    } as never);
+    expect((runtime.outputs.obj as any).new_key).toBeUndefined();
   });
 });
 

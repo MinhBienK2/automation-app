@@ -195,10 +195,30 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       };
     case "set_json_variables":
       return { type: actionType, config: { json: "{\n  \"name\": \"value\"\n}" } };
-    case "update_variable":
+    case "update_number_variable":
       return {
         type: actionType,
-        config: { name: "", operation: "push", value: "", value_type: "text" },
+        config: { name: "", operation: "increment", value: "" },
+      };
+    case "update_text_variable":
+      return {
+        type: actionType,
+        config: { name: "", operation: "append", value: "", search_pattern: "" },
+      };
+    case "update_flag_variable":
+      return {
+        type: actionType,
+        config: { name: "", operation: "toggle" },
+      };
+    case "update_list_variable":
+      return {
+        type: actionType,
+        config: { name: "", operation: "push", value: "", value_type: "text", index: null },
+      };
+    case "update_object_variable":
+      return {
+        type: actionType,
+        config: { name: "", operation: "merge", value: "{\n  \"key\": \"value\"\n}", property_key: "", property_value: "", property_value_type: "text" },
       };
     case "assert_element":
       return {
