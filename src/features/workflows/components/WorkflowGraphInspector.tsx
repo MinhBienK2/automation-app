@@ -69,7 +69,7 @@ export function WorkflowGraphInspector({
   onUpdateEdge,
   onUpdateNode,
 }: WorkflowGraphInspectorProps) {
-  const variableOptions = collectVariableOptions(graph);
+  const variableOptions = collectVariableOptions(graph, selectedNode);
   const [runErrorDetailsVisible, setRunErrorDetailsVisible] = useState(false);
   const selectedRunError =
     selectedNode && runState.error?.step_id === selectedNode.id
@@ -371,10 +371,42 @@ function copyRunError(reason: string) {
   void navigator.clipboard?.writeText(reason);
 }
 
-function collectVariableOptions(graph: WorkflowGraph): VariableOption[] {
+export function collectVariableOptions(graph: WorkflowGraph, selectedNode?: GraphNode | null): VariableOption[] {
   const options: VariableOption[] = [];
 
+  let allowedNodeIds: Set<string> | null = null;
+  if (selectedNode) {
+    allowedNodeIds = new Set<string>();
+    const predecessors = new Map<string, string[]>();
+    for (const edge of graph.edges) {
+      let list = predecessors.get(edge.target_node_id);
+      if (!list) {
+        list = [];
+        predecessors.set(edge.target_node_id, list);
+      }
+      list.push(edge.source_node_id);
+    }
+
+    const visited = new Set<string>();
+    const queue = [selectedNode.id];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const preds = predecessors.get(current) ?? [];
+      for (const pred of preds) {
+        if (!visited.has(pred)) {
+          visited.add(pred);
+          allowedNodeIds.add(pred);
+          queue.push(pred);
+        }
+      }
+    }
+  }
+
   for (const node of graph.nodes) {
+    if (allowedNodeIds && !allowedNodeIds.has(node.id)) {
+      continue;
+    }
+
     if (node.node_type === "set_variable") {
       const config = objectConfig(node.config);
       const rows = Array.isArray(config.variables) ? config.variables : [];
