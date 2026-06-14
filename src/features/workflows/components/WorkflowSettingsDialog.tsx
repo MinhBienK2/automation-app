@@ -166,7 +166,9 @@ export function WorkflowSettingsDialog({
                 <div className="workflow-settings-section-header">
                   <div>
                     <h2 id="workflow-settings-section-title">{activeMeta.label}</h2>
-                    <p>{workflowSettingsHelp[activeSection]?.en.summary}</p>
+                    {activeSection !== "environment" && (
+                      <p>{workflowSettingsHelp[activeSection]?.en.summary}</p>
+                    )}
                   </div>
                   <WorkflowSettingsHelpButton section={activeSection} />
                 </div>
@@ -752,16 +754,11 @@ function EnvironmentSettingsSection({
   };
 
   return (
-    <SettingsFieldGroup
-      title="Initial variables"
-      description="Typed values available before the graph starts running."
-    >
-      <EnvironmentVariablesEditor
-        variables={vars}
-        onChange={handleVariablesChange}
-        showPersistOptions={false}
-      />
-    </SettingsFieldGroup>
+    <EnvironmentVariablesEditor
+      variables={vars}
+      onChange={handleVariablesChange}
+      showPersistOptions={false}
+    />
   );
 }
 

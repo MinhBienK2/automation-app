@@ -376,7 +376,8 @@ describe("WorkflowSettingsDialog", () => {
       />,
     );
     dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
-    expect(within(dialog).getByRole("group", { name: "Initial variables" })).toHaveClass("settings-field-group");
+    expect(within(dialog).queryByRole("group", { name: "Initial variables" })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Add variable row" })).toBeInTheDocument();
   });
 
   test("does not edit profile-owned fingerprint settings in Workflow Settings", () => {
