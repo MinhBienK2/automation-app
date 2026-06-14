@@ -3,7 +3,6 @@ import { HelpCircle, Save, Settings } from "lucide-react";
 import type {
   BrowserProfile,
   WorkflowSettings,
-  WorkflowSettingsBrowserLaunch,
   WorkflowSettingsEnvironment,
   WorkflowSettingsGraphDefaults,
   WorkflowSettingsGeneral,
@@ -78,15 +77,6 @@ export function WorkflowSettingsDialog({
   ) => {
     if (!settings) return;
     const nextSettings: WorkflowSettings = { ...settings, [section]: value };
-    if (
-      section === "browser_launch" &&
-      (value as WorkflowSettingsBrowserLaunch).session_mode !== "persistent_profile"
-    ) {
-      nextSettings.run_policy = {
-        ...settings.run_policy,
-        run_from_selected_enabled: false,
-      };
-    }
     onSettingsChange(nextSettings);
   };
 
@@ -183,7 +173,6 @@ export function WorkflowSettingsDialog({
                 ) : null}
                 {activeSection === "run_policy" ? (
                   <RunPolicySettingsSection
-                    browserLaunch={settings.browser_launch}
                     value={settings.run_policy}
                     onChange={(value) => updateSection("run_policy", value)}
                   />
@@ -441,19 +430,12 @@ function GeneralSettingsSection({
 }
 
 function RunPolicySettingsSection({
-  browserLaunch,
   value,
   onChange,
 }: {
-  browserLaunch: WorkflowSettingsBrowserLaunch;
   value: WorkflowSettingsRunPolicy;
   onChange: (value: WorkflowSettingsRunPolicy) => void;
 }) {
-  const canEnableRunFromSelected =
-    browserLaunch.session_mode === "persistent_profile" &&
-    Boolean(browserLaunch.profile_name) &&
-    value.browser_retention === "retain";
-  const runFromSelectedMode = value.run_from_selected_mode ?? "from_selected";
   return (
     <div className="settings-form-grid">
       <SettingsFieldGroup
@@ -473,10 +455,6 @@ function RunPolicySettingsSection({
               onChange({
                 ...value,
                 browser_retention: event.currentTarget.value === "close" ? "close" : "retain",
-                run_from_selected_enabled:
-                  event.currentTarget.value === "close"
-                    ? false
-                    : value.run_from_selected_enabled,
               })
             }
           >
@@ -489,49 +467,7 @@ function RunPolicySettingsSection({
           label="Allow Run JavaScript"
           onCheckedChange={(checked) => onChange({ ...value, execute_js_enabled: checked })}
         />
-        <div
-          aria-label="Run from selected controls"
-          className="workflow-run-from-selected-group"
-          role="group"
-        >
-          <SwitchField
-            checked={Boolean(value.run_from_selected_enabled)}
-            disabled={!canEnableRunFromSelected}
-            label="Enable Run from selected"
-            description={
-              canEnableRunFromSelected
-                ? "Show the Run from selected action when a matching browser session is retained."
-                : "Requires a persistent browser profile and Browser retention set to retain."
-            }
-            onCheckedChange={(checked) =>
-              onChange({
-                ...value,
-                run_from_selected_enabled: canEnableRunFromSelected ? checked : false,
-                run_from_selected_mode: runFromSelectedMode,
-              })
-            }
-          />
-          {value.run_from_selected_enabled ? (
-            <label className="field workflow-run-from-selected-scope">
-              <span>Run from selected scope</span>
-              <Select
-                value={runFromSelectedMode}
-                onChange={(event) =>
-                  onChange({
-                    ...value,
-                    run_from_selected_mode:
-                      event.currentTarget.value === "selected_only"
-                        ? "selected_only"
-                        : "from_selected",
-                  })
-                }
-              >
-                <option value="selected_only">Only rerun selected node</option>
-                <option value="from_selected">Run from selected node onward</option>
-              </Select>
-            </label>
-          ) : null}
-        </div>
+
       </SettingsFieldGroup>
       <SettingsFieldGroup
         title="Batch defaults"

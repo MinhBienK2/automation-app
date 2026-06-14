@@ -451,76 +451,28 @@ describe("WorkflowSettingsDialog", () => {
     );
   });
 
-  test("renders Run from selected controls in Run Policy with a scope select", async () => {
-    const user = userEvent.setup();
-    const onSettingsChange = vi.fn();
-    const initialSettings = defaultWorkflowSettings({
+  test("does not render Run from selected controls in Workflow Settings Run Policy", () => {
+    const settings = defaultWorkflowSettings({
       workflowId: "workflow-1",
       workflowName: "Checkout QA",
     });
 
-    function Harness() {
-      const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
-      return (
-        <WorkflowSettingsDialog
-          activeSection="run_policy"
-          hasUnsavedChanges={false}
-          open
-          settings={settings}
-          onActiveSectionChange={vi.fn()}
-          onDiscardChanges={vi.fn()}
-          onOpenChange={vi.fn()}
-          onSaveSettings={vi.fn()}
-          onSettingsChange={(nextSettings) => {
-            onSettingsChange(nextSettings);
-            setSettings(nextSettings);
-          }}
-        />
-      );
-    }
+    render(
+      <WorkflowSettingsDialog
+        activeSection="run_policy"
+        hasUnsavedChanges={false}
+        open
+        settings={settings}
+        onActiveSectionChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={vi.fn()}
+      />,
+    );
 
-    render(<Harness />);
-
-    expect(screen.getByRole("switch", { name: "Enable Run from selected" }))
-      .not.toBeDisabled();
+    expect(screen.queryByRole("switch", { name: "Enable Run from selected" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Run from selected scope")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("switch", { name: "Enable Run from selected" }));
-
-    expect(onSettingsChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        run_policy: expect.objectContaining({
-          run_from_selected_enabled: true,
-          run_from_selected_mode: "from_selected",
-        }),
-      }),
-    );
-    expect(screen.getByLabelText("Run from selected scope")).toBeInTheDocument();
-    const runFromSelectedGroup = screen
-      .getByRole("switch", { name: "Enable Run from selected" })
-      .closest(".workflow-run-from-selected-group");
-    expect(runFromSelectedGroup).not.toBeNull();
-    expect(screen.getByLabelText("Run from selected scope").closest(".workflow-run-from-selected-group"))
-      .toBe(runFromSelectedGroup);
-    expect(screen.getByRole("option", { name: "Only rerun selected node" }))
-      .toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Run from selected node onward" }))
-      .toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "Chỉ chạy lại mỗi node được select" }))
-      .not.toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "Chạy từ node đó đổ đi" }))
-      .not.toBeInTheDocument();
-
-    await user.selectOptions(screen.getByLabelText("Run from selected scope"), "selected_only");
-
-    expect(onSettingsChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        run_policy: expect.objectContaining({
-          run_from_selected_enabled: true,
-          run_from_selected_mode: "selected_only",
-        }),
-      }),
-    );
   });
 
   test("does not expose workflow-level identity reset", () => {

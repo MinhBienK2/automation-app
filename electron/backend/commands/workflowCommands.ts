@@ -211,7 +211,11 @@ export function createWorkflowCommands(deps: CommandDeps) {
       return startWorkflowRun(workflowId, "manual");
     },
 
-    async runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<WorkflowRunSnapshot> {
+    async runWorkflowFromNode(
+      workflowId: string,
+      startNodeId: string,
+      mode?: "selected_only" | "from_selected",
+    ): Promise<WorkflowRunSnapshot> {
       const workflow = requireWorkflow(workflowId);
       const settings = getSettings(workflowId);
       const conflict = activeRunConflict(workflowId, settings);
@@ -231,12 +235,6 @@ export function createWorkflowCommands(deps: CommandDeps) {
           "run_policy.browser_retention",
         );
       }
-      if (!settings.run_policy.run_from_selected_enabled) {
-        throw commandError(
-          "Run from selected must be enabled in Workflow Settings",
-          "run_policy.run_from_selected_enabled",
-        );
-      }
       if (!runner.hasReusableRetainedSession?.(workflowId, profileKey)) {
         const retained_session = runner.getRetainedSessionState?.(workflowId, profileKey) ?? {
           available: false,
@@ -251,10 +249,16 @@ export function createWorkflowCommands(deps: CommandDeps) {
         );
       }
 
+      const runMode = mode ?? settings.run_policy.run_from_selected_mode;
+      if (mode && mode !== settings.run_policy.run_from_selected_mode) {
+        settings.run_policy.run_from_selected_mode = mode;
+        saveSettings(workflowId, settings);
+      }
+
       const graph = getWorkflowGraph(workflowId);
       const compiledGraph = compileWorkflowGraphFromNode(graph, startNodeId, {
         ...graphContextForWorkflow(workflow),
-        mode: settings.run_policy.run_from_selected_mode,
+        mode: runMode,
       });
       if (compiledGraph.steps.length === 0) {
         throw commandError("Selected graph node has no executable steps", "startNodeId");

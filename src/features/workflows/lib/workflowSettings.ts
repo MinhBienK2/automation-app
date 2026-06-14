@@ -267,20 +267,7 @@ export const workflowSettingsHelp: Record<
           whenToUse:
             "Leave it on for authorized flows that need direct page inspection; turn it off for lower-risk profiles that must avoid direct DOM scripting.",
         },
-        {
-          name: "Enable Run from selected",
-          description:
-            "Shows the Run from selected workflow action when the workflow uses a retained persistent browser session.",
-          whenToUse:
-            "Use it after a retained full run when operators need to rerun one selected main-path node or continue from that node without reopening Chromium.",
-        },
-        {
-          name: "Run from selected scope",
-          description:
-            "Selects whether Run from selected executes only the selected node or the selected node plus the downstream main-path nodes.",
-          whenToUse:
-            "Choose selected-only for a focused retry of one node; choose downstream when the rest of the workflow depends on that node's fresh output.",
-        },
+
         {
           name: "Batch concurrency limit",
           description:
@@ -353,20 +340,7 @@ export const workflowSettingsHelp: Record<
           whenToUse:
             "Bật cho flow được ủy quyền cần kiểm tra trực tiếp trong page; tắt cho profile rủi ro thấp không được dùng direct DOM scripting.",
         },
-        {
-          name: "Enable Run from selected",
-          description:
-            "Hiển thị action Run from selected khi workflow dùng browser session persistent đang được giữ lại.",
-          whenToUse:
-            "Dùng sau một full run được retain khi operator cần chạy lại một node main-path được chọn hoặc chạy tiếp từ node đó mà không mở lại Chromium.",
-        },
-        {
-          name: "Run from selected scope",
-          description:
-            "Chọn Run from selected chỉ chạy node được chọn, hoặc chạy node đó cùng các node main-path phía sau.",
-          whenToUse:
-            "Chọn selected-only để retry đúng một node; chọn downstream khi phần còn lại của workflow phụ thuộc output mới từ node đó.",
-        },
+
         {
           name: "Batch concurrency limit",
           description:

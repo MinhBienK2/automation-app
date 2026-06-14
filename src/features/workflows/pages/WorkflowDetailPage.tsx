@@ -46,7 +46,8 @@ type WorkflowDetailPageProps = {
   onOpenSubflowDetail?: (subflowId: string) => void;
   onGraphChange: (graph: WorkflowGraph) => void;
   onRunGraph: () => void;
-  onRunGraphFromSelected: () => void;
+  onRunGraphFromSelected: (mode: "selected_only" | "from_selected") => void;
+  runFromSelectedMode?: "selected_only" | "from_selected";
   onSelectedGraphNodeChange: (nodeId: string | null) => void;
   showRunGraphFromSelected: boolean;
   canRunGraphFromSelected: boolean;
@@ -80,6 +81,7 @@ export function WorkflowDetailPage({
   onGraphChange,
   onRunGraph,
   onRunGraphFromSelected,
+  runFromSelectedMode = "from_selected",
   onSelectedGraphNodeChange,
   showRunGraphFromSelected,
   canRunGraphFromSelected,
@@ -90,6 +92,26 @@ export function WorkflowDetailPage({
 }: WorkflowDetailPageProps) {
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
+  const [isRunFromSelectedOpen, setIsRunFromSelectedOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsRunFromSelectedOpen(false);
+      }
+    }
+    if (isRunFromSelectedOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isRunFromSelectedOpen]);
+
+  useEffect(() => {
+    setIsRunFromSelectedOpen(false);
+  }, [isRunning, detail.workflow.id]);
   const [followCurrentNode, setFollowCurrentNode] = useState(liveRunFollowCurrent);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const selectionRequestIdRef = useRef(0);
@@ -227,17 +249,101 @@ export function WorkflowDetailPage({
               </Button>
             ) : null}
             {showRunGraphFromSelected ? (
-              <Button
-                className="workflow-command-secondary"
-                variant="secondary"
-                size="sm"
-                type="button"
-                onClick={onRunGraphFromSelected}
-                disabled={!canRunGraphFromSelected}
-                title={runGraphFromSelectedReason}
-              >
-                Run from selected
-              </Button>
+              <div ref={dropdownRef} className="run-from-selected-container" style={{ position: "relative" }}>
+                <Button
+                  className="workflow-command-secondary"
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  onClick={() => setIsRunFromSelectedOpen((prev) => !prev)}
+                  disabled={!canRunGraphFromSelected}
+                  title={runGraphFromSelectedReason}
+                  aria-haspopup="listbox"
+                  aria-expanded={isRunFromSelectedOpen}
+                >
+                  Run from selected
+                </Button>
+                {isRunFromSelectedOpen && (
+                  <div
+                    className="run-from-selected-menu"
+                    role="listbox"
+                    aria-label="Run from selected options"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      right: 0,
+                      marginTop: "4px",
+                      zIndex: 50,
+                      width: "240px",
+                      backgroundColor: "var(--app-surface, #121c26)",
+                      border: "1px solid var(--app-border, #233240)",
+                      borderRadius: "var(--app-radius-sm, 8px)",
+                      padding: "4px",
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "2px",
+                    }}
+                  >
+                    <button
+                      className="run-from-selected-item"
+                      role="option"
+                      aria-selected={runFromSelectedMode === "selected_only"}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        background: "none",
+                        border: "none",
+                        padding: "8px 12px",
+                        fontSize: "13px",
+                        color: "var(--app-text, #e7eef5)",
+                        borderRadius: "var(--app-radius-xs, 4px)",
+                        cursor: "pointer",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                      onClick={() => {
+                        setIsRunFromSelectedOpen(false);
+                        onRunGraphFromSelected("selected_only");
+                      }}
+                    >
+                      <span>Only rerun selected node</span>
+                      {runFromSelectedMode === "selected_only" && (
+                        <span style={{ color: "var(--app-active-control, #32d3e6)" }}>✓</span>
+                      )}
+                    </button>
+                    <button
+                      className="run-from-selected-item"
+                      role="option"
+                      aria-selected={runFromSelectedMode === "from_selected"}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        background: "none",
+                        border: "none",
+                        padding: "8px 12px",
+                        fontSize: "13px",
+                        color: "var(--app-text, #e7eef5)",
+                        borderRadius: "var(--app-radius-xs, 4px)",
+                        cursor: "pointer",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                      onClick={() => {
+                        setIsRunFromSelectedOpen(false);
+                        onRunGraphFromSelected("from_selected");
+                      }}
+                    >
+                      <span>Run from selected node onward</span>
+                      {runFromSelectedMode === "from_selected" && (
+                        <span style={{ color: "var(--app-active-control, #32d3e6)" }}>✓</span>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : null}
             <Button
               className="workflow-command-primary"

@@ -814,7 +814,19 @@ function App() {
             }}
             onGraphChange={graphState.changeWorkflowGraph} // const changeWorkflowGraph = useCallback
             onRunGraph={runWorkspace.runGraph}
-            onRunGraphFromSelected={runWorkspace.runGraphFromSelectedNode}
+            onRunGraphFromSelected={async (mode) => {
+              if (workflowSettings) {
+                setWorkflowSettings({
+                  ...workflowSettings,
+                  run_policy: {
+                    ...workflowSettings.run_policy,
+                    run_from_selected_mode: mode,
+                  },
+                });
+              }
+              await runWorkspace.runGraphFromSelectedNode(mode);
+            }}
+            runFromSelectedMode={workflowSettings?.run_policy?.run_from_selected_mode ?? "from_selected"}
             onSelectedGraphNodeChange={graphState.setSelectedGraphNodeId}
             showRunGraphFromSelected={runFromSelectedAvailability.visible ?? true}
             canRunGraphFromSelected={runFromSelectedAvailability.enabled}

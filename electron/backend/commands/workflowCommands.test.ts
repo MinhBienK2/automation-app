@@ -990,18 +990,9 @@ describe("Workflow commands integration", () => {
     const workflow = handlers.createWorkflow("No reusable session");
     handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
-    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
-      message: "Run from selected must be enabled in Workflow Settings",
-      field: "run_policy.run_from_selected_enabled",
-    });
-
     const settings = handlers.getWorkflowSettings(workflow.id);
     handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
-      run_policy: {
-        ...settings.run_policy,
-        run_from_selected_enabled: true,
-      },
       browser_launch: {
         ...settings.browser_launch,
         session_mode: "temporary",
@@ -1023,7 +1014,6 @@ describe("Workflow commands integration", () => {
       run_policy: {
         ...handlers.getWorkflowSettings(workflow.id).run_policy,
         browser_retention: "close",
-        run_from_selected_enabled: true,
       },
     });
     await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
@@ -1036,19 +1026,6 @@ describe("Workflow commands integration", () => {
       run_policy: {
         ...handlers.getWorkflowSettings(workflow.id).run_policy,
         browser_retention: "retain",
-        run_from_selected_enabled: false,
-      },
-    });
-    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
-      message: "Run from selected must be enabled in Workflow Settings",
-      field: "run_policy.run_from_selected_enabled",
-    });
-
-    handlers.saveWorkflowSettings(workflow.id, {
-      ...handlers.getWorkflowSettings(workflow.id),
-      run_policy: {
-        ...handlers.getWorkflowSettings(workflow.id).run_policy,
-        run_from_selected_enabled: true,
       },
     });
     await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({

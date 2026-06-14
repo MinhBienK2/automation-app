@@ -25,13 +25,6 @@ export function runFromSelectedState({
       visible: false,
     };
   }
-  if (!settings.run_policy?.run_from_selected_enabled) {
-    return {
-      enabled: false,
-      reason: "Enable Run from selected in Workflow Settings Run Policy first.",
-      visible: false,
-    };
-  }
   if (isRunning) return { enabled: false, reason: "A workflow run is already active.", visible: true };
   if (!selectedNodeId) return { enabled: false, reason: "Select one main-path node to run from.", visible: true };
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId);

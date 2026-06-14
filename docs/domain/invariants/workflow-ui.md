@@ -19,7 +19,7 @@ Preserve these unless the task explicitly changes them.
 - Compact header: project name in metadata, Settings/Validate/Save as icon controls with tooltips.
 - Settings opens Workflow Settings at Browser Launch.
 - Save disabled when no content changes; enables on change or failed autosave retry.
-- `Launch Run` is primary text action; Stop appears only while running; Run from selected appears only when enabled.
+- `Launch Run` is primary text action; Stop appears only while running; Run from selected is always shown (but is disabled if prerequisites are not met).
 - Header actions: single row at desktop widths; compact layouts may wrap.
 - Graph save state shown (saved/unsaved/saving/autosave failed/autosave off) without raw `updated_at`.
 - `Launch Run` invokes save/settings/validation/run pipeline. `Run from selected` is retained-session debug command.
@@ -41,7 +41,8 @@ Preserve these unless the task explicitly changes them.
 
 ## Run from Selected
 
-- Hidden unless enabled in Workflow Settings Run Policy.
+- Always visible in the workflow detail header.
+- Displays a dropdown offering two execution scopes: "Only rerun selected node" and "Run from selected node onward".
 - Runs from one selected main-path node using retained session.
 - Saves graph/settings first.
 - Disabled unless: persistent profile, retention = `retain`, retained session matches workflow/profile.

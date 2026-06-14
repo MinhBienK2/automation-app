@@ -145,8 +145,6 @@ describe("workflow settings model", () => {
       "Max workflow duration ms",
       "Browser retention",
       "Allow Run JavaScript",
-      "Enable Run from selected",
-      "Run from selected scope",
       "Batch concurrency limit",
       "Batch runs are headless",
       "Stop batch on first failed row",

@@ -42,6 +42,9 @@ export const test = base.extend<DesktopFixtures>({
       cwd: repoRoot,
       env: {
         ...process.env,
+        HOME: appDataDir,
+        USERPROFILE: appDataDir,
+        HOMEPATH: appDataDir,
         AUTOMATION_APP_DATA_DIR: appDataDir,
         ELECTRON_DISABLE_SECURITY_WARNINGS: "1",
         VITE_DEV_SERVER_URL: rendererUrl,
@@ -56,7 +59,7 @@ export const test = base.extend<DesktopFixtures>({
     await window.waitForLoadState("domcontentloaded");
     const mainNavigation = window.getByRole("navigation", { name: "Main navigation" });
     await expect(mainNavigation).toBeVisible();
-    await expect(mainNavigation.getByRole("button", { name: "Workflows", exact: true })).toBeVisible();
+    await expect(mainNavigation.getByRole("button", { name: "Projects", exact: true })).toBeVisible();
     await use(window);
   },
 });

@@ -244,8 +244,12 @@ export function runWorkflow(workflowId: string) {
   return bridge().runWorkflow(workflowId);
 }
 
-export function runWorkflowFromNode(workflowId: string, startNodeId: string) {
-  return bridge().runWorkflowFromNode(workflowId, startNodeId);
+export function runWorkflowFromNode(
+  workflowId: string,
+  startNodeId: string,
+  mode?: "selected_only" | "from_selected",
+) {
+  return bridge().runWorkflowFromNode(workflowId, startNodeId, mode);
 }
 
 export function stopRun(runId?: string | null) {

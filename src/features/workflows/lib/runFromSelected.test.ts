@@ -103,6 +103,39 @@ describe("runFromSelectedState", () => {
     });
   });
 
+  test("ignores run_from_selected_enabled toggle and remains visible/enabled when conditions match", () => {
+    const settings = {
+      ...defaultWorkflowSettings({ workflowId: "workflow-1", workflowName: "Login" }),
+      run_policy: {
+        ...defaultWorkflowSettings({ workflowId: "workflow-1", workflowName: "Login" }).run_policy,
+        run_from_selected_enabled: false,
+        run_from_selected_mode: "from_selected" as const,
+        browser_retention: "retain" as const,
+      },
+      browser_launch: {
+        ...defaultWorkflowSettings({ workflowId: "workflow-1", workflowName: "Login" }).browser_launch,
+        session_mode: "persistent_profile" as const,
+        profile_dir: "profiles/login",
+        profile_name: "",
+      },
+    };
+
+    expect(
+      runFromSelectedState({
+        graph,
+        selectedNodeId: "step-1",
+        settings,
+        runState: retainedRunState("profiles/login"),
+        isRunning: false,
+      }),
+    ).toEqual({
+      enabled: true,
+      reason: "Run from the selected node using the retained browser session.",
+      visible: true,
+    });
+  });
+
+
   test("rejects selected nodes outside the workflow main path", () => {
     const settings = {
       ...defaultWorkflowSettings({ workflowId: "workflow-1", workflowName: "Login" }),

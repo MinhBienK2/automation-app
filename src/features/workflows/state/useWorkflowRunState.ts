@@ -198,7 +198,7 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
     }
   }, [upsertRunSnapshot, loadOperationsOverview, setActiveRunWorkflowName, setAppError]);
 
-  const runGraphFromSelectedNode = useCallback(async () => {
+  const runGraphFromSelectedNode = useCallback(async (mode?: "selected_only" | "from_selected") => {
     if (!detail || !workflowGraph || !selectedGraphNodeId) return;
     setAppError("");
 
@@ -211,6 +211,7 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
       const state = await runWorkflowFromNodeCommand(
         detail.workflow.id,
         selectedGraphNodeId,
+        mode,
       );
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);

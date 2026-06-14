@@ -121,8 +121,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("compileWorkflowGraph", graph),
   runWorkflow: (workflowId) =>
     invokeWorkflow("runWorkflow", workflowId),
-  runWorkflowFromNode: (workflowId, startNodeId) =>
-    invokeWorkflow("runWorkflowFromNode", workflowId, startNodeId),
+  runWorkflowFromNode: (workflowId, startNodeId, mode) =>
+    invokeWorkflow("runWorkflowFromNode", workflowId, startNodeId, mode),
   stopRun: (runId) => invokeWorkflow("stopRun", runId),
   getRunState: () => invokeWorkflow("getRunState"),
   listRunStates: () => invokeWorkflow("listRunStates"),

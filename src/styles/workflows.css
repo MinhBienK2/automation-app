@@ -300,3 +300,8 @@
   color: #667d8d;
   font-size: 13px;
 }
+
+.run-from-selected-item:hover {
+  background-color: var(--app-elevated-surface, #172431) !important;
+  color: var(--app-active-control, #32d3e6) !important;
+}

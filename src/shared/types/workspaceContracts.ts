@@ -157,7 +157,7 @@ export interface WorkflowRunStateAPI {
   upsertRunSnapshot: (snapshot: WorkflowRunSnapshot | RunState, context?: { workflowId: string; workflowName: string }) => WorkflowRunSnapshot;
   runGraph: () => Promise<void>;
   runSavedWorkflow: (workflow: WorkflowSummary) => Promise<void>;
-  runGraphFromSelectedNode: () => Promise<void>;
+  runGraphFromSelectedNode: (mode?: "selected_only" | "from_selected") => Promise<void>;
   stopRun: (runId: string) => Promise<void>;
 }
 

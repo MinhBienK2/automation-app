@@ -423,6 +423,9 @@ describe("Workflow detail integration", () => {
     await waitFor(() => expect(runFromSelected).toBeEnabled());
     await userEvent.click(runFromSelected);
 
+    const option = await screen.findByRole("option", { name: /Run from selected node onward/ });
+    await userEvent.click(option);
+
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
       workflowId: "workflow-1",
       startNodeId: "step-1",
@@ -508,6 +511,9 @@ describe("Workflow detail integration", () => {
     const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
     await waitFor(() => expect(runFromSelected).toBeEnabled());
     await userEvent.click(runFromSelected);
+
+    const option = await screen.findByRole("option", { name: /Run from selected node onward/ });
+    await userEvent.click(option);
 
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
       workflowId: "workflow-1",
@@ -656,13 +662,16 @@ describe("Workflow detail integration", () => {
     await waitFor(() => expect(runFromSelected).toBeEnabled());
     await userEvent.click(runFromSelected);
 
+    const option = await screen.findByRole("option", { name: /Run from selected node onward/ });
+    await userEvent.click(option);
+
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
       workflowId: "workflow-1",
       startNodeId: "after-merge",
     });
   });
 
-  test("does not show Run from selected until the workflow setting is enabled", async () => {
+  test("always shows Run from selected button even when settings are disabled by default", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       get_run_state: {
@@ -688,8 +697,8 @@ describe("Workflow detail integration", () => {
 
     await openWorkflowDetails();
 
-    expect(screen.queryByRole("button", { name: "Run from selected" }))
-      .not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run from selected" }))
+      .toBeInTheDocument();
   });
 
   test("opens workflow settings on the Browser Launch section from the detail header", async () => {

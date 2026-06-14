@@ -135,7 +135,11 @@ export type WorkflowElectronBridge = {
   validateWorkflowGraph(graph: WorkflowGraph): Promise<GraphValidationIssue[]>;
   compileWorkflowGraph(graph: WorkflowGraph): Promise<CompiledWorkflowGraph>;
   runWorkflow(workflowId: string): Promise<WorkflowRunSnapshot>;
-  runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<WorkflowRunSnapshot>;
+  runWorkflowFromNode(
+    workflowId: string,
+    startNodeId: string,
+    mode?: "selected_only" | "from_selected",
+  ): Promise<WorkflowRunSnapshot>;
   stopRun(runId?: string | null): Promise<WorkflowRunSnapshot>;
   getRunState(): Promise<RunState>;
   listRunStates(): Promise<WorkflowRunSnapshot[]>;
