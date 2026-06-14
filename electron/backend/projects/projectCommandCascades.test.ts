@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import type { Workflow, WorkflowSettings } from "../../../src/types/workflow";
 import {
   duplicateProjectWorkflowSettings,
-  projectEnvironmentProfileKey,
+  getBrowserProfileKey,
 } from "./projectCommandCascades";
 
 describe("project command cascade helpers", () => {
@@ -13,7 +13,7 @@ describe("project command cascade helpers", () => {
       id: "workflow-copy",
       name: "Copied workflow",
       project_id: "project-copy",
-      environment_id: "environment-copy",
+      browser_profile_id: "environment-copy",
       created_at: "2026-05-27T12:00:00.000Z",
       updated_at: "2026-05-27T12:00:00.000Z",
     };
@@ -46,8 +46,8 @@ describe("project command cascade helpers", () => {
     });
   });
 
-  test("returns the persistent project environment profile key", () => {
-    expect(projectEnvironmentProfileKey({
+  test("returns the persistent browser profile key", () => {
+    expect(getBrowserProfileKey({
       id: "environment-1",
       project_id: "project-1",
       name: "Saved session",

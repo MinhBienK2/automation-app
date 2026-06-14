@@ -9,7 +9,7 @@ Mission Control is an Electron desktop app for building and running browser auto
 | Concept | Definition |
 |---------|-----------|
 | **Project** | Groups workflows, subflows, and browser profiles. Default: `Main`. |
-| **Browser Profile** | Project-owned identity + persistent storage. Creates `identity_id`, `fingerprint_seed`, `profile_dir`. DTO: `project_environments`. |
+| **Browser Profile** | Project-owned identity + persistent storage. Creates `identity_id`, `fingerprint_seed`, `profile_dir`. DTO: `browser_profiles`. |
 | **Workflow** | Named automation with a visual graph as authoring source. |
 | **Subflow** | Reusable non-runnable graph fragment inside one project. Called via `call_subflow`. |
 | **Action Config** | Executable behavior produced by graph compilation. |

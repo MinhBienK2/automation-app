@@ -354,13 +354,13 @@ describe("Workflow detail integration", () => {
     const selectedWorkflow = {
       ...workflow,
       project_id: "project-1",
-      environment_id: "environment-qa",
-      environment_name: "QA profile",
+      browser_profile_id: "environment-qa",
+      browser_profile_name: "QA profile",
     };
     mockWorkflowBridgeCommands({
       ...scenario,
       list_workflows: () => [selectedWorkflow],
-      list_project_environments: () => [
+      list_browser_profiles: () => [
         {
           id: "environment-qa",
           project_id: "project-1",
@@ -440,13 +440,13 @@ describe("Workflow detail integration", () => {
     const selectedWorkflow = {
       ...workflow,
       project_id: "project-1",
-      environment_id: "environment-qa",
-      environment_name: "QA profile",
+      browser_profile_id: "environment-qa",
+      browser_profile_name: "QA profile",
     };
     mockWorkflowBridgeCommands({
       ...scenario,
       list_workflows: () => [selectedWorkflow],
-      list_project_environments: () => [
+      list_browser_profiles: () => [
         {
           id: "environment-qa",
           project_id: "project-1",
@@ -526,8 +526,8 @@ describe("Workflow detail integration", () => {
     const selectedWorkflow = {
       ...workflow,
       project_id: "project-1",
-      environment_id: "environment-qa",
-      environment_name: "QA profile",
+      browser_profile_id: "environment-qa",
+      browser_profile_name: "QA profile",
     };
     const graph: WorkflowGraph = {
       version: 2,
@@ -592,7 +592,7 @@ describe("Workflow detail integration", () => {
     mockWorkflowBridgeCommands({
       ...scenario,
       list_workflows: () => [selectedWorkflow],
-      list_project_environments: () => [
+      list_browser_profiles: () => [
         {
           id: "environment-qa",
           project_id: "project-1",
@@ -703,8 +703,8 @@ describe("Workflow detail integration", () => {
     const selectedWorkflow = {
       ...workflow,
       project_id: project.id,
-      environment_id: "environment-main",
-      environment_name: "Default browser profile",
+      browser_profile_id: "environment-main",
+      browser_profile_name: "Default browser profile",
     };
     const scenario = workflowDetailScenario([sleepStep]);
     const releaseBrowserLaunch = {
@@ -745,7 +745,7 @@ describe("Workflow detail integration", () => {
       ...scenario,
       list_projects: [project],
       list_workflows: () => [selectedWorkflow],
-      list_project_environments: () => projectEnvironments,
+      list_browser_profiles: () => projectEnvironments,
       get_workflow: ({ id }: { id: string }) => ({
         workflow: selectedWorkflow,
         steps: id === selectedWorkflow.id ? [sleepStep] : [],
@@ -755,14 +755,14 @@ describe("Workflow detail integration", () => {
         browser_launch: releaseBrowserLaunch,
       },
       save_workflow_settings_section: undefined,
-      set_workflow_project_environment: ({
-        environmentId,
+      set_workflow_browser_profile: ({
+        profileId,
       }: {
-        environmentId: string;
+        profileId: string;
       }) => ({
         ...selectedWorkflow,
-        environment_id: environmentId,
-        environment_name: "Release profile",
+        browser_profile_id: profileId,
+        browser_profile_name: "Release profile",
       }),
     });
 
@@ -818,9 +818,9 @@ describe("Workflow detail integration", () => {
       name: "Save Settings",
     }));
 
-    expect(workflowCommandCallMock).toHaveBeenCalledWith("set_workflow_project_environment", {
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("set_workflow_browser_profile", {
       workflowId: "workflow-1",
-      environmentId: "environment-release",
+      profileId: "environment-release",
     });
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Workflow settings saved.",
@@ -839,8 +839,8 @@ describe("Workflow detail integration", () => {
     const selectedWorkflow = {
       ...workflow,
       project_id: project.id,
-      environment_id: "environment-main",
-      environment_name: "Project browser profile",
+      browser_profile_id: "environment-main",
+      browser_profile_name: "Project browser profile",
     };
     const mainBrowserLaunch = scenario.get_workflow_settings.browser_launch;
     const currentSettings = {
@@ -864,7 +864,7 @@ describe("Workflow detail integration", () => {
       ...scenario,
       list_projects: [project],
       list_workflows: () => [selectedWorkflow],
-      list_project_environments: () => projectEnvironments,
+      list_browser_profiles: () => projectEnvironments,
       get_workflow: ({ id }: { id: string }) => ({
         workflow: selectedWorkflow,
         steps: id === selectedWorkflow.id ? [sleepStep] : [],
@@ -900,15 +900,11 @@ describe("Workflow detail integration", () => {
     expect(within(settingsDialog).queryByLabelText("Fingerprint seed"))
       .not.toBeInTheDocument();
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
-      "set_workflow_environment",
-      expect.anything(),
-    );
-    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
       "fork_workflow_session",
       expect.anything(),
     );
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
-      "set_workflow_project_environment",
+      "set_workflow_browser_profile",
       expect.anything(),
     );
   }, 10_000);

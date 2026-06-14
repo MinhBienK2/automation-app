@@ -17,9 +17,9 @@ import { SettingsFieldGroup } from "../../../components/ui/settings-field-group"
 import { SwitchField } from "../../../components/ui/switch";
 import type {
   Project,
-  ProjectEnvironment,
+  BrowserProfile,
   WorkflowSummary,
-  ProjectEnvironmentInput,
+  BrowserProfileInput,
   WorkflowSettingsBrowserLaunch,
   WorkflowWebRtcPolicy,
   WorkflowHumanPreset,
@@ -27,7 +27,7 @@ import type {
 
 type ProjectProfilesPanelProps = {
   project: Project | null;
-  projectEnvironments: ProjectEnvironment[];
+  browserProfiles: BrowserProfile[];
   workflows: WorkflowSummary[];
   overview: any; // Keep signature compatibility
   loading: boolean;
@@ -39,26 +39,26 @@ type ProjectProfilesPanelProps = {
   onCloseRetainedSession: (workflowId: string, profileName: string) => void;
   onResetIdentity: (workflowId: string) => void | Promise<void>;
   onOpenIdentityTarget: (target: any) => void;
-  onCreateProjectEnvironment: (
+  onCreateBrowserProfile: (
     projectId: string,
     input: { name: string; description?: string | null },
   ) => Promise<void>;
-  onUpdateProjectEnvironment: (
-    environmentId: string,
-    input: Partial<ProjectEnvironmentInput>,
+  onUpdateBrowserProfile: (
+    profileId: string,
+    input: Partial<BrowserProfileInput>,
   ) => Promise<void>;
-  onDeleteProjectEnvironment: (environmentId: string) => Promise<void>;
+  onDeleteBrowserProfile: (profileId: string) => Promise<void>;
 };
 
 export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
   const {
     project,
-    projectEnvironments,
+    browserProfiles,
     workflows,
     error,
-    onCreateProjectEnvironment,
-    onUpdateProjectEnvironment,
-    onDeleteProjectEnvironment,
+    onCreateBrowserProfile,
+    onUpdateBrowserProfile,
+    onDeleteBrowserProfile,
     onOpenWorkflow,
   } = props;
 
@@ -70,8 +70,8 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const selectedEnv = projectEnvironments.find((e) => e.id === selectedEnvId) || null;
-  const associatedWorkflows = selectedEnv ? workflows.filter((w) => w.environment_id === selectedEnv.id) : [];
+  const selectedEnv = browserProfiles.find((e) => e.id === selectedEnvId) || null;
+  const associatedWorkflows = selectedEnv ? workflows.filter((w) => w.browser_profile_id === selectedEnv.id) : [];
 
   // Sync environment changes & name/launch draft when the selected environment changes
   useEffect(() => {
@@ -90,14 +90,14 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
 
   async function handleAddProfile() {
     if (!project || !newProfileName.trim()) return;
-    await onCreateProjectEnvironment(project.id, { name: newProfileName.trim(), description: null });
+    await onCreateBrowserProfile(project.id, { name: newProfileName.trim(), description: null });
     setNewProfileName("");
     setCreateDialogOpen(false);
   }
 
   async function handleSaveProfile() {
     if (!selectedEnv) return;
-    const updates: Partial<ProjectEnvironmentInput> = {};
+    const updates: Partial<BrowserProfileInput> = {};
     if (nameChanged) {
       updates.name = profileNameDraft.trim();
     }
@@ -105,13 +105,13 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
       updates.browser_launch = browserLaunchDraft;
     }
     if (Object.keys(updates).length > 0) {
-      await onUpdateProjectEnvironment(selectedEnv.id, updates);
+      await onUpdateBrowserProfile(selectedEnv.id, updates);
     }
   }
 
   async function handleDeleteProfile() {
     if (!selectedEnvId) return;
-    await onDeleteProjectEnvironment(selectedEnvId);
+    await onDeleteBrowserProfile(selectedEnvId);
     setDeleteDialogOpen(false);
     setSelectedEnvId(null);
   }
@@ -125,7 +125,7 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
         </div>
         <div className="page-header-actions">
           <div className="header-stats" aria-label="Profile summary">
-            <span>{projectEnvironments.length} profiles</span>
+            <span>{browserProfiles.length} profiles</span>
           </div>
           <Button shape="pill" type="button" onClick={() => setCreateDialogOpen(true)}>
             <Plus aria-hidden="true" />
@@ -136,15 +136,15 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
       </header>
 
       <section className="workflow-library" aria-label="Browser profiles list">
-        {projectEnvironments.length === 0 ? (
+        {browserProfiles.length === 0 ? (
           <div className="empty-state panel" style={{ minHeight: "240px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             <Fingerprint aria-hidden="true" style={{ width: "36px", height: "36px", color: "var(--app-muted)", marginBottom: "12px" }} />
             <h2>No profiles configured</h2>
             <p className="muted">Add a profile to start setting up browser configurations.</p>
           </div>
         ) : (
-          projectEnvironments.map((env) => {
-            const count = workflows.filter((w) => w.environment_id === env.id).length;
+          browserProfiles.map((env) => {
+            const count = workflows.filter((w) => w.browser_profile_id === env.id).length;
             return (
               <Card className="workflow-card" key={env.id}>
                 <div className="workflow-card-main">

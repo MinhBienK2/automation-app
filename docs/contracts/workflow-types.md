@@ -45,7 +45,7 @@ For exact shapes, read the TypeScript source. This doc covers cross-boundary rul
 ### Project Package v1
 ```text
 { kind: "project_package", version: 1, project: { name, description },
-  included_sections, omitted_fields, environments[], subflows[], workflows[] }
+  included_sections, omitted_fields, browser_profiles[], subflows[], workflows[] }
 ```
 - Import creates `<name> (imported)` project with fresh identities. No runs/evidence/schedules.
 

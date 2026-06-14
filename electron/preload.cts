@@ -40,18 +40,18 @@ const workflowApi: WorkflowElectronBridge = {
   importProjectPackage: (packageValue) =>
     invokeWorkflow("importProjectPackage", packageValue),
   deleteProject: (projectId) => invokeWorkflow("deleteProject", projectId),
-  listProjectEnvironments: (projectId) =>
-    invokeWorkflow("listProjectEnvironments", projectId),
-  createProjectEnvironment: (projectId, input) =>
-    invokeWorkflow("createProjectEnvironment", projectId, input),
-  updateProjectEnvironment: (environmentId, input) =>
-    invokeWorkflow("updateProjectEnvironment", environmentId, input),
-  deleteProjectEnvironment: (environmentId) =>
-    invokeWorkflow("deleteProjectEnvironment", environmentId),
-  setWorkflowProjectEnvironment: (workflowId, environmentId) =>
-    invokeWorkflow("setWorkflowProjectEnvironment", workflowId, environmentId),
-  resetProjectEnvironmentBrowserIdentity: (environmentId) =>
-    invokeWorkflow("resetProjectEnvironmentBrowserIdentity", environmentId),
+  listBrowserProfiles: (projectId) =>
+    invokeWorkflow("listBrowserProfiles", projectId),
+  createBrowserProfile: (projectId, input) =>
+    invokeWorkflow("createBrowserProfile", projectId, input),
+  updateBrowserProfile: (profileId, input) =>
+    invokeWorkflow("updateBrowserProfile", profileId, input),
+  deleteBrowserProfile: (profileId) =>
+    invokeWorkflow("deleteBrowserProfile", profileId),
+  setWorkflowBrowserProfile: (workflowId, profileId) =>
+    invokeWorkflow("setWorkflowBrowserProfile", workflowId, profileId),
+  resetBrowserProfileIdentity: (profileId) =>
+    invokeWorkflow("resetBrowserProfileIdentity", profileId),
   createSubflow: (projectId, input) =>
     invokeWorkflow("createSubflow", projectId, input),
   listSubflows: (projectId) =>

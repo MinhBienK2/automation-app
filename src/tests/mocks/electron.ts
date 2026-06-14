@@ -17,12 +17,12 @@ const methodNames: BridgeMethodName[] = [
   "previewProjectPackage",
   "importProjectPackage",
   "deleteProject",
-  "listProjectEnvironments",
-  "createProjectEnvironment",
-  "updateProjectEnvironment",
-  "deleteProjectEnvironment",
-  "setWorkflowProjectEnvironment",
-  "resetProjectEnvironmentBrowserIdentity",
+  "listBrowserProfiles",
+  "createBrowserProfile",
+  "updateBrowserProfile",
+  "deleteBrowserProfile",
+  "setWorkflowBrowserProfile",
+  "resetBrowserProfileIdentity",
   "createSubflow",
   "listSubflows",
   "getSubflow",
@@ -111,9 +111,11 @@ export function resetWorkflowBridge() {
 function resolveCommand(commands: CommandMap, command: string, args: unknown) {
   workflowCommandCallMock(command, args);
 
-  if (!(command in commands)) {
+  let activeCommand = command;
+
+  if (!(activeCommand in commands)) {
     if (command === "list_projects") return defaultProjects();
-    if (command === "list_project_environments") return defaultProjectEnvironments();
+    if (command === "list_browser_profiles") return defaultBrowserProfiles();
     if (command === "list_subflows") return [];
     if (command === "get_subflow_usage") return [];
     if (command === "get_operations_overview") return defaultOperationsOverview();
@@ -124,7 +126,7 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
     throw new Error(`Unexpected command: ${command}`);
   }
 
-  const handler = commands[command];
+  const handler = commands[activeCommand];
   return typeof handler === "function"
     ? (handler as CommandHandler)(args)
     : handler;
@@ -142,7 +144,7 @@ function defaultProjects() {
   ];
 }
 
-function defaultProjectEnvironments() {
+function defaultBrowserProfiles() {
   return [
     {
       id: "environment-1",
@@ -279,31 +281,32 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   workflowBridgeMock.deleteProject.mockImplementation((projectId: string) =>
     resolveCommand(commands, "delete_project", { projectId }),
   );
-  workflowBridgeMock.listProjectEnvironments.mockImplementation((projectId: string) =>
-    resolveCommand(commands, "list_project_environments", { projectId }),
+
+  workflowBridgeMock.listBrowserProfiles.mockImplementation((projectId: string) =>
+    resolveCommand(commands, "list_browser_profiles", { projectId }),
   );
-  workflowBridgeMock.createProjectEnvironment.mockImplementation(
+  workflowBridgeMock.createBrowserProfile.mockImplementation(
     (projectId: string, input: unknown) =>
-      resolveCommand(commands, "create_project_environment", { projectId, input }),
+      resolveCommand(commands, "create_browser_profile", { projectId, input }),
   );
-  workflowBridgeMock.updateProjectEnvironment.mockImplementation(
-    (environmentId: string, input: unknown) =>
-      resolveCommand(commands, "update_project_environment", { environmentId, input }),
+  workflowBridgeMock.updateBrowserProfile.mockImplementation(
+    (profileId: string, input: unknown) =>
+      resolveCommand(commands, "update_browser_profile", { profileId, input }),
   );
-  workflowBridgeMock.deleteProjectEnvironment.mockImplementation((environmentId: string) =>
-    resolveCommand(commands, "delete_project_environment", { environmentId }),
+  workflowBridgeMock.deleteBrowserProfile.mockImplementation((profileId: string) =>
+    resolveCommand(commands, "delete_browser_profile", { profileId }),
   );
-  workflowBridgeMock.setWorkflowProjectEnvironment.mockImplementation(
-    (workflowId: string, environmentId: string) =>
-      resolveCommand(commands, "set_workflow_project_environment", {
+  workflowBridgeMock.setWorkflowBrowserProfile.mockImplementation(
+    (workflowId: string, profileId: string) =>
+      resolveCommand(commands, "set_workflow_browser_profile", {
         workflowId,
-        environmentId,
+        profileId,
       }),
   );
-  workflowBridgeMock.resetProjectEnvironmentBrowserIdentity.mockImplementation(
-    (environmentId: string) =>
-      resolveCommand(commands, "reset_project_environment_browser_identity", {
-        environmentId,
+  workflowBridgeMock.resetBrowserProfileIdentity.mockImplementation(
+    (profileId: string) =>
+      resolveCommand(commands, "reset_browser_profile_identity", {
+        profileId,
       }),
   );
   workflowBridgeMock.createSubflow.mockImplementation((projectId: string, input: unknown) =>

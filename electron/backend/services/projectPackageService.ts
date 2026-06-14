@@ -1,7 +1,7 @@
 import type {
+  BrowserProfile,
   GraphValidationIssue,
   Project,
-  ProjectEnvironment,
   ProjectPackage,
   ProjectPackagePreview,
   ProjectPackageWorkflow,
@@ -38,16 +38,17 @@ export class ProjectPackageService {
 
   exportProjectPackage({
     project,
-    environments,
+    browser_profiles,
     subflows,
     workflows,
   }: {
     project: Project;
-    environments: ProjectEnvironment[];
+    browser_profiles?: BrowserProfile[];
     subflows: Subflow[];
     workflows: ProjectPackageExportWorkflow[];
   }): ProjectPackage {
     const omittedFields: string[] = [];
+    const profiles = browser_profiles ?? [];
     return {
       kind: "project_package",
       version: 1,
@@ -55,21 +56,21 @@ export class ProjectPackageService {
         name: project.name,
         description: project.description,
       },
-      included_sections: ["project", "environments", "subflows", "workflows"],
+      included_sections: ["project", "browser_profiles", "subflows", "workflows"],
       omitted_fields: omittedFields,
-      environments: environments.map((environment) => ({
-        ...structuredClone(environment),
+      browser_profiles: profiles.map((profile) => ({
+        ...structuredClone(profile),
         browser_launch: sanitizeBrowserLaunchSettings(
-          environment.browser_launch,
+          profile.browser_launch,
           omittedFields,
-          `environments.${environment.id}.browser_launch`,
+          `browser_profiles.${profile.id}.browser_launch`,
         ),
       })),
       subflows: structuredClone(subflows),
       workflows: workflows.map(({ workflow, flow, settings }) => ({
         id: workflow.id,
         project_id: workflow.project_id ?? null,
-        environment_id: workflow.environment_id ?? null,
+        browser_profile_id: workflow.browser_profile_id ?? null,
         name: workflow.name,
         flow: flow ? structuredClone(flow) : null,
         settings: settings
@@ -83,6 +84,7 @@ export class ProjectPackageService {
 
   previewProjectPackage(packageValue: ProjectPackage): ProjectPackagePreview {
     validateProjectPackage(packageValue);
+    const profiles = packageValue.browser_profiles ?? [];
     return {
       project_name: packageValue.project.name,
       workflows: packageValue.workflows.map((workflow) => ({
@@ -93,10 +95,10 @@ export class ProjectPackageService {
         id: subflow.id,
         name: subflow.name,
       })),
-      environments: packageValue.environments.map((environment) => ({
-        id: environment.id,
-        name: environment.name,
-        is_default: environment.is_default,
+      browser_profiles: profiles.map((profile) => ({
+        id: profile.id,
+        name: profile.name,
+        is_default: profile.is_default,
       })),
       omitted_fields: packageValue.omitted_fields,
     };
@@ -111,13 +113,13 @@ export class ProjectPackageService {
   }) {
     validateProjectPackage(packageValue);
     const timestamp = now.toISOString();
-    const environments = validatePackageEnvironments(
+    const browser_profiles = validatePackageBrowserProfiles(
       packageValue,
       this.dependencies.defaultSettings,
       this.dependencies.validateSettings,
       timestamp,
     );
-    const environmentById = new Map(environments.map((environment) => [environment.id, environment]));
+    const browserProfileById = new Map(browser_profiles.map((profile) => [profile.id, profile]));
     const subflows = validatePackageSubflows(packageValue, this.dependencies.migrateGraph);
     const subflowById = new Map(subflows.map((subflow) => [subflow.id, subflow]));
 
@@ -135,7 +137,7 @@ export class ProjectPackageService {
 
     const workflows = validatePackageWorkflows(
       packageValue,
-      environmentById,
+      browserProfileById,
       subflowById,
       this.dependencies.migrateGraph,
       this.dependencies.validateGraph,
@@ -145,7 +147,7 @@ export class ProjectPackageService {
     return {
       importedName: `${packageValue.project.name} (imported)`,
       description: packageValue.project.description ?? "",
-      environments,
+      browser_profiles,
       subflows,
       workflows,
     };
@@ -225,8 +227,8 @@ function validateProjectPackage(packageValue: ProjectPackage) {
   if (!Array.isArray(packageValue.included_sections)) {
     throw commandError("Project package sections are required", "package.included_sections");
   }
-  if (!Array.isArray(packageValue.environments)) {
-    throw commandError("Project package sessions are required", "package.environments");
+  if (!Array.isArray(packageValue.browser_profiles)) {
+    throw commandError("Project package browser profiles are required", "package.browser_profiles");
   }
   if (!Array.isArray(packageValue.subflows)) {
     throw commandError("Project package subflows are required", "package.subflows");
@@ -239,36 +241,37 @@ function validateProjectPackage(packageValue: ProjectPackage) {
   }
 }
 
-function validatePackageEnvironments(
+function validatePackageBrowserProfiles(
   packageValue: ProjectPackage,
   defaultSettings: ProjectPackageServiceDependencies["defaultSettings"],
   validateSettings: ProjectPackageServiceDependencies["validateSettings"],
   timestamp: string,
-): ProjectEnvironment[] {
+): BrowserProfile[] {
   const seenIds = new Set<string>();
-  const environments = packageValue.environments.map((environment, index) => {
-    const record = objectRecord(environment);
+  const profilesSource = packageValue.browser_profiles ?? [];
+  const browser_profiles = profilesSource.map((profile, index) => {
+    const record = objectRecord(profile);
     const id = stringRecordField(record, "id");
     const name = stringRecordField(record, "name");
     if (!id) {
-      throw commandError("Project package session id is required", `package.environments.${index}.id`);
+      throw commandError("Project package profile id is required", `package.browser_profiles.${index}.id`);
     }
     if (seenIds.has(id)) {
-      throw commandError("Project package session ids must be unique", "package.environments");
+      throw commandError("Project package profile ids must be unique", "package.browser_profiles");
     }
     seenIds.add(id);
     if (!name) {
-      throw commandError("Project package session name is required", `package.environments.${index}.name`);
+      throw commandError("Project package profile name is required", `package.browser_profiles.${index}.name`);
     }
     if (!record.browser_launch || typeof record.browser_launch !== "object") {
       throw commandError(
-        "Project package session Browser Launch is required",
-        `package.environments.${index}.browser_launch`,
+        "Project package profile Browser Launch is required",
+        `package.browser_profiles.${index}.browser_launch`,
       );
     }
     const browserLaunch = structuredClone(record.browser_launch) as WorkflowSettingsBrowserLaunch;
     const settings = defaultSettings({
-      id: "__project_package_environment__",
+      id: "__project_package_profile__",
       name,
       created_at: timestamp,
       updated_at: timestamp,
@@ -281,8 +284,8 @@ function validatePackageEnvironments(
       throw commandError(
         settingsError.message,
         settingsError.field
-          ? `package.environments.${index}.browser_launch.${settingsError.field}`
-          : `package.environments.${index}.browser_launch`,
+          ? `package.browser_profiles.${index}.browser_launch.${settingsError.field}`
+          : `package.browser_profiles.${index}.browser_launch`,
       );
     }
     return {
@@ -296,13 +299,13 @@ function validatePackageEnvironments(
       updated_at: stringRecordField(record, "updated_at"),
     };
   });
-  if (environments.length === 0) {
-    throw commandError("Project package must include at least one session", "package.environments");
+  if (browser_profiles.length === 0) {
+    throw commandError("Project package must include at least one browser profile", "package.browser_profiles");
   }
-  if (environments.filter((environment) => environment.is_default).length !== 1) {
-    throw commandError("Project package must include one default session", "package.environments");
+  if (browser_profiles.filter((profile) => profile.is_default).length !== 1) {
+    throw commandError("Project package must include one default browser profile", "package.browser_profiles");
   }
-  return environments;
+  return browser_profiles;
 }
 
 function validatePackageSubflows(
@@ -344,7 +347,7 @@ function validatePackageSubflows(
 
 function validatePackageWorkflows(
   packageValue: ProjectPackage,
-  environmentById: Map<string, ProjectEnvironment>,
+  browserProfileById: Map<string, BrowserProfile>,
   subflowById: Map<string, Subflow>,
   migrateGraph: (graph: WorkflowGraph) => WorkflowGraph,
   validateGraph: ProjectPackageServiceDependencies["validateGraph"],
@@ -365,11 +368,11 @@ function validatePackageWorkflows(
     if (!name) {
       throw commandError("Project package workflow name is required", `package.workflows.${index}.name`);
     }
-    const environmentId = stringRecordField(record, "environment_id");
-    if (environmentId && !environmentById.has(environmentId)) {
+    const profileId = stringRecordField(record, "browser_profile_id");
+    if (profileId && !browserProfileById.has(profileId)) {
       throw commandError(
-        "Project package is missing a referenced session",
-        "package.environments",
+        "Project package is missing a referenced browser profile",
+        "package.browser_profiles",
       );
     }
     if (!record.flow || typeof record.flow !== "object") {
@@ -425,7 +428,7 @@ function validatePackageWorkflows(
     return {
       id,
       project_id: stringRecordField(record, "project_id"),
-      environment_id: environmentId || null,
+      browser_profile_id: profileId || null,
       name,
       flow,
       settings,

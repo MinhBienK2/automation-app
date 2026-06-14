@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, test, vi } from "vitest";
-import type { ProjectEnvironment, WorkflowPersona, WorkflowSettings } from "../../../types/workflow";
+import type { BrowserProfile, WorkflowPersona, WorkflowSettings } from "../../../types/workflow";
 import { defaultWorkflowSettings } from "../lib/workflowSettings";
 import { WorkflowSettingsDialog } from "./WorkflowSettingsDialog";
 
@@ -25,7 +25,7 @@ const persona: WorkflowPersona = {
   behavioral_timing_profile: "default",
 };
 
-const browserProfiles: ProjectEnvironment[] = [
+const browserProfiles: BrowserProfile[] = [
   {
     id: "profile-1",
     project_id: "project-1",

@@ -39,7 +39,7 @@ Node/TypeScript backend
   -> electron/backend/persistence/database.ts SQLite bootstrap
 SQLite
   -> projects
-  -> project_environments
+  -> browser_profiles
   -> workflows
   -> subflows
   -> runs
@@ -53,7 +53,7 @@ SQLite
 ## Runtime State
 
 The renderer command boundary is Electron IPC. The TypeScript backend owns
-project/environment CRUD, workflow CRUD, subflow CRUD, graph document storage,
+project/browser profile CRUD, workflow CRUD, subflow CRUD, graph document storage,
 Workflow Settings, package import/export, graph validation/compilation,
 workflow scheduling, SQLite persistence, backend-owned browser recorder session
 lifecycle, run lifecycle orchestration, and CloakBrowser execution.

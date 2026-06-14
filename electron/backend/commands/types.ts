@@ -11,7 +11,7 @@ import type {
   WorkflowGraph,
   Workflow,
   WorkflowCreateOptions,
-  ProjectEnvironment,
+  BrowserProfile,
   Subflow,
   SubflowExport,
 } from "../../../src/types/workflow.js";
@@ -57,8 +57,8 @@ export type CommandDeps = {
   // Common helper functions shared from orchestrator
   requireProject: (projectId: string) => Project;
   ensureDefaultProject: () => Project;
-  requireProjectEnvironment: (environmentId: string) => ProjectEnvironment;
-  ensureDefaultProjectEnvironment: (project: Project) => ProjectEnvironment;
+  requireBrowserProfile: (profileId: string) => BrowserProfile;
+  ensureDefaultBrowserProfile: (project: Project) => BrowserProfile;
   requireWorkflow: (workflowId: string) => WorkflowSummary;
   getSettings: (workflowId: string) => WorkflowSettings;
   saveSettings: (workflowId: string, settings: WorkflowSettings) => WorkflowSettings;

@@ -4,11 +4,11 @@ import type {
 } from "../../../shared/types/workspaceContracts";
 import type {
   Project,
-  ProjectEnvironment,
+  BrowserProfile,
 } from "../../../types/workflow";
 import {
   listProjects,
-  listProjectEnvironments,
+  listBrowserProfiles,
   createProject as createProjectCommand,
   updateProject as updateProjectCommand,
   duplicateProject as duplicateProjectCommand,
@@ -31,7 +31,7 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projectCollection, setProjectCollectionState] = useState<"workflows" | "subflows" | "profiles" | "settings">("workflows");
-  const [projectEnvironments, setProjectEnvironments] = useState<ProjectEnvironment[]>([]);
+  const [browserProfiles, setBrowserProfiles] = useState<BrowserProfile[]>([]);
 
   const loadProjectModel = useCallback(async () => {
     try {
@@ -43,15 +43,15 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
           : loadedProjects[0]?.id ?? null;
       setSelectedProjectId(projectId);
       if (!projectId) {
-        setProjectEnvironments([]);
-        return { projects: loadedProjects, environments: [] };
+        setBrowserProfiles([]);
+        return { projects: loadedProjects, browserProfiles: [] };
       }
-      const environments = await listProjectEnvironments(projectId);
-      setProjectEnvironments(environments);
-      return { projects: loadedProjects, environments };
+      const environments = await listBrowserProfiles(projectId);
+      setBrowserProfiles(environments);
+      return { projects: loadedProjects, browserProfiles: environments };
     } catch (error) {
       setAppError(commandMessage(error));
-      return { projects: [], environments: [] };
+      return { projects: [], browserProfiles: [] };
     }
   }, [selectedProjectId, setAppError]);
 
@@ -59,10 +59,10 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
     return (
       selectedProjectId ??
       projects[0]?.id ??
-      projectEnvironments[0]?.project_id ??
+      browserProfiles[0]?.project_id ??
       null
     );
-  }, [selectedProjectId, projects, projectEnvironments]);
+  }, [selectedProjectId, projects, browserProfiles]);
 
   const ensureProjectId = useCallback(async () => {
     const existingProjectId = currentProjectId();
@@ -106,8 +106,8 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
     }
     setSelectedProjectId(projectId);
     try {
-      const environments = await listProjectEnvironments(projectId);
-      setProjectEnvironments(environments);
+      const environments = await listBrowserProfiles(projectId);
+      setBrowserProfiles(environments);
       await loadSubflowsForProject(projectId);
     } catch (error) {
       setAppError(commandMessage(error));
@@ -122,7 +122,7 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
       setProjectCollectionState("workflows");
       setProjects(await listProjects());
       await loadWorkflows();
-      setProjectEnvironments(await listProjectEnvironments(project.id));
+      setBrowserProfiles(await listBrowserProfiles(project.id));
       const subflowItems = await listSubflows(project.id);
       setSubflows(subflowItems);
     } catch (error) {
@@ -152,7 +152,7 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
       setSelectedProjectId(project.id);
       setProjectCollectionState("settings");
       setProjects(await listProjects());
-      setProjectEnvironments(await listProjectEnvironments(project.id));
+      setBrowserProfiles(await listBrowserProfiles(project.id));
       const subflowItems = await listSubflows(project.id);
       setSubflows(subflowItems);
       await loadWorkflows();
@@ -171,11 +171,11 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
       setProjects(loadedProjects);
       setSelectedProjectId(nextProjectId);
       if (nextProjectId) {
-        setProjectEnvironments(await listProjectEnvironments(nextProjectId));
+        setBrowserProfiles(await listBrowserProfiles(nextProjectId));
         const subflowItems = await listSubflows(nextProjectId);
         setSubflows(subflowItems);
       } else {
-        setProjectEnvironments([]);
+        setBrowserProfiles([]);
         setSubflows([]);
       }
       await loadWorkflows();
@@ -189,10 +189,10 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
     projects,
     selectedProjectId,
     projectCollection,
-    projectEnvironments,
+    browserProfiles,
     setSelectedProjectId,
     setProjectCollection,
-    setProjectEnvironments,
+    setBrowserProfiles,
     setProjects,
     loadProjectModel,
     currentProjectId,

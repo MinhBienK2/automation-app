@@ -559,14 +559,14 @@ describe("Settings commands integration", () => {
     await fs.writeFile(path.join(fontsDir, "NotoSans-Regular.otf"), "noto");
     await fs.writeFile(path.join(fontsDir, "CourierNew.ttf"), "courier");
     const ownerSettings = handlers.getWorkflowSettings(owner.id);
-    const sharedProfile = projectHandlers.createProjectEnvironment(owner.project_id ?? "", {
+    const sharedProfile = projectHandlers.createBrowserProfile(owner.project_id ?? "", {
       name: "Shared font profile",
     });
-    const missingProfile = projectHandlers.createProjectEnvironment(owner.project_id ?? "", {
+    const missingProfile = projectHandlers.createBrowserProfile(owner.project_id ?? "", {
       name: "Missing font profile",
     });
-    projectHandlers.setWorkflowProjectEnvironment(shared.id, sharedProfile.id);
-    projectHandlers.setWorkflowProjectEnvironment(missing.id, missingProfile.id);
+    projectHandlers.setWorkflowBrowserProfile(shared.id, sharedProfile.id);
+    projectHandlers.setWorkflowBrowserProfile(missing.id, missingProfile.id);
     handlers.saveWorkflowSettings(owner.id, {
       ...ownerSettings,
       browser_launch: {
@@ -574,14 +574,23 @@ describe("Settings commands integration", () => {
         fingerprint_fonts_dir: fontsDir,
       },
     });
-    projectHandlers.updateProjectEnvironment(sharedProfile.id, {
+    projectHandlers.updateBrowserProfile(sharedProfile.id, {
       browser_launch: {
         ...sharedProfile.browser_launch,
         fingerprint_fonts_dir: fontsDir,
       },
     });
     database
-      .prepare("UPDATE project_environments SET browser_launch_json = ? WHERE id = ?")
+      .prepare("UPDATE browser_profiles SET browser_launch_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...missingProfile.browser_launch,
+          fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
+        }),
+        missingProfile.id,
+      );
+    database
+      .prepare("UPDATE browser_profiles SET browser_launch_json = ? WHERE id = ?")
       .run(
         JSON.stringify({
           ...missingProfile.browser_launch,

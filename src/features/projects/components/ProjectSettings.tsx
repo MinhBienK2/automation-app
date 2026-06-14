@@ -13,7 +13,7 @@ import { Input } from "../../../components/ui/input";
 import { SettingsFieldGroup } from "../../../components/ui/settings-field-group";
 import type { Project } from "../../../types/workflow";
 
-type ProjectEnvironmentSettingsProps = {
+type ProjectSettingsProps = {
   project: Project | null;
   error: string;
   onUpdateProject: (
@@ -25,14 +25,14 @@ type ProjectEnvironmentSettingsProps = {
   onDeleteProject: (projectId: string) => Promise<void>;
 };
 
-export function ProjectEnvironmentSettings({
+export function ProjectSettings({
   project,
   error,
   onUpdateProject,
   onDuplicateProject,
   onExportProjectPackage,
   onDeleteProject,
-}: ProjectEnvironmentSettingsProps) {
+}: ProjectSettingsProps) {
   const [projectNameDraft, setProjectNameDraft] = useState(project?.name ?? "");
   const [localError, setLocalError] = useState("");
   const [savingProject, setSavingProject] = useState(false);

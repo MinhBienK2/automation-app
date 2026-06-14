@@ -6,7 +6,7 @@ import type {
 import type {
   WorkflowSummary,
   WorkflowDetail,
-  ProjectEnvironment,
+  BrowserProfile,
 } from "../../../types/workflow";
 import {
   listWorkflows,
@@ -15,7 +15,7 @@ import {
   duplicateWorkflow as duplicateWorkflowCommand,
   createWorkflow as createWorkflowCommand,
   renameWorkflow as renameWorkflowCommand,
-  listProjectEnvironments,
+  listBrowserProfiles,
   getWorkflowGraph,
   getWorkflowSettings,
 } from "../../../lib/workflowApi";
@@ -38,8 +38,8 @@ export interface WorkflowWorkspaceDeps {
   requestGraphExitNavigation: (navigate: () => void | Promise<void>) => Promise<boolean> | boolean;
   setSelectedProjectId: (id: string | null) => void;
   currentProjectId: () => string | null;
-  projectEnvironments: ProjectEnvironment[];
-  setProjectEnvironments: (environments: ProjectEnvironment[]) => void;
+  browserProfiles: BrowserProfile[];
+  setBrowserProfiles: (profiles: BrowserProfile[]) => void;
   loadSubflowsForProject: (projectId?: string | null) => Promise<any[]>;
   graphAutosaveEnabled: boolean;
   setWorkflowGraph: (graph: any) => void;
@@ -69,8 +69,8 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     requestGraphExitNavigation,
     setSelectedProjectId,
     currentProjectId,
-    projectEnvironments,
-    setProjectEnvironments,
+    browserProfiles,
+    setBrowserProfiles,
     loadSubflowsForProject,
     graphAutosaveEnabled,
     setWorkflowGraph,
@@ -108,13 +108,13 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
   }, []);
 
   const resolveWorkflowProfileId = useCallback((
-    environmentId: string | null | undefined,
-    environments: ProjectEnvironment[],
+    profileId: string | null | undefined,
+    profiles: BrowserProfile[],
   ) => {
-    if (environmentId && environments.some((environment) => environment.id === environmentId)) {
-      return environmentId;
+    if (profileId && profiles.some((profile) => profile.id === profileId)) {
+      return profileId;
     }
-    return environments[0]?.id ?? null;
+    return profiles[0]?.id ?? null;
   }, []);
 
   const performOpenWorkflow = useCallback(async (id: string) => {
@@ -139,20 +139,20 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
       setSelectedWorkflowId(id);
       setDetail(loaded);
       const workflowProjectId = loaded.workflow.project_id ?? currentProjectId();
-      let workflowProjectEnvironments = projectEnvironments;
+      let workflowBrowserProfiles = browserProfiles;
       if (workflowProjectId) {
         setSelectedProjectId(workflowProjectId);
         try {
-          workflowProjectEnvironments = await listProjectEnvironments(workflowProjectId);
-          setProjectEnvironments(workflowProjectEnvironments);
+          workflowBrowserProfiles = await listBrowserProfiles(workflowProjectId);
+          setBrowserProfiles(workflowBrowserProfiles);
         } catch {
           // Keep the workflow detail usable even if project metadata is temporarily unavailable.
         }
         await loadSubflowsForProject(workflowProjectId);
       }
       const profileId = resolveWorkflowProfileId(
-        loaded.workflow.environment_id,
-        workflowProjectEnvironments,
+        loaded.workflow.browser_profile_id,
+        workflowBrowserProfiles,
       );
       setWorkflowProfileDraftId(profileId);
       setWorkflowProfileSavedId(profileId);
@@ -169,7 +169,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
           createdAt: loaded.workflow.created_at,
           updatedAt: loaded.workflow.updated_at,
         });
-        const selectedProfile = workflowProjectEnvironments.find((environment) => environment.id === profileId);
+        const selectedProfile = workflowBrowserProfiles.find((profile) => profile.id === profileId);
         const nextSettings = selectedProfile
           ? { ...normalizedSettings, browser_launch: selectedProfile.browser_launch }
           : normalizedSettings;
@@ -182,7 +182,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
           createdAt: loaded.workflow.created_at,
           updatedAt: loaded.workflow.updated_at,
         });
-        const selectedProfile = workflowProjectEnvironments.find((environment) => environment.id === profileId);
+        const selectedProfile = workflowBrowserProfiles.find((profile) => profile.id === profileId);
         const nextSettings = selectedProfile
           ? { ...fallbackSettings, browser_launch: selectedProfile.browser_launch }
           : fallbackSettings;
@@ -209,13 +209,13 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     }
   }, [
     currentProjectId,
-    projectEnvironments,
+    browserProfiles,
     graphAutosaveEnabled,
     runSnapshots,
     setScreen,
     setProjectCollection,
     setSelectedProjectId,
-    setProjectEnvironments,
+    setBrowserProfiles,
     loadSubflowsForProject,
     setWorkflowProfileDraftId,
     setWorkflowProfileSavedId,

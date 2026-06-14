@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
-import { ProjectEnvironmentSettings } from "./ProjectEnvironmentSettings";
+import { ProjectSettings } from "./ProjectSettings";
 import type { Project } from "../../../types/workflow";
 
 const project: Project = {
@@ -13,7 +13,7 @@ const project: Project = {
 
 function renderProjectSettings() {
   return render(
-    <ProjectEnvironmentSettings
+    <ProjectSettings
       project={project}
       error=""
       onUpdateProject={vi.fn()}
@@ -24,7 +24,7 @@ function renderProjectSettings() {
   );
 }
 
-describe("ProjectEnvironmentSettings", () => {
+describe("ProjectSettings", () => {
   test("keeps the project name save action inline and labels it Save", () => {
     renderProjectSettings();
 

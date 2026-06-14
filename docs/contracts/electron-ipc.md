@@ -45,7 +45,7 @@
 For the full command list, see `electron/ipc.ts`. Key patterns:
 
 - **Project CRUD**: `createProject` (+ initial profile + `Main` workflow), `updateProject`, `duplicateProject`, `deleteProject`
-- **Profile CRUD**: `createProjectEnvironment`, `updateProjectEnvironment`, `deleteProjectEnvironment`, `setWorkflowProjectEnvironment`
+- **Profile CRUD**: `createBrowserProfile`, `updateBrowserProfile`, `deleteBrowserProfile`, `setWorkflowBrowserProfile`, `listBrowserProfiles`, `resetBrowserProfileIdentity`
 - **Workflow CRUD**: `createWorkflow`, `renameWorkflow`, `deleteWorkflow(id, { deleteBrowserProfile? })`, `duplicateWorkflow`
 - **Graph**: `getWorkflowGraph`, `saveWorkflowGraph`, `validateWorkflowGraph`, `compileWorkflowGraph`
 - **Settings**: `getWorkflowSettings`, `saveWorkflowSettings`, `saveWorkflowSettingsSection`, `validateWorkflowSettings`

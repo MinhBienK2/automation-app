@@ -181,10 +181,10 @@ export function createWorkflowCommands(deps: CommandDeps) {
         let created = createWorkflow(name, {
           project_id: sourceWorkflow.project_id,
         });
-        if (sourceWorkflow.environment_id) {
-          created = repository.assignWorkflowProjectEnvironment(
+        if (sourceWorkflow.browser_profile_id) {
+          created = repository.assignWorkflowBrowserProfile(
             created.id,
-            sourceWorkflow.environment_id,
+            sourceWorkflow.browser_profile_id,
           ) ?? created;
         }
         const graph = repository.getWorkflowGraph(workflowId);

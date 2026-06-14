@@ -223,7 +223,9 @@ export function AppPackageDialogs({
                 </div>
                 <div>
                   <dt>Sessions</dt>
-                  <dd>{importProjectPackagePreview.environments.length}</dd>
+                  <dd>
+                    {(importProjectPackagePreview.browser_profiles ?? []).length}
+                  </dd>
                 </div>
               </dl>
               {importProjectPackagePreview.omitted_fields.length > 0 ? (

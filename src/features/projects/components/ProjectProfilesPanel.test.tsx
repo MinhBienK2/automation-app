@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import { ProjectProfilesPanel } from "./ProjectProfilesPanel";
-import type { Project, ProjectEnvironment, WorkflowSummary } from "../../../types/workflow";
+import type { Project, BrowserProfile, WorkflowSummary } from "../../../types/workflow";
 
 const project: Project = {
   id: "project-1",
@@ -12,7 +12,7 @@ const project: Project = {
   updated_at: "2026-01-01T00:00:00.000Z",
 };
 
-const environments: ProjectEnvironment[] = [
+const environments: BrowserProfile[] = [
   {
     id: "env-1",
     project_id: project.id,
@@ -57,8 +57,7 @@ const workflows: WorkflowSummary[] = [
   {
     id: "workflow-1",
     project_id: project.id,
-    environment_id: "env-1",
-    environment_name: "Profile A",
+    browser_profile_id: "env-1",
     name: "Workflow A",
     step_count: 5,
     created_at: "2026-01-01T00:00:00.000Z",
@@ -72,7 +71,7 @@ describe("ProjectProfilesPanel", () => {
     render(
       <ProjectProfilesPanel
         project={project}
-        projectEnvironments={environments}
+        browserProfiles={environments}
         workflows={workflows}
         overview={null}
         loading={false}
@@ -84,9 +83,9 @@ describe("ProjectProfilesPanel", () => {
         onCloseRetainedSession={vi.fn()}
         onResetIdentity={vi.fn()}
         onOpenIdentityTarget={vi.fn()}
-        onCreateProjectEnvironment={vi.fn()}
-        onUpdateProjectEnvironment={vi.fn()}
-        onDeleteProjectEnvironment={vi.fn()}
+        onCreateBrowserProfile={vi.fn()}
+        onUpdateBrowserProfile={vi.fn()}
+        onDeleteBrowserProfile={vi.fn()}
       />,
     );
 
@@ -104,12 +103,12 @@ describe("ProjectProfilesPanel", () => {
 
   test("can rename profile", async () => {
     const user = userEvent.setup();
-    const onUpdateProjectEnvironment = vi.fn().mockResolvedValue(undefined);
+    const onUpdateBrowserProfile = vi.fn().mockResolvedValue(undefined);
 
     render(
       <ProjectProfilesPanel
         project={project}
-        projectEnvironments={environments}
+        browserProfiles={environments}
         workflows={workflows}
         overview={null}
         loading={false}
@@ -121,9 +120,9 @@ describe("ProjectProfilesPanel", () => {
         onCloseRetainedSession={vi.fn()}
         onResetIdentity={vi.fn()}
         onOpenIdentityTarget={vi.fn()}
-        onCreateProjectEnvironment={vi.fn()}
-        onUpdateProjectEnvironment={onUpdateProjectEnvironment}
-        onDeleteProjectEnvironment={vi.fn()}
+        onCreateBrowserProfile={vi.fn()}
+        onUpdateBrowserProfile={onUpdateBrowserProfile}
+        onDeleteBrowserProfile={vi.fn()}
       />,
     );
 
@@ -138,19 +137,19 @@ describe("ProjectProfilesPanel", () => {
     const saveButton = within(editDialog).getByRole("button", { name: "Save" });
     await user.click(saveButton);
 
-    expect(onUpdateProjectEnvironment).toHaveBeenCalledWith("env-1", {
+    expect(onUpdateBrowserProfile).toHaveBeenCalledWith("env-1", {
       name: "Profile New",
     });
   });
 
   test("can add profile", async () => {
     const user = userEvent.setup();
-    const onCreateProjectEnvironment = vi.fn().mockResolvedValue(undefined);
+    const onCreateBrowserProfile = vi.fn().mockResolvedValue(undefined);
 
     render(
       <ProjectProfilesPanel
         project={project}
-        projectEnvironments={environments}
+        browserProfiles={environments}
         workflows={workflows}
         overview={null}
         loading={false}
@@ -162,9 +161,9 @@ describe("ProjectProfilesPanel", () => {
         onCloseRetainedSession={vi.fn()}
         onResetIdentity={vi.fn()}
         onOpenIdentityTarget={vi.fn()}
-        onCreateProjectEnvironment={onCreateProjectEnvironment}
-        onUpdateProjectEnvironment={vi.fn()}
-        onDeleteProjectEnvironment={vi.fn()}
+        onCreateBrowserProfile={onCreateBrowserProfile}
+        onUpdateBrowserProfile={vi.fn()}
+        onDeleteBrowserProfile={vi.fn()}
       />,
     );
 
@@ -178,7 +177,7 @@ describe("ProjectProfilesPanel", () => {
     const submitBtn = within(createDialog).getByRole("button", { name: "Create profile" });
     await user.click(submitBtn);
 
-    expect(onCreateProjectEnvironment).toHaveBeenCalledWith("project-1", {
+    expect(onCreateBrowserProfile).toHaveBeenCalledWith("project-1", {
       name: "New Profile B",
       description: null,
     });
@@ -186,12 +185,12 @@ describe("ProjectProfilesPanel", () => {
 
   test("can configure and save profile launch options", async () => {
     const user = userEvent.setup();
-    const onUpdateProjectEnvironment = vi.fn().mockResolvedValue(undefined);
+    const onUpdateBrowserProfile = vi.fn().mockResolvedValue(undefined);
 
     render(
       <ProjectProfilesPanel
         project={project}
-        projectEnvironments={environments}
+        browserProfiles={environments}
         workflows={workflows}
         overview={null}
         loading={false}
@@ -203,9 +202,9 @@ describe("ProjectProfilesPanel", () => {
         onCloseRetainedSession={vi.fn()}
         onResetIdentity={vi.fn()}
         onOpenIdentityTarget={vi.fn()}
-        onCreateProjectEnvironment={vi.fn()}
-        onUpdateProjectEnvironment={onUpdateProjectEnvironment}
-        onDeleteProjectEnvironment={vi.fn()}
+        onCreateBrowserProfile={vi.fn()}
+        onUpdateBrowserProfile={onUpdateBrowserProfile}
+        onDeleteBrowserProfile={vi.fn()}
       />,
     );
 
@@ -243,7 +242,7 @@ describe("ProjectProfilesPanel", () => {
     const saveButton = within(editDialog).getByRole("button", { name: "Save" });
     await user.click(saveButton);
 
-    expect(onUpdateProjectEnvironment).toHaveBeenCalledWith("env-1", {
+    expect(onUpdateBrowserProfile).toHaveBeenCalledWith("env-1", {
       browser_launch: expect.objectContaining({
         proxy_enabled: true,
         proxy_server: "http://myproxy:8080",
@@ -262,7 +261,7 @@ describe("ProjectProfilesPanel", () => {
     render(
       <ProjectProfilesPanel
         project={project}
-        projectEnvironments={environments}
+        browserProfiles={environments}
         workflows={workflows}
         overview={null}
         loading={false}
@@ -274,9 +273,9 @@ describe("ProjectProfilesPanel", () => {
         onCloseRetainedSession={vi.fn()}
         onResetIdentity={vi.fn()}
         onOpenIdentityTarget={vi.fn()}
-        onCreateProjectEnvironment={vi.fn()}
-        onUpdateProjectEnvironment={vi.fn()}
-        onDeleteProjectEnvironment={vi.fn()}
+        onCreateBrowserProfile={vi.fn()}
+        onUpdateBrowserProfile={vi.fn()}
+        onDeleteBrowserProfile={vi.fn()}
       />,
     );
 
@@ -294,4 +293,3 @@ describe("ProjectProfilesPanel", () => {
     expect(screen.queryByRole("dialog", { name: /Profile Configuration: Profile A/i })).not.toBeInTheDocument();
   });
 });
-

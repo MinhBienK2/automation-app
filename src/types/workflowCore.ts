@@ -115,8 +115,8 @@ export type WorkflowSummary = {
   name: string;
   step_count: number;
   project_id?: string | null;
-  environment_id?: string | null;
-  environment_name?: string | null;
+  browser_profile_id?: string | null;
+  browser_profile_name?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -125,7 +125,7 @@ export type Workflow = {
   id: string;
   name: string;
   project_id?: string | null;
-  environment_id?: string | null;
+  browser_profile_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -236,7 +236,7 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   run_from_selected_enabled?: boolean;
 };
 
-export type ProjectEnvironment = {
+export type BrowserProfile = {
   id: string;
   project_id: string;
   name: string;
@@ -247,7 +247,7 @@ export type ProjectEnvironment = {
   updated_at: string;
 };
 
-export type ProjectEnvironmentInput = {
+export type BrowserProfileInput = {
   name: string;
   description?: string | null;
   is_default?: boolean | null;

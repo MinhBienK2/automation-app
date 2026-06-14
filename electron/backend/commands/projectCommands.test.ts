@@ -14,7 +14,7 @@ import {
   tempRoots,
   type ProjectWorkflow,
   type TestProject,
-  type TestProjectEnvironment,
+  type TestBrowserProfile,
   type TestSubflow,
   type ProjectWorkflowTestHandlers,
 } from "../commands.testHelpers";
@@ -34,8 +34,8 @@ describe("Projects, Environments, and Subflows integration", () => {
     ]);
 
     const project = projects[0];
-    const environments = projectHandlers.listProjectEnvironments(project.id);
-    expect(environments).toEqual([
+    const profiles = projectHandlers.listBrowserProfiles(project.id);
+    expect(profiles).toEqual([
       expect.objectContaining({
         project_id: project.id,
         name: "Project browser profile",
@@ -47,17 +47,17 @@ describe("Projects, Environments, and Subflows integration", () => {
 
     expect(workflow).toMatchObject({
       project_id: project.id,
-      environment_id: environments[0].id,
+      browser_profile_id: profiles[0].id,
     });
     expect(listRow).toMatchObject({
       project_id: project.id,
-      environment_id: environments[0].id,
-      environment_name: "Project browser profile",
+      browser_profile_id: profiles[0].id,
+      browser_profile_name: "Project browser profile",
     });
     expect(handlers.getWorkflowSettings(workflow.id).browser_launch)
       .toMatchObject({
-        identity_id: environments[0].browser_launch.identity_id,
-        fingerprint_seed: environments[0].browser_launch.fingerprint_seed,
+        identity_id: profiles[0].browser_launch.identity_id,
+        fingerprint_seed: profiles[0].browser_launch.fingerprint_seed,
       });
   });
 
@@ -209,8 +209,8 @@ describe("Projects, Environments, and Subflows integration", () => {
     expect(importedProject.id).not.toBe(sourceProject.id);
     expect(importedWorkflow).toMatchObject({
       project_id: importedProject.id,
-      environment_id: expect.any(String),
-      environment_name: "Project browser profile",
+      browser_profile_id: expect.any(String),
+      browser_profile_name: "Project browser profile",
     });
     expect(importedWorkflow?.id).not.toBe(sourceWorkflow.id);
     expect(importedSubflows).toHaveLength(1);
@@ -269,7 +269,7 @@ describe("Projects, Environments, and Subflows integration", () => {
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
 
     const project = projectHandlers.createProject({ name: "Owned Staging" });
-    const [projectProfile] = projectHandlers.listProjectEnvironments(project.id);
+    const [projectProfile] = projectHandlers.listBrowserProfiles(project.id);
     const projectWorkflows = handlers
       .listWorkflows()
       .filter((item) => item.project_id === project.id);
@@ -278,8 +278,8 @@ describe("Projects, Environments, and Subflows integration", () => {
       expect.objectContaining({
         name: "Main",
         project_id: project.id,
-        environment_id: projectProfile.id,
-        environment_name: projectProfile.name,
+        browser_profile_id: projectProfile.id,
+        browser_profile_name: projectProfile.name,
       }),
     ]);
 
@@ -296,10 +296,10 @@ describe("Projects, Environments, and Subflows integration", () => {
     const { handlers, appPaths } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
     const project = projectHandlers.listProjects()[0];
-    const environment = projectHandlers.listProjectEnvironments(project.id)[0];
-    const customized = projectHandlers.updateProjectEnvironment(environment.id, {
+    const profile = projectHandlers.listBrowserProfiles(project.id)[0];
+    const customized = projectHandlers.updateBrowserProfile(profile.id, {
       browser_launch: {
-        ...environment.browser_launch,
+        ...profile.browser_launch,
         fingerprint_seed: "11111",
         proxy_url: "http://proxy.owned.test:8080",
         timezone: "America/New_York",
@@ -313,7 +313,7 @@ describe("Projects, Environments, and Subflows integration", () => {
     await fs.mkdir(oldProfilePath, { recursive: true });
     await fs.writeFile(path.join(oldProfilePath, "state.json"), "{}");
 
-    const rotated = projectHandlers.resetProjectEnvironmentBrowserIdentity(customized.id);
+    const rotated = projectHandlers.resetBrowserProfileIdentity(customized.id);
 
     expect(rotated.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
     expect(rotated.browser_launch.identity_id).not.toBe(
@@ -331,7 +331,7 @@ describe("Projects, Environments, and Subflows integration", () => {
     expect(rotated.browser_launch.timezone).toBe("America/New_York");
     expect(rotated.browser_launch.locale).toBe("en-US");
     expect(rotated.browser_launch.humanize).toBe(false);
-    expect(projectHandlers.listProjectEnvironments(project.id)[0].browser_launch)
+    expect(projectHandlers.listBrowserProfiles(project.id)[0].browser_launch)
       .toMatchObject({
         identity_id: rotated.browser_launch.identity_id,
         fingerprint_seed: rotated.browser_launch.fingerprint_seed,
@@ -358,8 +358,8 @@ describe("Projects, Environments, and Subflows integration", () => {
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
     const project = projectHandlers.createProject({ name: "Owned Lab" });
     const projectId = project.id;
-    const defaultEnvironment = projectHandlers.listProjectEnvironments(projectId)[0];
-    const selectedProfile = projectHandlers.createProjectEnvironment(projectId, {
+    const defaultEnvironment = projectHandlers.listBrowserProfiles(projectId)[0];
+    const selectedProfile = projectHandlers.createBrowserProfile(projectId, {
       name: "Proxy identity",
       description: "Project-level browser posture",
       browser_launch: {
@@ -374,7 +374,7 @@ describe("Projects, Environments, and Subflows integration", () => {
     const workflow = handlers.createWorkflow("Environment run", {
       project_id: project.id,
     }) as ProjectWorkflow;
-    projectHandlers.setWorkflowProjectEnvironment(workflow.id, selectedProfile.id);
+    projectHandlers.setWorkflowBrowserProfile(workflow.id, selectedProfile.id);
     handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
     await handlers.runWorkflow(workflow.id);
@@ -400,16 +400,16 @@ describe("Projects, Environments, and Subflows integration", () => {
     const { handlers, appPaths } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
     const project = projectHandlers.listProjects()[0];
-    const usedProfile = projectHandlers.listProjectEnvironments(project.id)[0];
+    const usedProfile = projectHandlers.listBrowserProfiles(project.id)[0];
     const workflow = handlers.createWorkflow("Uses profile", {
       project_id: project.id,
     }) as ProjectWorkflow;
-    projectHandlers.setWorkflowProjectEnvironment(workflow.id, usedProfile.id);
+    projectHandlers.setWorkflowBrowserProfile(workflow.id, usedProfile.id);
 
-    expect(() => projectHandlers.deleteProjectEnvironment(usedProfile.id))
+    expect(() => projectHandlers.deleteBrowserProfile(usedProfile.id))
       .toThrow("Browser profile is used by workflows");
 
-    const unusedProfile = projectHandlers.createProjectEnvironment(project.id, {
+    const unusedProfile = projectHandlers.createBrowserProfile(project.id, {
       name: "Unused buyer",
       description: "Delete me",
     });
@@ -419,16 +419,16 @@ describe("Projects, Environments, and Subflows integration", () => {
     await fs.mkdir(profilePath, { recursive: true });
     await fs.writeFile(path.join(profilePath, "state.json"), "{}");
 
-    projectHandlers.deleteProjectEnvironment(unusedProfile.id);
+    projectHandlers.deleteBrowserProfile(unusedProfile.id);
 
-    expect(projectHandlers.listProjectEnvironments(project.id).map((item) => item.id))
+    expect(projectHandlers.listBrowserProfiles(project.id).map((item) => item.id))
       .not.toContain(unusedProfile.id);
     await expect(fs.stat(profilePath)).rejects.toThrow();
   });
 
   test("exposes workflow browser profile selection but not fork commands", async () => {
     const { handlers } = await createTestHandlers();
-    expect("setWorkflowProjectEnvironment" in handlers).toBe(true);
+    expect("setWorkflowBrowserProfile" in handlers).toBe(true);
     expect("forkWorkflowSession" in handlers).toBe(false);
   });
 

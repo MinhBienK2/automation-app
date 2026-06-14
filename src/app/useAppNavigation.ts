@@ -200,7 +200,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
       name: loaded.workflow.name,
       step_count: loaded.steps.length,
       project_id: loaded.workflow.project_id ?? null,
-      environment_id: loaded.workflow.environment_id ?? null,
+      browser_profile_id: loaded.workflow.browser_profile_id ?? null,
       created_at: loaded.workflow.created_at,
       updated_at: loaded.workflow.updated_at,
     };

@@ -36,12 +36,12 @@ export default defineConfig(async () => ({
     setupFiles: "src/tests/setup.ts",
     testTimeout: 20000,
     exclude: [
-      "**/.worktrees/**",
       "**/node_modules/**",
       "**/dist/**",
       "**/dist-electron/**",
       "**/release/**",
       "**/test-results/**",
+      "**/.worktrees/**",
     ],
   },
 

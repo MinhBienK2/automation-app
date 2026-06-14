@@ -107,8 +107,8 @@ describe("Package commands integration", () => {
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
     const sourceWorkflow = handlers.createWorkflow("Source package") as ProjectWorkflow;
     const targetProject = projectHandlers.createProject({ name: "Target Project" });
-    const targetDefaultEnvironment = projectHandlers.listProjectEnvironments(targetProject.id)[0];
-    const targetSavedSessionBefore = structuredClone(targetDefaultEnvironment.browser_launch);
+    const targetDefaultProfile = projectHandlers.listBrowserProfiles(targetProject.id)[0];
+    const targetSavedSessionBefore = structuredClone(targetDefaultProfile.browser_launch);
     const sourceSettings = handlers.getWorkflowSettings(sourceWorkflow.id);
     handlers.saveWorkflowSettings(sourceWorkflow.id, {
       ...sourceSettings,
@@ -136,17 +136,17 @@ describe("Package commands integration", () => {
         target_project_id: targetProject.id,
       },
     ) as { workflow: ProjectWorkflow };
-    const targetSavedSessionAfter = projectHandlers.listProjectEnvironments(targetProject.id)
-      .find((environment) => environment.id === targetDefaultEnvironment.id);
+    const targetSavedSessionAfter = projectHandlers.listBrowserProfiles(targetProject.id)
+      .find((profile) => profile.id === targetDefaultProfile.id);
 
     expect(imported.workflow.project_id).toBe(targetProject.id);
-    expect(imported.workflow.environment_id).toEqual(expect.any(String));
-    expect(imported.workflow.environment_id).not.toBe(targetDefaultEnvironment.id);
+    expect(imported.workflow.browser_profile_id).toEqual(expect.any(String));
+    expect(imported.workflow.browser_profile_id).not.toBe(targetDefaultProfile.id);
     expect(handlers.listWorkflows().find((item) => item.id === imported.workflow.id))
       .toMatchObject({
         project_id: targetProject.id,
-        environment_id: imported.workflow.environment_id,
-        environment_name: "Imported into target (imported) browser profile",
+        browser_profile_id: imported.workflow.browser_profile_id,
+        browser_profile_name: "Imported into target (imported) browser profile",
       });
     expect(targetSavedSessionAfter?.browser_launch).toEqual(targetSavedSessionBefore);
     expect(handlers.getWorkflowSettings(imported.workflow.id).browser_launch)

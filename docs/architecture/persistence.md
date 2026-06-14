@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Persistence stores projects, browser profile rows (in the compatibility
-`project_environments` table), workflows, reusable subflows,
+Persistence stores projects, browser profile rows (in the
+`browser_profiles` table), workflows, reusable subflows,
 versioned workflow graph authoring data, per-workflow settings, schedules,
 schedule events, runs, run steps, and operational attention events in SQLite.
 Electron/Node now owns the production persistence layer.
@@ -19,13 +19,13 @@ Electron/Node now owns the production persistence layer.
 ## Current Behavior
 
 - Electron app data uses `appData/automation-app`.
-- The current schema creates `projects`, `project_environments`,
+- The current schema creates `projects`, `browser_profiles`,
   document-shaped `workflows`, reusable `subflows`, queryable `runs` and
   `run_steps`, `workflow_schedules`, `workflow_schedule_events`, and
   `operational_attention_events`.
 - A default project named `Main` and initial browser profile are created for
   existing local data. Workflows store `project_id` and selected
-  `environment_id`; subflows and compatibility project-environment/profile rows
+  `browser_profile_id`; subflows and browser profile rows
   store `project_id`.
 - Product-facing project creation writes the project row, default project
   browser-profile row, and a normal draft workflow named `Main` in one
@@ -33,9 +33,9 @@ Electron/Node now owns the production persistence layer.
 - Project rename updates the `projects` row. Product-facing project deletion
   deletes workflows for that project before deleting the project row so workflow
   run/schedule/attention cascades apply and no projectless workflow rows are
-  left behind; subflows and project-environment/profile rows cascade from the
+  left behind; subflows and browser profile rows cascade from the
   project row. Product-facing project duplication creates a new project, copies
-  project environments, subflows, and workflows, remaps copied workflow Call
+  browser profiles, subflows, and workflows, remaps copied workflow Call
   Subflow references to copied subflows, and stores regenerated storage values
   for copied browser profiles.
 - `runs.source` stores durable run provenance as `manual` or `schedule`.
@@ -50,7 +50,7 @@ Electron/Node now owns the production persistence layer.
   `workflow_schedule_events(workflow_id, created_at DESC)`,
   `operational_attention_events(created_at DESC)`, and
   `operational_attention_events(workflow_id, created_at DESC)`, plus project
-  lookup indexes for project environments, workflows, and subflows.
+  lookup indexes for browser profiles, workflows, and subflows.
 - `listWorkflows` returns workflow summaries used by the workflow list.
 - Summaries sort by `updated_at DESC`, then name ascending.
 - `getWorkflow` returns workflow metadata; product graph authoring data is loaded from `getWorkflowGraph`.
@@ -61,8 +61,8 @@ Electron/Node now owns the production persistence layer.
 - Updating subflow metadata, such as the name changed through Subflow Settings,
   updates the `subflows` row and touches `updated_at` without rewriting the
   graph JSON.
-- Browser profiles are stored in `project_environments.browser_launch_json`.
-  Workflows point at the selected profile through `workflows.environment_id`, and
+- Browser profiles are stored in `browser_profiles.browser_launch_json`.
+  Workflows point at the selected profile through `workflows.browser_profile_id`, and
   `getWorkflowSettings` overlays Browser Launch values from that profile for run
   resolution. Legacy workflow Browser Launch saves are written back to the
   selected profile so older command callers stay consistent with profile-owned
@@ -75,7 +75,7 @@ Electron/Node now owns the production persistence layer.
 - Workflow package import validates selected flow/settings and referenced
   packaged subflows before creating a workflow. It writes the target-project
   workflow, recreated subflows, remapped workflow graph, settings, and a private
-  imported project-environment/session row when Browser Launch is selected
+  imported browser profile row when Browser Launch is selected
   inside one SQLite transaction. Failed validation or save errors roll back the
   whole import.
 - Legacy workflow import writes the new workflow and optional imported settings
@@ -83,7 +83,7 @@ Electron/Node now owns the production persistence layer.
   back the new workflow row.
 - Project package import validates packaged sessions, subflows, workflows,
   graphs, and Workflow Settings before persistence. It writes the imported
-  project row, recreated project-environment/session rows with fresh browser
+  project row, recreated browser profile rows with fresh browser
   identities/profiles, recreated subflows, workflows, remapped workflow graphs,
   and settings inside one SQLite transaction. Failed validation or save errors
   roll back the whole import. Project packages do not persist or restore runs,
@@ -118,8 +118,7 @@ Electron/Node now owns the production persistence layer.
 - Serialization/deserialization of stored action config JSON.
 - Serialization/deserialization of stored workflow graph JSON.
 - Persistence of Workflow Settings rows.
-- Persistence of project rows, browser profile rows, compatibility
-  project-environment rows, and subflow rows.
+- Persistence of project rows, browser profile rows, and subflow rows.
 - Persistence of workflow schedule rows and schedule event rows.
 - Persistence of operational attention rows and bounded operations read queries.
 - Persistence of durable run source.

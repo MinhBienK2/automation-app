@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { HelpCircle, Save, Settings } from "lucide-react";
 import type {
-  ProjectEnvironment,
+  BrowserProfile,
   WorkflowSettings,
   WorkflowSettingsBrowserLaunch,
   WorkflowSettingsEnvironment,
@@ -40,13 +40,13 @@ type WorkflowSettingsDialogProps = {
   open: boolean;
   settings: WorkflowSettings | null;
   activeSection: WorkflowSettingsSectionId;
-  browserProfiles?: ProjectEnvironment[];
+  browserProfiles?: BrowserProfile[];
   selectedBrowserProfileId?: string | null;
   error?: string;
   hasUnsavedChanges: boolean;
   onOpenChange: (open: boolean) => void;
   onActiveSectionChange: (section: WorkflowSettingsSectionId) => void;
-  onBrowserProfileChange?: (environmentId: string) => void;
+  onBrowserProfileChange?: (profileId: string) => void;
   onSettingsChange: (settings: WorkflowSettings) => void;
   onSaveSettings: () => void | boolean | Promise<void | boolean>;
   onDiscardChanges: () => void;
@@ -566,9 +566,9 @@ export function BrowserLaunchSettingsSection({
   selectedBrowserProfileId,
   onBrowserProfileChange,
 }: {
-  browserProfiles: ProjectEnvironment[];
+  browserProfiles: BrowserProfile[];
   selectedBrowserProfileId: string | null;
-  onBrowserProfileChange?: (environmentId: string) => void;
+  onBrowserProfileChange?: (profileId: string) => void;
 }) {
   const selectedProfile =
     browserProfiles.find((profile) => profile.id === selectedBrowserProfileId) ??

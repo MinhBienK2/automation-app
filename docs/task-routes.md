@@ -19,7 +19,7 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 - **Verify**: `src/app/App.tsx`, `src/features/workflows/state/`, `src/features/workflows/components/`, `src/features/workflows/pages/`, `src/shared/types/workspaceContracts.ts`
 - **Checks**: focused page/component tests; `npx tsc --noEmit`
 
-### Change Projects, Environments, Or Subflows
+### Change Projects, Browser Profiles, Or Subflows
 - **Read**: `domain/product-model.md`, `domain/workflow-lifecycle.md`, `domain/invariants/projects.md`, `architecture/persistence.md`, `contracts/electron-ipc.md`; add `DESIGN.md` for styling
 - **Verify**: `src/features/projects/state/`, `src/features/subflows/`, `electron/backend/commands/projectCommands.ts`, `electron/backend/commands/subflowCommands.ts`, `electron/backend/persistence/`, `electron/backend/services/`, `electron/backend/projects/`
 - **Checks**: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts electron/backend/graph/ electron/backend/services/`, `npx tsc --noEmit`

@@ -2,7 +2,7 @@ import type {
   ActionConfig,
   CloakBrowserDiagnostics,
   ElementLocatorKind,
-  ProjectEnvironment,
+  BrowserProfile,
   RunMode,
   RunStatus,
   Workflow,
@@ -339,7 +339,7 @@ export type WorkflowPackagePreview = {
 export type ProjectPackageWorkflow = {
   id: string;
   project_id?: string | null;
-  environment_id?: string | null;
+  browser_profile_id?: string | null;
   name: string;
   flow?: WorkflowGraph | null;
   settings?: WorkflowSettings | null;
@@ -356,7 +356,7 @@ export type ProjectPackage = {
   };
   included_sections: string[];
   omitted_fields: string[];
-  environments: ProjectEnvironment[];
+  browser_profiles: BrowserProfile[];
   subflows: Subflow[];
   workflows: ProjectPackageWorkflow[];
 };
@@ -365,7 +365,7 @@ export type ProjectPackagePreview = {
   project_name: string;
   workflows: Array<{ id: string; name: string }>;
   subflows: Array<{ id: string; name: string }>;
-  environments: Array<{ id: string; name: string; is_default: boolean }>;
+  browser_profiles: Array<{ id: string; name: string; is_default: boolean }>;
   omitted_fields: string[];
 };
 

@@ -6,14 +6,14 @@ import type {
   WorkflowDetail,
   WorkflowSettings,
   WorkflowSettingsSectionId,
-  ProjectEnvironment,
+  BrowserProfile,
   WorkflowSummary,
 } from "../../../types/workflow";
 import {
-  setWorkflowProjectEnvironment as setWorkflowProjectEnvironmentCommand,
+  setWorkflowBrowserProfile as setWorkflowBrowserProfileCommand,
   saveWorkflowSettingsSection,
   getWorkflowSettings,
-  listProjectEnvironments,
+  listBrowserProfiles,
 } from "../../../lib/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
 import {
@@ -32,13 +32,13 @@ export interface WorkflowSettingsStateDeps {
   setDetail: React.Dispatch<React.SetStateAction<WorkflowDetail | null>>;
   workflows: WorkflowSummary[];
   setWorkflows: React.Dispatch<React.SetStateAction<WorkflowSummary[]>>;
-  projectEnvironments: ProjectEnvironment[];
-  setProjectEnvironments: (environments: ProjectEnvironment[]) => void;
+  browserProfiles: BrowserProfile[];
+  setBrowserProfiles: (profiles: BrowserProfile[]) => void;
   setSelectedProjectId: (id: string | null) => void;
   loadWorkflows: () => Promise<void>;
   setAppError: (error: string) => void;
   showToast: (message: string) => void;
-  resolveWorkflowProfileId: (environmentId: string | null | undefined, environments: ProjectEnvironment[]) => string | null;
+  resolveWorkflowProfileId: (profileId: string | null | undefined, profiles: BrowserProfile[]) => string | null;
 
   workflowSettings: WorkflowSettings | null;
   setWorkflowSettings: (settings: WorkflowSettings | null) => void;
@@ -62,8 +62,8 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
     setDetail,
     workflows: _workflows,
     setWorkflows,
-    projectEnvironments,
-    setProjectEnvironments,
+    browserProfiles,
+    setBrowserProfiles,
     setSelectedProjectId,
     loadWorkflows,
     setAppError,
@@ -133,11 +133,11 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
         if (!workflowProfileDraftId) {
           throw { message: "Select a browser profile before saving.", field: "browser_launch" };
         }
-        const updatedWorkflow = await setWorkflowProjectEnvironmentCommand(
+        const updatedWorkflow = await setWorkflowBrowserProfileCommand(
           settings.workflow_id,
           workflowProfileDraftId,
         );
-        setWorkflowProfileSavedId(updatedWorkflow.environment_id ?? workflowProfileDraftId);
+        setWorkflowProfileSavedId(updatedWorkflow.browser_profile_id ?? workflowProfileDraftId);
         setDetail((current) =>
           current && current.workflow.id === updatedWorkflow.id
             ? { ...current, workflow: { ...current.workflow, ...updatedWorkflow } }
@@ -191,19 +191,19 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
   ) => {
     setAppError("");
     setWorkflowSettingsActiveSection(section);
-    let workflowProjectEnvironments = projectEnvironments;
+    let workflowBrowserProfiles = browserProfiles;
     if (workflow.project_id) {
       setSelectedProjectId(workflow.project_id);
       try {
-        workflowProjectEnvironments = await listProjectEnvironments(workflow.project_id);
-        setProjectEnvironments(workflowProjectEnvironments);
+        workflowBrowserProfiles = await listBrowserProfiles(workflow.project_id);
+        setBrowserProfiles(workflowBrowserProfiles);
       } catch {
         // Keep settings dialog usable if project metadata is temporarily unavailable.
       }
     }
     const profileId = resolveWorkflowProfileId(
-      workflow.environment_id,
-      workflowProjectEnvironments,
+      workflow.browser_profile_id,
+      workflowBrowserProfiles,
     );
     setWorkflowProfileDraftId(profileId);
     setWorkflowProfileSavedId(profileId);
@@ -216,7 +216,7 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
         createdAt: workflow.created_at,
         updatedAt: workflow.updated_at,
       });
-      const selectedProfile = workflowProjectEnvironments.find((environment) => environment.id === profileId);
+      const selectedProfile = workflowBrowserProfiles.find((profile) => profile.id === profileId);
       const nextSettings = selectedProfile
         ? { ...normalizedSettings, browser_launch: selectedProfile.browser_launch }
         : normalizedSettings;
@@ -229,7 +229,7 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
         createdAt: workflow.created_at,
         updatedAt: workflow.updated_at,
       });
-      const selectedProfile = workflowProjectEnvironments.find((environment) => environment.id === profileId);
+      const selectedProfile = workflowBrowserProfiles.find((profile) => profile.id === profileId);
       const nextSettings = selectedProfile
         ? { ...fallbackSettings, browser_launch: selectedProfile.browser_launch }
         : fallbackSettings;
@@ -239,9 +239,9 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
     setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
     setWorkflowSettingsDialogOpen(true);
   }, [
-    projectEnvironments,
+    browserProfiles,
     setSelectedProjectId,
-    setProjectEnvironments,
+    setBrowserProfiles,
     resolveWorkflowProfileId,
     setWorkflowProfileDraftId,
     setWorkflowProfileSavedId,

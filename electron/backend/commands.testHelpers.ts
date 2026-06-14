@@ -27,7 +27,7 @@ export type ProjectWorkflow = {
   id: string;
   name: string;
   project_id: string;
-  environment_id: string | null;
+  browser_profile_id: string | null;
 };
 
 export type TestProject = {
@@ -38,7 +38,7 @@ export type TestProject = {
   updated_at: string;
 };
 
-export type TestProjectEnvironment = {
+export type TestBrowserProfile = {
   id: string;
   project_id: string;
   name: string;
@@ -64,8 +64,8 @@ export type ProjectWorkflowTestHandlers = {
   updateProject(projectId: string, input: { name?: string; description?: string | null }): TestProject;
   duplicateProject(projectId: string): TestProject;
   deleteProject(projectId: string): void;
-  listProjectEnvironments(projectId: string): TestProjectEnvironment[];
-  createProjectEnvironment(
+  listBrowserProfiles(projectId: string): TestBrowserProfile[];
+  createBrowserProfile(
     projectId: string,
     input: {
       name: string;
@@ -73,22 +73,22 @@ export type ProjectWorkflowTestHandlers = {
       browser_launch?: WorkflowSettings["browser_launch"];
       is_default?: boolean;
     },
-  ): TestProjectEnvironment;
-  updateProjectEnvironment(
-    environmentId: string,
+  ): TestBrowserProfile;
+  updateBrowserProfile(
+    profileId: string,
     input: {
       name?: string;
       description?: string | null;
       browser_launch?: WorkflowSettings["browser_launch"];
       is_default?: boolean;
     },
-  ): TestProjectEnvironment;
-  deleteProjectEnvironment(environmentId: string): void;
-  setWorkflowProjectEnvironment(
+  ): TestBrowserProfile;
+  deleteBrowserProfile(profileId: string): void;
+  setWorkflowBrowserProfile(
     workflowId: string,
-    environmentId: string,
+    profileId: string,
   ): ProjectWorkflow;
-  resetProjectEnvironmentBrowserIdentity(environmentId: string): TestProjectEnvironment;
+  resetBrowserProfileIdentity(profileId: string): TestBrowserProfile;
   exportProjectPackage(projectId: string): ProjectPackage;
   previewProjectPackage(packageValue: ProjectPackage): unknown;
   importProjectPackage(packageValue: ProjectPackage): TestProject;

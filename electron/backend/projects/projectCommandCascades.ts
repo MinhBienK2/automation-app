@@ -3,7 +3,7 @@ import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   Project,
-  ProjectEnvironment,
+  BrowserProfile,
   ProjectPackage,
   Subflow,
   Workflow,
@@ -33,8 +33,8 @@ type ProjectCommandCascadeDeps = {
   repository: WorkflowRepository;
   projectPackageService: ProjectPackageService;
   requireProject: (projectId: string) => Project;
-  requireProjectEnvironment: (environmentId: string) => ProjectEnvironment;
-  ensureDefaultProjectEnvironment: (project: Project) => ProjectEnvironment;
+  requireBrowserProfile: (browserProfileId: string) => BrowserProfile;
+  ensureDefaultBrowserProfile: (project: Project) => BrowserProfile;
   createWorkflow: (name: string, options?: WorkflowCreateOptions) => Workflow;
   getSettings: (workflowId: string) => WorkflowSettings;
   saveSettings: (workflowId: string, settings: WorkflowSettings) => WorkflowSettings;
@@ -47,11 +47,11 @@ type ProjectCommandCascadeDeps = {
   ) => WorkflowGraph;
 };
 
-export function projectEnvironmentProfileKey(environment: ProjectEnvironment) {
-  if (environment.browser_launch.session_mode !== "persistent_profile") return null;
+export function getBrowserProfileKey(profile: BrowserProfile) {
+  if (profile.browser_launch.session_mode !== "persistent_profile") return null;
   return (
-    environment.browser_launch.profile_dir?.trim() ||
-    environment.browser_launch.profile_name?.trim() ||
+    profile.browser_launch.profile_dir?.trim() ||
+    profile.browser_launch.profile_name?.trim() ||
     null
   );
 }
@@ -85,18 +85,18 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
   function usedFingerprintSeeds(exceptWorkflowId?: string) {
     return new Set(
       deps.repository
-        .listWorkflows()
-        .filter((workflow) => workflow.id !== exceptWorkflowId)
-        .map((workflow) => deps.getSettings(workflow.id).browser_launch.fingerprint_seed)
-        .filter((seed): seed is string => Boolean(seed)),
+          .listWorkflows()
+          .filter((workflow) => workflow.id !== exceptWorkflowId)
+          .map((workflow) => deps.getSettings(workflow.id).browser_launch.fingerprint_seed)
+          .filter((seed): seed is string => Boolean(seed)),
     );
   }
 
-  function usedProjectEnvironmentFingerprintSeeds() {
+  function usedBrowserProfileFingerprintSeeds() {
     const seeds = usedFingerprintSeeds();
     for (const project of deps.repository.listProjects()) {
-      for (const environment of deps.repository.listProjectEnvironments(project.id)) {
-        const seed = environment.browser_launch?.fingerprint_seed;
+      for (const profile of deps.repository.listBrowserProfiles(project.id)) {
+        const seed = profile.browser_launch?.fingerprint_seed;
         if (seed) seeds.add(seed);
       }
     }
@@ -115,19 +115,19 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         browserLaunch.session_mode === "persistent_profile" ? identityId : null,
       fingerprint_seed: deriveFingerprintSeedFromIdentityId(
         identityId,
-        usedProjectEnvironmentFingerprintSeeds(),
+        usedBrowserProfileFingerprintSeeds(),
       ),
     };
   }
 
-  function assertCanResetProjectEnvironmentBrowserIdentity(
-    environment: ProjectEnvironment,
+  function assertCanResetBrowserProfileIdentity(
+    profile: BrowserProfile,
   ) {
     for (const workflow of deps.repository.listWorkflows()) {
-      if (workflow.environment_id !== environment.id) continue;
+      if (workflow.browser_profile_id !== profile.id) continue;
       const settings = {
         ...deps.getSettings(workflow.id),
-        browser_launch: environment.browser_launch,
+        browser_launch: profile.browser_launch,
       };
       const conflict = deps.activeRunConflict(workflow.id, settings);
       if (conflict) throw commandError(conflict.message, conflict.field);
@@ -141,15 +141,15 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
     }
   }
 
-  function deleteProjectEnvironmentProfileDirectoryIfPrivate(
-    environmentId: string,
+  function deleteBrowserProfileDirectoryIfPrivate(
+    browserProfileId: string,
     profileDir: string | null,
     nextProfileDir: string | null,
   ) {
     if (
       !profileDir ||
       profileDir === nextProfileDir ||
-      isProfileReferencedOutsideProjectEnvironment(environmentId, profileDir)
+      isProfileReferencedOutsideBrowserProfile(browserProfileId, profileDir)
     ) {
       return;
     }
@@ -159,20 +159,20 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
     });
   }
 
-  function isProfileReferencedOutsideProjectEnvironment(
-    environmentId: string,
+  function isProfileReferencedOutsideBrowserProfile(
+    browserProfileId: string,
     profileDir: string,
   ) {
     for (const project of deps.repository.listProjects()) {
-      for (const environment of deps.repository.listProjectEnvironments(project.id)) {
-        if (environment.id === environmentId) continue;
-        if (projectEnvironmentProfileKey(environment) === profileDir) return true;
+      for (const profile of deps.repository.listBrowserProfiles(project.id)) {
+        if (profile.id === browserProfileId) continue;
+        if (getBrowserProfileKey(profile) === profileDir) return true;
       }
     }
     return deps.repository
       .listWorkflows()
       .some((workflow) => {
-        if (workflow.environment_id === environmentId) return false;
+        if (workflow.browser_profile_id === browserProfileId) return false;
         return browserProfileKey(deps.getSettings(workflow.id)) === profileDir;
       });
   }
@@ -184,8 +184,8 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
   ) {
     for (const project of deps.repository.listProjects()) {
       if (project.id === projectId) continue;
-      for (const environment of deps.repository.listProjectEnvironments(project.id)) {
-        if (projectEnvironmentProfileKey(environment) === profileDir) return true;
+      for (const profile of deps.repository.listBrowserProfiles(project.id)) {
+        if (getBrowserProfileKey(profile) === profileDir) return true;
       }
     }
     return deps.repository
@@ -196,41 +196,41 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
       });
   }
 
-  function rotateProjectEnvironmentBrowserIdentity(
-    environmentId: string,
-  ): ProjectEnvironment {
-    const environment = deps.requireProjectEnvironment(environmentId);
-    assertCanResetProjectEnvironmentBrowserIdentity(environment);
-    const oldProfileDir = projectEnvironmentProfileKey(environment);
+  function rotateBrowserProfileIdentity(
+    browserProfileId: string,
+  ): BrowserProfile {
+    const profile = deps.requireBrowserProfile(browserProfileId);
+    assertCanResetBrowserProfileIdentity(profile);
+    const oldProfileDir = getBrowserProfileKey(profile);
     const identityId = createHighEntropyBrowserIdentityId();
     const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
       identityId,
-      usedProjectEnvironmentFingerprintSeeds(),
+      usedBrowserProfileFingerprintSeeds(),
     );
-    const updated = deps.repository.updateProjectEnvironment(environment.id, {
+    const updated = deps.repository.updateBrowserProfile(profile.id, {
       browser_launch: {
-        ...environment.browser_launch,
+        ...profile.browser_launch,
         identity_id: identityId,
         profile_dir: identityId,
         profile_name:
-          environment.browser_launch.session_mode === "persistent_profile"
+          profile.browser_launch.session_mode === "persistent_profile"
             ? identityId
             : null,
         fingerprint_seed: fingerprintSeed,
       },
     });
-    if (!updated) throw commandError("Project environment not found", "environmentId");
-    deleteProjectEnvironmentProfileDirectoryIfPrivate(
-      environment.id,
+    if (!updated) throw commandError("Browser profile not found", "browserProfileId");
+    deleteBrowserProfileDirectoryIfPrivate(
+      profile.id,
       oldProfileDir,
-      projectEnvironmentProfileKey(updated),
+      getBrowserProfileKey(updated),
     );
     return updated;
   }
 
   function duplicateProjectCascade(projectId: string): Project {
     const sourceProject = deps.requireProject(projectId);
-    const sourceEnvironments = deps.repository.listProjectEnvironments(sourceProject.id);
+    const sourceProfiles = deps.repository.listBrowserProfiles(sourceProject.id);
     const sourceSubflows = deps.repository
       .listSubflows(sourceProject.id)
       .map((subflow) => deps.repository.getSubflow(subflow.id))
@@ -245,17 +245,17 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         `Copy of ${sourceProject.name}`,
         sourceProject.description,
       );
-      const environmentIdMap = new Map<string, string>();
-      for (const environment of sourceEnvironments) {
-        const copiedEnvironment = deps.repository.createProjectEnvironment(createdProject.id, {
-          name: environment.name,
-          description: environment.description,
-          is_default: environment.is_default,
-          browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
+      const browserProfileIdMap = new Map<string, string>();
+      for (const profile of sourceProfiles) {
+        const copiedProfile = deps.repository.createBrowserProfile(createdProject.id, {
+          name: profile.name,
+          description: profile.description,
+          is_default: profile.is_default,
+          browser_launch: duplicateProjectBrowserLaunch(profile.browser_launch),
         });
-        environmentIdMap.set(environment.id, copiedEnvironment.id);
+        browserProfileIdMap.set(profile.id, copiedProfile.id);
       }
-      deps.ensureDefaultProjectEnvironment(createdProject);
+      deps.ensureDefaultBrowserProfile(createdProject);
 
       const subflowIdMap = new Map<string, string>();
       for (const subflow of sourceSubflows) {
@@ -272,17 +272,17 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         const copiedWorkflow = deps.createWorkflow(workflow.name, {
           project_id: createdProject.id,
         });
-        const selectedEnvironmentId = workflow.environment_id
-          ? environmentIdMap.get(workflow.environment_id) ?? null
+        const selectedProfileId = workflow.browser_profile_id
+          ? browserProfileIdMap.get(workflow.browser_profile_id) ?? null
           : null;
-        if (selectedEnvironmentId) {
-          deps.repository.assignWorkflowProjectEnvironment(
+        if (selectedProfileId) {
+          deps.repository.assignWorkflowBrowserProfile(
             copiedWorkflow.id,
-            selectedEnvironmentId,
+            selectedProfileId,
           );
         }
-        const selectedEnvironment = selectedEnvironmentId
-          ? deps.repository.getProjectEnvironment(selectedEnvironmentId)
+        const selectedProfile = selectedProfileId
+          ? deps.repository.getBrowserProfile(selectedProfileId)
           : null;
         const graph = deps.repository.getWorkflowGraph(workflow.id);
         if (graph) {
@@ -298,7 +298,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
             duplicateProjectWorkflowSettings(
               settings,
               copiedWorkflow,
-              selectedEnvironment?.browser_launch ??
+              selectedProfile?.browser_launch ??
                 deps.getSettings(copiedWorkflow.id).browser_launch,
             ),
           );
@@ -321,17 +321,18 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         preparedImport.importedName,
         preparedImport.description,
       );
-      const environmentIdMap = new Map<string, string>();
-      for (const environment of preparedImport.environments) {
-        const createdEnvironment = deps.repository.createProjectEnvironment(createdProject.id, {
-          name: environment.name,
-          description: environment.description,
-          is_default: environment.is_default,
-          browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
+      const browserProfileIdMap = new Map<string, string>();
+      const profilesSource = preparedImport.browser_profiles ?? [];
+      for (const profile of profilesSource) {
+        const createdProfile = deps.repository.createBrowserProfile(createdProject.id, {
+          name: profile.name,
+          description: profile.description,
+          is_default: profile.is_default,
+          browser_launch: duplicateProjectBrowserLaunch(profile.browser_launch),
         });
-        environmentIdMap.set(environment.id, createdEnvironment.id);
+        browserProfileIdMap.set(profile.id, createdProfile.id);
       }
-      deps.ensureDefaultProjectEnvironment(createdProject);
+      deps.ensureDefaultBrowserProfile(createdProject);
 
       const subflowIdMap = new Map<string, string>();
       for (const subflow of preparedImport.subflows) {
@@ -348,17 +349,18 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         const createdWorkflow = deps.createWorkflow(packagedWorkflow.name, {
           project_id: createdProject.id,
         });
-        const selectedEnvironmentId = packagedWorkflow.environment_id
-          ? environmentIdMap.get(packagedWorkflow.environment_id) ?? null
+        const workflowProfileId = packagedWorkflow.browser_profile_id;
+        const selectedProfileId = workflowProfileId
+          ? browserProfileIdMap.get(workflowProfileId) ?? null
           : null;
-        if (selectedEnvironmentId) {
-          deps.repository.assignWorkflowProjectEnvironment(
+        if (selectedProfileId) {
+          deps.repository.assignWorkflowBrowserProfile(
             createdWorkflow.id,
-            selectedEnvironmentId,
+            selectedProfileId,
           );
         }
-        const selectedEnvironment = selectedEnvironmentId
-          ? deps.repository.getProjectEnvironment(selectedEnvironmentId)
+        const selectedProfile = selectedProfileId
+          ? deps.repository.getBrowserProfile(selectedProfileId)
           : null;
         if (packagedWorkflow.flow) {
           deps.repository.saveWorkflowGraph(
@@ -380,7 +382,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
               ...packagedWorkflow.settings.run_policy,
               run_from_selected_enabled: false,
             },
-            browser_launch: selectedEnvironment?.browser_launch ??
+            browser_launch: selectedProfile?.browser_launch ??
               deps.getSettings(createdWorkflow.id).browser_launch,
             created_at: createdWorkflow.created_at,
             updated_at: createdWorkflow.updated_at,
@@ -407,8 +409,8 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
     }
 
     const profileDirs = new Set<string>();
-    for (const environment of deps.repository.listProjectEnvironments(project.id)) {
-      const profileDir = projectEnvironmentProfileKey(environment);
+    for (const profile of deps.repository.listBrowserProfiles(project.id)) {
+      const profileDir = getBrowserProfileKey(profile);
       if (profileDir) profileDirs.add(profileDir);
     }
     for (const workflow of workflows) {
@@ -437,7 +439,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
   }
 
   return {
-    rotateProjectEnvironmentBrowserIdentity,
+    rotateBrowserProfileIdentity,
     duplicateProjectCascade,
     importProjectPackageCascade,
     deleteProjectCascade,

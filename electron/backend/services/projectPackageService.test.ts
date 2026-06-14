@@ -21,7 +21,7 @@ describe("ProjectPackageService", () => {
         created_at: "1",
         updated_at: "1",
       },
-      environments: [
+      browser_profiles: [
         {
           id: "environment-1",
           project_id: "project-1",
@@ -54,7 +54,7 @@ describe("ProjectPackageService", () => {
           workflow: {
             id: "workflow-1",
             project_id: "project-1",
-            environment_id: "environment-1",
+            browser_profile_id: "environment-1",
             name: "Login flow",
             step_count: 0,
             created_at: "1",
@@ -70,21 +70,21 @@ describe("ProjectPackageService", () => {
       kind: "project_package",
       version: 1,
       project: { name: "Owned Lab", description: "Staging workflows" },
-      included_sections: ["project", "environments", "subflows", "workflows"],
+      included_sections: ["project", "browser_profiles", "subflows", "workflows"],
     });
-    expect(packageValue.environments[0].browser_launch.proxy_password).toBeNull();
-    expect(packageValue.environments[0].browser_launch.proxy_server).toBe(
+    expect(packageValue.browser_profiles[0].browser_launch.proxy_password).toBeNull();
+    expect(packageValue.browser_profiles[0].browser_launch.proxy_server).toBe(
       "https://proxy.example:8443/",
     );
-    expect(packageValue.environments[0].browser_launch.fingerprint_fonts_dir).toBeNull();
-    expect(packageValue.environments[0].browser_launch).not.toHaveProperty("preflight_enabled");
+    expect(packageValue.browser_profiles[0].browser_launch.fingerprint_fonts_dir).toBeNull();
+    expect(packageValue.browser_profiles[0].browser_launch).not.toHaveProperty("preflight_enabled");
     expect(packageValue.workflows[0].settings?.browser_launch.proxy_password).toBeNull();
     expect(packageValue.workflows[0].flow.nodes.some((node) => node.node_type === "call_subflow"))
       .toBe(true);
     expect(packageValue.omitted_fields).toEqual([
-      "environments.environment-1.browser_launch.proxy_password",
-      "environments.environment-1.browser_launch.proxy_server.credentials",
-      "environments.environment-1.browser_launch.fingerprint_fonts_dir",
+      "browser_profiles.environment-1.browser_launch.proxy_password",
+      "browser_profiles.environment-1.browser_launch.proxy_server.credentials",
+      "browser_profiles.environment-1.browser_launch.fingerprint_fonts_dir",
       "workflows.workflow-1.settings.browser_launch.proxy_password",
       "workflows.workflow-1.settings.browser_launch.proxy_server.credentials",
       "workflows.workflow-1.settings.browser_launch.fingerprint_fonts_dir",
@@ -155,9 +155,9 @@ function projectPackage(overrides: {
     kind: "project_package",
     version: 1,
     project: { name: "Source Project", description: "" },
-    included_sections: ["project", "environments", "subflows", "workflows"],
+    included_sections: ["project", "browser_profiles", "subflows", "workflows"],
     omitted_fields: [],
-    environments: [
+    browser_profiles: [
       {
         id: "environment-1",
         project_id: "project-source",
@@ -185,7 +185,7 @@ function projectPackage(overrides: {
       {
         id: "workflow-1",
         project_id: "project-source",
-        environment_id: "environment-1",
+        browser_profile_id: "environment-1",
         name: "Login flow",
         flow: overrides.flow ?? workflowGraphCallingSubflow("subflow-1"),
         settings: workflowSettings("workflow-1", "Login flow"),

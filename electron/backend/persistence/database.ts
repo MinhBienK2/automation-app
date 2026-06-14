@@ -51,7 +51,7 @@ export function initializeDatabase(paths: AppPaths) {
       updated_at TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS project_environments (
+    CREATE TABLE IF NOT EXISTS browser_profiles (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL,
       name TEXT NOT NULL,
@@ -66,7 +66,7 @@ export function initializeDatabase(paths: AppPaths) {
     CREATE TABLE IF NOT EXISTS workflows (
       id TEXT PRIMARY KEY,
       project_id TEXT,
-      environment_id TEXT,
+      browser_profile_id TEXT,
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       tags_json TEXT NOT NULL DEFAULT '[]',
@@ -75,7 +75,7 @@ export function initializeDatabase(paths: AppPaths) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
-      FOREIGN KEY (environment_id) REFERENCES project_environments(id) ON DELETE SET NULL
+      FOREIGN KEY (browser_profile_id) REFERENCES browser_profiles(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS subflows (
@@ -180,14 +180,15 @@ export function initializeDatabase(paths: AppPaths) {
     CREATE INDEX IF NOT EXISTS idx_operational_attention_events_workflow_created_at
       ON operational_attention_events(workflow_id, created_at DESC);
 
-    CREATE INDEX IF NOT EXISTS idx_project_environments_project_default
-      ON project_environments(project_id, is_default);
+    CREATE INDEX IF NOT EXISTS idx_browser_profiles_project_default
+      ON browser_profiles(project_id, is_default);
 
     CREATE INDEX IF NOT EXISTS idx_subflows_project_updated_at
       ON subflows(project_id, updated_at DESC);
   `);
   migrateWorkflowSchema(database);
   migrateRunSchema(database);
+  migrateBrowserProfileSchema(database);
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_workflows_project_updated_at
       ON workflows(project_id, updated_at DESC);
@@ -218,9 +219,6 @@ function migrateWorkflowSchema(database: DatabaseSync) {
   if (!columns.has("project_id")) {
     database.exec("ALTER TABLE workflows ADD COLUMN project_id TEXT");
   }
-  if (!columns.has("environment_id")) {
-    database.exec("ALTER TABLE workflows ADD COLUMN environment_id TEXT");
-  }
 }
 
 function migrateRunSchema(database: DatabaseSync) {
@@ -241,6 +239,56 @@ function migrateRunSchema(database: DatabaseSync) {
         WHERE event_type = 'started'
           AND run_id IS NOT NULL
       )
+    `);
+  }
+}
+
+function migrateBrowserProfileSchema(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS browser_profiles (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      is_default INTEGER NOT NULL DEFAULT 0,
+      browser_launch_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    );
+  `);
+
+  const tables = new Set(
+    database
+      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .all()
+      .map((row) => (row as { name: string }).name),
+  );
+
+  if (tables.has("project_environments")) {
+    database.exec(`
+      INSERT OR IGNORE INTO browser_profiles (id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at)
+      SELECT id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at
+      FROM project_environments;
+    `);
+  }
+
+  const workflowColumns = new Set(
+    database
+      .prepare("PRAGMA table_info(workflows)")
+      .all()
+      .map((row) => (row as { name: string }).name),
+  );
+
+  if (!workflowColumns.has("browser_profile_id")) {
+    database.exec("ALTER TABLE workflows ADD COLUMN browser_profile_id TEXT");
+  }
+
+  if (workflowColumns.has("environment_id")) {
+    database.exec(`
+      UPDATE workflows
+      SET browser_profile_id = environment_id
+      WHERE browser_profile_id IS NULL AND environment_id IS NOT NULL;
     `);
   }
 }

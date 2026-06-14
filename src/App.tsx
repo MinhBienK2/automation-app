@@ -5,8 +5,8 @@ import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnosti
 import { ProjectProfilesPanel } from "./features/projects/components/ProjectProfilesPanel";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
 import { useOperationsOverviewWorkspace } from "./features/overview/useOperationsOverviewWorkspace";
-import { ProjectEnvironmentSettings } from "./features/projects/components/ProjectEnvironmentSettings";
-import { useProjectEnvironmentActions } from "./features/projects/useProjectEnvironmentActions";
+import { ProjectSettings } from "./features/projects/components/ProjectSettings";
+import { useBrowserProfileActions } from "./features/projects/useBrowserProfileActions";
 import { useIdentityLabWorkspace } from "./features/identities/useIdentityLabWorkspace";
 import { ProjectsPage } from "./features/projects/pages/ProjectsPage";
 import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
@@ -18,7 +18,7 @@ import { SubflowDetailPage } from "./features/workflows/pages/SubflowDetailPage"
 import { AppShell } from "./layouts/AppShell";
 import {
   listProjects,
-  listProjectEnvironments,
+  listBrowserProfiles,
   listSubflows,
   getSubflowGraph,
   saveWorkflowGraph,
@@ -162,8 +162,8 @@ function App() {
     requestGraphExitNavigation: (navigate) => requestGraphExitNavigation(navigate),
     setSelectedProjectId: (id) => projectsWorkspace.setSelectedProjectId(id),
     currentProjectId: () => projectsWorkspace.currentProjectId(),
-    projectEnvironments: projectsWorkspace.projectEnvironments,
-    setProjectEnvironments: (envs) => projectsWorkspace.setProjectEnvironments(envs),
+    browserProfiles: projectsWorkspace.browserProfiles,
+    setBrowserProfiles: (envs) => projectsWorkspace.setBrowserProfiles(envs),
     loadSubflowsForProject: (id) => subflowsWorkspace.loadSubflowsForProject(id),
     graphAutosaveEnabled,
     setWorkflowGraph,
@@ -214,17 +214,17 @@ function App() {
     setDetail: workflowsWorkspace.setDetail,
     workflows: workflowsWorkspace.workflows,
     setWorkflows: workflowsWorkspace.setWorkflows,
-    projectEnvironments: projectsWorkspace.projectEnvironments,
-    setProjectEnvironments: projectsWorkspace.setProjectEnvironments,
+    browserProfiles: projectsWorkspace.browserProfiles,
+    setBrowserProfiles: projectsWorkspace.setBrowserProfiles,
     setSelectedProjectId: projectsWorkspace.setSelectedProjectId,
     loadWorkflows: workflowsWorkspace.loadWorkflows,
     setAppError,
     showToast,
-    resolveWorkflowProfileId: (environmentId, environments) => {
-      if (environmentId && environments.some((environment) => environment.id === environmentId)) {
-        return environmentId;
+    resolveWorkflowProfileId: (profileId, profiles) => {
+      if (profileId && profiles.some((profile) => profile.id === profileId)) {
+        return profileId;
       }
-      return environments[0]?.id ?? null;
+      return profiles[0]?.id ?? null;
     },
     workflowSettings,
     setWorkflowSettings,
@@ -314,12 +314,12 @@ function App() {
   });
 
   const {
-    createProjectEnvironment,
-    updateProjectEnvironment,
-    deleteProjectEnvironment,
-  } = useProjectEnvironmentActions({
+    createBrowserProfile,
+    updateBrowserProfile,
+    deleteBrowserProfile,
+  } = useBrowserProfileActions({
     setAppError,
-    setProjectEnvironments: projectsWorkspace.setProjectEnvironments,
+    setBrowserProfiles: projectsWorkspace.setBrowserProfiles,
     showToast,
   });
 
@@ -354,7 +354,7 @@ function App() {
       projectsWorkspace.setSelectedProjectId(project.id);
       projectsWorkspace.setProjectCollection("workflows");
       projectsWorkspace.setProjects(await listProjects());
-      projectsWorkspace.setProjectEnvironments(await listProjectEnvironments(project.id));
+      projectsWorkspace.setBrowserProfiles(await listBrowserProfiles(project.id));
       subflowsWorkspace.setSubflows(await listSubflows(project.id));
       await workflowsWorkspace.loadWorkflows();
     },
@@ -568,11 +568,11 @@ function App() {
       )
     : workflowsWorkspace.workflows;
 
-  const selectedProjectEnvironments = selectedProject
-    ? projectsWorkspace.projectEnvironments.filter(
-        (environment) => environment.project_id === selectedProject.id,
+  const selectedBrowserProfiles = selectedProject
+    ? projectsWorkspace.browserProfiles.filter(
+        (profile) => profile.project_id === selectedProject.id,
       )
-    : projectsWorkspace.projectEnvironments;
+    : projectsWorkspace.browserProfiles;
 
   return (
     <AppShell
@@ -671,7 +671,7 @@ function App() {
           ) : projectsWorkspace.projectCollection === "profiles" ? (
             <ProjectProfilesPanel
               project={selectedProject}
-              projectEnvironments={selectedProjectEnvironments}
+              browserProfiles={selectedBrowserProfiles}
               workflows={selectedProjectWorkflows}
               overview={identityLabOverview}
               loading={identityLabLoading}
@@ -689,14 +689,14 @@ function App() {
               }}
               onResetIdentity={(workflowId) => resetIdentityFromLab(workflowId, selectedProject?.id)}
               onOpenIdentityTarget={openIdentityTarget}
-              onCreateProjectEnvironment={createProjectEnvironment}
-              onUpdateProjectEnvironment={updateProjectEnvironment}
-              onDeleteProjectEnvironment={async (environmentId) => {
-                await deleteProjectEnvironment(environmentId, selectedProject?.id);
+              onCreateBrowserProfile={createBrowserProfile}
+              onUpdateBrowserProfile={updateBrowserProfile}
+              onDeleteBrowserProfile={async (profileId) => {
+                await deleteBrowserProfile(profileId, selectedProject?.id);
               }}
             />
           ) : projectsWorkspace.projectCollection === "settings" ? (
-            <ProjectEnvironmentSettings
+            <ProjectSettings
               project={selectedProject}
               error={appError}
               onUpdateProject={(id, input) => projectsWorkspace.updateProject(id, input)}
@@ -851,7 +851,7 @@ function App() {
         open={workflowSettingsDialogOpen}
         settings={workflowSettings}
         activeSection={workflowSettingsActiveSection}
-        browserProfiles={selectedProjectEnvironments}
+        browserProfiles={selectedBrowserProfiles}
         selectedBrowserProfileId={workflowProfileDraftId}
         error={appError}
         hasUnsavedChanges={Object.values(workflowSettingsSaveStatuses).some(
@@ -868,8 +868,8 @@ function App() {
         onBrowserProfileChange={(profileId) => {
           setWorkflowProfileDraftId(profileId);
           setWorkflowSettings((current) => {
-            const selectedProfile = selectedProjectEnvironments.find(
-              (environment) => environment.id === profileId,
+            const selectedProfile = selectedBrowserProfiles.find(
+              (profile) => profile.id === profileId,
             );
             return current && selectedProfile
               ? { ...current, browser_launch: selectedProfile.browser_launch }

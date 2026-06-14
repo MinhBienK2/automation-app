@@ -9,8 +9,8 @@ const workflow: WorkflowSummary = {
   project_id: "project-1",
   name: "Login flow",
   step_count: 2,
-  environment_id: null,
-  environment_name: null,
+  browser_profile_id: null,
+  browser_profile_name: null,
   created_at: "2026-05-27T00:00:00.000Z",
   updated_at: "2026-05-27T00:00:00.000Z",
 };

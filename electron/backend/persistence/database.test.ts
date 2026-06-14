@@ -32,13 +32,13 @@ describe("Electron database initialization", () => {
       .map((row) => (row as { name: string }).name);
 
     expect(tables).toEqual(
-      expect.arrayContaining(["projects", "project_environments", "subflows"]),
+      expect.arrayContaining(["projects", "browser_profiles", "subflows"]),
     );
     expect(workflowColumns).toEqual(
-      expect.arrayContaining(["project_id", "environment_id"]),
+      expect.arrayContaining(["project_id", "browser_profile_id"]),
     );
-    expect(indexSql(database, "idx_project_environments_project_default")).toBe(
-      "CREATE INDEX idx_project_environments_project_default ON project_environments(project_id, is_default)",
+    expect(indexSql(database, "idx_browser_profiles_project_default")).toBe(
+      "CREATE INDEX idx_browser_profiles_project_default ON browser_profiles(project_id, is_default)",
     );
     expect(indexSql(database, "idx_workflows_project_updated_at")).toBe(
       "CREATE INDEX idx_workflows_project_updated_at ON workflows(project_id, updated_at DESC)",
@@ -254,6 +254,63 @@ describe("Electron database initialization", () => {
     expect(indexSql(database, "idx_runs_source_started_at")).toBe(
       "CREATE INDEX idx_runs_source_started_at ON runs(source, started_at DESC)",
     );
+    database.close();
+  });
+
+  test("migrates legacy project_environments and workflows to browser_profiles", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-db-"));
+    tempRoots.push(tempRoot);
+    const paths = createAppPaths(tempRoot);
+    await fs.mkdir(paths.rootDir, { recursive: true });
+    const legacy = new DatabaseSync(paths.databasePath);
+    legacy.exec(`
+      CREATE TABLE projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE project_environments (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        is_default INTEGER NOT NULL DEFAULT 0,
+        browser_launch_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE workflows (
+        id TEXT PRIMARY KEY,
+        project_id TEXT,
+        environment_id TEXT,
+        name TEXT NOT NULL,
+        graph_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      INSERT INTO projects (id, name, created_at, updated_at) VALUES ('project-1', 'Main', '1', '1');
+      INSERT INTO project_environments (id, project_id, name, browser_launch_json, created_at, updated_at)
+      VALUES ('profile-1', 'project-1', 'Profile 1', '{}', '1', '1');
+      INSERT INTO workflows (id, project_id, environment_id, name, graph_json, created_at, updated_at)
+      VALUES ('workflow-1', 'project-1', 'profile-1', 'Workflow 1', '{}', '1', '1');
+    `);
+    legacy.close();
+
+    const database = initializeDatabase(paths);
+    const profiles = database
+      .prepare("SELECT id, name FROM browser_profiles")
+      .all() as Array<{ id: string; name: string }>;
+    const workflows = database
+      .prepare("SELECT id, browser_profile_id FROM workflows")
+      .all() as Array<{ id: string; browser_profile_id: string }>;
+
+    expect(profiles).toEqual([{ id: "profile-1", name: "Profile 1" }]);
+    expect(workflows).toEqual([{ id: "workflow-1", browser_profile_id: "profile-1" }]);
     database.close();
   });
 });

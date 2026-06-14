@@ -1,8 +1,8 @@
 import type { DatabaseSync } from "node:sqlite";
 import type {
   Project,
-  ProjectEnvironment,
-  ProjectEnvironmentInput,
+  BrowserProfile,
+  BrowserProfileInput,
   Subflow,
   SubflowSummary,
   SubflowUsage,
@@ -16,8 +16,8 @@ import type {
 type WorkflowRow = {
   id: string;
   project_id: string | null;
-  environment_id: string | null;
-  environment_name?: string | null;
+  browser_profile_id: string | null;
+  browser_profile_name?: string | null;
   name: string;
   description: string;
   tags_json: string;
@@ -35,7 +35,7 @@ type ProjectRow = {
   updated_at: string;
 };
 
-type ProjectEnvironmentRow = {
+type BrowserProfileRow = {
   id: string;
   project_id: string;
   name: string;
@@ -123,21 +123,22 @@ export class WorkflowRepository {
     this.database.prepare("DELETE FROM projects WHERE id = ?").run(projectId);
   }
 
-  createProjectEnvironment(
+  createBrowserProfile(
     projectId: string,
-    input: ProjectEnvironmentInput & { browser_launch: ProjectEnvironment["browser_launch"] },
+    input: BrowserProfileInput & { browser_launch: BrowserProfile["browser_launch"] },
     now = new Date(),
-  ): ProjectEnvironment {
+  ): BrowserProfile {
     const timestamp = now.toISOString();
     const id = crypto.randomUUID();
     if (input.is_default) {
       this.database
-        .prepare("UPDATE project_environments SET is_default = 0 WHERE project_id = ?")
+        .prepare("UPDATE browser_profiles SET is_default = 0 WHERE project_id = ?")
         .run(projectId);
     }
+    // Write to browser_profiles
     this.database
       .prepare(
-        `INSERT INTO project_environments (
+        `INSERT INTO browser_profiles (
           id,
           project_id,
           name,
@@ -170,51 +171,51 @@ export class WorkflowRepository {
     };
   }
 
-  listProjectEnvironments(projectId: string): ProjectEnvironment[] {
+  listBrowserProfiles(projectId: string): BrowserProfile[] {
     return this.database
       .prepare(
         `SELECT id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at
-         FROM project_environments
+         FROM browser_profiles
          WHERE project_id = ?
          ORDER BY is_default DESC, updated_at DESC, name ASC`,
       )
       .all(projectId)
-      .map((row) => rowToProjectEnvironment(row as ProjectEnvironmentRow));
+      .map((row) => rowToBrowserProfile(row as BrowserProfileRow));
   }
 
-  getProjectEnvironment(environmentId: string): ProjectEnvironment | null {
+  getBrowserProfile(profileId: string): BrowserProfile | null {
     const row = this.database
       .prepare(
         `SELECT id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at
-         FROM project_environments
+         FROM browser_profiles
          WHERE id = ?`,
       )
-      .get(environmentId) as ProjectEnvironmentRow | undefined;
-    return row ? rowToProjectEnvironment(row) : null;
+      .get(profileId) as BrowserProfileRow | undefined;
+    return row ? rowToBrowserProfile(row) : null;
   }
 
-  getDefaultProjectEnvironment(projectId: string): ProjectEnvironment | null {
+  getDefaultBrowserProfile(projectId: string): BrowserProfile | null {
     const row = this.database
       .prepare(
         `SELECT id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at
-         FROM project_environments
+         FROM browser_profiles
          WHERE project_id = ? AND is_default = 1
          ORDER BY updated_at DESC
          LIMIT 1`,
       )
-      .get(projectId) as ProjectEnvironmentRow | undefined;
-    return row ? rowToProjectEnvironment(row) : null;
+      .get(projectId) as BrowserProfileRow | undefined;
+    return row ? rowToBrowserProfile(row) : null;
   }
 
-  updateProjectEnvironment(
-    environmentId: string,
-    input: Partial<ProjectEnvironmentInput>,
+  updateBrowserProfile(
+    profileId: string,
+    input: Partial<BrowserProfileInput>,
     now = new Date(),
-  ): ProjectEnvironment | null {
-    const current = this.getProjectEnvironment(environmentId);
+  ): BrowserProfile | null {
+    const current = this.getBrowserProfile(profileId);
     if (!current) return null;
     const timestamp = now.toISOString();
-    const next: ProjectEnvironment = {
+    const next: BrowserProfile = {
       ...current,
       name: input.name ?? current.name,
       description: input.description ?? current.description,
@@ -224,12 +225,13 @@ export class WorkflowRepository {
     };
     if (next.is_default) {
       this.database
-        .prepare("UPDATE project_environments SET is_default = 0 WHERE project_id = ?")
+        .prepare("UPDATE browser_profiles SET is_default = 0 WHERE project_id = ?")
         .run(current.project_id);
     }
+    // Update browser_profiles
     this.database
       .prepare(
-        `UPDATE project_environments
+        `UPDATE browser_profiles
          SET name = ?, description = ?, is_default = ?, browser_launch_json = ?, updated_at = ?
          WHERE id = ?`,
       )
@@ -239,31 +241,31 @@ export class WorkflowRepository {
         next.is_default ? 1 : 0,
         JSON.stringify(next.browser_launch),
         timestamp,
-        environmentId,
+        profileId,
       );
     return next;
   }
 
-  deleteProjectEnvironment(environmentId: string) {
-    this.database.prepare("DELETE FROM project_environments WHERE id = ?").run(environmentId);
+  deleteBrowserProfile(profileId: string) {
+    this.database.prepare("DELETE FROM browser_profiles WHERE id = ?").run(profileId);
   }
 
-  listWorkflowsUsingEnvironment(environmentId: string): WorkflowSummary[] {
+  listWorkflowsUsingBrowserProfile(profileId: string): WorkflowSummary[] {
     return this.database
       .prepare(
         `SELECT workflows.id,
                 workflows.project_id,
-                workflows.environment_id,
-                project_environments.name AS environment_name,
+                workflows.browser_profile_id,
+                browser_profiles.name AS browser_profile_name,
                 workflows.name,
                 workflows.created_at,
                 workflows.updated_at
          FROM workflows
-         LEFT JOIN project_environments ON project_environments.id = workflows.environment_id
-         WHERE workflows.environment_id = ?
+         LEFT JOIN browser_profiles ON browser_profiles.id = workflows.browser_profile_id
+         WHERE workflows.browser_profile_id = ?
          ORDER BY workflows.name ASC`,
       )
-      .all(environmentId)
+      .all(profileId)
       .map((row) => rowToSummary(row as WorkflowRow));
   }
 
@@ -271,16 +273,17 @@ export class WorkflowRepository {
     name: string,
     graph: WorkflowGraph,
     now = new Date(),
-    ownership: { projectId?: string | null; environmentId?: string | null } = {},
+    ownership: { projectId?: string | null; browserProfileId?: string | null } = {},
   ): Workflow {
     const timestamp = now.toISOString();
     const id = crypto.randomUUID();
+    const profileId = ownership.browserProfileId ?? null;
     this.database
       .prepare(
         `INSERT INTO workflows (
           id,
           project_id,
-          environment_id,
+          browser_profile_id,
           name,
           description,
           tags_json,
@@ -293,7 +296,7 @@ export class WorkflowRepository {
       .run(
         id,
         ownership.projectId ?? null,
-        ownership.environmentId ?? null,
+        profileId,
         name,
         JSON.stringify(graph),
         timestamp,
@@ -304,7 +307,7 @@ export class WorkflowRepository {
       id,
       name,
       project_id: ownership.projectId ?? null,
-      environment_id: ownership.environmentId ?? null,
+      browser_profile_id: profileId,
       created_at: timestamp,
       updated_at: timestamp,
     };
@@ -315,13 +318,13 @@ export class WorkflowRepository {
       .prepare(
         `SELECT workflows.id,
                 workflows.project_id,
-                workflows.environment_id,
-                project_environments.name AS environment_name,
+                workflows.browser_profile_id,
+                browser_profiles.name AS browser_profile_name,
                 workflows.name,
                 workflows.created_at,
                 workflows.updated_at
          FROM workflows
-         LEFT JOIN project_environments ON project_environments.id = workflows.environment_id
+         LEFT JOIN browser_profiles ON browser_profiles.id = workflows.browser_profile_id
          ORDER BY workflows.updated_at DESC, workflows.name ASC`,
       )
       .all()
@@ -356,21 +359,21 @@ export class WorkflowRepository {
   ) {
     this.database
       .prepare(
-        "UPDATE workflows SET project_id = ?, environment_id = NULL, updated_at = ? WHERE id = ?",
+        "UPDATE workflows SET project_id = ?, browser_profile_id = NULL, updated_at = ? WHERE id = ?",
       )
       .run(projectId, now.toISOString(), id);
   }
 
-  assignWorkflowProjectEnvironment(
+  assignWorkflowBrowserProfile(
     id: string,
-    environmentId: string,
+    profileId: string,
     now = new Date(),
   ): Workflow | null {
     const workflow = this.getWorkflow(id)?.workflow ?? null;
     if (!workflow) return null;
     this.database
-      .prepare("UPDATE workflows SET environment_id = ?, updated_at = ? WHERE id = ?")
-      .run(environmentId, now.toISOString(), id);
+      .prepare("UPDATE workflows SET browser_profile_id = ?, updated_at = ? WHERE id = ?")
+      .run(profileId, now.toISOString(), id);
     return this.getWorkflow(id)?.workflow ?? null;
   }
 
@@ -536,8 +539,8 @@ export class WorkflowRepository {
         .prepare(
           `SELECT workflows.id,
                   workflows.project_id,
-                  workflows.environment_id,
-                  project_environments.name AS environment_name,
+                  workflows.browser_profile_id,
+                  browser_profiles.name AS browser_profile_name,
                   workflows.name,
                   workflows.description,
                   workflows.tags_json,
@@ -546,7 +549,7 @@ export class WorkflowRepository {
                   workflows.created_at,
                   workflows.updated_at
            FROM workflows
-           LEFT JOIN project_environments ON project_environments.id = workflows.environment_id
+           LEFT JOIN browser_profiles ON browser_profiles.id = workflows.browser_profile_id
            WHERE workflows.id = ?`,
         )
         .get(id) as WorkflowRow | undefined) ?? null
@@ -576,14 +579,14 @@ function rowToProject(row: ProjectRow): Project {
   };
 }
 
-function rowToProjectEnvironment(row: ProjectEnvironmentRow): ProjectEnvironment {
+function rowToBrowserProfile(row: BrowserProfileRow): BrowserProfile {
   return {
     id: row.id,
     project_id: row.project_id,
     name: row.name,
     description: row.description,
     is_default: Boolean(row.is_default),
-    browser_launch: parseJson<ProjectEnvironment["browser_launch"]>(row.browser_launch_json),
+    browser_launch: parseJson<BrowserProfile["browser_launch"]>(row.browser_launch_json),
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -594,7 +597,7 @@ function rowToWorkflow(row: WorkflowRow): Workflow {
     id: row.id,
     name: row.name,
     project_id: row.project_id,
-    environment_id: row.environment_id,
+    browser_profile_id: row.browser_profile_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -604,7 +607,7 @@ function rowToSummary(row: WorkflowRow): WorkflowSummary {
   return {
     ...rowToWorkflow(row),
     step_count: 0,
-    environment_name: row.environment_name ?? null,
+    browser_profile_name: row.browser_profile_name ?? null,
   };
 }
 

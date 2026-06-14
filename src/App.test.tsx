@@ -174,7 +174,7 @@ describe("App settings and graph autosave", () => {
       createdAt: "1",
       updatedAt: "1",
     }).browser_launch;
-    const defaultEnvironment = {
+    const defaultProfile = {
       id: "environment-default",
       project_id: project.id,
       name: "Project browser profile",
@@ -187,7 +187,7 @@ describe("App settings and graph autosave", () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       list_projects: [project],
-      list_project_environments: [defaultEnvironment],
+      list_browser_profiles: [defaultProfile],
     });
 
     renderApp();
@@ -248,7 +248,7 @@ describe("App settings and graph autosave", () => {
       createdAt: "1",
       updatedAt: "1",
     }).browser_launch;
-    const environmentsByProject = new Map([
+    const browserProfilesByProject = new Map([
       [
         "project-1",
         [
@@ -268,8 +268,8 @@ describe("App settings and graph autosave", () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       list_projects: () => projects,
-      list_project_environments: ({ projectId }: { projectId: string }) =>
-        environmentsByProject.get(projectId) ?? [],
+      list_browser_profiles: ({ projectId }: { projectId: string }) =>
+        browserProfilesByProject.get(projectId) ?? [],
       update_project: ({
         projectId,
         input,
@@ -300,9 +300,9 @@ describe("App settings and graph autosave", () => {
           updated_at: "3",
         };
         projects = [...projects, duplicated];
-        environmentsByProject.set("project-copy", [
+        browserProfilesByProject.set("project-copy", [
           {
-            ...environmentsByProject.get(projectId)![0],
+            ...browserProfilesByProject.get(projectId)![0],
             id: "environment-copy",
             project_id: "project-copy",
             created_at: "3",
@@ -313,7 +313,7 @@ describe("App settings and graph autosave", () => {
       },
       delete_project: ({ projectId }: { projectId: string }) => {
         projects = projects.filter((project) => project.id !== projectId);
-        environmentsByProject.delete(projectId);
+        browserProfilesByProject.delete(projectId);
         return null;
       },
     });
@@ -386,7 +386,7 @@ describe("App settings and graph autosave", () => {
       createdAt: "1",
       updatedAt: "1",
     }).browser_launch;
-    const currentEnvironment = {
+    const currentProfile = {
       id: "environment-default",
       project_id: project.id,
       name: "Project browser profile",
@@ -399,7 +399,7 @@ describe("App settings and graph autosave", () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       list_projects: [project],
-      list_project_environments: () => [currentEnvironment],
+      list_browser_profiles: () => [currentProfile],
     });
 
     renderApp();
@@ -416,7 +416,7 @@ describe("App settings and graph autosave", () => {
     expect(screen.queryByRole("button", { name: "Regenerate identity" }))
       .not.toBeInTheDocument();
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
-      "update_project_environment",
+      "update_browser_profile",
       expect.anything(),
     );
   });
@@ -442,7 +442,7 @@ describe("App settings and graph autosave", () => {
       profile_name: "bi_1234567890abcdef1234567890abcdef",
       fingerprint_seed: "99887",
     };
-    const currentEnvironment = {
+    const currentProfile = {
       id: "environment-default",
       project_id: project.id,
       name: "Project browser profile",
@@ -452,7 +452,7 @@ describe("App settings and graph autosave", () => {
       created_at: "1",
       updated_at: "1",
     };
-    const createdEnvironment = {
+    const createdProfile = {
       id: "environment-buyer",
       project_id: project.id,
       name: "Buyer A",
@@ -462,14 +462,14 @@ describe("App settings and graph autosave", () => {
       created_at: "2",
       updated_at: "2",
     };
-    let environments = [currentEnvironment];
+    let browserProfiles = [currentProfile];
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       list_projects: [project],
-      list_project_environments: () => environments,
-      create_project_environment: () => {
-        environments = [...environments, createdEnvironment];
-        return createdEnvironment;
+      list_browser_profiles: () => browserProfiles,
+      create_browser_profile: () => {
+        browserProfiles = [...browserProfiles, createdProfile];
+        return createdProfile;
       },
     });
 
@@ -486,7 +486,7 @@ describe("App settings and graph autosave", () => {
 
     await waitFor(() => {
       expect(workflowCommandCallMock).toHaveBeenCalledWith(
-        "create_project_environment",
+        "create_browser_profile",
         {
           projectId: "project-1",
           input: { name: "Buyer A", description: null },
@@ -495,7 +495,7 @@ describe("App settings and graph autosave", () => {
     });
     expect(await screen.findByText("Buyer A")).toBeInTheDocument();
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
-      "reset_project_environment_browser_identity",
+      "reset_browser_profile_identity",
       expect.anything(),
     );
   });
@@ -519,9 +519,9 @@ describe("App settings and graph autosave", () => {
       kind: "project_package",
       version: 1,
       project: { name: "Owned Lab", description: "Staging workflows" },
-      included_sections: ["project", "environments", "subflows", "workflows"],
-      omitted_fields: ["environments.environment-1.browser_launch.proxy_password"],
-      environments: [],
+      included_sections: ["project", "browser_profiles", "subflows", "workflows"],
+      omitted_fields: ["browser_profiles.environment-1.browser_launch.proxy_password"],
+      browser_profiles: [],
       subflows: [],
       workflows: [{ id: "workflow-1", name: "Login flow", flow: null, settings: null }],
     };
@@ -530,7 +530,7 @@ describe("App settings and graph autosave", () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       list_projects: () => projects,
-      list_project_environments: () => [
+      list_browser_profiles: () => [
         {
           id: "environment-1",
           project_id: sourceProject.id,
@@ -553,8 +553,8 @@ describe("App settings and graph autosave", () => {
         project_name: "Owned Lab",
         workflows: [{ id: "workflow-1", name: "Login flow" }],
         subflows: [],
-        environments: [],
-        omitted_fields: ["environments.environment-1.browser_launch.proxy_password"],
+        browser_profiles: [],
+        omitted_fields: ["browser_profiles.environment-1.browser_launch.proxy_password"],
       },
       import_project_package: () => {
         projects = [sourceProject, importedProject];
@@ -653,12 +653,12 @@ describe("App settings and graph autosave", () => {
         {
           ...workflow,
           project_id: "project-1",
-          environment_id: "environment-project-1",
-          environment_name: "Project browser profile",
+          browser_profile_id: "environment-project-1",
+          browser_profile_name: "Project browser profile",
         },
       ]),
       list_projects: projects,
-      list_project_environments: ({ projectId }: { projectId: string }) => [
+      list_browser_profiles: ({ projectId }: { projectId: string }) => [
         {
           id: `environment-${projectId}`,
           project_id: projectId,
@@ -708,10 +708,10 @@ describe("App settings and graph autosave", () => {
       id: "workflow-main",
       name: "Main",
       project_id: createdProject.id,
-      environment_id: "environment-project-2",
-      environment_name: "Project browser profile",
+      browser_profile_id: "environment-project-2",
+      browser_profile_name: "Project browser profile",
     };
-    const createdEnvironment = {
+    const createdProfile = {
       id: "environment-project-2",
       project_id: createdProject.id,
       name: "Project browser profile",
@@ -731,8 +731,8 @@ describe("App settings and graph autosave", () => {
         projectCreated = true;
         return createdProject;
       },
-      list_project_environments: ({ projectId }: { projectId: string }) =>
-        projectId === createdProject.id ? [createdEnvironment] : [],
+      list_browser_profiles: ({ projectId }: { projectId: string }) =>
+        projectId === createdProject.id ? [createdProfile] : [],
       list_workflows: () => [createdWorkflow],
       list_subflows: [],
     });
@@ -1005,12 +1005,12 @@ describe("App settings and graph autosave", () => {
         {
           ...workflow,
           project_id: "project-1",
-          environment_id: "environment-1",
-          environment_name: "Profile A",
+          browser_profile_id: "environment-1",
+          browser_profile_name: "Profile A",
         },
       ]),
       list_projects: [{ id: "project-1", name: "Main", description: "" }],
-      list_project_environments: () => [
+      list_browser_profiles: () => [
         {
           id: "environment-1",
           project_id: "project-1",

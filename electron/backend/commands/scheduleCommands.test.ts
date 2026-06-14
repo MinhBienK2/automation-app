@@ -119,11 +119,11 @@ describe("Schedule commands integration", () => {
       enabled: true,
       kind: { type: "once_at", timestamp: scheduledAt },
     });
-    const isolatedProfile = projectHandlers.createProjectEnvironment(
+    const isolatedProfile = projectHandlers.createBrowserProfile(
       isolatedWorkflow.project_id ?? "",
       { name: "Isolated scheduler profile" },
     );
-    projectHandlers.setWorkflowProjectEnvironment(isolatedWorkflow.id, isolatedProfile.id);
+    projectHandlers.setWorkflowBrowserProfile(isolatedWorkflow.id, isolatedProfile.id);
 
     const runPromise = handlers.runWorkflow(runningWorkflow.id);
     await waitFor(() => activeRunSignal !== null);

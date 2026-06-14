@@ -1,6 +1,6 @@
 import type {
   Project,
-  ProjectEnvironment,
+  BrowserProfile,
   WorkflowSummary,
   WorkflowDetail,
   WorkflowGraph,
@@ -49,14 +49,14 @@ export interface ProjectWorkspaceAPI {
   projects: Project[];
   selectedProjectId: string | null;
   projectCollection: "workflows" | "subflows" | "profiles" | "settings";
-  projectEnvironments: ProjectEnvironment[];
+  browserProfiles: BrowserProfile[];
   
   setSelectedProjectId: (id: string | null) => void;
   setProjectCollection: (collection: "workflows" | "subflows" | "profiles" | "settings") => void;
-  setProjectEnvironments: (environments: ProjectEnvironment[]) => void;
+  setBrowserProfiles: (profiles: BrowserProfile[]) => void;
   setProjects: (projects: Project[]) => void;
 
-  loadProjectModel: () => Promise<{ projects: Project[]; environments: ProjectEnvironment[] }>;
+  loadProjectModel: () => Promise<{ projects: Project[]; browserProfiles: BrowserProfile[] }>;
   currentProjectId: () => string | null;
   ensureProjectId: () => Promise<string>;
   selectProject: (projectId: string) => Promise<void>;

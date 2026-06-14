@@ -9,7 +9,7 @@ import type {
   IdentityLabTarget,
   OperationsOverviewRequest,
   ProjectPackage,
-  ProjectEnvironmentInput,
+  BrowserProfileInput,
   WorkflowBrowserConfig,
   WorkflowCreateOptions,
   WorkflowDeleteOptions,
@@ -73,37 +73,37 @@ export function deleteProject(projectId: string) {
   return bridge().deleteProject(projectId);
 }
 
-export function listProjectEnvironments(projectId: string) {
-  return bridge().listProjectEnvironments(projectId);
+export function listBrowserProfiles(projectId: string) {
+  return bridge().listBrowserProfiles(projectId);
 }
 
-export function createProjectEnvironment(
+export function createBrowserProfile(
   projectId: string,
-  input: ProjectEnvironmentInput,
+  input: BrowserProfileInput,
 ) {
-  return bridge().createProjectEnvironment(projectId, input);
+  return bridge().createBrowserProfile(projectId, input);
 }
 
-export function updateProjectEnvironment(
-  environmentId: string,
-  input: Partial<ProjectEnvironmentInput>,
+export function updateBrowserProfile(
+  profileId: string,
+  input: Partial<BrowserProfileInput>,
 ) {
-  return bridge().updateProjectEnvironment(environmentId, input);
+  return bridge().updateBrowserProfile(profileId, input);
 }
 
-export function deleteProjectEnvironment(environmentId: string) {
-  return bridge().deleteProjectEnvironment(environmentId);
+export function deleteBrowserProfile(profileId: string) {
+  return bridge().deleteBrowserProfile(profileId);
 }
 
-export function setWorkflowProjectEnvironment(
+export function setWorkflowBrowserProfile(
   workflowId: string,
-  environmentId: string,
+  profileId: string,
 ) {
-  return bridge().setWorkflowProjectEnvironment(workflowId, environmentId);
+  return bridge().setWorkflowBrowserProfile(workflowId, profileId);
 }
 
-export function resetProjectEnvironmentBrowserIdentity(environmentId: string) {
-  return bridge().resetProjectEnvironmentBrowserIdentity(environmentId);
+export function resetBrowserProfileIdentity(profileId: string) {
+  return bridge().resetBrowserProfileIdentity(profileId);
 }
 
 export function createSubflow(

@@ -6,12 +6,10 @@ import {
 import {
   cleanupOrphanedBrowserProfiles,
   createProject,
-  createProjectEnvironment,
   createSubflow,
   createSchedule,
   deleteWorkflow,
   deleteProject,
-  deleteProjectEnvironment,
   deleteSchedule,
   disableSchedule,
   enableSchedule,
@@ -37,7 +35,6 @@ import {
   getCloakBrowserDiagnostics,
   getOperationsOverview,
   listProjects,
-  listProjectEnvironments,
   listSubflows,
   getIdentityLabOverview,
   getIdentityLabDetail,
@@ -51,7 +48,6 @@ import {
   runWorkflowFromNode,
   listRunStates,
   saveWorkflowSettings,
-  setWorkflowProjectEnvironment,
   saveSubflowGraph,
   saveRecordingDraft,
   startRecordingSession,
@@ -70,10 +66,8 @@ import {
   previewWorkflowPackage,
   previewProjectPackage,
   deleteSubflow,
-  updateProjectEnvironment,
   updateProject,
   updateSubflow,
-  resetProjectEnvironmentBrowserIdentity,
   saveProjectPackageFile,
 } from "./workflowApi";
 import type {
@@ -134,12 +128,6 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.importProjectPackage.mockResolvedValue(undefined);
     workflowBridgeMock.saveProjectPackageFile.mockResolvedValue(undefined);
     workflowBridgeMock.deleteProject.mockResolvedValue(undefined);
-    workflowBridgeMock.listProjectEnvironments.mockResolvedValue(undefined);
-    workflowBridgeMock.createProjectEnvironment.mockResolvedValue(undefined);
-    workflowBridgeMock.updateProjectEnvironment.mockResolvedValue(undefined);
-    workflowBridgeMock.deleteProjectEnvironment.mockResolvedValue(undefined);
-    workflowBridgeMock.setWorkflowProjectEnvironment.mockResolvedValue(undefined);
-    workflowBridgeMock.resetProjectEnvironmentBrowserIdentity.mockResolvedValue(undefined);
     workflowBridgeMock.createSubflow.mockResolvedValue(undefined);
     workflowBridgeMock.listSubflows.mockResolvedValue(undefined);
     workflowBridgeMock.getSubflow.mockResolvedValue(undefined);
@@ -157,9 +145,9 @@ describe("workflow API phase ten commands", () => {
       kind: "project_package",
       version: 1,
       project: { name: "Owned Lab 2", description: "" },
-      included_sections: ["project", "environments", "subflows", "workflows"],
+      included_sections: ["project", "browser_profiles", "subflows", "workflows"],
       omitted_fields: [],
-      environments: [],
+      browser_profiles: [],
       subflows: [],
       workflows: [],
     };
@@ -168,15 +156,6 @@ describe("workflow API phase ten commands", () => {
     await importProjectPackage(projectPackage);
     await saveProjectPackageFile(projectPackage);
     await deleteProject("project-1");
-    await listProjectEnvironments("project-1");
-    await createProjectEnvironment("project-1", {
-      name: "Staging identity",
-      description: "Proxy posture",
-    });
-    await updateProjectEnvironment("environment-1", { name: "Updated" });
-    await deleteProjectEnvironment("environment-1");
-    await setWorkflowProjectEnvironment("workflow-1", "environment-2");
-    await resetProjectEnvironmentBrowserIdentity("environment-1");
     await createSubflow("project-1", { name: "Login" });
     await listSubflows("project-1");
     await getSubflow("subflow-1");
@@ -263,25 +242,6 @@ describe("workflow API phase ten commands", () => {
     expect(workflowBridgeMock.importProjectPackage).toHaveBeenCalledWith(projectPackage);
     expect(workflowBridgeMock.saveProjectPackageFile).toHaveBeenCalledWith(projectPackage);
     expect(workflowBridgeMock.deleteProject).toHaveBeenCalledWith("project-1");
-    expect(workflowBridgeMock.listProjectEnvironments).toHaveBeenCalledWith("project-1");
-    expect(workflowBridgeMock.createProjectEnvironment).toHaveBeenCalledWith(
-      "project-1",
-      { name: "Staging identity", description: "Proxy posture" },
-    );
-    expect(workflowBridgeMock.updateProjectEnvironment).toHaveBeenCalledWith(
-      "environment-1",
-      { name: "Updated" },
-    );
-    expect(workflowBridgeMock.deleteProjectEnvironment).toHaveBeenCalledWith(
-      "environment-1",
-    );
-    expect(workflowBridgeMock.setWorkflowProjectEnvironment).toHaveBeenCalledWith(
-      "workflow-1",
-      "environment-2",
-    );
-    expect(workflowBridgeMock.resetProjectEnvironmentBrowserIdentity).toHaveBeenCalledWith(
-      "environment-1",
-    );
     expect(workflowBridgeMock.createSubflow).toHaveBeenCalledWith("project-1", {
       name: "Login",
     });

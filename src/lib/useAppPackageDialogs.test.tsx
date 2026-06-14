@@ -165,8 +165,8 @@ function workflowSummary(): WorkflowSummary {
     name: "Workflow",
     step_count: 1,
     project_id: "project-1",
-    environment_id: null,
-    environment_name: null,
+    browser_profile_id: null,
+    browser_profile_name: null,
     created_at: "2026-06-01T12:00:00.000Z",
     updated_at: "2026-06-01T12:00:00.000Z",
   };
@@ -201,7 +201,7 @@ function workflowDetail(id: string): WorkflowDetail {
       id,
       name: "Imported workflow",
       project_id: "project-1",
-      environment_id: null,
+      browser_profile_id: null,
       created_at: "2026-06-01T12:00:00.000Z",
       updated_at: "2026-06-01T12:00:00.000Z",
     },
@@ -226,7 +226,7 @@ function projectPackage(): ProjectPackage {
     project: { name: "Imported project", description: "" },
     included_sections: [],
     omitted_fields: [],
-    environments: [],
+    browser_profiles: [],
     subflows: [],
     workflows: [],
   };
@@ -237,7 +237,7 @@ function projectPackagePreview(): ProjectPackagePreview {
     project_name: "Imported project",
     workflows: [],
     subflows: [],
-    environments: [],
+    browser_profiles: [],
     omitted_fields: [],
   };
 }

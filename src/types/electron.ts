@@ -22,6 +22,8 @@ import type {
   RunValidationIssue,
   ScheduleValidationIssue,
   SettingsValidationIssue,
+  BrowserProfile,
+  BrowserProfileInput,
   BrowserProfileCleanupResult,
   CloakBrowserDiagnostics,
   Workflow,
@@ -47,8 +49,6 @@ import type {
   WorkflowSettingsSectionId,
   WorkflowSummary,
   Project,
-  ProjectEnvironment,
-  ProjectEnvironmentInput,
   Subflow,
   SubflowSummary,
   SubflowUsage,
@@ -69,23 +69,23 @@ export type WorkflowElectronBridge = {
   ): Promise<ProjectPackagePreview>;
   importProjectPackage(packageValue: ProjectPackage): Promise<Project>;
   deleteProject(projectId: string): Promise<void>;
-  listProjectEnvironments(projectId: string): Promise<ProjectEnvironment[]>;
-  createProjectEnvironment(
+  listBrowserProfiles(projectId: string): Promise<BrowserProfile[]>;
+  createBrowserProfile(
     projectId: string,
-    input: ProjectEnvironmentInput,
-  ): Promise<ProjectEnvironment>;
-  updateProjectEnvironment(
-    environmentId: string,
-    input: Partial<ProjectEnvironmentInput>,
-  ): Promise<ProjectEnvironment>;
-  deleteProjectEnvironment(environmentId: string): Promise<void>;
-  setWorkflowProjectEnvironment(
+    input: BrowserProfileInput,
+  ): Promise<BrowserProfile>;
+  updateBrowserProfile(
+    profileId: string,
+    input: Partial<BrowserProfileInput>,
+  ): Promise<BrowserProfile>;
+  deleteBrowserProfile(profileId: string): Promise<void>;
+  setWorkflowBrowserProfile(
     workflowId: string,
-    environmentId: string,
+    profileId: string,
   ): Promise<Workflow>;
-  resetProjectEnvironmentBrowserIdentity(
-    environmentId: string,
-  ): Promise<ProjectEnvironment>;
+  resetBrowserProfileIdentity(
+    profileId: string,
+  ): Promise<BrowserProfile>;
   createSubflow(
     projectId: string,
     input: { name: string; description?: string | null },

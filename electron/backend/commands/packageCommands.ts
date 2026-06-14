@@ -35,7 +35,7 @@ export function createPackageCommands(deps: CommandDeps) {
   return {
     exportProjectPackage(projectId: string): ProjectPackage {
       const project = requireProject(projectId);
-      const environments = repository.listProjectEnvironments(project.id);
+      const browser_profiles = repository.listBrowserProfiles(project.id);
       const subflows = repository
         .listSubflows(project.id)
         .map((subflow) => repository.getSubflow(subflow.id))
@@ -50,7 +50,7 @@ export function createPackageCommands(deps: CommandDeps) {
         }));
       return projectPackageService.exportProjectPackage({
         project,
-        environments,
+        browser_profiles,
         subflows,
         workflows,
       });
@@ -133,7 +133,7 @@ export function createPackageCommands(deps: CommandDeps) {
         });
         let importedProfile: any = null;
         if (importsBrowserLaunch && preparedImport.candidateSettings?.browser_launch) {
-          importedProfile = repository.createProjectEnvironment(
+          importedProfile = repository.createBrowserProfile(
             workflow.project_id ?? targetProjectId,
             {
               name: `${workflow.name} browser profile`,
@@ -145,7 +145,7 @@ export function createPackageCommands(deps: CommandDeps) {
               ),
             },
           );
-          workflow = repository.assignWorkflowProjectEnvironment(
+          workflow = repository.assignWorkflowBrowserProfile(
             workflow.id,
             importedProfile.id,
           ) ?? workflow;
