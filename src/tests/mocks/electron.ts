@@ -89,6 +89,9 @@ const methodNames: BridgeMethodName[] = [
   "dryRunValidateConfig",
   "saveWorkflowPackageFile",
   "saveProjectPackageFile",
+  "exportSubflow",
+  "importSubflow",
+  "saveSubflowPackageFile",
 ];
 
 export const workflowBridgeMock = Object.fromEntries(
@@ -482,6 +485,17 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.saveProjectPackageFile.mockImplementation((packageValue: unknown) =>
     resolveCommand(commands, "save_project_package_file", {
+      package: packageValue,
+    }),
+  );
+  workflowBridgeMock.exportSubflow.mockImplementation((subflowId: string) =>
+    resolveCommand(commands, "export_subflow", { subflowId }),
+  );
+  workflowBridgeMock.importSubflow.mockImplementation((projectId: string, exported: unknown) =>
+    resolveCommand(commands, "import_subflow", { projectId, exported }),
+  );
+  workflowBridgeMock.saveSubflowPackageFile.mockImplementation((packageValue: unknown) =>
+    resolveCommand(commands, "save_subflow_package_file", {
       package: packageValue,
     }),
   );

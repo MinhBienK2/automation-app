@@ -243,4 +243,94 @@ describe("Subflow list integration", () => {
     });
     expect(await screen.findByRole("heading", { name: "Session Prep" })).toBeInTheDocument();
   });
+
+  test("exports a subflow and imports a subflow from file", async () => {
+    const subflow: SubflowSummary = {
+      id: "subflow-login",
+      project_id: "project-1",
+      name: "Login Subflow",
+      description: "Reusable login path",
+      tags: [],
+      used_by_count: 0,
+      created_at: "1",
+      updated_at: "1",
+    };
+
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_subflows: [subflow],
+      export_subflow: {
+        version: 1,
+        subflow: {
+          name: "Login Subflow",
+          description: "Reusable login path",
+          graph: linearGraphFromSteps([]),
+        },
+      },
+      save_subflow_package_file: "saved-file-path.json",
+      import_subflow: {
+        id: "subflow-imported",
+        project_id: "project-1",
+        name: "Imported Subflow",
+        description: "From package",
+        tags: [],
+        used_by_count: 0,
+        created_at: "1",
+        updated_at: "1",
+      },
+    });
+
+    renderApp();
+
+    await openSubflows();
+
+    const row = (await screen.findByText("Login Subflow")).closest("[data-slot='card']");
+    expect(row).toBeInTheDocument();
+
+    await userEvent.click(
+      within(row as HTMLElement).getByRole("button", { name: "Export Login Subflow" }),
+    );
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.exportSubflow).toHaveBeenCalledWith("subflow-login");
+      expect(workflowBridgeMock.saveSubflowPackageFile).toHaveBeenCalledWith({
+        version: 1,
+        subflow: {
+          name: "Login Subflow",
+          description: "Reusable login path",
+          graph: linearGraphFromSteps([]),
+        },
+      });
+    });
+
+    const file = new File(
+      [
+        JSON.stringify({
+          version: 1,
+          subflow: {
+            name: "Imported Subflow",
+            description: "From package",
+            graph: linearGraphFromSteps([]),
+          },
+        }),
+      ],
+      "imported.subflow.json",
+      { type: "application/json" },
+    );
+
+    const input = screen.getByLabelText("Subflow package file");
+    await userEvent.upload(input, file);
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.importSubflow).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({
+          version: 1,
+          subflow: expect.objectContaining({
+            name: "Imported Subflow",
+          }),
+        }),
+      );
+    });
+  });
 });

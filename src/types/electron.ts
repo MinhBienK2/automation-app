@@ -52,6 +52,7 @@ import type {
   Subflow,
   SubflowSummary,
   SubflowUsage,
+  SubflowExport,
 } from "./workflow.js";
 
 export type WorkflowElectronBridge = {
@@ -200,6 +201,9 @@ export type WorkflowElectronBridge = {
   dryRunValidateConfig(config: ActionConfig): Promise<void>;
   saveWorkflowPackageFile(packageValue: WorkflowPackage): Promise<string | null>;
   saveProjectPackageFile(packageValue: ProjectPackage): Promise<string | null>;
+  exportSubflow(subflowId: string): Promise<SubflowExport>;
+  importSubflow(projectId: string, exported: SubflowExport): Promise<Subflow>;
+  saveSubflowPackageFile(packageValue: SubflowExport): Promise<string | null>;
 };
 
 declare global {

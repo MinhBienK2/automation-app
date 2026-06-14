@@ -195,4 +195,48 @@ describe("Subflows integration", () => {
       }),
     );
   });
+
+  test("exports and imports subflows correctly", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    
+    const firstWorkflow = handlers.createWorkflow("First Workflow") as ProjectWorkflow;
+    const subflow = projectHandlers.createSubflow(firstWorkflow.project_id, {
+      name: "Common Auth",
+      description: "Handles shared login sequence",
+    });
+    const subflowGraph = subflowGraphWithAction("login-step", "Login Step");
+    projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
+
+    // @ts-ignore
+    const exported = handlers.exportSubflow(subflow.id);
+    expect(exported).toEqual({
+      version: 1,
+      subflow: {
+        name: "Common Auth",
+        description: "Handles shared login sequence",
+        graph: expect.objectContaining({
+          nodes: expect.arrayContaining([
+            expect.objectContaining({ id: "login-step" })
+          ])
+        })
+      }
+    });
+
+    const secondProject = projectHandlers.createProject({ name: "Second Project" });
+    
+    // @ts-ignore
+    const imported = handlers.importSubflow(secondProject.id, exported);
+    expect(imported).toMatchObject({
+      project_id: secondProject.id,
+      name: "Common Auth",
+      description: "Handles shared login sequence",
+    });
+
+    const importedGraph = projectHandlers.getSubflowGraph(imported.id);
+    expect(importedGraph.nodes).toContainEqual(
+      expect.objectContaining({ id: "login-step" })
+    );
+  });
 });
+

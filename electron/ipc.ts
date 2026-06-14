@@ -80,6 +80,9 @@ export const workflowIpcChannels = {
   dryRunValidateConfig: "workflow:dryRunValidateConfig",
   saveWorkflowPackageFile: "workflow:saveWorkflowPackageFile",
   saveProjectPackageFile: "workflow:saveProjectPackageFile",
+  exportSubflow: "workflow:exportSubflow",
+  importSubflow: "workflow:importSubflow",
+  saveSubflowPackageFile: "workflow:saveSubflowPackageFile",
 } as const;
 
 export type WorkflowIpcChannelName = keyof typeof workflowIpcChannels;

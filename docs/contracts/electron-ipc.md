@@ -16,7 +16,7 @@
 - Preload unwraps values / throws error objects.
 - IPC channels: namespaced strings from `electron/ipc.ts` (e.g., `workflow:listWorkflows`).
 - No casing conversion at boundary — shared DTO shapes pass through.
-- Native save-dialog and file-writing: owned by Electron main (`saveWorkflowPackageFile`, `saveProjectPackageFile`).
+- Native save-dialog and file-writing: owned by Electron main (`saveWorkflowPackageFile`, `saveProjectPackageFile`, `saveSubflowPackageFile`).
 
 ## Backend Ownership
 
@@ -50,7 +50,7 @@ For the full command list, see `electron/ipc.ts`. Key patterns:
 - **Graph**: `getWorkflowGraph`, `saveWorkflowGraph`, `validateWorkflowGraph`, `compileWorkflowGraph`
 - **Settings**: `getWorkflowSettings`, `saveWorkflowSettings`, `saveWorkflowSettingsSection`, `validateWorkflowSettings`
 - **Run**: `runWorkflow`, `runWorkflowFromNode` → `WorkflowRunSnapshot`, `stopRun`, `getRunState`, `listRunStates`
-- **Subflow**: `createSubflow`, `listSubflows`, `getSubflow`, `updateSubflow`, `getSubflowGraph`, `saveSubflowGraph`, `duplicateSubflow`, `deleteSubflow`, `getSubflowUsage`
+- **Subflow**: `createSubflow`, `listSubflows`, `getSubflow`, `updateSubflow`, `getSubflowGraph`, `saveSubflowGraph`, `duplicateSubflow`, `deleteSubflow`, `getSubflowUsage`, `exportSubflow`, `importSubflow`, `saveSubflowPackageFile`
 - **Package**: `exportWorkflowPackage`, `previewWorkflowPackage`, `importWorkflowPackage`, `exportProjectPackage`, `previewProjectPackage`, `importProjectPackage`
 - **Schedule**: `listSchedules`, `getSchedule`, `createSchedule`, `updateSchedule`, `deleteSchedule`, `enableSchedule`, `disableSchedule`, `listScheduleEvents`, `validateSchedule`
 - **Identity**: `getIdentityLabOverview`, `getIdentityLabDetail`, `closeIdentityRetainedSession`

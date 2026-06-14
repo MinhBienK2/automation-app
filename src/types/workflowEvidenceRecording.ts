@@ -287,6 +287,15 @@ export type WorkflowExport = {
   settings?: WorkflowSettings | null;
 };
 
+export type SubflowExport = {
+  version: number;
+  subflow: {
+    name: string;
+    description?: string | null;
+    graph: WorkflowGraph;
+  };
+};
+
 export type WorkflowPackageExportOptions = {
   include_flow: boolean;
   settings_sections: WorkflowSettingsSectionId[];

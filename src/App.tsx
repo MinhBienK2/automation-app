@@ -665,6 +665,8 @@ function App() {
               onRefresh={() => {
                 void subflowsWorkspace.loadSubflowsForProject();
               }}
+              onExportSubflow={subflowsWorkspace.exportProjectSubflow}
+              onImportSubflowFile={subflowsWorkspace.importProjectSubflowFile}
             />
           ) : projectsWorkspace.projectCollection === "profiles" ? (
             <ProjectProfilesPanel

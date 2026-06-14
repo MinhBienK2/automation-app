@@ -204,4 +204,6 @@ export interface SubflowWorkspaceAPI {
   deleteProjectSubflow: (subflowId: string) => Promise<void>;
   changeSubflowGraph: (graph: WorkflowGraph) => void;
   saveCurrentSubflowGraph: () => Promise<boolean>;
+  exportProjectSubflow: (subflowId: string) => Promise<void>;
+  importProjectSubflowFile: (file: File | null) => Promise<void>;
 }

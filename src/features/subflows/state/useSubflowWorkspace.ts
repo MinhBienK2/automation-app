@@ -19,6 +19,9 @@ import {
   saveSubflowGraph,
   updateSubflow as updateSubflowCommand,
   duplicateSubflow as duplicateSubflowCommand,
+  exportSubflow,
+  importSubflow,
+  saveSubflowPackageFile,
 } from "../../../lib/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
 import { hasEditableGraphChange, type GraphSaveStatus } from "../../../lib/appState";
@@ -200,6 +203,39 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
     }
   }, [loadSubflowsForProject, setAppError]);
 
+  const exportProjectSubflow = useCallback(async (subflowId: string) => {
+    setAppError("");
+    try {
+      const exported = await exportSubflow(subflowId);
+      await saveSubflowPackageFile(exported);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }, [setAppError]);
+
+  const importProjectSubflowFile = useCallback(async (file: File | null) => {
+    if (!file) return;
+    setAppError("");
+    const limitBytes = 5 * 1024 * 1024;
+    if (file.size > limitBytes) {
+      setAppError("Subflow package file must be 5 MB or smaller");
+      return;
+    }
+    try {
+      const text = await file.text();
+      const exported = JSON.parse(text);
+      const projectId = await ensureProjectId();
+      if (!projectId) {
+        setAppError("Project not found");
+        return;
+      }
+      await importSubflow(projectId, exported);
+      await loadSubflowsForProject(projectId);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }, [ensureProjectId, loadSubflowsForProject, setAppError]);
+
   return {
     subflows,
     subflowsLoading,
@@ -223,5 +259,7 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
     deleteProjectSubflow,
     changeSubflowGraph,
     saveCurrentSubflowGraph,
+    exportProjectSubflow,
+    importProjectSubflowFile,
   };
 }

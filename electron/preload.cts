@@ -190,6 +190,12 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("saveWorkflowPackageFile", packageValue),
   saveProjectPackageFile: (packageValue) =>
     invokeWorkflow("saveProjectPackageFile", packageValue),
+  exportSubflow: (subflowId) =>
+    invokeWorkflow("exportSubflow", subflowId),
+  importSubflow: (projectId, exported) =>
+    invokeWorkflow("importSubflow", projectId, exported),
+  saveSubflowPackageFile: (packageValue) =>
+    invokeWorkflow("saveSubflowPackageFile", packageValue),
 };
 
 contextBridge.exposeInMainWorld("workflowApi", workflowApi);

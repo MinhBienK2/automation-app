@@ -3,6 +3,7 @@ import type {
   SubflowSummary,
   SubflowUsage,
   WorkflowGraph,
+  SubflowExport,
 } from "../../../src/types/workflow.js";
 import { commandError, createDraftGraph } from "../commandHelpers.js";
 import type { CommandDeps } from "./types.js";
@@ -117,6 +118,38 @@ export function createSubflowCommands(deps: CommandDeps) {
         throw commandError("Subflow not found", "subflowId");
       }
       return repository.getSubflowUsage(subflowId);
+    },
+
+    exportSubflow(subflowId: string): SubflowExport {
+      const subflow = repository.getSubflow(subflowId);
+      if (!subflow) throw commandError("Subflow not found", "subflowId");
+      return {
+        version: 1,
+        subflow: {
+          name: subflow.name,
+          description: subflow.description,
+          graph: repository.getSubflowGraph(subflow.id) || createDraftGraph(),
+        },
+      };
+    },
+
+    importSubflow(projectId: string, exported: SubflowExport): Subflow {
+      requireProject(projectId);
+      if (!exported || exported.version !== 1 || !exported.subflow || !exported.subflow.name) {
+        throw commandError("Invalid subflow package file", "exported");
+      }
+      const name = exported.subflow.name.trim();
+      if (!name) throw commandError("Subflow name is required", "name");
+      const description = exported.subflow.description?.trim() ?? "";
+      const graph = migrateWorkflowGraph(exported.subflow.graph);
+      return repository.createSubflow(projectId, name, description, graph);
+    },
+
+    async saveSubflowPackageFile(packageValue: SubflowExport) {
+      if (!deps.context.saveSubflowPackageFile) {
+        throw commandError("Subflow package file saving is not available");
+      }
+      return deps.context.saveSubflowPackageFile(packageValue);
     },
   };
 }

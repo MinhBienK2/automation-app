@@ -1,4 +1,4 @@
-import { Copy, Eye, Plus, RefreshCw, Settings, Trash2 } from "lucide-react";
+import { Copy, Eye, Plus, RefreshCw, Settings, Trash2, Download, Upload } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
@@ -29,6 +29,8 @@ type SubflowListPageProps = {
   onDeleteSubflow: (subflow: SubflowSummary) => Promise<void>;
   onOpenSubflow: (subflowId: string) => void;
   onRefresh: () => void;
+  onExportSubflow: (subflowId: string) => void;
+  onImportSubflowFile: (file: File | null) => void;
 };
 
 export function SubflowListPage({
@@ -41,6 +43,8 @@ export function SubflowListPage({
   onDeleteSubflow,
   onOpenSubflow,
   onRefresh,
+  onExportSubflow,
+  onImportSubflowFile,
 }: SubflowListPageProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -92,6 +96,20 @@ export function SubflowListPage({
             <RefreshCw aria-hidden="true" />
             Refresh
           </Button>
+          <label className="workflow-import-button">
+            <Upload aria-hidden="true" />
+            Import Subflow
+            <input
+              aria-label="Subflow package file"
+              className="workflow-package-file-input"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => {
+                onImportSubflowFile(event.currentTarget.files?.[0] ?? null);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
           <Button
             shape="pill"
             type="button"
@@ -154,6 +172,14 @@ export function SubflowListPage({
                   }}
                 >
                   <Copy aria-hidden="true" />
+                </IconButton>
+                <IconButton
+                  label={`Export ${subflow.name}`}
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onExportSubflow(subflow.id)}
+                >
+                  <Download aria-hidden="true" />
                 </IconButton>
                 <IconButton
                   label={`Delete ${subflow.name}`}

@@ -23,6 +23,7 @@ import type {
   WorkflowScheduleUpdate,
   WorkflowSettings,
   WorkflowSettingsSectionId,
+  SubflowExport,
 } from "../types/workflow";
 
 function bridge() {
@@ -394,4 +395,16 @@ export function saveRecordingDraft(
 
 export function dryRunValidateConfig(config: ActionConfig) {
   return bridge().dryRunValidateConfig(config);
+}
+
+export function exportSubflow(subflowId: string) {
+  return bridge().exportSubflow(subflowId);
+}
+
+export function importSubflow(projectId: string, exported: SubflowExport) {
+  return bridge().importSubflow(projectId, exported);
+}
+
+export function saveSubflowPackageFile(packageValue: SubflowExport) {
+  return bridge().saveSubflowPackageFile(packageValue);
 }

@@ -13,6 +13,7 @@ import type {
   WorkflowCreateOptions,
   ProjectEnvironment,
   Subflow,
+  SubflowExport,
 } from "../../../src/types/workflow.js";
 import { WorkflowRepository } from "../persistence/workflowRepository.js";
 import { OperationsRepository } from "../operations/operationsRepository.js";
@@ -34,6 +35,7 @@ export type CommandContext = {
   recorderUsesDefaultDriver?: boolean;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
   saveProjectPackageFile?: (packageValue: ProjectPackage) => Promise<string | null>;
+  saveSubflowPackageFile?: (packageValue: SubflowExport) => Promise<string | null>;
   defaultFingerprintFontsDir?: string | null | (() => string | null);
 };
 

@@ -128,6 +128,20 @@ app.whenReady().then(() => {
       await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
       return filePath;
     },
+    async saveSubflowPackageFile(packageValue) {
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        defaultPath: path.join(
+          appPaths.rootDir,
+          `${filenameFromWorkflowName(packageValue.subflow.name)}.subflow.json`,
+        ),
+        filters: [{ name: "Subflow package", extensions: ["json"] }],
+        title: "Export Subflow",
+      });
+      if (canceled || !filePath) return null;
+
+      await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
+      return filePath;
+    },
 
   });
   registerWorkflowIpc(handlers);
