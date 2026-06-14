@@ -97,6 +97,7 @@ export function createProjectCommands(deps: CommandDeps) {
       description: input.description?.trim() ?? "",
       is_default: Boolean(input.is_default),
       browser_launch: input.browser_launch ?? defaultLaunch,
+      environment: input.environment,
     });
   }
 

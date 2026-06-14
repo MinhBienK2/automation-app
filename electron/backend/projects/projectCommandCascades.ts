@@ -252,6 +252,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
           description: profile.description,
           is_default: profile.is_default,
           browser_launch: duplicateProjectBrowserLaunch(profile.browser_launch),
+          environment: profile.environment,
         });
         browserProfileIdMap.set(profile.id, copiedProfile.id);
       }
@@ -329,6 +330,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
           description: profile.description,
           is_default: profile.is_default,
           browser_launch: duplicateProjectBrowserLaunch(profile.browser_launch),
+          environment: profile.environment,
         });
         browserProfileIdMap.set(profile.id, createdProfile.id);
       }

@@ -30,6 +30,10 @@ describe("Electron database initialization", () => {
       .prepare("PRAGMA table_info(workflows)")
       .all()
       .map((row) => (row as { name: string }).name);
+    const profileColumns = database
+      .prepare("PRAGMA table_info(browser_profiles)")
+      .all()
+      .map((row) => (row as { name: string }).name);
 
     expect(tables).toEqual(
       expect.arrayContaining(["projects", "browser_profiles", "subflows"]),
@@ -37,6 +41,7 @@ describe("Electron database initialization", () => {
     expect(workflowColumns).toEqual(
       expect.arrayContaining(["project_id", "browser_profile_id"]),
     );
+    expect(profileColumns).toContain("environment_json");
     expect(indexSql(database, "idx_browser_profiles_project_default")).toBe(
       "CREATE INDEX idx_browser_profiles_project_default ON browser_profiles(project_id, is_default)",
     );
@@ -311,6 +316,44 @@ describe("Electron database initialization", () => {
 
     expect(profiles).toEqual([{ id: "profile-1", name: "Profile 1" }]);
     expect(workflows).toEqual([{ id: "workflow-1", browser_profile_id: "profile-1" }]);
+    database.close();
+  });
+
+  test("migrates browser_profiles table to have environment_json if missing", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-db-"));
+    tempRoots.push(tempRoot);
+    const paths = createAppPaths(tempRoot);
+    await fs.mkdir(paths.rootDir, { recursive: true });
+    const legacy = new DatabaseSync(paths.databasePath);
+    legacy.exec(`
+      CREATE TABLE projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE browser_profiles (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        is_default INTEGER NOT NULL DEFAULT 0,
+        browser_launch_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+    `);
+    legacy.close();
+
+    const database = initializeDatabase(paths);
+    const columns = database
+      .prepare("PRAGMA table_info(browser_profiles)")
+      .all()
+      .map((row) => (row as { name: string }).name);
+
+    expect(columns).toContain("environment_json");
     database.close();
   });
 });

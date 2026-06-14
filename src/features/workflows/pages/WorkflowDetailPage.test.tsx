@@ -791,7 +791,7 @@ describe("Workflow detail integration", () => {
     await userEvent.click(within(settingsDialog).getByRole("button", {
       name: "Add variable row",
     }));
-    expect(within(settingsDialog).getByLabelText("Variable 2 name")).toBeInTheDocument();
+    expect(within(settingsDialog).getByLabelText("Variable 1 name")).toBeInTheDocument();
     await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }));
     expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
       .toHaveAttribute("aria-selected", "true");

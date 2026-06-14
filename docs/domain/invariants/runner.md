@@ -7,7 +7,8 @@ Preserve these unless the task explicitly changes them.
 - Full runs execute the compiled saved graph.
 - Default engine: CloakBrowser/Playwright with humanized interaction. `AUTOMATION_BROWSER_ENGINE=camoufox` selects Camoufox Firefox-compatible runtime.
 - Full runs use persisted Workflow Settings + selected browser profile as baseline.
-- Environment variables applied before first graph step.
+- Environment variables applied before first graph step. Loaded in priority: Profile Environment (lowest priority) -> Workflow Settings Environment (takes precedence over profile) -> Workflow logic nodes (runtime overrides).
+- Profile variables marked as persistent (`persist: true`) write back their final execution values to the database when the run completes.
 - Edge waits compile into synthetic wait steps before target nodes.
 - Run Policy max duration cancels overlong runs with timeout reason.
 - Run Policy can reject Run JavaScript before page script evaluation.

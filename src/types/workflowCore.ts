@@ -236,6 +236,17 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   run_from_selected_enabled?: boolean;
 };
 
+export type ProfileVariableAssignment = {
+  name: string;
+  value_type: VariableValueType;
+  value: string;
+  persist: boolean;
+};
+
+export type ProfileEnvironment = {
+  variables: ProfileVariableAssignment[];
+};
+
 export type BrowserProfile = {
   id: string;
   project_id: string;
@@ -243,6 +254,7 @@ export type BrowserProfile = {
   description: string;
   is_default: boolean;
   browser_launch: WorkflowSettingsBrowserLaunch;
+  environment?: ProfileEnvironment;
   created_at: string;
   updated_at: string;
 };
@@ -252,6 +264,7 @@ export type BrowserProfileInput = {
   description?: string | null;
   is_default?: boolean | null;
   browser_launch?: WorkflowSettingsBrowserLaunch | null;
+  environment?: ProfileEnvironment | null;
 };
 
 export type WorkflowCreateOptions = {

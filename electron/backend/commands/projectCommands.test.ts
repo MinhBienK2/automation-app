@@ -439,6 +439,47 @@ describe("Projects, Environments, and Subflows integration", () => {
     expect(content).not.toContain("require('");
   });
 
+  test("creates browser profile with custom environment and updates it", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const project = projectHandlers.listProjects()[0];
+
+    const initialEnv = {
+      variables: [
+        { name: "test_var", value_type: "text" as const, value: "hello", persist: true },
+      ],
+    };
+
+    const profile = projectHandlers.createBrowserProfile(project.id, {
+      name: "Env profile",
+      description: "Custom environment variables",
+      environment: initialEnv,
+    });
+
+    expect(profile.environment).toEqual(initialEnv);
+
+    // Fetch and check environment
+    const fetchedProfile = projectHandlers.listBrowserProfiles(project.id).find((p) => p.id === profile.id);
+    expect(fetchedProfile?.environment).toEqual(initialEnv);
+
+    // Update profile environment
+    const nextEnv = {
+      variables: [
+        { name: "test_var", value_type: "text" as const, value: "world", persist: false },
+        { name: "other_var", value_type: "number" as const, value: "123", persist: true },
+      ],
+    };
+
+    const updated = projectHandlers.updateBrowserProfile(profile.id, {
+      environment: nextEnv,
+    });
+
+    expect(updated.environment).toEqual(nextEnv);
+
+    const refetched = projectHandlers.listBrowserProfiles(project.id).find((p) => p.id === profile.id);
+    expect(refetched?.environment).toEqual(nextEnv);
+  });
+
 });
 
 

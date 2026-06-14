@@ -9,6 +9,7 @@ import type {
   ActionConfig,
   BatchRunRequest,
   GraphValidationIssue,
+  ProfileEnvironment,
 } from "../../../src/types/workflow.js";
 import { commandError } from "../commandHelpers.js";
 import type { CommandDeps } from "./types.js";
@@ -104,7 +105,18 @@ export function createWorkflowCommands(deps: CommandDeps) {
       throw commandError("Workflow graph has no executable steps", "graph");
     }
 
-    const compiledGraph = compileWorkflowRunPlan(graph, settings, graphContext);
+    let profileEnvironment: ProfileEnvironment | undefined;
+    if (workflow.browser_profile_id) {
+      const profile = repository.getBrowserProfile(workflow.browser_profile_id);
+      if (profile) {
+        profileEnvironment = profile.environment;
+      }
+    }
+
+    const compiledGraph = compileWorkflowRunPlan(graph, settings, {
+      ...graphContext,
+      profileEnvironment,
+    });
     return runManager.startWorkflowRun({
       workflow,
       source,
@@ -276,7 +288,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
       workflowId: string,
       request: BatchRunRequest,
     ) {
-      requireWorkflow(workflowId);
+      const workflow = requireWorkflow(workflowId);
       if (runManager.hasActiveBatchRun() || runManager.hasActiveWorkflowRuns()) {
         throw commandError("A workflow run is already active", "run");
       }
@@ -290,12 +302,21 @@ export function createWorkflowCommands(deps: CommandDeps) {
         );
       }
       const graph = getWorkflowGraph(workflowId);
-      const workflow = requireWorkflow(workflowId);
       const graphContext = graphContextForWorkflow(workflow);
       if (compileGraph(graph, graphContext).steps.length === 0) {
         throw commandError("Workflow graph has no executable steps", "graph");
       }
-      const compiledGraph = compileWorkflowRunPlan(graph, settings, graphContext);
+      let profileEnvironment: ProfileEnvironment | undefined;
+      if (workflow.browser_profile_id) {
+        const profile = repository.getBrowserProfile(workflow.browser_profile_id);
+        if (profile) {
+          profileEnvironment = profile.environment;
+        }
+      }
+      const compiledGraph = compileWorkflowRunPlan(graph, settings, {
+        ...graphContext,
+        profileEnvironment,
+      });
       return runBatchWorkflowRows({
         workflowId,
         request,

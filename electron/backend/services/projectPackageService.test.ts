@@ -133,6 +133,46 @@ describe("ProjectPackageService", () => {
       field: "package.subflows",
     }));
   });
+
+  test("preserves browser profile environment variables on export and import", () => {
+    const service = createService();
+    const settings = workflowSettings("workflow-1", "Login flow");
+    const environment = {
+      variables: [
+        { name: "test_var", value_type: "text" as const, value: "hello", persist: true },
+      ],
+    };
+
+    const packageValue = service.exportProjectPackage({
+      project: {
+        id: "project-1",
+        name: "Owned Lab",
+        description: "Staging workflows",
+        created_at: "1",
+        updated_at: "1",
+      },
+      browser_profiles: [
+        {
+          id: "environment-1",
+          project_id: "project-1",
+          name: "Project saved session",
+          description: "",
+          is_default: true,
+          browser_launch: settings.browser_launch,
+          environment,
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      subflows: [],
+      workflows: [],
+    });
+
+    expect(packageValue.browser_profiles[0].environment).toEqual(environment);
+
+    const prepared = service.prepareImport({ packageValue });
+    expect(prepared.browser_profiles[0].environment).toEqual(environment);
+  });
 });
 
 type ProjectPackageServiceDependencies = ConstructorParameters<typeof ProjectPackageService>[0];

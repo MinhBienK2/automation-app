@@ -295,6 +295,9 @@ function validatePackageBrowserProfiles(
       description: stringRecordField(record, "description"),
       is_default: Boolean(record.is_default),
       browser_launch: browserLaunch,
+      environment: record.environment && typeof record.environment === "object"
+        ? (structuredClone(record.environment) as BrowserProfile["environment"])
+        : undefined,
       created_at: stringRecordField(record, "created_at"),
       updated_at: stringRecordField(record, "updated_at"),
     };

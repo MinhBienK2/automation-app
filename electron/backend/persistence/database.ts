@@ -58,6 +58,7 @@ export function initializeDatabase(paths: AppPaths) {
       description TEXT NOT NULL DEFAULT '',
       is_default INTEGER NOT NULL DEFAULT 0,
       browser_launch_json TEXT NOT NULL,
+      environment_json TEXT NOT NULL DEFAULT '{"variables":[]}',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -252,11 +253,23 @@ function migrateBrowserProfileSchema(database: DatabaseSync) {
       description TEXT NOT NULL DEFAULT '',
       is_default INTEGER NOT NULL DEFAULT 0,
       browser_launch_json TEXT NOT NULL,
+      environment_json TEXT NOT NULL DEFAULT '{"variables":[]}',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
     );
   `);
+
+  const columns = new Set(
+    database
+      .prepare("PRAGMA table_info(browser_profiles)")
+      .all()
+      .map((row) => (row as { name: string }).name),
+  );
+
+  if (!columns.has("environment_json")) {
+    database.exec("ALTER TABLE browser_profiles ADD COLUMN environment_json TEXT NOT NULL DEFAULT '{\"variables\":[]}'");
+  }
 
   const tables = new Set(
     database

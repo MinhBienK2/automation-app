@@ -32,6 +32,9 @@ For exact shapes, read the TypeScript source. This doc covers cross-boundary rul
 - `execute_js_enabled`: defaults true. When false, runner rejects Run JavaScript.
 - `live_run_enabled` defaults true, `live_run_follow_current` defaults false.
 - Package export sanitizes: proxy password, URL credentials, font dirs.
+- **Browser Profile Environment Variables**: Environment variables can be defined inside Browser Profiles (`environment_json` in `browser_profiles` table).
+- **Precedence**: Environment variables are seeded during graph compilation in the following order: Browser Profile Environment Variables (lowest priority) -> Workflow Settings Environment Variables (medium priority) -> Workflow logic nodes (e.g. `set_variable` node at runtime, highest priority).
+- **Persistence**: Profile environment variables support a `persist: boolean` flag. If enabled, the final value of the variable at the end of a run is persisted back to the Browser Profile in the database.
 
 ## Package Contracts
 

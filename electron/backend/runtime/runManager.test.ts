@@ -298,6 +298,101 @@ describe("RunManager", () => {
     );
     database.close();
   });
+
+  test("persists variables marked with persist: true back to browser profile environment after a run", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
+    tempRoots.push(tempRoot);
+    const database = initializeDatabase(createAppPaths(tempRoot));
+    const workflow = workflowSummary("workflow-1", "Run manager workflow");
+    workflow.browser_profile_id = "profile-1";
+    const graph = workflowGraph();
+    const settings = workflowSettings(workflow.id, "profile-1");
+
+    database.prepare(`
+      INSERT INTO projects (id, name, created_at, updated_at)
+      VALUES (?, ?, ?, ?)
+    `).run("project-1", "Project 1", "2026-05-24T00:00:00.000Z", "2026-05-24T00:00:00.000Z");
+
+    const initialEnv = {
+      variables: [
+        { name: "persist_me", value_type: "text", value: "old-value", persist: true },
+        { name: "dont_persist_me", value_type: "text", value: "old-value", persist: false },
+      ],
+    };
+    database.prepare(`
+      INSERT INTO browser_profiles (
+        id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      "profile-1",
+      "project-1",
+      "profile-1",
+      "description",
+      0,
+      JSON.stringify(settings.browser_launch),
+      JSON.stringify(initialEnv),
+      "2026-05-24T00:00:00.000Z",
+      "2026-05-24T00:00:00.000Z"
+    );
+
+    database
+      .prepare(
+        `INSERT INTO workflows (
+          id, name, description, tags_json, graph_json, settings_json, browser_profile_id, created_at, updated_at
+        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        workflow.id,
+        workflow.name,
+        JSON.stringify(graph),
+        JSON.stringify(settings),
+        "profile-1",
+        workflow.created_at,
+        workflow.updated_at,
+      );
+
+    let finishRun: ((state: RunState) => void) | null = null;
+    const runner = {
+      run: vi.fn(
+        () =>
+          new Promise<RunState>((resolve) => {
+            finishRun = resolve;
+          }),
+      ),
+      getRetainedSessionState: vi.fn(() => idleRunState.retained_session),
+    };
+    const manager = new RunManager({ database, runner });
+
+    const started = await manager.startWorkflowRun({
+      workflow,
+      source: "manual",
+      settings,
+      graphSnapshot: graph,
+      compiledGraph: compiledGraph(),
+    });
+
+    finishRun?.({
+      ...idleRunState,
+      status: "success",
+      mode: "run_workflow",
+      completed_step_ids: ["visit"],
+      outputs: {
+        persist_me: "new-value",
+        dont_persist_me: "new-value",
+      },
+    });
+    await flushAsyncWork();
+
+    const profileRow = database
+      .prepare("SELECT environment_json FROM browser_profiles WHERE id = ?")
+      .get("profile-1") as { environment_json: string };
+    const parsedEnv = JSON.parse(profileRow.environment_json);
+    expect(parsedEnv.variables).toEqual([
+      { name: "persist_me", value_type: "text", value: "new-value", persist: true },
+      { name: "dont_persist_me", value_type: "text", value: "old-value", persist: false },
+    ]);
+    database.close();
+  });
 });
 
 function workflowSummary(id: string, name: string): WorkflowSummary {

@@ -1109,6 +1109,74 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
+  test("compiles profile environment variables and lets workflow environment variables override them", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("click", "action", { config: clickAction("//button") }),
+      ],
+      [
+        edge("start", "out", "click", "in"),
+      ],
+    );
+    const settings = workflowSettings({
+      environment: {
+        initial_variables: [{ name: "var1", value_type: "text", value: "workflow-val" }],
+      },
+    });
+
+    const profileEnvironment = {
+      variables: [
+        { name: "var1", value_type: "text" as const, value: "profile-val", persist: true },
+        { name: "var2", value_type: "text" as const, value: "profile-only-val", persist: false },
+      ],
+    };
+
+    const plan = compileWorkflowRunPlan(graph, settings, {
+      profileEnvironment,
+    });
+
+    // Verify both prelude steps are present
+    const profilePrelude = plan.steps.find((step) => step.node_id === "__settings:profile:variables");
+    const workflowPrelude = plan.steps.find((step) => step.node_id === "__settings:inputs:variables");
+
+    expect(profilePrelude).toBeDefined();
+    expect(workflowPrelude).toBeDefined();
+
+    // Verify profile variables are seeded first (low priority)
+    expect(profilePrelude?.config).toEqual({
+      type: "set_variable",
+      config: {
+        name: null,
+        value: null,
+        value_type: null,
+        variables: [
+          { name: "var1", value_type: "text", value: "profile-val" },
+          { name: "var2", value_type: "text", value: "profile-only-val" },
+        ],
+      },
+    });
+
+    // Verify workflow variables are seeded second (high priority, will override)
+    expect(workflowPrelude?.config).toEqual({
+      type: "set_variable",
+      config: {
+        name: null,
+        value: null,
+        value_type: null,
+        variables: [
+          { name: "var1", value_type: "text", value: "workflow-val" },
+        ],
+      },
+    });
+
+    // Verify order: profile:variables should come before inputs:variables
+    const stepIds = plan.steps.map((step) => step.node_id);
+    const profileIndex = stepIds.indexOf("__settings:profile:variables");
+    const workflowIndex = stepIds.indexOf("__settings:inputs:variables");
+    expect(profileIndex).toBeLessThan(workflowIndex);
+  });
+
   test("promotes domain allowlist graph nodes into run domain policy", () => {
     const graph = graphOf(
       [

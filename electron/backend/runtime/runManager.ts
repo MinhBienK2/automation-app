@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   CompiledWorkflowGraph,
+  ProfileEnvironment,
   RunState,
   WorkflowGraph,
   WorkflowRunSnapshot,
@@ -279,6 +280,7 @@ export class RunManager {
       timeoutMs,
       reuseRetainedSession,
       retainedSessionWorkflowId,
+      browserProfileId: workflow.browser_profile_id,
     });
     return this.sessionRunSnapshots.get(runId) ?? snapshot;
   }
@@ -534,6 +536,7 @@ export class RunManager {
     timeoutMs,
     reuseRetainedSession,
     retainedSessionWorkflowId,
+    browserProfileId,
   }: {
     runId: string;
     workflowId: string;
@@ -547,6 +550,7 @@ export class RunManager {
     timeoutMs: number | null;
     reuseRetainedSession: boolean;
     retainedSessionWorkflowId?: string;
+    browserProfileId?: string | null;
   }) {
     const retainedSessionOwnerWorkflowId = retainedSessionWorkflowId ?? workflowId;
     try {
@@ -623,6 +627,46 @@ export class RunManager {
       if (activeEntry?.timeoutHandle) clearTimeout(activeEntry.timeoutHandle);
       this.releaseRunLocks(workflowId, profileName, runId);
       this.runEntries.delete(runId);
+
+      if (browserProfileId) {
+        try {
+          const finalSnapshot = this.sessionRunSnapshots.get(runId);
+          const finalState = finalSnapshot?.state;
+          if (finalState && finalState.outputs) {
+            const profileRow = this.options.database
+              .prepare("SELECT environment_json FROM browser_profiles WHERE id = ?")
+              .get(browserProfileId) as { environment_json?: string } | undefined;
+            if (profileRow?.environment_json) {
+              const environment = JSON.parse(profileRow.environment_json) as ProfileEnvironment;
+              let changed = false;
+              if (environment && Array.isArray(environment.variables)) {
+                for (const variable of environment.variables) {
+                  if (variable.persist && finalState.outputs[variable.name] !== undefined) {
+                    const finalVal = finalState.outputs[variable.name];
+                    const serialized = serializeVariableValue(variable.value_type, finalVal);
+                    if (variable.value !== serialized) {
+                      variable.value = serialized;
+                      changed = true;
+                    }
+                  }
+                }
+              }
+              if (changed) {
+                const timestamp = new Date().toISOString();
+                this.options.database
+                  .prepare(
+                    `UPDATE browser_profiles
+                     SET environment_json = ?, updated_at = ?
+                     WHERE id = ?`,
+                  )
+                  .run(JSON.stringify(environment), timestamp, browserProfileId);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to persist profile environment variables:", err);
+        }
+      }
     }
   }
 
@@ -802,4 +846,17 @@ function fallbackWorkflowSummary(id: string, name: string): WorkflowSummary {
 
 function commandError(message: string, field?: string): CommandError {
   return { message, field };
+}
+
+function serializeVariableValue(valueType: string, value: unknown): string {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  if (valueType === "json") {
+    return JSON.stringify(value);
+  }
+  if (valueType === "boolean") {
+    return value ? "true" : "false";
+  }
+  return String(value);
 }

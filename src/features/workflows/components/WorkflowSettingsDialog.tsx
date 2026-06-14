@@ -33,7 +33,7 @@ import {
   workflowSettingsHelp,
   workflowSettingsSections,
 } from "../lib/workflowSettings";
-import { SetVariablesConfigFields } from "./VariableConfigFields";
+import { EnvironmentVariablesEditor } from "../../projects/components/EnvironmentVariablesEditor";
 import { HelpDisclosure } from "./HelpDisclosure";
 
 type WorkflowSettingsDialogProps = {
@@ -733,14 +733,33 @@ function EnvironmentSettingsSection({
   value: WorkflowSettingsEnvironment;
   onChange: (value: WorkflowSettingsEnvironment) => void;
 }) {
+  const vars = (value.initial_variables ?? []).map((v) => ({
+    name: v.name,
+    value_type: v.value_type,
+    value: v.value,
+    persist: false,
+  }));
+
+  const handleVariablesChange = (nextVars: Array<{ name: string; value_type: any; value: string }>) => {
+    onChange({
+      ...value,
+      initial_variables: nextVars.map((v) => ({
+        name: v.name,
+        value_type: v.value_type,
+        value: v.value,
+      })),
+    });
+  };
+
   return (
     <SettingsFieldGroup
       title="Initial variables"
       description="Typed values available before the graph starts running."
     >
-      <SetVariablesConfigFields
-        config={{ variables: value.initial_variables }}
-        onChange={(next) => onChange({ ...value, initial_variables: next.variables ?? [] })}
+      <EnvironmentVariablesEditor
+        variables={vars}
+        onChange={handleVariablesChange}
+        showPersistOptions={false}
       />
     </SettingsFieldGroup>
   );

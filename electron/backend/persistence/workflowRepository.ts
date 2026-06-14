@@ -42,6 +42,7 @@ type BrowserProfileRow = {
   description: string;
   is_default: number;
   browser_launch_json: string;
+  environment_json: string;
   created_at: string;
   updated_at: string;
 };
@@ -145,9 +146,10 @@ export class WorkflowRepository {
           description,
           is_default,
           browser_launch_json,
+          environment_json,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -156,6 +158,7 @@ export class WorkflowRepository {
         input.description ?? "",
         input.is_default ? 1 : 0,
         JSON.stringify(input.browser_launch),
+        JSON.stringify(input.environment ?? { variables: [] }),
         timestamp,
         timestamp,
       );
@@ -166,6 +169,7 @@ export class WorkflowRepository {
       description: input.description ?? "",
       is_default: Boolean(input.is_default),
       browser_launch: input.browser_launch,
+      environment: input.environment ?? { variables: [] },
       created_at: timestamp,
       updated_at: timestamp,
     };
@@ -174,7 +178,7 @@ export class WorkflowRepository {
   listBrowserProfiles(projectId: string): BrowserProfile[] {
     return this.database
       .prepare(
-        `SELECT id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at
+        `SELECT id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
          FROM browser_profiles
          WHERE project_id = ?
          ORDER BY is_default DESC, updated_at DESC, name ASC`,
@@ -186,7 +190,7 @@ export class WorkflowRepository {
   getBrowserProfile(profileId: string): BrowserProfile | null {
     const row = this.database
       .prepare(
-        `SELECT id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at
+        `SELECT id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
          FROM browser_profiles
          WHERE id = ?`,
       )
@@ -197,7 +201,7 @@ export class WorkflowRepository {
   getDefaultBrowserProfile(projectId: string): BrowserProfile | null {
     const row = this.database
       .prepare(
-        `SELECT id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at
+        `SELECT id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
          FROM browser_profiles
          WHERE project_id = ? AND is_default = 1
          ORDER BY updated_at DESC
@@ -221,6 +225,7 @@ export class WorkflowRepository {
       description: input.description ?? current.description,
       is_default: input.is_default ?? current.is_default,
       browser_launch: input.browser_launch ?? current.browser_launch,
+      environment: input.environment !== undefined ? (input.environment ?? { variables: [] }) : current.environment,
       updated_at: timestamp,
     };
     if (next.is_default) {
@@ -232,7 +237,7 @@ export class WorkflowRepository {
     this.database
       .prepare(
         `UPDATE browser_profiles
-         SET name = ?, description = ?, is_default = ?, browser_launch_json = ?, updated_at = ?
+         SET name = ?, description = ?, is_default = ?, browser_launch_json = ?, environment_json = ?, updated_at = ?
          WHERE id = ?`,
       )
       .run(
@@ -240,6 +245,7 @@ export class WorkflowRepository {
         next.description,
         next.is_default ? 1 : 0,
         JSON.stringify(next.browser_launch),
+        JSON.stringify(next.environment ?? { variables: [] }),
         timestamp,
         profileId,
       );
@@ -587,6 +593,7 @@ function rowToBrowserProfile(row: BrowserProfileRow): BrowserProfile {
     description: row.description,
     is_default: Boolean(row.is_default),
     browser_launch: parseJson<BrowserProfile["browser_launch"]>(row.browser_launch_json),
+    environment: row.environment_json ? parseJson<BrowserProfile["environment"]>(row.environment_json) : { variables: [] },
     created_at: row.created_at,
     updated_at: row.updated_at,
   };

@@ -9,6 +9,7 @@ import type {
   RouterGraphCase,
   RouterGraphConfig,
   VariableAssignment,
+  ProfileEnvironment,
   WorkflowCondition,
   WorkflowGraph,
   WorkflowRunFromSelectedMode,
@@ -42,6 +43,7 @@ export type CompileWorkflowGraphOptions = Omit<WorkflowGraphValidationOptions, "
   labelPrefix?: string[];
   nodeIdPrefix?: string;
   resolveSubflow?: (subflowId: string) => CompileSubflowReference | null;
+  profileEnvironment?: ProfileEnvironment;
 };
 
 const nestedStepKeys = [
@@ -91,7 +93,7 @@ export function compileWorkflowRunPlan(
   const withWaits = insertWaitBetweenGraphNodes(compiled);
   const domainPolicy = domainPolicyFromSteps(withWaits);
   return {
-    steps: [...settingsPreludeSteps(settings), ...withWaits],
+    steps: [...settingsPreludeSteps(settings, options.profileEnvironment), ...withWaits],
     domain_policy: domainPolicy,
   };
 }
@@ -663,8 +665,26 @@ function callSubflowInputMapping(config: unknown): Array<{ input_name: string; v
     .filter((item) => item.input_name.trim());
 }
 
-function settingsPreludeSteps(settings: WorkflowSettings): CompiledGraphStep[] {
+function settingsPreludeSteps(
+  settings: WorkflowSettings,
+  profileEnvironment?: ProfileEnvironment,
+): CompiledGraphStep[] {
   const steps: CompiledGraphStep[] = [];
+  if (profileEnvironment && profileEnvironment.variables.length > 0) {
+    steps.push(settingsStep("profile:variables", "Seed profile inputs and variables", {
+      type: "set_variable",
+      config: {
+        name: null,
+        value: null,
+        value_type: null,
+        variables: profileEnvironment.variables.map((v) => ({
+          name: v.name,
+          value_type: v.value_type,
+          value: v.value,
+        })),
+      },
+    }));
+  }
   const variables: VariableAssignment[] = settings.environment.initial_variables;
   if (variables.length > 0) {
     steps.push(settingsStep("inputs:variables", "Seed settings inputs and variables", {
