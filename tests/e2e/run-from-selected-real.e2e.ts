@@ -80,7 +80,7 @@ test.describe("run from selected real session", () => {
       return (await api.listRunStates()).length;
     });
     await runFromSelected.click();
-    await appWindow.getByRole("option", { name: /Run from selected node onward/ }).click();
+    await appWindow.getByRole("menuitem", { name: "Run from selected node onward" }).click();
     await expect
       .poll(
         () =>

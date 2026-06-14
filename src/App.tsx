@@ -826,7 +826,6 @@ function App() {
               }
               await runWorkspace.runGraphFromSelectedNode(mode);
             }}
-            runFromSelectedMode={workflowSettings?.run_policy?.run_from_selected_mode ?? "from_selected"}
             onSelectedGraphNodeChange={graphState.setSelectedGraphNodeId}
             showRunGraphFromSelected={runFromSelectedAvailability.visible ?? true}
             canRunGraphFromSelected={runFromSelectedAvailability.enabled}

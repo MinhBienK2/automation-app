@@ -423,7 +423,7 @@ describe("Workflow detail integration", () => {
     await waitFor(() => expect(runFromSelected).toBeEnabled());
     await userEvent.click(runFromSelected);
 
-    const option = await screen.findByRole("option", { name: /Run from selected node onward/ });
+    const option = await screen.findByRole("menuitem", { name: "Run from selected node onward" });
     await userEvent.click(option);
 
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
@@ -512,7 +512,7 @@ describe("Workflow detail integration", () => {
     await waitFor(() => expect(runFromSelected).toBeEnabled());
     await userEvent.click(runFromSelected);
 
-    const option = await screen.findByRole("option", { name: /Run from selected node onward/ });
+    const option = await screen.findByRole("menuitem", { name: "Run from selected node onward" });
     await userEvent.click(option);
 
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
@@ -662,7 +662,7 @@ describe("Workflow detail integration", () => {
     await waitFor(() => expect(runFromSelected).toBeEnabled());
     await userEvent.click(runFromSelected);
 
-    const option = await screen.findByRole("option", { name: /Run from selected node onward/ });
+    const option = await screen.findByRole("menuitem", { name: "Run from selected node onward" });
     await userEvent.click(option);
 
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {

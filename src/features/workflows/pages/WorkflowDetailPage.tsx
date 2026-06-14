@@ -47,7 +47,6 @@ type WorkflowDetailPageProps = {
   onGraphChange: (graph: WorkflowGraph) => void;
   onRunGraph: () => void;
   onRunGraphFromSelected: (mode: "selected_only" | "from_selected") => void;
-  runFromSelectedMode?: "selected_only" | "from_selected";
   onSelectedGraphNodeChange: (nodeId: string | null) => void;
   showRunGraphFromSelected: boolean;
   canRunGraphFromSelected: boolean;
@@ -81,7 +80,6 @@ export function WorkflowDetailPage({
   onGraphChange,
   onRunGraph,
   onRunGraphFromSelected,
-  runFromSelectedMode = "from_selected",
   onSelectedGraphNodeChange,
   showRunGraphFromSelected,
   canRunGraphFromSelected,
@@ -258,7 +256,7 @@ export function WorkflowDetailPage({
                   onClick={() => setIsRunFromSelectedOpen((prev) => !prev)}
                   disabled={!canRunGraphFromSelected}
                   title={runGraphFromSelectedReason}
-                  aria-haspopup="listbox"
+                  aria-haspopup="menu"
                   aria-expanded={isRunFromSelectedOpen}
                 >
                   Run from selected
@@ -266,7 +264,7 @@ export function WorkflowDetailPage({
                 {isRunFromSelectedOpen && (
                   <div
                     className="run-from-selected-menu"
-                    role="listbox"
+                    role="menu"
                     aria-label="Run from selected options"
                     style={{
                       position: "absolute",
@@ -287,8 +285,7 @@ export function WorkflowDetailPage({
                   >
                     <button
                       className="run-from-selected-item"
-                      role="option"
-                      aria-selected={runFromSelectedMode === "selected_only"}
+                      role="menuitem"
                       style={{
                         width: "100%",
                         textAlign: "left",
@@ -309,14 +306,10 @@ export function WorkflowDetailPage({
                       }}
                     >
                       <span>Only rerun selected node</span>
-                      {runFromSelectedMode === "selected_only" && (
-                        <span style={{ color: "var(--app-active-control, #32d3e6)" }}>✓</span>
-                      )}
                     </button>
                     <button
                       className="run-from-selected-item"
-                      role="option"
-                      aria-selected={runFromSelectedMode === "from_selected"}
+                      role="menuitem"
                       style={{
                         width: "100%",
                         textAlign: "left",
@@ -337,9 +330,6 @@ export function WorkflowDetailPage({
                       }}
                     >
                       <span>Run from selected node onward</span>
-                      {runFromSelectedMode === "from_selected" && (
-                        <span style={{ color: "var(--app-active-control, #32d3e6)" }}>✓</span>
-                      )}
                     </button>
                   </div>
                 )}
