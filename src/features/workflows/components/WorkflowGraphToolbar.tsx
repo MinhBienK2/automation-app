@@ -1,15 +1,19 @@
 import {
   Blocks,
+  GitFork,
   Hand,
   Keyboard,
   Maximize,
   MousePointer2,
+  Plus,
   Redo2,
+  StopCircle,
   Undo2,
+  Variable,
   Workflow,
+  Zap,
 } from "lucide-react";
 import type { GraphNodeType } from "../../../types/workflow";
-import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
 import {
   endNodeGroups,
@@ -122,60 +126,81 @@ export function WorkflowGraphToolbar({
           <Workflow aria-hidden="true" />
         </IconButton>
       </div>
-      <Button type="button" variant="secondary" onClick={onAddNewNode}>
-        New node
-      </Button>
-      <Button type="button" variant="secondary" onClick={onAddAction}>
-        Add Action
-      </Button>
-      {graphKind === "workflow" ? (
-        <Button type="button" variant="secondary" onClick={onAddSubflow}>
-          <Blocks aria-hidden="true" />
-          Add Subflow
-        </Button>
-      ) : null}
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() =>
-          onOpenNodePalette(
-            "Choose a logic node",
-            "Add Logic Node",
-            "Search logic nodes",
-            visibleLogicNodeGroups,
-          )
-        }
-      >
-        Add Logic
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() =>
-          onOpenNodePalette(
-            "Choose a variable node",
-            "Add Variable Node",
-            "Search variable nodes",
-            variableNodeGroups,
-          )
-        }
-      >
-        Add Variable
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() =>
-          onOpenNodePalette(
-            "Choose an end node",
-            "Add End Node",
-            "Search end nodes",
-            endNodeGroups,
-          )
-        }
-      >
-        Add End
-      </Button>
+
+      <div className="graph-node-tools" aria-label="Graph node creation tools">
+        <IconButton
+          label="New node"
+          type="button"
+          variant="ghost"
+          onClick={onAddNewNode}
+        >
+          <Plus aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          label="Add Action"
+          type="button"
+          variant="ghost"
+          onClick={onAddAction}
+        >
+          <Zap aria-hidden="true" />
+        </IconButton>
+        {graphKind === "workflow" ? (
+          <IconButton
+            label="Add Subflow"
+            type="button"
+            variant="ghost"
+            onClick={onAddSubflow}
+          >
+            <Blocks aria-hidden="true" />
+          </IconButton>
+        ) : null}
+        <IconButton
+          label="Add Logic"
+          type="button"
+          variant="ghost"
+          onClick={() =>
+            onOpenNodePalette(
+              "Choose a logic node",
+              "Add Logic Node",
+              "Search logic nodes",
+              visibleLogicNodeGroups,
+            )
+          }
+        >
+          <GitFork aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          label="Add Variable"
+          type="button"
+          variant="ghost"
+          onClick={() =>
+            onOpenNodePalette(
+              "Choose a variable node",
+              "Add Variable Node",
+              "Search variable nodes",
+              variableNodeGroups,
+            )
+          }
+        >
+          <Variable aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          label="Add End"
+          type="button"
+          variant="ghost"
+          onClick={() =>
+            onOpenNodePalette(
+              "Choose an end node",
+              "Add End Node",
+              "Search end nodes",
+              endNodeGroups,
+            )
+          }
+        >
+          <StopCircle aria-hidden="true" />
+        </IconButton>
+      </div>
+
       <IconButton
         label="Shortcuts"
         type="button"

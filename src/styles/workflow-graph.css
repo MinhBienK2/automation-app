@@ -33,7 +33,17 @@
   display: flex;
   gap: 4px;
   align-items: center;
-  padding-right: 4px;
+  padding-right: 12px;
+  margin-right: 4px;
+  border-right: 1px solid #233240;
+}
+
+.graph-node-tools {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding-right: 12px;
+  margin-right: 4px;
   border-right: 1px solid #233240;
 }
 
