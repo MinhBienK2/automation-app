@@ -163,7 +163,7 @@ export function OutputActionFields({
     case "update_list_variable": {
       const operation = config.config.operation ?? "push";
       const value_type = config.config.value_type ?? "text";
-      const showValue = ["push", "unshift", "push_unique", "remove_by_value"].includes(operation);
+      const showValue = ["push", "unshift", "push_unique", "remove_by_value", "merge", "merge_unique"].includes(operation);
       const showValueType = showValue;
       const showIndex = operation === "remove_by_index";
       return (
@@ -190,6 +190,8 @@ export function OutputActionFields({
               <option value="shift">Shift (Remove from start)</option>
               <option value="remove_by_index">Remove by index</option>
               <option value="remove_by_value">Remove by value</option>
+              <option value="merge">Merge</option>
+              <option value="merge_unique">Merge Unique</option>
             </Select>
           </Label>
           {showValueType && (

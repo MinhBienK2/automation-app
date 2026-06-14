@@ -217,6 +217,48 @@ describe("runnerActionExecutors", () => {
     } as never);
     expect((runtime.outputs.obj as any).new_key).toBeUndefined();
   });
+
+  test("updates list variable via merge and merge_unique operations", async () => {
+    const runtime = minimalRuntime({
+      outputs: {
+        listA: [1, 2],
+        listB: [2, 3],
+      },
+    });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    // 1. Merge A and B (with duplicates)
+    await executeRegisteredAction(executors, {
+      type: "update_list_variable",
+      config: { name: "listA", operation: "merge", value: "{{listB}}" },
+    } as never);
+    expect(runtime.outputs.listA).toEqual([1, 2, 2, 3]);
+
+    // Reset listA
+    runtime.outputs.listA = [1, 2];
+
+    // 2. Merge A and B uniquely
+    await executeRegisteredAction(executors, {
+      type: "update_list_variable",
+      config: { name: "listA", operation: "merge_unique", value: "{{listB}}" },
+    } as never);
+    expect(runtime.outputs.listA).toEqual([1, 2, 3]);
+
+    // 3. Merge with inline JSON array
+    await executeRegisteredAction(executors, {
+      type: "update_list_variable",
+      config: { name: "listA", operation: "merge", value: "[4, 5]", value_type: "json" },
+    } as never);
+    expect(runtime.outputs.listA).toEqual([1, 2, 3, 4, 5]);
+
+    // 4. Merge unique with inline JSON array and objects
+    runtime.outputs.listA = [{ id: 1 }, { id: 2 }];
+    await executeRegisteredAction(executors, {
+      type: "update_list_variable",
+      config: { name: "listA", operation: "merge_unique", value: '[{"id": 2}, {"id": 3}]', value_type: "json" },
+    } as never);
+    expect(runtime.outputs.listA).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
+  });
 });
 
 

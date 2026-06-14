@@ -396,16 +396,16 @@ const actionValidators = createActionValidatorMap({
   },
   update_list_variable: (config) => {
     const operation = config.config.operation;
-    const needsValue = ["push", "unshift", "push_unique", "remove_by_value"].includes(operation);
-    const needsValueType = ["push", "unshift", "push_unique"].includes(operation);
+    const needsValue = ["push", "unshift", "push_unique", "remove_by_value", "merge", "merge_unique"].includes(operation);
+    const needsValueType = ["push", "unshift", "push_unique", "merge", "merge_unique"].includes(operation);
     const needsIndex = operation === "remove_by_index";
     return firstValidation(
       requiredActionString(config.config.name, "name", "Variable name is required"),
       validateRequiredEnumValue(
         operation,
-        ["push", "unshift", "push_unique", "pop", "shift", "remove_by_index", "remove_by_value"],
+        ["push", "unshift", "push_unique", "pop", "shift", "remove_by_index", "remove_by_value", "merge", "merge_unique"],
         "operation",
-        "Operation must be push, unshift, push_unique, pop, shift, remove_by_index, or remove_by_value",
+        "Operation must be push, unshift, push_unique, pop, shift, remove_by_index, remove_by_value, merge, or merge_unique",
       ),
       needsValue
         ? requiredActionString(config.config.value, "value", "Value is required")

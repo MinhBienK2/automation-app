@@ -827,12 +827,14 @@ export function NodeConfigFields({
         | "pop"
         | "shift"
         | "remove_by_index"
-        | "remove_by_value";
+        | "remove_by_value"
+        | "merge"
+        | "merge_unique";
       const value = stringConfig(node.config, "value", "");
       const value_type = stringConfig(node.config, "value_type", "text");
       const index = stringConfig(node.config, "index", "");
 
-      const showValue = ["push", "unshift", "push_unique", "remove_by_value"].includes(operation);
+      const showValue = ["push", "unshift", "push_unique", "remove_by_value", "merge", "merge_unique"].includes(operation);
       const showValueType = showValue;
       const showIndex = operation === "remove_by_index";
 
@@ -864,6 +866,8 @@ export function NodeConfigFields({
                 <option value="shift">Shift (Remove from start)</option>
                 <option value="remove_by_index">Remove by index</option>
                 <option value="remove_by_value">Remove by value</option>
+                <option value="merge">Merge</option>
+                <option value="merge_unique">Merge Unique</option>
               </Select>
             </Label>
             {showValueType && (

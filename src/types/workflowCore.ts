@@ -742,7 +742,7 @@ export type ActionConfig =
       type: "update_list_variable";
       config: {
         name: string;
-        operation: "push" | "unshift" | "push_unique" | "pop" | "shift" | "remove_by_index" | "remove_by_value";
+        operation: "push" | "unshift" | "push_unique" | "pop" | "shift" | "remove_by_index" | "remove_by_value" | "merge" | "merge_unique";
         value?: string | null;
         value_type?: VariableValueType | null;
         index?: number | string | null;

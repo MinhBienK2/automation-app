@@ -599,6 +599,42 @@ export function createRunnerActionExecutors(
             array.push(parsedValue);
           }
         }
+      } else if (["merge", "merge_unique"].includes(operation)) {
+        let valToMerge: unknown;
+        const varMatch = value?.trim().match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+        if (varMatch) {
+          valToMerge = runtime.outputs[varMatch[1]];
+        } else if (value !== null && value !== undefined) {
+          valToMerge = parseVariableValue(
+            value_type ?? "json",
+            value,
+            runtime.outputs,
+          );
+        }
+
+        if (valToMerge !== undefined) {
+          const itemsToMerge = Array.isArray(valToMerge) ? valToMerge : [valToMerge];
+          if (operation === "merge") {
+            array.push(...itemsToMerge);
+          } else if (operation === "merge_unique") {
+            for (const item of itemsToMerge) {
+              const exists = array.some((existingItem) => {
+                if (
+                  typeof existingItem === "object" &&
+                  existingItem !== null &&
+                  typeof item === "object" &&
+                  item !== null
+                ) {
+                  return JSON.stringify(existingItem) === JSON.stringify(item);
+                }
+                return existingItem === item;
+              });
+              if (!exists) {
+                array.push(item);
+              }
+            }
+          }
+        }
       } else if (operation === "pop") {
         array.pop();
       } else if (operation === "shift") {

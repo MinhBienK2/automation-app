@@ -51,7 +51,7 @@ Variable config rules:
 - `update_number_variable` uses `{ name, operation, value }` to perform mathematical calculations.
 - `update_text_variable` uses `{ name, operation, value, search_pattern }` to transform strings (append, prepend, replace, uppercase, lowercase, trim).
 - `update_flag_variable` uses `{ name, operation }` to toggle or set booleans.
-- `update_list_variable` uses `{ name, operation, value, value_type, index }` to push, pop, shift, unshift, or remove from arrays.
+- `update_list_variable` uses `{ name, operation, value, value_type, index }` to push, pop, shift, unshift, remove, merge, or merge_unique from/into arrays.
 - `update_object_variable` uses `{ name, operation, value, property_key, property_value, property_value_type }` to merge or edit object key-values.
 - Dot-path names are valid variable paths.
 - Object values flatten into dot-path outputs; arrays stay whole at their path.

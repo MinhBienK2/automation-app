@@ -361,6 +361,20 @@ describe("backend action validation registry", () => {
     expect(
       validateActionConfig({
         type: "update_list_variable",
+        config: { name: "my_list", operation: "merge", value: "", value_type: "json" },
+      } as never),
+    ).toEqual({ field: "value", message: "Value is required" });
+
+    expect(
+      validateActionConfig({
+        type: "update_list_variable",
+        config: { name: "my_list", operation: "merge_unique", value: "[]", value_type: "invalid" },
+      } as never),
+    ).toEqual({ field: "value_type", message: "Value type must be text, json, number, or boolean" });
+
+    expect(
+      validateActionConfig({
+        type: "update_list_variable",
         config: { name: "my_list", operation: "remove_by_index", index: null },
       } as never),
     ).toEqual({ field: "index", message: "Index is required" });

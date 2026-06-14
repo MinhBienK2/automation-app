@@ -93,7 +93,7 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   update_number_variable: "Update a number variable (increment, add, multiply, etc.).",
   update_text_variable: "Update a text variable (append, replace, trim, casing).",
   update_flag_variable: "Update a boolean flag variable (toggle, set true/false).",
-  update_list_variable: "Update a list variable (push, pop, shift, unshift, remove, unique).",
+  update_list_variable: "Update a list variable (push, pop, shift, unshift, remove, unique, merge).",
   update_object_variable: "Update a JSON object variable (merge, set, delete key).",
   transform_variable: "Create an output from an existing value.",
   assert_output: "Require an output value to match an expectation.",

@@ -1674,6 +1674,10 @@ describe("Workflow graph editor integration", () => {
       (await screen.findByRole("dialog", { name: "Choose an action type" }))
         .querySelector('[data-value="input_text"]') as HTMLElement,
     );
+
+    fireEvent.pointerDown(within(editor).getByLabelText("Set Variables Out port"));
+    fireEvent.pointerUp(within(editor).getByLabelText("Fill Field In port"));
+
     await userEvent.click(within(editor).getByRole("button", { name: "Insert variable for Text" }));
     await userEvent.click(
       screen.getByRole("option", { name: "session.token Set Variables" }),

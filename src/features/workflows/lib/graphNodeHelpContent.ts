@@ -414,14 +414,14 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
     ], "en"),
   },
   update_list_variable: {
-    vi: nodeWithFields("Cập nhật biến danh sách", "Thao tác với mảng (thêm, xóa phần tử, loại bỏ trùng lặp).", [
+    vi: nodeWithFields("Cập nhật biến danh sách", "Thao tác với mảng (thêm, xóa phần tử, loại bỏ trùng lặp, gộp mảng).", [
       field("Variable name", "Tên biến danh sách cần cập nhật.", []),
-      field("Operation", "Thao tác mảng (push, unshift, push_unique, pop, shift, remove_by_index, remove_by_value).", []),
+      field("Operation", "Thao tác mảng (push, unshift, push_unique, pop, shift, remove_by_index, remove_by_value, merge, merge_unique).", []),
       field("Value type", "Kiểu dữ liệu của phần tử mới.", []),
       field("Value", "Giá trị phần tử cần thêm hoặc xóa.", []),
       field("Index", "Chỉ số phần tử cần xóa (dành cho remove_by_index).", []),
     ]),
-    en: nodeWithFields("Update List Variable", "Perform array operations (push, unshift, push_unique, pop, shift, remove_by_index, remove_by_value) on a list variable.", [
+    en: nodeWithFields("Update List Variable", "Perform array operations (push, unshift, push_unique, pop, shift, remove_by_index, remove_by_value, merge, merge_unique) on a list variable.", [
       field("Variable name", "Name of the list variable to update.", []),
       field("Operation", "The array operation to perform.", []),
       field("Value type", "The data type of the new element.", []),
