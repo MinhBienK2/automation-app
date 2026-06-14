@@ -746,6 +746,8 @@ export function createRunnerActionExecutors(
     },
     repeat_times: async (action) => {
       for (let index = 0; index < action.config.times; index += 1) {
+        runtime.outputs["system.loop.index"] = index;
+        runtime.outputs["system.loop.number"] = index + 1;
         const control = await deps.executeLoopBody(runtime, action.config.steps);
         if (control === "break") break;
       }
@@ -755,9 +757,13 @@ export function createRunnerActionExecutors(
         ? (runtime.outputs[action.config.array_variable] as unknown[])
         : action.config.items;
       if (!Array.isArray(items)) throw new Error("repeat_for_each source is not an array");
+      let index = 0;
       for (const item of items) {
         writeVariableValue(runtime.outputs, action.config.item_name, item);
+        runtime.outputs["system.loop.index"] = index;
+        runtime.outputs["system.loop.number"] = index + 1;
         const control = await deps.executeLoopBody(runtime, action.config.steps);
+        index += 1;
         if (control === "break") break;
       }
     },

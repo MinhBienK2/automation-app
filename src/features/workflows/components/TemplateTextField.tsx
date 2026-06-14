@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect, useId, forwardRef, useImperativeHandle } from "react";
+import { useMemo, useRef, useState, useEffect, useId, forwardRef, useImperativeHandle, createContext, useContext } from "react";
 import { createPortal } from "react-dom";
 import { Braces, Calculator } from "lucide-react";
 import { Button } from "../../../components/ui/button";
@@ -11,15 +11,13 @@ type VariableOption = {
   source: string;
 };
 
+export const VariableOptionsContext = createContext<VariableOption[]>([]);
+
 const defaultVariableOptions: VariableOption[] = [
-  { name: "user.name", source: "Set JSON Variables" },
-  { name: "roles", source: "Set JSON Variables" },
-  { name: "loop.index", source: "Loop current item" },
-  { name: "loop.number", source: "Loop current item" },
+  { name: "system.loop.index", source: "Loop current item" },
+  { name: "system.loop.number", source: "Loop current item" },
   { name: "last_error", source: "System outputs" },
 ];
-
-let rememberedVariableOptions: VariableOption[] = [];
 
 export interface TemplateTextFieldRef {
   insertMath: () => void;
@@ -64,7 +62,8 @@ export const TemplateTextField = forwardRef<TemplateTextFieldRef, TemplateTextFi
   }));
 
   const normalizedQuery = query.trim().toLowerCase();
-  const allOptions = useMemo(() => mergeVariableOptions(variableOptions), [variableOptions]);
+  const contextOptions = useContext(VariableOptionsContext);
+  const allOptions = useMemo(() => mergeVariableOptions(variableOptions, contextOptions), [variableOptions, contextOptions]);
   const options = useMemo(
     () =>
       normalizedQuery
@@ -339,7 +338,8 @@ export function TemplateTextareaField({
   const textareaId = useId();
 
   const normalizedQuery = query.trim().toLowerCase();
-  const allOptions = useMemo(() => mergeVariableOptions(variableOptions), [variableOptions]);
+  const contextOptions = useContext(VariableOptionsContext);
+  const allOptions = useMemo(() => mergeVariableOptions(variableOptions, contextOptions), [variableOptions, contextOptions]);
   const options = useMemo(
     () =>
       normalizedQuery
@@ -557,9 +557,9 @@ export function TemplateTextareaField({
     </div>
   );}
 
-function mergeVariableOptions(options: VariableOption[]) {
+function mergeVariableOptions(options: VariableOption[], contextOptions: VariableOption[] = []) {
   const seen = new Set<string>();
-  return [...options, ...rememberedVariableOptions, ...defaultVariableOptions].filter((option) => {
+  return [...options, ...contextOptions, ...defaultVariableOptions].filter((option) => {
     const key = `${option.source}:${option.name}`;
     if (seen.has(key)) return false;
     seen.add(key);
@@ -567,14 +567,12 @@ function mergeVariableOptions(options: VariableOption[]) {
   });
 }
 
-export function rememberVariableOptions(options: VariableOption[]) {
-  rememberedVariableOptions = mergeVariableOptions(options).filter(
-    (option) => option.source !== "Loop current item" && option.source !== "System outputs",
-  );
+export function rememberVariableOptions(_options: VariableOption[]) {
+  // Deprecated: No longer needed as we use VariableOptionsContext to retrieve active variables reactively
 }
 
 export function getAvailableVariableOptions(extraOptions: VariableOption[] = []): VariableOption[] {
-  return mergeVariableOptions(extraOptions);
+  return mergeVariableOptions(extraOptions, []);
 }
 
 export type { VariableOption };

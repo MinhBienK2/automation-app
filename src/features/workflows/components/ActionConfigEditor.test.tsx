@@ -72,17 +72,20 @@ describe("ActionConfigEditor", () => {
     render(<Harness />);
 
     await userEvent.click(screen.getByRole("button", { name: "Insert variable for Text" }));
-    await userEvent.click(screen.getByRole("option", { name: "roles Set JSON Variables" }));
+    expect(screen.queryByRole("option", { name: /roles/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /user.name/i })).not.toBeInTheDocument();
+    
+    await userEvent.click(screen.getByRole("option", { name: "last_error System outputs" }));
 
-    expect(screen.getByLabelText("Text")).toHaveValue("{{roles}}");
-    const tokens = screen.getAllByText("{{roles}}");
+    expect(screen.getByLabelText("Text")).toHaveValue("{{last_error}}");
+    const tokens = screen.getAllByText("{{last_error}}");
     const spanToken = tokens.find((el) => el.tagName === "SPAN");
     expect(spanToken).toHaveClass("template-token-highlight");
     expect(onChange).toHaveBeenLastCalledWith({
       type: "input_text",
       config: {
         xpath: "//*[@name='role']",
-        text: "{{roles}}",
+        text: "{{last_error}}",
         clear_before_input: true,
       },
     });

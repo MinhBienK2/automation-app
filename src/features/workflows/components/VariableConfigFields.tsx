@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import type { VariableAssignment, VariableValueType } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { X, Calculator, Braces } from "lucide-react";
-import { rememberVariableOptions, TemplateTextField, type TemplateTextFieldRef } from "./TemplateTextField";
+import { TemplateTextField, type TemplateTextFieldRef } from "./TemplateTextField";
 
 type SetVariableConfig = {
   name?: string | null;
@@ -26,15 +26,6 @@ export function SetVariablesConfigFields({
   const rows = variableRowsFromConfig(config);
   const duplicateNames = duplicateVariableNames(rows);
   const itemRefs = useRef<(TemplateTextFieldRef | null)[]>([]);
-
-  useEffect(() => {
-    rememberVariableOptions(
-      rows
-        .map((row) => row.name.trim())
-        .filter(Boolean)
-        .map((name) => ({ name, source: "Set Variables" })),
-    );
-  }, [rows]);
 
   function updateRow(index: number, patch: Partial<VariableAssignment>) {
     onChange({

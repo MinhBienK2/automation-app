@@ -17,7 +17,7 @@ import { callSubflowIdFromNode, graphNodeLabel } from "../lib/workflowGraph";
 import { objectConfig } from "../lib/configUtils";
 import { NodeConfigFields } from "./WorkflowGraphInspectorFields";
 import type { ActionConfig } from "../../../types/workflow";
-import type { VariableOption } from "./TemplateTextField";
+import { VariableOptionsContext, type VariableOption } from "./TemplateTextField";
 
 type SelectionSummary = {
   nodeCount: number;
@@ -82,7 +82,8 @@ export function WorkflowGraphInspector({
   const selectedSubflowName = selectedSubflow?.name ?? selectedNode?.label ?? "selected subflow";
 
   return (
-    <div className="graph-inspector" aria-label="Graph inspector">
+    <VariableOptionsContext.Provider value={variableOptions}>
+      <div className="graph-inspector" aria-label="Graph inspector">
       <div className="graph-inspector-shell-header">
         <p className="eyebrow">Inspector</p>
         <IconButton
@@ -251,7 +252,8 @@ export function WorkflowGraphInspector({
         <p className="muted">Select a graph node.</p>
       ) : null}
 
-    </div>
+      </div>
+    </VariableOptionsContext.Provider>
   );
 }
 

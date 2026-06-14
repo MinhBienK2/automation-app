@@ -1932,6 +1932,47 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
+  test("populates system.loop.index and system.loop.number during loop execution", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("loop", "Loop 2 times", {
+            type: "repeat_times",
+            config: {
+              times: 2,
+              steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "last_idx", value_type: "text", value: "{{system.loop.index}}" },
+                      { name: "last_num", value_type: "text", value: "{{system.loop.number}}" },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      "system.loop.index": 1,
+      "system.loop.number": 2,
+      last_idx: "1",
+      last_num: "2",
+    });
+  });
+
   test("keeps break and continue scoped to the current loop", async () => {
     const progress: Array<Partial<RunState>> = [];
     const runner = new BrowserWorkflowRunner({

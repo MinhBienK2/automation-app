@@ -958,6 +958,8 @@ export class BrowserWorkflowRunner {
     while (await predicate()) {
       if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
       if (attempts >= maxAttempts) return "max_attempts";
+      runtime.outputs["system.loop.index"] = attempts;
+      runtime.outputs["system.loop.number"] = attempts + 1;
       attempts += 1;
       const control = await this.executeLoopBody(runtime, steps);
       if (control === "break") return "break";

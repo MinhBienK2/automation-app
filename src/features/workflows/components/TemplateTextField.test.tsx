@@ -71,12 +71,19 @@ describe("TemplateTextField", () => {
     const trigger = screen.getByRole("button", { name: /Insert variable for My Textarea/i });
     await user.click(trigger);
 
-    // Click an option in the portal popover
-    const option = screen.getByRole("option", { name: /user.name/i });
+    // user.name and roles should NOT be present in options anymore
+    expect(screen.queryByRole("option", { name: /user.name/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /roles/i })).not.toBeInTheDocument();
+
+    // system.loop.index should be present
+    expect(screen.getByRole("option", { name: /system.loop.index/i })).toBeInTheDocument();
+
+    // Click an option in the portal popover (last_error)
+    const option = screen.getByRole("option", { name: /last_error/i });
     await user.click(option);
 
     // onChange should be called with updated value
-    expect(handleChange).toHaveBeenCalledWith("hello {{var1}} world{{user.name}}");
+    expect(handleChange).toHaveBeenCalledWith("hello {{var1}} world{{last_error}}");
   });
 
   test("does not render math button in textarea when showMath is false", () => {
