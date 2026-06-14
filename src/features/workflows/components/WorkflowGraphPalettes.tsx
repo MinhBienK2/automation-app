@@ -845,6 +845,8 @@ const hiddenActionPickerTypes = new Set<ActionType>([
   "break_loop",
   "continue_loop",
   "stop_workflow",
+  "set_variable",
+  "set_json_variables",
   "transform_variable",
   "update_number_variable",
   "update_text_variable",
