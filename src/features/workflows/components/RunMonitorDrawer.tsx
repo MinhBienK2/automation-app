@@ -21,6 +21,7 @@ type RunMonitorTimelineItem = {
   nodeId: string;
   label: string;
   stepNumber: number;
+  traceIndex: number;
 };
 
 function nodeLabel(nodeById: Map<string, GraphNode>, nodeId: string | null | undefined) {
@@ -84,6 +85,7 @@ function buildTimeline(graph: WorkflowGraph, runState: RunState) {
   const appendNodeEvent = (
     nodeId: string | null | undefined,
     status: RunMonitorTimelineEventStatus,
+    traceIndex: number,
   ) => {
     if (!nodeId) return;
     const node = nodeById.get(nodeId);
@@ -96,20 +98,21 @@ function buildTimeline(graph: WorkflowGraph, runState: RunState) {
       nodeId: node.id,
       label: node.label,
       stepNumber: stepNumberForNode(node.id, runState, nodeOrder),
+      traceIndex,
     });
   };
 
-  runState.completed_step_ids.forEach((nodeId) => {
-    appendNodeEvent(nodeId, "completed");
+  runState.completed_step_ids.forEach((nodeId, index) => {
+    appendNodeEvent(nodeId, "completed", index);
   });
 
   if (runState.status === "running") {
-    appendNodeEvent(runState.current_step_id, "running");
+    appendNodeEvent(runState.current_step_id, "running", runState.completed_step_ids.length);
   }
 
   if (runState.status === "failed") {
     const failedNodeId = runState.error?.step_id ?? runState.current_step_id;
-    appendNodeEvent(failedNodeId, "failed");
+    appendNodeEvent(failedNodeId, "failed", runState.completed_step_ids.length);
   }
 
   return timeline;
@@ -230,10 +233,10 @@ export function RunMonitorDrawer({
         {timeline.length > 0 ? (
           <>
             <ol>
-              {timeline.map((item, index) => {
+              {timeline.map((item) => {
                 const isExpanded = expandedEventNumbers[item.eventNumber] ?? false;
                 const isShowAll = showAllVars[item.eventNumber] ?? false;
-                const trace = traces[index];
+                const trace = traces[item.traceIndex];
 
                 return (
                   <li key={item.id} className="run-monitor-timeline-item">
@@ -271,7 +274,7 @@ export function RunMonitorDrawer({
                       <RunMonitorEnvironmentPanel
                         initialVariables={initialVariables}
                         traces={traces}
-                        stepIndex={index}
+                        stepIndex={item.traceIndex}
                         trace={trace}
                         showAll={isShowAll}
                         onToggleShowAll={(e) => {

@@ -230,5 +230,78 @@ describe("RunMonitorDrawer", () => {
     expect(screen.getAllByText("value1").length).toBeGreaterThan(1);
     expect(screen.getByText("newValue1")).toBeInTheDocument(); // new value of var1
   });
+
+  test("correctly maps timeline items to traces when non-visual steps are present (no offset/shift)", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    const runStateWithPrelude: RunState = {
+      ...baseRunState,
+      completed_step_ids: ["__settings:settings", "step-1", "__edge_wait:1", "step-2"],
+      status: "success",
+      outputs: {
+        __action_traces: [
+          {
+            node_id: "__settings:settings",
+            output_summary: { added_keys: ["initVar"], changed_keys: [], removed_keys: [] },
+            output_values: { initVar: "initVal" },
+          },
+          {
+            node_id: "step-1",
+            output_summary: { added_keys: ["var1"], changed_keys: [], removed_keys: [] },
+            output_values: { var1: "value1" },
+          },
+          {
+            node_id: "__edge_wait:1",
+            output_summary: { added_keys: [], changed_keys: [], removed_keys: [] },
+            output_values: {},
+          },
+          {
+            node_id: "step-2",
+            output_summary: { added_keys: ["var2"], changed_keys: [], removed_keys: [] },
+            output_values: { var2: "value2" },
+          },
+        ],
+      },
+    };
+
+    render(
+      <RunMonitorDrawer
+        graph={graph}
+        runState={runStateWithPrelude}
+        onClose={vi.fn()}
+        onFocusNode={vi.fn()}
+      />,
+    );
+
+    // Timeline should show 2 events (excluding non-visual steps)
+    const timeline = screen.getByRole("region", { name: "Run timeline" });
+    expect(within(timeline).getByText("2 events")).toBeInTheDocument();
+
+    // Click Event 1 (step-1) to expand it
+    const event1Button = screen.getByRole("button", {
+      name: /Event 1 completed: Step 1 Open page/i,
+    });
+    await user.click(event1Button);
+
+    // Event 1 should show var1 = value1 (trace index 1)
+    // If it was offset, it would show initVar = initVal (trace index 0)
+    expect(screen.getByText("var1")).toBeInTheDocument();
+    expect(screen.getByText("value1")).toBeInTheDocument();
+    expect(screen.queryByText("initVar")).not.toBeInTheDocument();
+
+    // Click Event 1 again to close it
+    await user.click(event1Button);
+
+    // Click Event 2 (step-2) to expand it
+    const event2Button = screen.getByRole("button", {
+      name: /Event 2 completed: Step 2 Click button/i,
+    });
+    await user.click(event2Button);
+
+    // Event 2 should show var2 = value2 (trace index 3)
+    // If it was offset, it would show var1 = value1 (trace index 1)
+    expect(screen.getByText("var2")).toBeInTheDocument();
+    expect(screen.getByText("value2")).toBeInTheDocument();
+    expect(screen.queryByText("var1")).not.toBeInTheDocument();
+  });
 });
 
