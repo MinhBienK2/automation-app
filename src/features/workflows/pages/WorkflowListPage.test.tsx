@@ -583,21 +583,12 @@ describe("Workflow list integration", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Delete Workflow" });
     expect(within(dialog).getByText(/This removes Login flow/i)).toBeInTheDocument();
-    const profileDataCheckbox = within(dialog).getByRole("checkbox", {
-      name: "Delete private browser profile data",
-    });
-    expect(profileDataCheckbox).toBeChecked();
-    expect(within(dialog).getByText(/Uncheck it when you want retained login state/i))
-      .toBeInTheDocument();
     expect(confirmSpy).not.toHaveBeenCalled();
 
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete Workflow" }));
 
     await waitFor(() => {
-      expect(workflowBridgeMock.deleteWorkflow).toHaveBeenCalledWith(
-        "workflow-1",
-        { deleteBrowserProfile: true },
-      );
+      expect(workflowBridgeMock.deleteWorkflow).toHaveBeenCalledWith("workflow-1", undefined);
     });
   });
 

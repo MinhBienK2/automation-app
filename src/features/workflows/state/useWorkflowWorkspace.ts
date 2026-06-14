@@ -100,7 +100,6 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
   const [deleteWorkflowCandidate, setDeleteWorkflowCandidate] = useState<WorkflowSummary | null>(null);
-  const [deleteBrowserProfileData, setDeleteBrowserProfileData] = useState(false);
 
   const loadWorkflows = useCallback(async () => {
     const items = await listWorkflows();
@@ -312,7 +311,6 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
 
   const deleteWorkflow = useCallback((id: string) => {
     setAppError("");
-    setDeleteBrowserProfileData(true);
     setDeleteWorkflowCandidate(
       workflows.find((workflow) => workflow.id === id) ?? null,
     );
@@ -324,11 +322,8 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     setAppError("");
 
     try {
-      await deleteWorkflowCommand(id, {
-        deleteBrowserProfile: deleteBrowserProfileData,
-      });
+      await deleteWorkflowCommand(id);
       setDeleteWorkflowCandidate(null);
-      setDeleteBrowserProfileData(false);
       if (selectedWorkflowId === id) {
         setSelectedWorkflowId(null);
         setDetail(null);
@@ -345,7 +340,6 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     }
   }, [
     deleteWorkflowCandidate,
-    deleteBrowserProfileData,
     selectedWorkflowId,
     loadWorkflows,
     setScreen,
@@ -359,7 +353,6 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
 
   const cancelDeleteWorkflow = useCallback(() => {
     setDeleteWorkflowCandidate(null);
-    setDeleteBrowserProfileData(false);
   }, []);
 
   const duplicateWorkflow = useCallback(async (workflow: WorkflowSummary) => {
@@ -382,12 +375,10 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     editingWorkflowId,
     workflowNameDraft,
     deleteWorkflowCandidate,
-    deleteBrowserProfileData,
     setWorkflows,
     setSelectedWorkflowId,
     setDetail,
     setWorkflowNameDraft,
-    setDeleteBrowserProfileData,
     setDeleteWorkflowCandidate,
     loadWorkflows,
     openWorkflow,

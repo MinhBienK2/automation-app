@@ -923,8 +923,6 @@ function App() {
         onCloseImportProjectPackageDialog={closeImportProjectPackageDialog}
         onSubmitImportProjectPackage={submitImportProjectPackage}
         deleteWorkflowCandidate={workflowsWorkspace.deleteWorkflowCandidate}
-        deleteBrowserProfileData={workflowsWorkspace.deleteBrowserProfileData}
-        onDeleteBrowserProfileDataChange={workflowsWorkspace.setDeleteBrowserProfileData}
         onConfirmDeleteWorkflow={() => {
           void workflowsWorkspace.confirmDeleteWorkflow();
         }}

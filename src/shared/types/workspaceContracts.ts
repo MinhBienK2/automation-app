@@ -74,13 +74,11 @@ export interface WorkflowWorkspaceAPI {
   editingWorkflowId: string | null;
   workflowNameDraft: string;
   deleteWorkflowCandidate: WorkflowSummary | null;
-  deleteBrowserProfileData: boolean;
 
   setWorkflows: React.Dispatch<React.SetStateAction<WorkflowSummary[]>>;
   setSelectedWorkflowId: (id: string | null) => void;
   setDetail: React.Dispatch<React.SetStateAction<WorkflowDetail | null>>;
   setWorkflowNameDraft: (name: string) => void;
-  setDeleteBrowserProfileData: (deleteData: boolean) => void;
   setDeleteWorkflowCandidate: (candidate: WorkflowSummary | null) => void;
 
   loadWorkflows: () => Promise<void>;

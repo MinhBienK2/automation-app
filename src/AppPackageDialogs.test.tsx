@@ -45,8 +45,6 @@ const defaultProps = {
   onCloseImportProjectPackageDialog: vi.fn(),
   onSubmitImportProjectPackage: vi.fn(),
   deleteWorkflowCandidate: null,
-  deleteBrowserProfileData: false,
-  onDeleteBrowserProfileDataChange: vi.fn(),
   onConfirmDeleteWorkflow: vi.fn(),
   onCancelDeleteWorkflow: vi.fn(),
 };

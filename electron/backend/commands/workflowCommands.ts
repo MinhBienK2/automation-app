@@ -8,12 +8,8 @@ import type {
   CompiledWorkflowGraph,
   ActionConfig,
   BatchRunRequest,
-  WorkflowSettings,
   GraphValidationIssue,
 } from "../../../src/types/workflow.js";
-import fs from "node:fs";
-import path from "node:path";
-import { sanitizePathSegment } from "../evidence/artifacts.js";
 import { commandError } from "../commandHelpers.js";
 import type { CommandDeps } from "./types.js";
 import { migrateWorkflowGraph } from "../graph/migration.js";
@@ -118,28 +114,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
     });
   }
 
-  function deleteBrowserProfileDirectoryIfPrivate(
-    workflowId: string,
-    settings: WorkflowSettings,
-  ) {
-    const profileDir = browserProfileKey(settings);
-    if (!profileDir || isProfileReferencedByAnotherWorkflow(workflowId, profileDir)) {
-      return;
-    }
-    fs.rmSync(path.join(deps.context.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)), {
-      recursive: true,
-      force: true,
-    });
-  }
 
-  function isProfileReferencedByAnotherWorkflow(workflowId: string, profileDir: string) {
-    return repository
-      .listWorkflows()
-      .some((workflow) => {
-        if (workflow.id === workflowId) return false;
-        return browserProfileKey(getSettings(workflow.id)) === profileDir;
-      });
-  }
 
   return {
     listWorkflows(): WorkflowSummary[] {
@@ -165,12 +140,9 @@ export function createWorkflowCommands(deps: CommandDeps) {
       repository.renameWorkflow(id, normalized);
     },
 
-    deleteWorkflow(id: string, options: WorkflowDeleteOptions = {}) {
+    deleteWorkflow(id: string, _options: WorkflowDeleteOptions = {}) {
       const settings = getSettings(id);
       assertWorkflowDeletionAllowed(id, settings);
-      if (options.deleteBrowserProfile) {
-        deleteBrowserProfileDirectoryIfPrivate(id, settings);
-      }
       repository.deleteWorkflow(id);
     },
 

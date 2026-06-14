@@ -42,8 +42,6 @@ type AppPackageDialogsProps = {
   onCloseImportProjectPackageDialog: () => void;
   onSubmitImportProjectPackage: FormEventHandler<HTMLFormElement>;
   deleteWorkflowCandidate: WorkflowSummary | null;
-  deleteBrowserProfileData: boolean;
-  onDeleteBrowserProfileDataChange: (checked: boolean) => void;
   onConfirmDeleteWorkflow: () => void;
   onCancelDeleteWorkflow: () => void;
 };
@@ -70,8 +68,6 @@ export function AppPackageDialogs({
   onCloseImportProjectPackageDialog,
   onSubmitImportProjectPackage,
   deleteWorkflowCandidate,
-  deleteBrowserProfileData,
-  onDeleteBrowserProfileDataChange,
   onConfirmDeleteWorkflow,
   onCancelDeleteWorkflow,
 }: AppPackageDialogsProps) {
@@ -266,17 +262,7 @@ export function AppPackageDialogs({
                 action cannot be undone.
               </DialogDescription>
             </DialogHeader>
-            <div className="package-section-list">
-              <PackageFlowCheckbox
-                checked={deleteBrowserProfileData}
-                label="Delete private browser profile data"
-                onChange={onDeleteBrowserProfileDataChange}
-              />
-              <p className="muted">
-                Uncheck it when you want retained login state available for
-                manual recovery or a later profile cleanup.
-              </p>
-            </div>
+
             {appError ? <p className="field-error">{appError}</p> : null}
             <DialogFooter className="form-actions">
               <Button
