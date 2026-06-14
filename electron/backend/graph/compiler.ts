@@ -100,6 +100,7 @@ export function compileWorkflowRunPlan(
 
 type CompileWorkflowGraphFromNodeOptions = CompileWorkflowGraphOptions & {
   mode?: WorkflowRunFromSelectedMode;
+  settings?: WorkflowSettings;
 };
 
 export function compileWorkflowGraphFromNode(
@@ -137,8 +138,13 @@ export function compileWorkflowGraphFromNode(
     config: applyNestedWaitBetweenNodes(applyExecutionDefaults(stepValue.config)),
   }));
   const fullWithWaits = insertWaitBetweenGraphNodes(fullCompiled);
+
+  const prelude = options.settings
+    ? settingsPreludeSteps(options.settings, options.profileEnvironment)
+    : [];
+
   return {
-    steps: withWaits,
+    steps: [...prelude, ...withWaits],
     domain_policy: domainPolicyFromSteps(fullWithWaits),
   };
 }

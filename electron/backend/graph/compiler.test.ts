@@ -390,6 +390,68 @@ describe("TypeScript graph compiler parity", () => {
     expect(plan.steps.map((step) => step.node_id)).toEqual(["second", "third"]);
   });
 
+  test("prepends settings prelude variables when compiling from a selected node", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("first", "action", { config: waitAction(100) }),
+        graphNode("second", "action", { config: clickAction("//continue") }),
+      ],
+      [
+        edge("start", "out", "first", "in"),
+        edge("first", "out", "second", "in"),
+      ],
+    );
+    const settings = workflowSettings({
+      environment: {
+        initial_variables: [
+          { name: "workflow_var", value_type: "text", value: "hello" },
+        ],
+      },
+    });
+    const profileEnvironment = {
+      variables: [
+        { name: "profile_var", value_type: "text" as const, value: "world", persist: false },
+      ],
+    };
+
+    const plan = compileWorkflowGraphFromNode(graph, "second", {
+      settings,
+      profileEnvironment,
+    });
+
+    expect(plan.steps.map((step) => step.node_id)).toEqual([
+      "__settings:profile:variables",
+      "__settings:inputs:variables",
+      "second",
+    ]);
+
+    expect(plan.steps[0].config).toEqual({
+      type: "set_variable",
+      config: {
+        name: null,
+        value: null,
+        value_type: null,
+        variables: [
+          { name: "profile_var", value_type: "text", value: "world" },
+        ],
+      },
+    });
+
+    expect(plan.steps[1].config).toEqual({
+      type: "set_variable",
+      config: {
+        name: null,
+        value: null,
+        value_type: null,
+        variables: [
+          { name: "workflow_var", value_type: "text", value: "hello" },
+        ],
+      },
+    });
+  });
+
+
   test("compiles a selected-only run plan for just the selected main-path node", () => {
     const graph = graphOf(
       [

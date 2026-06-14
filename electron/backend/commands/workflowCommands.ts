@@ -255,10 +255,20 @@ export function createWorkflowCommands(deps: CommandDeps) {
         saveSettings(workflowId, settings);
       }
 
+      let profileEnvironment: ProfileEnvironment | undefined;
+      if (workflow.browser_profile_id) {
+        const profile = repository.getBrowserProfile(workflow.browser_profile_id);
+        if (profile) {
+          profileEnvironment = profile.environment;
+        }
+      }
+
       const graph = getWorkflowGraph(workflowId);
       const compiledGraph = compileWorkflowGraphFromNode(graph, startNodeId, {
         ...graphContextForWorkflow(workflow),
         mode: runMode,
+        settings,
+        profileEnvironment,
       });
       if (compiledGraph.steps.length === 0) {
         throw commandError("Selected graph node has no executable steps", "startNodeId");

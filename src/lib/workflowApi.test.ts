@@ -459,6 +459,7 @@ describe("workflow API graph commands", () => {
     expect(workflowBridgeMock.runWorkflowFromNode).toHaveBeenCalledWith(
       "workflow-1",
       "step-1",
+      undefined,
     );
     expect(workflowBridgeMock.listRunStates).toHaveBeenCalled();
     expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-1");
