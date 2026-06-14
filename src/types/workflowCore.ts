@@ -269,6 +269,7 @@ export type BrowserProfileInput = {
 
 export type WorkflowCreateOptions = {
   project_id?: string | null;
+  browser_profile_id?: string | null;
 };
 
 export type WorkflowSettingsEnvironment = {

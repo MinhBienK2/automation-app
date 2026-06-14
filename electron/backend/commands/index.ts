@@ -496,7 +496,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const project = options.project_id
       ? requireProject(options.project_id)
       : ensureDefaultProject();
-    const browserProfile = ensureDefaultBrowserProfile(project);
+    const browserProfile = options.browser_profile_id
+      ? requireBrowserProfile(options.browser_profile_id)
+      : ensureDefaultBrowserProfile(project);
     const workflow = repository.createWorkflow(
       normalized,
       createDraftGraph(),

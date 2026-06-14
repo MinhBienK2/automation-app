@@ -709,11 +709,14 @@ function App() {
               workflows={selectedProjectWorkflows}
               workflowDialogMode={workflowsWorkspace.workflowDialogMode}
               workflowNameDraft={workflowsWorkspace.workflowNameDraft}
+              browserProfiles={selectedBrowserProfiles}
+              selectedProfileIdDraft={workflowsWorkspace.selectedProfileIdDraft}
               appError={appError}
               runState={runState}
               runSnapshots={runSnapshots}
               activeRunWorkflowName={activeRunWorkflowName}
               onWorkflowNameDraftChange={workflowsWorkspace.setWorkflowNameDraft}
+              onSelectedProfileIdDraftChange={workflowsWorkspace.setSelectedProfileIdDraft}
               onSubmitWorkflowDialog={workflowsWorkspace.submitWorkflowDialog}
               onOpenCreateWorkflow={workflowsWorkspace.openCreateWorkflowDialog}
               onOpenEditWorkflow={(workflow) => {

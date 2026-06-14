@@ -99,6 +99,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
   const [workflowDialogMode, setWorkflowDialogMode] = useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
+  const [selectedProfileIdDraft, setSelectedProfileIdDraft] = useState<string | null>(null);
   const [deleteWorkflowCandidate, setDeleteWorkflowCandidate] = useState<WorkflowSummary | null>(null);
 
   const loadWorkflows = useCallback(async () => {
@@ -242,8 +243,10 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     setWorkflowDialogMode("create");
     setEditingWorkflowId(null);
     setWorkflowNameDraft("");
+    const defaultProfile = browserProfiles.find((p) => p.is_default) ?? browserProfiles[0];
+    setSelectedProfileIdDraft(defaultProfile?.id ?? null);
     setAppError("");
-  }, [setAppError]);
+  }, [browserProfiles, setAppError]);
 
   const openEditWorkflowDialog = useCallback((workflow: WorkflowSummary) => {
     setWorkflowDialogMode("edit");
@@ -272,6 +275,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
         }
         const created = await createWorkflowCommand(workflowNameDraft, {
           project_id: projectId,
+          browser_profile_id: selectedProfileIdDraft ?? undefined,
         });
         closeWorkflowDialog();
         await loadWorkflows();
@@ -301,6 +305,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     workflowDialogMode,
     editingWorkflowId,
     workflowNameDraft,
+    selectedProfileIdDraft,
     detail,
     ensureProjectId,
     closeWorkflowDialog,
@@ -374,11 +379,13 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     workflowDialogMode,
     editingWorkflowId,
     workflowNameDraft,
+    selectedProfileIdDraft,
     deleteWorkflowCandidate,
     setWorkflows,
     setSelectedWorkflowId,
     setDetail,
     setWorkflowNameDraft,
+    setSelectedProfileIdDraft,
     setDeleteWorkflowCandidate,
     loadWorkflows,
     openWorkflow,

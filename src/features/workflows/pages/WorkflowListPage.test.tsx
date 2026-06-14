@@ -67,7 +67,7 @@ describe("Workflow list integration", () => {
     expect(screen.queryByText("1733 steps")).not.toBeInTheDocument();
   });
 
-  test("lists workflows and creates a workflow without browser session selection", async () => {
+  test("lists workflows and creates a workflow with browser profile selection", async () => {
     const project = {
       id: "project-1",
       name: "Main",
@@ -100,7 +100,7 @@ describe("Workflow list integration", () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([]),
       list_projects: [project],
-      list_project_environments: environments,
+      list_browser_profiles: environments,
       create_workflow: workflow,
       get_workflow: { workflow, steps: [] },
     });
@@ -117,6 +117,11 @@ describe("Workflow list integration", () => {
     const dialog = await screen.findByRole("dialog", { name: "Create Workflow" });
 
     await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Login flow");
+    expect(within(dialog).getByLabelText("Browser Profile")).toHaveValue("environment-default");
+    
+    // Choose the staging profile
+    await userEvent.selectOptions(within(dialog).getByLabelText("Browser Profile"), "environment-staging");
+    
     expect(within(dialog).queryByLabelText("Browser session")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("Use project browser profile")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("Create new workflow session")).not.toBeInTheDocument();
@@ -127,6 +132,7 @@ describe("Workflow list integration", () => {
         "Login flow",
         {
           project_id: project.id,
+          browser_profile_id: "environment-staging",
         },
       );
     });

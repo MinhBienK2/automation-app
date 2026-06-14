@@ -1,5 +1,6 @@
 import { CircleDot, Copy, Download, Eye, Pencil, Play, Square, Trash2, Upload } from "lucide-react";
-import type { RunState, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
+import { Select } from "../../../components/ui/select";
+import type { BrowserProfile, RunState, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
 import { IconButton } from "../../../components/ui/icon-button";
@@ -19,11 +20,14 @@ type WorkflowListPageProps = {
   workflows: WorkflowSummary[];
   workflowDialogMode: "create" | "edit" | null;
   workflowNameDraft: string;
+  browserProfiles: BrowserProfile[];
+  selectedProfileIdDraft: string | null;
   appError: string;
   runState: RunState;
   runSnapshots: WorkflowRunSnapshot[];
   activeRunWorkflowName?: string | null;
   onWorkflowNameDraftChange: (name: string) => void;
+  onSelectedProfileIdDraftChange: (id: string | null) => void;
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
   onOpenCreateWorkflow: () => void;
   onOpenEditWorkflow: (workflow: WorkflowSummary) => void;
@@ -42,11 +46,14 @@ export function WorkflowListPage({
   workflows,
   workflowDialogMode,
   workflowNameDraft,
+  browserProfiles,
+  selectedProfileIdDraft,
   appError,
   runState,
   runSnapshots,
   activeRunWorkflowName,
   onWorkflowNameDraftChange,
+  onSelectedProfileIdDraftChange,
   onSubmitWorkflowDialog,
   onOpenCreateWorkflow,
   onOpenEditWorkflow,
@@ -240,6 +247,26 @@ export function WorkflowListPage({
                 }
                 placeholder="Login flow"
               />
+              {workflowDialogMode === "create" ? (
+                <>
+                  <Label htmlFor="workflow-profile">
+                    Browser Profile
+                  </Label>
+                  <Select
+                    id="workflow-profile"
+                    value={selectedProfileIdDraft ?? ""}
+                    onChange={(event) =>
+                      onSelectedProfileIdDraftChange(event.currentTarget.value || null)
+                    }
+                  >
+                    {browserProfiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </Select>
+                </>
+              ) : null}
               {appError ? <p className="field-error">{appError}</p> : null}
               <DialogFooter className="form-actions">
                 <Button shape="pill" type="submit">

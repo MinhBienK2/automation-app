@@ -73,12 +73,14 @@ export interface WorkflowWorkspaceAPI {
   workflowDialogMode: WorkflowDialogMode;
   editingWorkflowId: string | null;
   workflowNameDraft: string;
+  selectedProfileIdDraft: string | null;
   deleteWorkflowCandidate: WorkflowSummary | null;
 
   setWorkflows: React.Dispatch<React.SetStateAction<WorkflowSummary[]>>;
   setSelectedWorkflowId: (id: string | null) => void;
   setDetail: React.Dispatch<React.SetStateAction<WorkflowDetail | null>>;
   setWorkflowNameDraft: (name: string) => void;
+  setSelectedProfileIdDraft: (id: string | null) => void;
   setDeleteWorkflowCandidate: (candidate: WorkflowSummary | null) => void;
 
   loadWorkflows: () => Promise<void>;

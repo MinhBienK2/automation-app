@@ -143,6 +143,33 @@ describe("Workflow commands integration", () => {
     expect(handlers.getWorkflow(created.id)).toBeNull();
   });
 
+  test("creates a workflow using the specified browser profile ID", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as any;
+
+    const project = projectHandlers.listProjects()[0];
+    const customProfile = projectHandlers.createBrowserProfile(project.id, {
+      name: "Custom Profile",
+      description: "A custom profile for testing workflow creation",
+    });
+
+    const workflow = handlers.createWorkflow("My custom workflow", {
+      project_id: project.id,
+      browser_profile_id: customProfile.id,
+    });
+
+    expect(workflow).toMatchObject({
+      project_id: project.id,
+      browser_profile_id: customProfile.id,
+    });
+
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    expect(settings.browser_launch).toMatchObject({
+      identity_id: customProfile.browser_launch.identity_id,
+      fingerprint_seed: customProfile.browser_launch.fingerprint_seed,
+    });
+  });
+
   test("defaults new workflow browser launch fonts from the detected repo-local CloakBrowser bundle", async () => {
     const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "repo-font-default-"));
     tempRoots.push(repoRoot);
