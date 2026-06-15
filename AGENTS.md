@@ -50,7 +50,5 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 - Quick Reference Map: `docs/ARCHITECTURE_QUICK_REF.md`. Read it to find hooks and commands instantly.
 - Layer map: `docs/architecture/overview.md`. Read it for broad or unclear tasks.
 - Add/update tests when changing validation, commands, persistence, runner, or UI.
-- Run `npm run lint` and `npx tsc --noEmit` before committing.
-- Before completing any task, ensure that `rtk npm run lint && rtk npm run test && rtk npm run build` passes successfully.
-
-
+- During development and TDD, run focused tests using file-scoped commands to keep feedback fast.
+- Before completing any task, you MUST run the FULL test suite using `rtk npm run test` to verify there are no regressions, in addition to running `rtk npm run lint` and `rtk npm run build`.
