@@ -377,6 +377,16 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("JSON variables", "The JSON root must be an object.", ["Nested objects flatten into dot paths; arrays stay whole."]),
     ], "en"),
   },
+  evaluate_logic: {
+    vi: nodeWithFields("Evaluate Logic", "Đánh giá các quy tắc logic trực quan hoặc mã JS và lưu kết quả dạng True/False.", [
+      field("Result Output Variable Name", "Tên biến lưu kết quả.", ["Kết quả lưu dưới dạng boolean true hoặc false."]),
+      field("Evaluation Mode", "Chọn chế độ visual rules hoặc viết mã JS.", ["Mã JS chạy trên ngữ cảnh browser và nhận outputs."]),
+    ]),
+    en: nodeWithFields("Evaluate Logic", "Evaluate visual rules or JS expression and store the boolean result.", [
+      field("Result Output Variable Name", "The name of the variable to store the output.", ["Saves the result as a boolean true or false."]),
+      field("Evaluation Mode", "Choose between visual rules builder or JS script.", ["JS script evaluates in the browser context with outputs available."]),
+    ], "en"),
+  },
   update_number_variable: {
     vi: nodeWithFields("Cập nhật biến số", "Thực hiện phép toán (cộng, trừ, nhân, chia, tăng, giảm) trên một biến số.", [
       field("Variable name", "Tên biến số cần cập nhật.", []),

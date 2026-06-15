@@ -79,6 +79,7 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   update_object_variable: "graph_internal",
   assert_output: "graph_internal",
   domain_allowlist: "graph_internal",
+  evaluate_logic: "graph_internal",
   set_cookie: "implemented",
   clear_cookies: "implemented",
   set_viewport: "implemented",

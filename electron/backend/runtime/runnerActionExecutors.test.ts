@@ -259,6 +259,66 @@ describe("runnerActionExecutors", () => {
     } as never);
     expect(runtime.outputs.listA).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
   });
+
+  test("evaluates logic in JS script mode", async () => {
+    let scriptPassedArgs: any = null;
+    const page = {
+      evaluate: async (fn: any, args: any) => {
+        scriptPassedArgs = args;
+        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
+        return parsedFn(args.outputs);
+      },
+    } as any;
+    const runtime = minimalRuntime({ page, outputs: { counter: 10, status: "active" } });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    await executeRegisteredAction(executors, {
+      type: "evaluate_logic",
+      config: {
+        output_name: "result",
+        mode: "script",
+        script: "outputs.counter > 5 && outputs.status === 'active'",
+      },
+    });
+
+    expect(runtime.outputs.result).toBe(true);
+    expect(scriptPassedArgs).toEqual({
+      scriptText: "outputs.counter > 5 && outputs.status === 'active'",
+      outputs: { counter: 10, status: "active", result: true }, // wait, result true is set after evaluation
+    });
+  });
+
+  test("evaluates logic in visual rules mode", async () => {
+    const runtime = minimalRuntime({ outputs: { status: "success", count: "15" } });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    await executeRegisteredAction(executors, {
+      type: "evaluate_logic",
+      config: {
+        output_name: "result",
+        mode: "visual",
+        rules_group: {
+          operator: "and",
+          rules: [
+            {
+              type: "value_compare",
+              left_operand: "{{status}}",
+              comparison: "equals",
+              right_operand: "success",
+            },
+            {
+              type: "value_compare",
+              left_operand: "{{count}}",
+              comparison: "greater_than",
+              right_operand: "10",
+            },
+          ],
+        },
+      },
+    });
+
+    expect(runtime.outputs.result).toBe(true);
+  });
 });
 
 

@@ -59,6 +59,7 @@ describe("backend action registry", () => {
       "wait_for_download",
       "set_variable",
       "set_json_variables",
+      "evaluate_logic",
       "assert_element",
       "assert_text",
       "graph_noop",

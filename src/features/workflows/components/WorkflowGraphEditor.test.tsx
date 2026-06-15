@@ -62,6 +62,7 @@ const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
   stop_workflow: true,
   set_variable: true,
   set_json_variables: true,
+  evaluate_logic: true,
   transform_variable: true,
   update_number_variable: true,
   update_text_variable: true,

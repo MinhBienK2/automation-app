@@ -36,7 +36,7 @@ Browser identity actions such as profile, proxy, user-agent, and download-direct
 
 Runner traces classify every top-level executed action with compact mode/status metadata. The runner's CloakBrowser-native/custom-human/direct-DOM capability map is internal execution policy, not a serialized action config field.
 
-Graph-internal executable configs such as `graph_noop`, `if_condition`, `router_condition`, `random_choice`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `update_number_variable`, `update_text_variable`, `update_flag_variable`, `update_list_variable`, `update_object_variable`, `assert_output`, and `domain_allowlist` are TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. They are intentionally included in TypeScript `ActionType` for DTO safety, but hidden from the main Add Action picker. Graph-native nodes are the user-facing control-flow authoring surface. Variable configs include multi-row `set_variable`, `set_json_variables`, `update_number_variable`, `update_text_variable`, `update_flag_variable`, `update_list_variable`, and `update_object_variable`.
+Graph-internal executable configs such as `graph_noop`, `if_condition`, `router_condition`, `random_choice`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `update_number_variable`, `update_text_variable`, `update_flag_variable`, `update_list_variable`, `update_object_variable`, `assert_output`, and `domain_allowlist` are TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. They are intentionally included in TypeScript `ActionType` for DTO safety, but hidden from the main Add Action picker. Graph-native nodes are the user-facing control-flow authoring surface. Variable configs include multi-row `set_variable`, `set_json_variables`, `evaluate_logic`, `update_number_variable`, `update_text_variable`, `update_flag_variable`, `update_list_variable`, and `update_object_variable`.
 
 Merge nodes compile to `{ type: "graph_noop", config: { kind: "merge" } }` and have no browser, output, session, or network side effects. Router nodes compile to `router_condition` with `mode: "first_match"`, stable case ids/labels/conditions, nested case steps, and `default_steps`.
 
@@ -48,6 +48,7 @@ Variable config rules:
 
 - `set_variable` rows use `{ name, value_type, value }`, where `value_type` is `text`, `json`, `number`, or `boolean`.
 - `set_json_variables` requires a JSON object root.
+- `evaluate_logic` uses `{ output_name, mode, script, rules_group }` to evaluate visual rules or JavaScript expressions and write a boolean result to `output_name`.
 - `update_number_variable` uses `{ name, operation, value }` to perform mathematical calculations.
 - `update_text_variable` uses `{ name, operation, value, search_pattern }` to transform strings (append, prepend, replace, uppercase, lowercase, trim).
 - `update_flag_variable` uses `{ name, operation }` to toggle or set booleans.

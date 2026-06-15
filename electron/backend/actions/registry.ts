@@ -91,6 +91,7 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("wait_for_download", "capture"),
   definition("set_variable", "variables"),
   definition("set_json_variables", "variables"),
+  definition("evaluate_logic", "variables"),
   definition("assert_element", "capture"),
   definition("assert_text", "capture"),
   definition("graph_noop", "graph_internal"),

@@ -200,6 +200,19 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       };
     case "set_json_variables":
       return { type: actionType, config: { json: "{\n  \"name\": \"value\"\n}" } };
+    case "evaluate_logic":
+      return {
+        type: actionType,
+        config: {
+          output_name: "is_valid",
+          mode: "visual",
+          script: "",
+          rules_group: {
+            operator: "and",
+            rules: [],
+          },
+        },
+      };
     case "update_number_variable":
       return {
         type: actionType,

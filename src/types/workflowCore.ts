@@ -54,6 +54,7 @@ export type ActionType =
   | "update_object_variable"
   | "assert_element"
   | "assert_text"
+  | "evaluate_logic"
   | "graph_noop"
   | "if_condition"
   | "router_condition"
@@ -955,6 +956,10 @@ export type ActionConfig =
   | {
       type: "set_session_storage";
       config: { key: string; value: string };
+    }
+  | {
+      type: "evaluate_logic";
+      config: EvaluateLogicConfig;
     };
 
 export type HeaderPair = {
@@ -1040,3 +1045,52 @@ type DataCaptureElementConfig = {
   output_name: string;
   timeout_ms?: number | null;
 };
+
+export type EvaluateLogicConfig = {
+  output_name: string;
+  mode: "visual" | "script";
+  script?: string;
+  rules_group?: LogicRuleGroup;
+};
+
+export type LogicRuleGroup = {
+  operator: "and" | "or";
+  rules: Array<LogicRule | LogicRuleGroup>;
+};
+
+export type LogicRule = {
+  type: "value_compare" | "element_state" | "url_check";
+  
+  // value_compare
+  left_operand?: string;
+  comparison?:
+    | "equals"
+    | "not_equals"
+    | "contains"
+    | "not_contains"
+    | "greater_than"
+    | "less_than"
+    | "greater_than_or_equals"
+    | "less_than_or_equals"
+    | "is_empty"
+    | "is_not_empty"
+    | "matches_regex";
+  right_operand?: string;
+
+  // element_state
+  element_source?: "xpath" | "ref";
+  xpath?: string;
+  target_ref?: string;
+  element_property?:
+    | "visible"
+    | "hidden"
+    | "enabled"
+    | "disabled"
+    | "checked"
+    | "unchecked";
+
+  // url_check
+  url_comparison?: "contains" | "not_contains" | "matches_regex";
+  url_value?: string;
+};
+

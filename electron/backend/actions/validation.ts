@@ -630,6 +630,24 @@ const actionValidators = createActionValidatorMap({
     requiredActionString(config.config.key, "key", "Storage key is required"),
   set_session_storage: (config) =>
     requiredActionString(config.config.key, "key", "Storage key is required"),
+  evaluate_logic: (config) => {
+    const { output_name, mode, script, rules_group } = config.config;
+    if (!output_name || !output_name.trim()) {
+      return validationError("output_name", "Output variable name is required");
+    }
+    if (mode === "script") {
+      if (!script || !script.trim()) {
+        return validationError("script", "JavaScript script is required in script mode");
+      }
+    } else if (mode === "visual") {
+      if (!rules_group || !rules_group.operator || !["and", "or"].includes(rules_group.operator)) {
+        return validationError("rules_group", "Invalid visual rules configuration");
+      }
+    } else {
+      return validationError("mode", "Evaluation mode must be visual or script");
+    }
+    return null;
+  },
 });
 
 export function validateActionConfig(config: ActionConfig): ActionValidationError | null {

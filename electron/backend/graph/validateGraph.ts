@@ -57,6 +57,7 @@ const supportedGraphNodeTypes = new Set<string>([
   "stop_workflow",
   "set_variable",
   "set_json_variables",
+  "evaluate_logic",
   "update_number_variable",
   "update_text_variable",
   "update_flag_variable",
@@ -340,6 +341,24 @@ function pushNodeSemanticIssues(
         issues.push(error(node.id, null, "JSON variables are required"));
       } else {
         const validation = validateActionConfig({ type: "set_json_variables", config: { json } });
+        if (validation) issues.push(error(node.id, null, validation.message));
+      }
+      break;
+    }
+    case "evaluate_logic": {
+      const output_name = stringField(node.config, "output_name");
+      if (!output_name) {
+        issues.push(error(node.id, null, "Output variable name is required"));
+      } else {
+        const validation = validateActionConfig({
+          type: "evaluate_logic",
+          config: {
+            output_name,
+            mode: stringField(node.config, "mode") === "script" ? "script" : "visual",
+            script: stringField(node.config, "script"),
+            rules_group: asRecord(node.config).rules_group,
+          },
+        } as any);
         if (validation) issues.push(error(node.id, null, validation.message));
       }
       break;

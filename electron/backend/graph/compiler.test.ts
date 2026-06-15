@@ -1566,7 +1566,63 @@ describe("TypeScript graph compiler parity", () => {
       message: "Unsupported action type: mystery_action",
     });
   });
+
+  test("compiles evaluate_logic graph nodes", async () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("eval-logic", "evaluate_logic", {
+          config: {
+            output_name: "is_valid",
+            mode: "visual",
+            rules_group: {
+              operator: "and",
+              rules: [
+                {
+                  type: "value_compare",
+                  left_operand: "{{status}}",
+                  comparison: "equals",
+                  right_operand: "active",
+                },
+              ],
+            },
+          },
+        }),
+        graphNode("stop", "stop_workflow", { config: { status: "success" } }),
+      ],
+      [
+        edge("start", "out", "eval-logic", "in"),
+        edge("eval-logic", "out", "stop", "in"),
+      ],
+    );
+
+    const plan = compileWorkflowRunPlan(graph, workflowSettings());
+    expect(plan.steps).toHaveLength(2);
+    expect(plan.steps[0]).toEqual(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          type: "evaluate_logic",
+          config: expect.objectContaining({
+            output_name: "is_valid",
+            mode: "visual",
+            rules_group: {
+              operator: "and",
+              rules: [
+                {
+                  type: "value_compare",
+                  left_operand: "{{status}}",
+                  comparison: "equals",
+                  right_operand: "active",
+                },
+              ],
+            },
+          }),
+        }),
+      }),
+    );
+  });
 });
+
 
 async function createTestHandlers() {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-app-"));

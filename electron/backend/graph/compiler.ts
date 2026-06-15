@@ -14,6 +14,7 @@ import type {
   WorkflowGraph,
   WorkflowRunFromSelectedMode,
   WorkflowSettings,
+  LogicRuleGroup,
 } from "../../../src/types/workflow.js";
 import {
   validateWorkflowGraph as validateWorkflowGraphModule,
@@ -378,6 +379,18 @@ function compilePath(
       steps.push(step(node, {
         type: "set_json_variables",
         config: { json: requiredString(node.config, "json", "JSON variables are required") },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    case "evaluate_logic":
+      steps.push(step(node, {
+        type: "evaluate_logic",
+        config: {
+          output_name: requiredString(node.config, "output_name", "Output variable name is required"),
+          mode: stringField(node.config, "mode") === "script" ? "script" : "visual",
+          script: stringField(node.config, "script") ?? undefined,
+          rules_group: asRecord(node.config).rules_group as LogicRuleGroup | undefined,
+        },
       }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;

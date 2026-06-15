@@ -58,6 +58,7 @@ export const variableNodeGroups = [
     nodes: [
       "set_variable",
       "set_json_variables",
+      "evaluate_logic",
       "update_number_variable",
       "update_text_variable",
       "update_flag_variable",
@@ -90,6 +91,7 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   continue_loop: "Skip the rest of the loop body and move to the next iteration.",
   set_variable: "Store multiple workflow values.",
   set_json_variables: "Store structured JSON values.",
+  evaluate_logic: "Evaluate visual rules or custom JavaScript to set a boolean output.",
   update_number_variable: "Update a number variable (increment, add, multiply, etc.).",
   update_text_variable: "Update a text variable (append, replace, trim, casing).",
   update_flag_variable: "Update a boolean flag variable (toggle, set true/false).",
@@ -925,6 +927,7 @@ export const actionDescriptions: Record<ActionType, string> = {
   wait_for_download: "Wait for a download",
   set_variable: "Store workflow values",
   set_json_variables: "Store JSON values",
+  evaluate_logic: "Evaluate custom logic or rules",
   update_number_variable: "Update a number variable",
   update_text_variable: "Update a text variable",
   update_flag_variable: "Update a flag variable",

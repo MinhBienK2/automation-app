@@ -50,7 +50,7 @@ import {
   weightedRandomChoice,
   withActionTimeout,
 } from "./runtimeHelpers.js";
-import type { RuntimeElementRef } from "./targetResolver.js";
+import { locatorFor, locatorForRuntimeElementRef, type RuntimeElementRef } from "./targetResolver.js";
 
 export type RunnerActionRuntime = {
   runId: string;
@@ -1006,8 +1006,105 @@ export function createRunnerActionExecutors(
       await setWebStorage(runtime.page, "session", action.config.key, action.config.value);
       runtime.outputs[action.config.key] = action.config.value;
     },
+    evaluate_logic: async (action) => {
+      const { output_name, mode, script, rules_group } = action.config;
+      if (mode === "script") {
+        if (!script) throw new Error("Script is required in script mode");
+        const result = await runtime.page.evaluate((args) => {
+          if (!args) throw new Error("Arguments are required");
+          const { scriptText, outputs } = args;
+          try {
+            const fn = new Function("outputs", `return (${scriptText});`);
+            return Boolean(fn(outputs));
+          } catch (err: any) {
+            throw new Error(`Failed to evaluate JS: ${err.message}`);
+          }
+        }, { scriptText: script, outputs: runtime.outputs });
+        runtime.outputs[output_name] = result;
+      } else {
+        runtime.outputs[output_name] = await evaluateRuleGroup(rules_group, runtime);
+      }
+    },
   });
 }
+
+async function evaluateRuleGroup(group: any, runtime: RunnerActionRuntime): Promise<boolean> {
+  if (!group || !Array.isArray(group.rules) || group.rules.length === 0) {
+    return true;
+  }
+
+  const results: boolean[] = [];
+  for (const rule of group.rules) {
+    if ("operator" in rule) {
+      results.push(await evaluateRuleGroup(rule, runtime));
+    } else {
+      results.push(await evaluateSingleRule(rule, runtime));
+    }
+  }
+
+  if (group.operator === "or") {
+    return results.some(r => r === true);
+  }
+  return results.every(r => r === true);
+}
+
+async function evaluateSingleRule(rule: any, runtime: RunnerActionRuntime): Promise<boolean> {
+  switch (rule.type) {
+    case "value_compare": {
+      const left = renderTemplate(rule.left_operand ?? "", runtime.outputs);
+      const right = renderTemplate(rule.right_operand ?? "", runtime.outputs);
+
+      switch (rule.comparison) {
+        case "equals": return left === right;
+        case "not_equals": return left !== right;
+        case "contains": return left.includes(right);
+        case "not_contains": return !left.includes(right);
+        case "greater_than": return Number(left) > Number(right);
+        case "less_than": return Number(left) < Number(right);
+        case "greater_than_or_equals": return Number(left) >= Number(right);
+        case "less_than_or_equals": return Number(left) <= Number(right);
+        case "is_empty": return !left || left.trim() === "";
+        case "is_not_empty": return left.trim() !== "";
+        case "matches_regex": return new RegExp(right).test(left);
+        default: return false;
+      }
+    }
+    case "element_state": {
+      let locator;
+      if (rule.element_source === "ref") {
+        if (!rule.target_ref) throw new Error("Target ref is required");
+        const ref = runtime.elementRefs.get(rule.target_ref);
+        if (!ref) throw new Error(`Element ref not found: ${rule.target_ref}`);
+        locator = await locatorForRuntimeElementRef(runtime.page, ref);
+      } else {
+        locator = await locatorFor(runtime.page, null, rule.xpath || "body");
+      }
+
+      switch (rule.element_property) {
+        case "visible": return locator.isVisible ? await locator.isVisible() : false;
+        case "hidden": return locator.isVisible ? !(await locator.isVisible()) : true;
+        case "enabled": return locator.isEnabled ? await locator.isEnabled() : false;
+        case "disabled": return locator.isEnabled ? !(await locator.isEnabled()) : true;
+        case "checked": return locator.evaluate ? await locator.evaluate((el) => (el as HTMLInputElement).checked) : false;
+        case "unchecked": return locator.evaluate ? !(await locator.evaluate((el) => (el as HTMLInputElement).checked)) : true;
+        default: return false;
+      }
+    }
+    case "url_check": {
+      const href = await runtime.page.evaluate(() => window.location.href);
+      const val = rule.url_value ?? "";
+      switch (rule.url_comparison) {
+        case "contains": return href.includes(val);
+        case "not_contains": return !href.includes(val);
+        case "matches_regex": return new RegExp(val).test(href);
+        default: return false;
+      }
+    }
+    default:
+      return false;
+  }
+}
+
 
 function outputValueToText(value: unknown, separator = "\n"): string {
   if (Array.isArray(value)) {

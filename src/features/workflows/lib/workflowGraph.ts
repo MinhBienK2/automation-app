@@ -493,6 +493,7 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "merge":
     case "set_variable":
     case "set_json_variables":
+    case "evaluate_logic":
     case "update_number_variable":
     case "update_text_variable":
     case "update_flag_variable":
@@ -940,6 +941,10 @@ function graphCanvasNodeMetaLabel(node: GraphNode) {
     case "while":
     case "repeat_until":
       return conditionMetaLabel(config.condition);
+    case "evaluate_logic":
+      return typeof config.output_name === "string" && config.output_name.trim()
+        ? `-> ${config.output_name.trim()}`
+        : null;
     case "repeat_times":
       return typeof config.times === "number" ? `${config.times}x` : null;
     case "repeat_for_each":
