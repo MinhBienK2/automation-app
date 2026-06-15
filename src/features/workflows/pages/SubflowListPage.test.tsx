@@ -333,4 +333,53 @@ describe("Subflow list integration", () => {
       );
     });
   });
+
+  test("asks for confirmation before deleting a subflow and updates the list after deletion", async () => {
+    const subflow: SubflowSummary = {
+      id: "subflow-login",
+      project_id: "project-1",
+      name: "Login Subflow",
+      description: "Reusable login path",
+      tags: [],
+      used_by_count: 0,
+      created_at: "1",
+      updated_at: "1",
+    };
+
+    let subflowList = [subflow];
+
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_subflows: () => subflowList,
+      delete_subflow: () => {
+        subflowList = [];
+        return Promise.resolve();
+      },
+    });
+
+    renderApp();
+
+    await openSubflows();
+
+    expect(await screen.findByText("Login Subflow")).toBeInTheDocument();
+
+    const row = (await screen.findByText("Login Subflow")).closest("[data-slot='card']");
+    await userEvent.click(
+      within(row as HTMLElement).getByRole("button", { name: "Delete Login Subflow" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "Delete Subflow" });
+    expect(within(dialog).getByText(/This removes Login Subflow/i)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete Subflow" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.deleteSubflow).toHaveBeenCalledWith("subflow-login");
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Login Subflow")).not.toBeInTheDocument();
+    });
+  });
 });
+

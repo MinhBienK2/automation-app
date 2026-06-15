@@ -50,6 +50,7 @@ export function SubflowListPage({
   const [nameDraft, setNameDraft] = useState("");
   const [descriptionDraft, setDescriptionDraft] = useState("");
   const [settingsSubflow, setSettingsSubflow] = useState<SubflowSummary | null>(null);
+  const [deleteSubflowCandidate, setDeleteSubflowCandidate] = useState<SubflowSummary | null>(null);
   const [localError, setLocalError] = useState("");
 
   async function submitCreateSubflow(event: React.FormEvent) {
@@ -186,7 +187,7 @@ export function SubflowListPage({
                   type="button"
                   variant="destructive"
                   onClick={() => {
-                    void onDeleteSubflow(subflow);
+                    setDeleteSubflowCandidate(subflow);
                   }}
                 >
                   <Trash2 aria-hidden="true" />
@@ -253,6 +254,48 @@ export function SubflowListPage({
           await onUpdateSubflow(settingsSubflow, input);
         }}
       />
+      <Dialog
+        open={Boolean(deleteSubflowCandidate)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteSubflowCandidate(null);
+        }}
+      >
+        {deleteSubflowCandidate ? (
+          <DialogContent className="workflow-dialog">
+            <DialogHeader>
+              <p className="eyebrow">Subflow</p>
+              <DialogTitle>Delete Subflow</DialogTitle>
+              <DialogDescription>
+                This removes {deleteSubflowCandidate.name} from the app. This
+                action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+
+            {error ? <p className="field-error">{error}</p> : null}
+            <DialogFooter className="form-actions">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={async () => {
+                  if (deleteSubflowCandidate) {
+                    await onDeleteSubflow(deleteSubflowCandidate);
+                    setDeleteSubflowCandidate(null);
+                  }
+                }}
+              >
+                Delete Subflow
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setDeleteSubflowCandidate(null)}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </section>
   );
 }

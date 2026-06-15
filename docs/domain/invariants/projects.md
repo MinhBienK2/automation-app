@@ -40,7 +40,7 @@ Preserve these unless the task explicitly changes them.
 
 - Reusable graph fragments, not standalone runnable scenarios.
 - Reachable from selected project's Subflows collection.
-- CRUD: create, open, rename via Subflow Settings, save, duplicate, delete.
+- CRUD: create, open, rename via Subflow Settings, save, duplicate, delete after confirmation.
 - Usage warnings when referenced by workflows. Deleting referenced subflow is blocked.
 - Subflow detail: owning project name in header, Settings opens rename, Save disabled until content changes.
 - Duplicate/delete actions stay on collection list, not detail header.

@@ -136,8 +136,9 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
     setAppError("");
     try {
       await deleteSubflowCommand(subflowId);
-      if (selectedSubflow) {
-        await loadSubflowsForProject(selectedSubflow.project_id);
+      const projectId = selectedSubflow?.project_id || (await ensureProjectId());
+      if (projectId) {
+        await loadSubflowsForProject(projectId);
       }
       if (selectedSubflow?.id === subflowId) {
         setSelectedSubflow(null);
@@ -149,7 +150,7 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
     } catch (error) {
       setAppError(commandMessage(error));
     }
-  }, [selectedSubflow, loadSubflowsForProject, setScreen, setProjectCollection, setAppError]);
+  }, [selectedSubflow, ensureProjectId, loadSubflowsForProject, setScreen, setProjectCollection, setAppError]);
 
   const changeSubflowGraph = useCallback((nextGraph: WorkflowGraph) => {
     const hasEditableChange = hasEditableGraphChange(selectedSubflowGraph, nextGraph);
