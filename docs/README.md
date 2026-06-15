@@ -19,17 +19,7 @@ This directory is for coding agents working in this repository.
 6. Implement the smallest scoped change.
 7. Run focused checks first, then broader checks when the touched area requires it.
 8. Update `docs/` when behavior, contracts, routes, ownership, or verification changed.
-9. Before final response, confirm docs and code agree for the touched area.
-
-## Final Response Checklist
-
-For code changes, include:
-
-- Tests/checks run.
-- Whether `docs/` was updated.
-- If `docs/` was not updated, why the touched behavior/contracts did not require it.
-
-For docs-only changes, mention that TDD was skipped because no runtime behavior changed.
+9. Before final response, confirm docs and code agree for the touched area, and ensure that `npm run lint && npm run test && npm run build` passes successfully.
 
 ## Update Rule
 

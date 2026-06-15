@@ -5,15 +5,15 @@
 - Helps identify abuse detection gaps (fake engagement, rate limits) via auditable test runs (allowlists, test accounts).
 
 ## Package Manager
-- Use **npm**: `npm install`, `npm run electron:dev`, `npm run build`, `npm test`, `npm run electron:pack`
+- Use **npm**: `rtk npm install`, `npm run electron:dev`, `rtk npm run build`, `rtk npm test`, `npm run electron:pack`
 
 ## File-Scoped Commands
 | Task | Command |
 |------|---------|
-| Test file | `npm test -- path/to/file.test.ts[x]` |
-| Typecheck renderer | `npx tsc --noEmit` |
-| Build Electron main/preload | `npm run build:electron` |
-| Electron package | `npm run electron:pack` |
+| Test file | `rtk npm test -- path/to/file.test.ts[x]` |
+| Typecheck renderer | `rtk npx tsc --noEmit` |
+| Build Electron main/preload | `rtk npm run build:electron` |
+| Electron package | `rtk npm run electron:pack` |
 
 ## TDD Requirement
 Before implementing any feature, bug fix, refactor, or behavior change, agents MUST use `.agents/skills/test-driven-development`.
@@ -51,5 +51,6 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 - Layer map: `docs/architecture/overview.md`. Read it for broad or unclear tasks.
 - Add/update tests when changing validation, commands, persistence, runner, or UI.
 - Run `npm run lint` and `npx tsc --noEmit` before committing.
+- Before completing any task, ensure that `rtk npm run lint && rtk npm run test && rtk npm run build` passes successfully.
 
 
