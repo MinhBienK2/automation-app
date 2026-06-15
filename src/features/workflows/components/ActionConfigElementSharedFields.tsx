@@ -37,6 +37,7 @@ type TargetableElementConfig = Extract<
       | "extract_input_value"
       | "extract_table"
       | "extract_list"
+      | "count_elements"
       | "assert_element"
       | "assert_text";
   }

@@ -293,6 +293,7 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "extract_input_value":
     case "extract_table":
     case "extract_list":
+    case "count_elements":
       return [...targetSourceFields, "Output name"];
     case "extract_regex_matches":
       return ["Source output", "Pattern", "Flags", "Output name", "Append", "Dedupe"];

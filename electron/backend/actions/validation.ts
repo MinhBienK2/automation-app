@@ -285,6 +285,7 @@ const actionValidators = createActionValidatorMap({
   extract_input_value: (config) => validateDataCaptureConfig(config.config),
   extract_table: (config) => validateDataCaptureConfig(config.config),
   extract_list: (config) => validateDataCaptureConfig(config.config),
+  count_elements: (config) => validateDataCaptureConfig(config.config),
   extract_regex_matches: (config) =>
     firstValidation(
       requiredActionString(config.config.source_name, "source_name", "Source output is required"),

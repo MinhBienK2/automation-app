@@ -45,6 +45,7 @@ describe("backend action execution registry", () => {
       extract_input_value: async () => calls.push("extract_input_value"),
       extract_table: async () => calls.push("extract_table"),
       extract_list: async () => calls.push("extract_list"),
+      count_elements: async () => calls.push("count_elements"),
       extract_regex_matches: async () => calls.push("extract_regex_matches"),
       take_screenshot: async () => calls.push("take_screenshot"),
       write_text_file: async () => calls.push("write_text_file"),

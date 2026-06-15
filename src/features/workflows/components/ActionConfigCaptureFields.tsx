@@ -23,6 +23,7 @@ export function CaptureActionFields({
     case "extract_input_value":
     case "extract_table":
     case "extract_list":
+    case "count_elements":
       return <DataCaptureFields config={config} onChange={onChange} />;
     case "extract_regex_matches":
       return (
@@ -221,7 +222,8 @@ type DataCaptureConfig = Extract<
       | "extract_attribute"
       | "extract_input_value"
       | "extract_table"
-      | "extract_list";
+      | "extract_list"
+      | "count_elements";
   }
 >;
 

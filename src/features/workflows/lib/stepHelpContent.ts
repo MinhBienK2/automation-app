@@ -41,6 +41,7 @@ type PhaseOneActionType =
   | "extract_input_value"
   | "extract_table"
   | "extract_list"
+  | "count_elements"
   | "extract_regex_matches"
   | "take_screenshot"
   | "write_text_file"
@@ -506,6 +507,7 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   ),
   extract_table: elementHelp("Extract Table", "capture table rows", "lấy bảng", "output"),
   extract_list: elementHelp("Extract List", "capture list items", "lấy danh sách", "output"),
+  count_elements: elementHelp("Count Elements", "count matching elements", "đếm số lượng phần tử", "output"),
   extract_regex_matches: {
     vi: {
       title: "Trợ giúp Extract Regex Matches",

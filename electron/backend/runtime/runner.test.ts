@@ -353,6 +353,47 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
+  test("executes count_elements action and records count output", async () => {
+    const page = new FakePage();
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("count_divs", "Count Divs", {
+            type: "count_elements",
+            config: { xpath: "//div", output_name: "div_count" },
+          }),
+          step("count_missing", "Count Missing", {
+            type: "count_elements",
+            config: { xpath: "#missing", output_name: "missing_count" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.completed_step_ids).toEqual(["count_divs", "count_missing"]);
+    expect(result.outputs).toMatchObject({
+      div_count: 1,
+      missing_count: 0,
+    });
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "locator://div",
+        "count://div",
+        "locator:#missing",
+        "count:#missing",
+      ]),
+    );
+  });
+
   test("advanced browser actions execute while CloakBrowser owns humanization globally", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),

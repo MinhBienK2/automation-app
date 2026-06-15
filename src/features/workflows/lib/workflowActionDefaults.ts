@@ -136,6 +136,11 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: { target: null, output_name: actionType.replace("extract_", "") },
       } as ActionConfig;
+    case "count_elements":
+      return {
+        type: actionType,
+        config: { target: null, output_name: "element_count" },
+      };
     case "extract_regex_matches":
       return {
         type: actionType,

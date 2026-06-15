@@ -182,6 +182,7 @@ export function actionConfigSummary(action: ActionConfig): string | null {
     case "extract_input_value":
     case "extract_table":
     case "extract_list":
+    case "count_elements":
       return withSuffix(elementTargetSummary(action.config), `Output ${action.config.output_name}`);
     case "extract_regex_matches":
       return compactSummary(

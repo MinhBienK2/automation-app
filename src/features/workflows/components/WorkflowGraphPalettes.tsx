@@ -910,6 +910,7 @@ export const actionDescriptions: Record<ActionType, string> = {
   extract_input_value: "Capture a field value",
   extract_table: "Capture table data",
   extract_list: "Capture repeated items",
+  count_elements: "Count matching elements on the page",
   extract_regex_matches: "Extract pattern matches from an output",
   take_screenshot: "Save visual evidence",
   write_text_file: "Save output text as a run artifact",

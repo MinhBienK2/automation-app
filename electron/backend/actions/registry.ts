@@ -76,6 +76,7 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("extract_input_value", "capture"),
   definition("extract_table", "capture"),
   definition("extract_list", "capture"),
+  definition("count_elements", "capture"),
   definition("extract_regex_matches", "capture"),
   definition("take_screenshot", "capture"),
   definition("write_text_file", "capture"),

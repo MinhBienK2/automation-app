@@ -372,6 +372,10 @@ export function createRunnerActionExecutors(
         await deps.locatorForAction(runtime, action.config),
       );
     },
+    count_elements: async (action) => {
+      const locator = await deps.locatorForAction(runtime, action.config);
+      runtime.outputs[action.config.output_name] = (await locator.count?.()) ?? 0;
+    },
     extract_regex_matches: async (action) => {
       const source = outputValueToText(runtime.outputs[action.config.source_name]);
       const regex = regexFromActionConfig(action.config.pattern, action.config.flags);

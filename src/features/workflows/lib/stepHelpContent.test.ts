@@ -81,6 +81,7 @@ describe("step help content", () => {
       "extract_input_value",
       "extract_table",
       "extract_list",
+      "count_elements",
       "extract_regex_matches",
       "take_screenshot",
       "write_text_file",

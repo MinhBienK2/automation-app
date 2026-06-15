@@ -39,6 +39,7 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   extract_input_value: "implemented_partial_requires_validation",
   extract_table: "implemented_partial_requires_validation",
   extract_list: "implemented_partial_requires_validation",
+  count_elements: "implemented_partial_requires_validation",
   extract_regex_matches: "implemented_partial_requires_validation",
   take_screenshot: "implemented",
   write_text_file: "implemented_partial_requires_validation",

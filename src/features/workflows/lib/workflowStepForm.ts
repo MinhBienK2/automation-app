@@ -161,6 +161,7 @@ export function updateActionConfigField(
     case "extract_input_value":
     case "extract_table":
     case "extract_list":
+    case "count_elements":
       return updateDataCaptureConfigField(config, field, value);
     case "extract_regex_matches":
       return updateExtractRegexMatchesConfigField(config, field, value);
@@ -345,6 +346,7 @@ function actionSupportsTargetRef(actionType: ActionConfig["type"]): boolean {
       "extract_input_value",
       "extract_table",
       "extract_list",
+      "count_elements",
       "assert_element",
       "assert_text",
     ] as Array<ActionConfig["type"]>
@@ -825,7 +827,7 @@ function updateSetContenteditableConfigField(
 function updateDataCaptureConfigField(
   config: Extract<
     ActionConfig,
-    { type: "extract_text" | "extract_input_value" | "extract_table" | "extract_list" }
+    { type: "extract_text" | "extract_input_value" | "extract_table" | "extract_list" | "count_elements" }
   >,
   field: ActionConfigField,
   value: string,
