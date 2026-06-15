@@ -22,6 +22,12 @@ rtk docker ps
 rtk gh pr list
 ```
 
+## File-Scoped Commands
+| Task | Command |
+|------|---------|
+| Test file | `rtk npm test -- path/to/file.test.ts[x]` |
+| Typecheck renderer | `rtk npx tsc --noEmit` |
+
 ## TDD Requirement
 Before implementing any feature, bug fix, refactor, or behavior change, agents MUST use `.agents/skills/test-driven-development`.
 
@@ -57,4 +63,5 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 - Quick Reference Map: `docs/ARCHITECTURE_QUICK_REF.md`. Read it to find hooks and commands instantly.
 - Layer map: `docs/architecture/overview.md`. Read it for broad or unclear tasks.
 - Add/update tests when changing validation, commands, persistence, runner, or UI.
+- During development and TDD, run focused tests using file-scoped commands to keep feedback fast.
 - Before completing any task, you MUST run the FULL test suite using `rtk npm run test` to verify there are no regressions, in addition to running `rtk npm run lint` and `rtk npm run build`.

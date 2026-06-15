@@ -9,17 +9,26 @@ This directory is for coding agents working in this repository.
 - `DESIGN.md` is mandatory for layout, styling, and user-facing UI changes.
 - `docs/superpowers/` is a historical planning archive. Do not use it as current truth.
 
-## Execution Loop
+## Task Workflow
 
-1. Read this file.
-2. Run `node scripts/agent/agent-router.mjs --diff` (or `--file <path>` / `--query <text>`) to automatically identify the matching route, documentation to read, and unit tests to run.
-3. Read only the documentation files output by the router. For broad or unclear work, read the product/planning route first, or refer to `docs/ARCHITECTURE_QUICK_REF.md` for a quick file mapping.
-4. Inspect the listed source files before editing.
-5. Use `.agents/skills/test-driven-development` before behavior-changing code.
-6. Implement the smallest scoped change.
-7. Run focused checks first (`rtk npm test -- path/to/file.test.ts[x]`) during development for fast TDD feedback.
-8. Before final response, you MUST run the FULL test suite using `npm run test` (in addition to `npm run lint` and `npm run build`) to ensure no regressions.
-9. Update `docs/` when behavior, contracts, routes, ownership, or verification changed, ensuring docs and code agree for the touched area.
+Follow this workflow once per task. Do not restart the workflow unless new information changes the task scope.
+
+1. Run `node scripts/agent/agent-router.mjs --diff` (or `--file <path>` / `--query <text>`) to automatically identify the matching route, documentation to read, and unit tests to run.
+2. Read only the documentation files output by the router. For broad or unclear work, read the product/planning route first, or refer to `docs/ARCHITECTURE_QUICK_REF.md` for a quick file mapping.
+3. Inspect the listed source files before editing.
+4. Use `.agents/skills/test-driven-development` to implement.
+5. After all the code changes are completed, update `docs/` when behavior, contracts, routes, ownership, or verification changed, ensuring docs and code agree for the touched area.
+6. The final checkpoint upon completion of the task. You MUST run `rtk npm run test`, `rtk npm run lint` and `rtk npm run build` to ensure no regressions.
+
+## Final Response Checklist
+
+For code changes, include:
+
+- Tests/checks run.
+- Whether `docs/` was updated.
+- If `docs/` was not updated, why the touched behavior/contracts did not require it.
+
+For docs-only changes, mention that TDD was skipped because no runtime behavior changed.
 
 ## Update Rule
 
