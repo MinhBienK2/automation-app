@@ -17,7 +17,7 @@ This directory is for coding agents working in this repository.
 4. Inspect the listed source files before editing.
 5. Use `.agents/skills/test-driven-development` before behavior-changing code.
 6. Implement the smallest scoped change.
-7. Run focused checks first (like file-scoped tests) during development for fast TDD feedback.
+7. Run focused checks first (`rtk npm test -- path/to/file.test.ts[x]`) during development for fast TDD feedback.
 8. Before final response, you MUST run the FULL test suite using `npm run test` (in addition to `npm run lint` and `npm run build`) to ensure no regressions.
 9. Update `docs/` when behavior, contracts, routes, ownership, or verification changed, ensuring docs and code agree for the touched area.
 
