@@ -10,6 +10,9 @@
 ## Rule
 Always prefix shell commands with `rtk` to minimize token consumption.
 
+> [!IMPORTANT]
+> For Python commands (like `pytest`, `pyright`, `ruff`, `python`), do NOT use `rtk uv`. Instead, always activate the virtual environment first (e.g., `source .venv/bin/activate`) and then run the command directly prefixed by `rtk`.
+
 Examples:
 
 ```bash
