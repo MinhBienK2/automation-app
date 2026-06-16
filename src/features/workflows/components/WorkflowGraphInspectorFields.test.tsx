@@ -149,6 +149,34 @@ describe("WorkflowGraphInspectorFields", () => {
       .toBeInTheDocument();
   });
 
+  test("evaluate_logic script mode uses template textarea with variable picker for script field", () => {
+    const onChange = vi.fn();
+    render(
+      <NodeConfigFields
+        node={graphNode({
+          node_type: "evaluate_logic",
+          config: {
+            output_name: "is_valid",
+            mode: "script",
+            script: "outputs.counter > 5",
+          },
+        })}
+        onChange={onChange}
+        variableOptions={[
+          { name: "counter", source: "Variables" },
+          { name: "status", source: "Variables" },
+        ]}
+      />,
+    );
+
+    const scriptGroup = screen.getByRole("group", { name: "Script Settings" });
+    const textarea = within(scriptGroup).getByRole("textbox");
+    expect(textarea).toHaveValue("outputs.counter > 5");
+
+    expect(within(scriptGroup).getByRole("button", { name: "Insert variable for JavaScript Expression" }))
+      .toBeInTheDocument();
+  });
+
   test("edits Call Subflow target and input mapping", () => {
     const onChange = vi.fn();
     const node = graphNode({

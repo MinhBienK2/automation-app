@@ -4,9 +4,8 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
-import { Textarea } from "../../../components/ui/textarea";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
-import { TemplateTextField } from "./TemplateTextField";
+import { TemplateTextField, TemplateTextareaField } from "./TemplateTextField";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { Trash2, Plus } from "lucide-react";
 import { objectConfig } from "../lib/configUtils";
@@ -110,18 +109,20 @@ export function WorkflowGraphEvaluateLogicFields({
 
       {mode === "script" ? (
         <ActionConfigFieldGroup title="Script Settings">
-          <Label>
-            JavaScript Expression
-            <Textarea
-              className="font-mono text-xs h-32"
-              placeholder="outputs.counter > 5 && page.url().includes('login')"
-              value={script}
-              onChange={(event) => updateConfig({ script: event.currentTarget.value })}
-            />
-          </Label>
+          <TemplateTextareaField
+            label="JavaScript Expression"
+            value={script}
+            placeholder="outputs.counter > 5 && page.url().includes('login')"
+            variableOptions={variableOptions}
+            showMath={false}
+            onChange={(value) => updateConfig({ script: value })}
+          />
           <div className="text-xs text-muted-foreground mt-1.5 space-y-1">
             <p>Expression should evaluate to a boolean value.</p>
-            <p>Available variables: <code className="font-mono bg-elevated px-1 rounded">outputs</code> (workflow variables), <code className="font-mono bg-elevated px-1 rounded">page</code> (Playwright Page instance).</p>
+            <p>
+              {"Use {{name}} to insert variables (resolved before execution), or outputs.name for direct access. "}
+              {"Also available: page (Playwright Page instance)."}
+            </p>
           </div>
         </ActionConfigFieldGroup>
       ) : (

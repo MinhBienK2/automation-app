@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import {
   evaluateMathInObject,
   renderTemplate,
+  resolveObjectTemplates,
   setVariables,
   writeVariableValue,
 } from "./variables";
@@ -109,5 +110,21 @@ describe("runner variable helpers", () => {
     expect(result.nested.math_with_minus).toBe(8);
     expect(result.nested.plain_text_math).toBe("10 -2");
     expect(result.array).toEqual([2, "hello"]);
+  });
+
+  test("resolves template tokens in evaluate_logic script config", () => {
+    const config = {
+      output_name: "is_valid",
+      mode: "script",
+      script: "{{counter}} > 5 && outputs.status === '{{status}}'",
+      rules_group: undefined,
+    };
+    const outputs = { counter: 10, status: "active" };
+
+    const resolved = resolveObjectTemplates(config, outputs);
+
+    expect(resolved.script).toBe("10 > 5 && outputs.status === 'active'");
+    expect(resolved.output_name).toBe("is_valid");
+    expect(resolved.mode).toBe("script");
   });
 });

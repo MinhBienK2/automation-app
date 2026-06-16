@@ -284,8 +284,30 @@ describe("runnerActionExecutors", () => {
     expect(runtime.outputs.result).toBe(true);
     expect(scriptPassedArgs).toEqual({
       scriptText: "outputs.counter > 5 && outputs.status === 'active'",
-      outputs: { counter: 10, status: "active", result: true }, // wait, result true is set after evaluation
+      outputs: { counter: 10, status: "active", result: true },
     });
+  });
+
+  test("evaluates logic in JS script mode with pre-resolved template tokens", async () => {
+    const page = {
+      evaluate: async (fn: any, args: any) => {
+        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
+        return parsedFn(args.outputs);
+      },
+    } as any;
+    const runtime = minimalRuntime({ page, outputs: { counter: 10, status: "active" } });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    await executeRegisteredAction(executors, {
+      type: "evaluate_logic",
+      config: {
+        output_name: "result",
+        mode: "script",
+        script: "10 > 5 && outputs.status === 'active'",
+      },
+    });
+
+    expect(runtime.outputs.result).toBe(true);
   });
 
   test("evaluates logic in visual rules mode", async () => {
