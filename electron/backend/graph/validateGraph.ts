@@ -58,6 +58,7 @@ const supportedGraphNodeTypes = new Set<string>([
   "set_variable",
   "set_json_variables",
   "evaluate_logic",
+  "evaluate_expression",
   "update_number_variable",
   "update_text_variable",
   "update_flag_variable",
@@ -357,6 +358,23 @@ function pushNodeSemanticIssues(
             mode: stringField(node.config, "mode") === "script" ? "script" : "visual",
             script: stringField(node.config, "script"),
             rules_group: asRecord(node.config).rules_group,
+          },
+        } as any);
+        if (validation) issues.push(error(node.id, null, validation.message));
+      }
+      break;
+    }
+    case "evaluate_expression": {
+      const output_name = stringField(node.config, "output_name");
+      if (!output_name) {
+        issues.push(error(node.id, null, "Output variable name is required"));
+      } else {
+        const validation = validateActionConfig({
+          type: "evaluate_expression",
+          config: {
+            output_name,
+            expression: stringField(node.config, "expression"),
+            evaluation_type: stringField(node.config, "evaluation_type") as any,
           },
         } as any);
         if (validation) issues.push(error(node.id, null, validation.message));

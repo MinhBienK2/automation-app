@@ -60,6 +60,8 @@ Graph-internal action types are not visible in the main action picker. This incl
 - `transform_variable`
 - `assert_output`
 - `domain_allowlist`
+- `evaluate_logic`
+- `evaluate_expression`
 
 The backend action registry enumerates every serialized action type with an
 execution owner, palette visibility, and audit-risk tag. Backend validation now

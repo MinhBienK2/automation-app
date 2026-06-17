@@ -58,7 +58,8 @@ export type GraphNodeType =
   | "transform_variable"
   | "assert_output"
   | "domain_allowlist"
-  | "evaluate_logic";
+  | "evaluate_logic"
+  | "evaluate_expression";
 
 export type GraphPortDirection = "input" | "output";
 export type GraphValidationLevel = "error" | "warning";

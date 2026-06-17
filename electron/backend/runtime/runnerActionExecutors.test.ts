@@ -428,6 +428,73 @@ describe("runnerActionExecutors", () => {
     expect(resolvers.has("result")).toBe(false);
     expect(runtime.outputs.result).toBe(false);
   });
+
+  test("evaluates expression statically and returns raw calculation result", async () => {
+    const page = {
+      evaluate: async (fn: any, args: any) => {
+        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
+        return parsedFn(args.outputs);
+      },
+    } as any;
+    const runtime = minimalRuntime({ page, outputs: { A: 10, B: 5 } });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    await executeRegisteredAction(executors, {
+      type: "evaluate_expression",
+      config: {
+        output_name: "result",
+        expression: "outputs.A + outputs.B",
+        evaluation_type: "static",
+      },
+    } as any);
+
+    expect(runtime.outputs.result).toBe(15);
+  });
+
+  test("registers dynamic evaluate_expression resolver and evaluates raw values lazily", async () => {
+    let scriptCallCount = 0;
+    const page = {
+      evaluate: async (fn: any, args: any) => {
+        scriptCallCount++;
+        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
+        return parsedFn(args.outputs);
+      },
+    } as any;
+    
+    const outputs: Record<string, unknown> = { A: 10, B: 5 };
+    const resolvers = new Map<string, any>();
+    Object.defineProperty(outputs, "__dynamicResolvers", {
+      value: resolvers,
+      writable: true,
+      enumerable: false,
+    });
+    
+    const runtime = minimalRuntime({ page, outputs });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    await executeRegisteredAction(executors, {
+      type: "evaluate_expression",
+      config: {
+        output_name: "result",
+        expression: "outputs.A + outputs.B",
+        evaluation_type: "dynamic",
+      },
+    } as any);
+
+    expect(scriptCallCount).toBe(0);
+    expect(resolvers.has("result")).toBe(true);
+
+    const { resolveDynamicOutputs } = await import("./variables");
+    await resolveDynamicOutputs(runtime.outputs, "{{result}}");
+
+    expect(scriptCallCount).toBe(1);
+    expect(runtime.outputs.result).toBe(15);
+
+    runtime.outputs.A = 20;
+    await resolveDynamicOutputs(runtime.outputs, "{{result}}");
+    expect(scriptCallCount).toBe(2);
+    expect(runtime.outputs.result).toBe(25);
+  });
 });
 
 

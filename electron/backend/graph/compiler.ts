@@ -395,6 +395,17 @@ function compilePath(
       }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
+    case "evaluate_expression":
+      steps.push(step(node, {
+        type: "evaluate_expression",
+        config: {
+          output_name: requiredString(node.config, "output_name", "Output variable name is required"),
+          expression: requiredString(node.config, "expression", "Expression is required"),
+          evaluation_type: stringField(node.config, "evaluation_type") === "dynamic" ? "dynamic" : "static",
+        },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
     case "update_number_variable": {
       const name = requiredString(node.config, "name", "Variable name is required");
       const operation = requiredString(node.config, "operation", "Operation must be increment, decrement, add, subtract, multiply, or divide") as any;
@@ -829,6 +840,8 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
+    case "evaluate_logic":
+    case "evaluate_expression":
     case "call_subflow":
     case "merge":
       return "out";

@@ -1061,6 +1061,51 @@ export function createRunnerActionExecutors(
         }
       }
     },
+    evaluate_expression: async (action) => {
+      const { output_name, expression, evaluation_type } = action.config;
+      const resolvers = (runtime.outputs as any).__dynamicResolvers;
+      if (evaluation_type === "dynamic" && resolvers) {
+        const { findReferencedVariables } = await import("./variables.js");
+        const refs = new Set<string>();
+        if (expression) {
+          findReferencedVariables(expression, refs);
+        }
+        resolvers.set(output_name, {
+          dependencies: Array.from(refs),
+          resolve: async () => {
+            if (!expression) throw new Error("Expression is required");
+            const result = await runtime.page.evaluate((args) => {
+              if (!args) throw new Error("Arguments are required");
+              const { scriptText, outputs } = args;
+              try {
+                const fn = new Function("outputs", `return (${scriptText});`);
+                return fn(outputs);
+              } catch (err: any) {
+                throw new Error(`Failed to evaluate JS: ${err.message}`);
+              }
+            }, { scriptText: renderTemplate(expression, runtime.outputs), outputs: runtime.outputs });
+            return result;
+          },
+        });
+        runtime.outputs[output_name] = undefined;
+      } else {
+        if (resolvers) {
+          resolvers.delete(output_name);
+        }
+        if (!expression) throw new Error("Expression is required");
+        const result = await runtime.page.evaluate((args) => {
+          if (!args) throw new Error("Arguments are required");
+          const { scriptText, outputs } = args;
+          try {
+            const fn = new Function("outputs", `return (${scriptText});`);
+            return fn(outputs);
+          } catch (err: any) {
+            throw new Error(`Failed to evaluate JS: ${err.message}`);
+          }
+        }, { scriptText: expression, outputs: runtime.outputs });
+        runtime.outputs[output_name] = result;
+      }
+    },
   });
 }
 

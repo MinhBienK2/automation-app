@@ -315,6 +315,7 @@ export function updateActionConfigField(
     case "assert_output":
     case "domain_allowlist":
     case "evaluate_logic":
+    case "evaluate_expression":
       return config;
   }
 }

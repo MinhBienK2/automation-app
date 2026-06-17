@@ -432,13 +432,13 @@ export function collectVariableOptions(
       continue;
     }
 
-    if (node.node_type === "evaluate_logic") {
+    if (node.node_type === "evaluate_logic" || node.node_type === "evaluate_expression") {
       const config = objectConfig(node.config);
       const name = typeof config.output_name === "string" ? config.output_name.trim() : "";
       if (name) {
         options.push({
           name,
-          source: node.label || "Evaluate Logic",
+          source: node.label || (node.node_type === "evaluate_logic" ? "Evaluate Condition" : "Evaluate Expression"),
           evaluation_type: config.evaluation_type === "dynamic" ? "dynamic" : "static",
         });
       }

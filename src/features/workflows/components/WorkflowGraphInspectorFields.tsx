@@ -24,6 +24,7 @@ import {
   conditionFromConfig,
 } from "./WorkflowGraphConditionFields";
 import { WorkflowGraphEvaluateLogicFields } from "./WorkflowGraphEvaluateLogicFields";
+import { WorkflowGraphEvaluateExpressionFields } from "./WorkflowGraphEvaluateExpressionFields";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
 import { TemplateTextField, TemplateTextareaField, type VariableOption } from "./TemplateTextField";
@@ -633,6 +634,14 @@ export function NodeConfigFields({
     case "evaluate_logic":
       return (
         <WorkflowGraphEvaluateLogicFields
+          node={node}
+          onChange={onChange}
+          variableOptions={variableOptions}
+        />
+      );
+    case "evaluate_expression":
+      return (
+        <WorkflowGraphEvaluateExpressionFields
           node={node}
           onChange={onChange}
           variableOptions={variableOptions}

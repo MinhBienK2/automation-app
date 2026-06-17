@@ -393,6 +393,35 @@ describe("backend action validation registry", () => {
         config: { name: "my_obj", operation: "set_key", property_key: "", property_value: "val", property_value_type: "text" },
       } as never),
     ).toEqual({ field: "property_key", message: "Property key is required" });
+
+    // evaluate_expression
+    expect(
+      validateActionConfig({
+        type: "evaluate_expression",
+        config: { output_name: "", expression: "1 + 1" },
+      } as any),
+    ).toEqual({ field: "output_name", message: "Output variable name is required" });
+
+    expect(
+      validateActionConfig({
+        type: "evaluate_expression",
+        config: { output_name: "result", expression: "" },
+      } as any),
+    ).toEqual({ field: "expression", message: "Expression is required" });
+
+    expect(
+      validateActionConfig({
+        type: "evaluate_expression",
+        config: { output_name: "result", expression: "1 + 1", evaluation_type: "invalid" as any },
+      } as any),
+    ).toEqual({ field: "evaluation_type", message: "Evaluation type must be static or dynamic" });
+
+    expect(
+      validateActionConfig({
+        type: "evaluate_expression",
+        config: { output_name: "result", expression: "1 + 1", evaluation_type: "dynamic" },
+      } as any),
+    ).toBeNull();
   });
 });
 

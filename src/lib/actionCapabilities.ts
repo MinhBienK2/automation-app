@@ -80,6 +80,7 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   assert_output: "graph_internal",
   domain_allowlist: "graph_internal",
   evaluate_logic: "graph_internal",
+  evaluate_expression: "graph_internal",
   set_cookie: "implemented",
   clear_cookies: "implemented",
   set_viewport: "implemented",

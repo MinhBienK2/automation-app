@@ -60,6 +60,7 @@ describe("backend action registry", () => {
       "set_variable",
       "set_json_variables",
       "evaluate_logic",
+      "evaluate_expression",
       "assert_element",
       "assert_text",
       "graph_noop",

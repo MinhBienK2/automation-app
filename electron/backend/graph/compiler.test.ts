@@ -1621,6 +1621,41 @@ describe("TypeScript graph compiler parity", () => {
       }),
     );
   });
+
+  test("compiles evaluate_expression graph nodes", async () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("eval-expr", "evaluate_expression", {
+          config: {
+            output_name: "result",
+            expression: "outputs.A + outputs.B",
+            evaluation_type: "dynamic",
+          },
+        }),
+        graphNode("stop", "stop_workflow", { config: { status: "success" } }),
+      ],
+      [
+        edge("start", "out", "eval-expr", "in"),
+        edge("eval-expr", "out", "stop", "in"),
+      ],
+    );
+
+    const plan = compileWorkflowRunPlan(graph, workflowSettings());
+    expect(plan.steps).toHaveLength(2);
+    expect(plan.steps[0]).toEqual(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          type: "evaluate_expression",
+          config: expect.objectContaining({
+            output_name: "result",
+            expression: "outputs.A + outputs.B",
+            evaluation_type: "dynamic",
+          }),
+        }),
+      }),
+    );
+  });
 });
 
 

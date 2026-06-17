@@ -413,6 +413,18 @@ export class BrowserWorkflowRunner {
       } else {
         resolvedAction.config = resolveObjectTemplates(resolvedAction.config, runtime.outputs);
       }
+    } else if (resolvedAction.type === "evaluate_expression") {
+      const config = resolvedAction.config as any;
+      if (config.evaluation_type === "dynamic") {
+        const { output_name, evaluation_type } = config;
+        resolvedAction.config = {
+          output_name: resolveObjectTemplates(output_name, runtime.outputs),
+          evaluation_type,
+          expression: (action.config as any).expression,
+        } as any;
+      } else {
+        resolvedAction.config = resolveObjectTemplates(resolvedAction.config, runtime.outputs);
+      }
     } else {
       resolvedAction.config = resolveObjectTemplates(resolvedAction.config, runtime.outputs);
     }

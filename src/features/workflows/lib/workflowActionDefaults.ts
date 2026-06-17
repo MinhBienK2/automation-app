@@ -214,6 +214,15 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
           evaluation_type: "static",
         },
       };
+    case "evaluate_expression":
+      return {
+        type: actionType,
+        config: {
+          output_name: "result",
+          expression: "",
+          evaluation_type: "static",
+        },
+      };
     case "update_number_variable":
       return {
         type: actionType,

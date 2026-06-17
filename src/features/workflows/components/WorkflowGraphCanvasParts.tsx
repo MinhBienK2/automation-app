@@ -156,7 +156,8 @@ function graphNodeCategory(nodeType: GraphNodeType) {
     nodeType === "update_object_variable" ||
     nodeType === "transform_variable" ||
     nodeType === "assert_output" ||
-    nodeType === "domain_allowlist"
+    nodeType === "domain_allowlist" ||
+    nodeType === "evaluate_expression"
   ) {
     return "variable";
   }
@@ -265,6 +266,7 @@ function portUsageText(nodeType: GraphNodeType, port: GraphPort) {
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
+    case "evaluate_expression":
       return utilityPortUsage(nodeType, port);
     default:
       return genericPortUsage(port);
@@ -433,6 +435,8 @@ function utilityNodeVerb(nodeType: GraphNodeType) {
       return "kiểm tra output";
     case "domain_allowlist":
       return "áp dụng domain allowlist";
+    case "evaluate_expression":
+      return "đánh giá biểu thức";
     default:
       return "chạy node";
   }

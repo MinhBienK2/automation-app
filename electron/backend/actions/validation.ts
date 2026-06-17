@@ -651,6 +651,19 @@ const actionValidators = createActionValidatorMap({
     }
     return null;
   },
+  evaluate_expression: (config) => {
+    const { output_name, expression, evaluation_type } = config.config;
+    if (!output_name || !output_name.trim()) {
+      return validationError("output_name", "Output variable name is required");
+    }
+    if (evaluation_type && !["static", "dynamic"].includes(evaluation_type)) {
+      return validationError("evaluation_type", "Evaluation type must be static or dynamic");
+    }
+    if (!expression || !expression.trim()) {
+      return validationError("expression", "Expression is required");
+    }
+    return null;
+  },
 });
 
 export function validateActionConfig(config: ActionConfig): ActionValidationError | null {

@@ -5068,4 +5068,85 @@ describe("BrowserWorkflowRunner dynamic evaluate_logic", () => {
     expect(context.page.events).toContain("fill://input:val false");
     expect(context.page.events).toContain("fill://input:val true");
   });
+
+  test("evaluates expression dynamically when referenced by later steps", async () => {
+    const context = new FakeContext();
+    const driver = createFakeDriver(context);
+    const paths = await createTempAppPaths();
+    const runner = new BrowserWorkflowRunner({ appPaths: paths, driver });
+    const settings = makeSettings({});
+
+    const graph: CompiledWorkflowGraph = {
+      steps: [
+        {
+          node_id: "set_A",
+          label: "Set A",
+          config: {
+            type: "set_variable",
+            config: { variables: [{ name: "A", value_type: "number", value: "10" }] },
+          },
+        },
+        {
+          node_id: "set_B",
+          label: "Set B",
+          config: {
+            type: "set_variable",
+            config: { variables: [{ name: "B", value_type: "number", value: "5" }] },
+          },
+        },
+        {
+          node_id: "eval_C",
+          label: "Evaluate Expression",
+          config: {
+            type: "evaluate_expression",
+            config: {
+              output_name: "C",
+              evaluation_type: "dynamic",
+              expression: "outputs.A + outputs.B",
+            },
+          },
+        },
+        {
+          node_id: "fill_1",
+          label: "Fill 1",
+          config: {
+            type: "input_text",
+            config: {
+              target: { locators: [{ kind: "xpath", value: "//input" }] },
+              text: "val {{C}}",
+            },
+          },
+        },
+        {
+          node_id: "update_A",
+          label: "Update A",
+          config: {
+            type: "update_number_variable",
+            config: { name: "A", operation: "add", value: "20" },
+          },
+        },
+        {
+          node_id: "fill_2",
+          label: "Fill 2",
+          config: {
+            type: "input_text",
+            config: {
+              target: { locators: [{ kind: "xpath", value: "//input" }] },
+              text: "val {{C}}",
+            },
+          },
+        },
+      ],
+    };
+
+    const result = await runner.run({
+      graph,
+      settings,
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(context.page.events).toContain("fill://input:val 15");
+    expect(context.page.events).toContain("fill://input:val 35");
+  });
 });

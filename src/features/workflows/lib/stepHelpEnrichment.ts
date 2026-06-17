@@ -395,6 +395,8 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Key", "Value"];
     case "evaluate_logic":
       return ["Output name", "Mode", "Script", "Rules group"];
+    case "evaluate_expression":
+      return ["Output name", "Expression"];
   }
 }
 

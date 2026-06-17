@@ -177,6 +177,32 @@ describe("WorkflowGraphInspectorFields", () => {
       .toBeInTheDocument();
   });
 
+  test("evaluate_expression uses template textarea with variable picker for expression field", () => {
+    const onChange = vi.fn();
+    render(
+      <NodeConfigFields
+        node={graphNode({
+          node_type: "evaluate_expression",
+          config: {
+            output_name: "result",
+            expression: "outputs.counter + 10",
+          },
+        })}
+        onChange={onChange}
+        variableOptions={[
+          { name: "counter", source: "Variables" },
+        ]}
+      />,
+    );
+
+    const scriptGroup = screen.getByRole("group", { name: "Expression Settings" });
+    const textarea = within(scriptGroup).getByRole("textbox");
+    expect(textarea).toHaveValue("outputs.counter + 10");
+
+    expect(within(scriptGroup).getByRole("button", { name: "Insert variable for JavaScript / Math Expression" }))
+      .toBeInTheDocument();
+  });
+
   test("edits Call Subflow target and input mapping", () => {
     const onChange = vi.fn();
     const node = graphNode({

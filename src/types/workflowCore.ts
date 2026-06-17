@@ -55,6 +55,7 @@ export type ActionType =
   | "assert_element"
   | "assert_text"
   | "evaluate_logic"
+  | "evaluate_expression"
   | "graph_noop"
   | "if_condition"
   | "router_condition"
@@ -960,6 +961,10 @@ export type ActionConfig =
   | {
       type: "evaluate_logic";
       config: EvaluateLogicConfig;
+    }
+  | {
+      type: "evaluate_expression";
+      config: EvaluateExpressionConfig;
     };
 
 export type HeaderPair = {
@@ -1051,6 +1056,12 @@ export type EvaluateLogicConfig = {
   mode: "visual" | "script";
   script?: string;
   rules_group?: LogicRuleGroup;
+  evaluation_type?: "static" | "dynamic";
+};
+
+export type EvaluateExpressionConfig = {
+  output_name: string;
+  expression: string;
   evaluation_type?: "static" | "dynamic";
 };
 

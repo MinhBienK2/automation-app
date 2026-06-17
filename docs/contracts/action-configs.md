@@ -48,7 +48,8 @@ Variable config rules:
 
 - `set_variable` rows use `{ name, value_type, value }`, where `value_type` is `text`, `json`, `number`, or `boolean`.
 - `set_json_variables` requires a JSON object root.
-- `evaluate_logic` uses `{ output_name, mode, script, rules_group }` to evaluate visual rules or JavaScript expressions and write a boolean result to `output_name`.
+- `evaluate_logic` uses `{ output_name, mode, script, rules_group }` to evaluate visual rules or JavaScript expressions and write a boolean result to `output_name` (display name: Evaluate Condition).
+- `evaluate_expression` uses `{ output_name, expression }` to evaluate JavaScript or mathematical expressions and write the raw result to `output_name`.
 - `update_number_variable` uses `{ name, operation, value }` to perform mathematical calculations.
 - `update_text_variable` uses `{ name, operation, value, search_pattern }` to transform strings (append, prepend, replace, uppercase, lowercase, trim).
 - `update_flag_variable` uses `{ name, operation }` to toggle or set booleans.
