@@ -157,6 +157,7 @@ function graphNodeCategory(nodeType: GraphNodeType) {
     nodeType === "transform_variable" ||
     nodeType === "assert_output" ||
     nodeType === "domain_allowlist" ||
+    nodeType === "evaluate_logic" ||
     nodeType === "evaluate_expression"
   ) {
     return "variable";
@@ -266,6 +267,7 @@ function portUsageText(nodeType: GraphNodeType, port: GraphPort) {
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
+    case "evaluate_logic":
     case "evaluate_expression":
       return utilityPortUsage(nodeType, port);
     default:
@@ -435,6 +437,8 @@ function utilityNodeVerb(nodeType: GraphNodeType) {
       return "kiểm tra output";
     case "domain_allowlist":
       return "áp dụng domain allowlist";
+    case "evaluate_logic":
+      return "kiểm tra điều kiện";
     case "evaluate_expression":
       return "đánh giá biểu thức";
     default:

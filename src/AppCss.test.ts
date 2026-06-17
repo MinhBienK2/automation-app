@@ -146,12 +146,14 @@ describe("App CSS", () => {
     const actionNode = cssRule(".graph-node-action");
     const logicNode = cssRule(".graph-node-logic");
     const subflowNode = cssRule(".graph-node-subflow");
+    const variableNode = cssRule(".graph-node-variable");
 
     expect(css).not.toContain(".graph-node::before");
     expect(css).not.toContain(".graph-node-subflow::before");
     expect(actionNode).toContain("--graph-node-accent: #32d3e6");
     expect(logicNode).toContain("--graph-node-accent: #f4b740");
     expect(subflowNode).toContain("--graph-node-accent: #ff8a3d");
+    expect(variableNode).toContain("--graph-node-accent: #b070ff");
     expect(subflowNode).not.toContain("--graph-node-accent: #32d3e6");
     expect(subflowNode).not.toContain("--graph-node-accent: #f4b740");
   });

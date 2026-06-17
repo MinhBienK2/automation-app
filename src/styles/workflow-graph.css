@@ -386,13 +386,14 @@
 }
 
 .graph-node-variable {
-  --graph-node-accent: #9aaebd;
-  --graph-node-accent-bg: rgba(154, 174, 189, 0.12);
+  --graph-node-accent: #b070ff;
+  --graph-node-accent-bg: rgba(176, 112, 255, 0.12);
 
-  border-color: rgba(154, 174, 189, 0.34);
+  border-color: rgba(176, 112, 255, 0.56);
   background:
     linear-gradient(90deg, var(--graph-node-accent-bg), transparent 34%),
     #0b1016;
+  box-shadow: 0 0 0 1px rgba(176, 112, 255, 0.13) inset;
 }
 
 .graph-node-start,

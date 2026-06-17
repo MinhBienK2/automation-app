@@ -378,21 +378,21 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
     ], "en"),
   },
   evaluate_logic: {
-    vi: nodeWithFields("Evaluate Condition", "Đánh giá các quy tắc logic trực quan hoặc mã JS và lưu kết quả dạng True/False.", [
+    vi: nodeWithFields("Kiểm tra điều kiện", "Đánh giá các quy tắc logic trực quan hoặc mã JS và lưu kết quả dạng True/False.", [
       field("Result Output Variable Name", "Tên biến lưu kết quả.", ["Kết quả lưu dưới dạng boolean true hoặc false."]),
       field("Evaluation Mode", "Chọn chế độ visual rules hoặc viết mã JS.", ["Mã JS chạy trên ngữ cảnh browser và nhận outputs.", "Dùng {{name}} để chèn biến, hoặc outputs.name để truy cập trực tiếp."]),
     ]),
-    en: nodeWithFields("Evaluate Condition", "Evaluate visual rules or JS expression and store the boolean result.", [
+    en: nodeWithFields("Check Condition", "Evaluate visual rules or JS expression and store the boolean result.", [
       field("Result Output Variable Name", "The name of the variable to store the output.", ["Saves the result as a boolean true or false."]),
       field("Evaluation Mode", "Choose between visual rules builder or JS script.", ["JS script evaluates in the browser context with outputs available.", "Use {{name}} to insert variables (resolved before execution), or outputs.name for direct access."]),
     ], "en"),
   },
   evaluate_expression: {
-    vi: nodeWithFields("Evaluate Expression", "Đánh giá một biểu thức JavaScript/Toán học và lưu kết quả thực tế (số, chuỗi, v.v.).", [
+    vi: nodeWithFields("Tính toán giá trị", "Đánh giá một biểu thức JavaScript/Toán học và lưu kết quả thực tế (số, chuỗi, v.v.).", [
       field("Result Output Variable Name", "Tên biến lưu kết quả.", ["Kết quả lưu dưới dạng giá trị thực tế sau tính toán."]),
       field("JavaScript / Math Expression", "Biểu thức cần tính toán.", ["Biểu thức chạy trên ngữ cảnh browser và nhận outputs.", "Dùng {{name}} hoặc outputs.name để tham chiếu biến."]),
     ]),
-    en: nodeWithFields("Evaluate Expression", "Evaluate a JavaScript/Math expression and store the raw result (number, string, etc.).", [
+    en: nodeWithFields("Calculate Value", "Evaluate a JavaScript/Math expression and store the raw result (number, string, etc.).", [
       field("Result Output Variable Name", "The name of the variable to store the output.", ["Saves the result as its actual evaluated type."]),
       field("JavaScript / Math Expression", "The expression to evaluate.", ["Evaluates in the browser context with outputs available.", "Use {{name}} to insert variables, or outputs.name for direct access."]),
     ], "en"),
