@@ -7,6 +7,8 @@ import {
   resolveObjectTemplates,
   setVariables,
   writeVariableValue,
+  findReferencedVariables,
+  resolveDynamicOutputs,
 } from "./variables";
 
 describe("runner variable helpers", () => {
@@ -126,5 +128,42 @@ describe("runner variable helpers", () => {
     expect(resolved.script).toBe("10 > 5 && outputs.status === 'active'");
     expect(resolved.output_name).toBe("is_valid");
     expect(resolved.mode).toBe("script");
+  });
+
+  test("finds referenced variables in templates and scripts", () => {
+    const refs = new Set<string>();
+    findReferencedVariables("Hello {{ name }} and {{ user.email }}", refs);
+    findReferencedVariables("outputs.status === 'active'", refs);
+    findReferencedVariables("outputs['config_value']", refs);
+    findReferencedVariables({ kind: "output_equals", name: "is_verified", value: "true" }, refs);
+    expect(Array.from(refs)).toEqual(["name", "user.email", "status", "config_value", "is_verified"]);
+  });
+
+  test("recursively resolves dynamic variables and detects circular dependencies", async () => {
+    const outputs: Record<string, unknown> = {};
+    const resolvers = new Map<string, { dependencies: string[]; resolve: () => Promise<any> }>();
+    Object.defineProperty(outputs, "__dynamicResolvers", {
+      value: resolvers,
+      writable: true,
+      enumerable: false,
+    });
+
+    resolvers.set("a", {
+      dependencies: ["b"],
+      resolve: async () => (outputs.b as number) + 1,
+    });
+    resolvers.set("b", {
+      dependencies: [],
+      resolve: async () => 10,
+    });
+
+    await resolveDynamicOutputs(outputs, "{{a}}");
+    expect(outputs.a).toBe(11);
+    expect(outputs.b).toBe(10);
+
+    // Circular dependency check
+    resolvers.set("c", { dependencies: ["d"], resolve: async () => 1 });
+    resolvers.set("d", { dependencies: ["c"], resolve: async () => 2 });
+    await expect(resolveDynamicOutputs(outputs, "{{c}}")).rejects.toThrow("Circular dependency detected");
   });
 });

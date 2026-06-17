@@ -195,6 +195,13 @@ export class BrowserWorkflowRunner {
       : await this.sessionManager.launchFreshSession(request);
     const retainedWorkflowId = request.retainedSessionWorkflowId ?? null;
     const retainedProfileName = retainedProfileKey(request.settings);
+    const outputs: Record<string, unknown> = {};
+    Object.defineProperty(outputs, "__dynamicResolvers", {
+      value: new Map(),
+      writable: true,
+      enumerable: false,
+      configurable: true,
+    });
     const state: RunState = {
       status: "running",
       mode: request.mode,
@@ -202,7 +209,7 @@ export class BrowserWorkflowRunner {
       current_step_id: null,
       current_step_number: null,
       completed_step_ids: [],
-      outputs: {},
+      outputs,
       retained_session: this.sessionManager.getRetainedSessionState(retainedWorkflowId, retainedProfileName),
       error: null,
     };
@@ -212,7 +219,7 @@ export class BrowserWorkflowRunner {
       context: launch.context,
       page: launch.page,
       domainPolicy: request.graph.domain_policy ?? null,
-      outputs: {},
+      outputs,
       elementRefs: new Map(),
       traces: [],
       evidence: [],
@@ -390,6 +397,8 @@ export class BrowserWorkflowRunner {
   private async executeAction(runtime: Runtime, action: ActionConfig): Promise<void> {
     this.throwIfCancelled(runtime.signal);
     const resolvedAction = structuredClone(action);
+    const { resolveDynamicOutputs } = await import("./variables.js");
+    await resolveDynamicOutputs(runtime.outputs, resolvedAction.config);
     resolvedAction.config = resolveObjectTemplates(resolvedAction.config, runtime.outputs);
     await executeRegisteredAction(this.runnerActionExecutors(runtime), resolvedAction);
   }

@@ -631,9 +631,12 @@ const actionValidators = createActionValidatorMap({
   set_session_storage: (config) =>
     requiredActionString(config.config.key, "key", "Storage key is required"),
   evaluate_logic: (config) => {
-    const { output_name, mode, script, rules_group } = config.config;
+    const { output_name, mode, script, rules_group, evaluation_type } = config.config;
     if (!output_name || !output_name.trim()) {
       return validationError("output_name", "Output variable name is required");
+    }
+    if (evaluation_type && !["static", "dynamic"].includes(evaluation_type)) {
+      return validationError("evaluation_type", "Evaluation type must be static or dynamic");
     }
     if (mode === "script") {
       if (!script || !script.trim()) {

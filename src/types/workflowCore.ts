@@ -1051,6 +1051,7 @@ export type EvaluateLogicConfig = {
   mode: "visual" | "script";
   script?: string;
   rules_group?: LogicRuleGroup;
+  evaluation_type?: "static" | "dynamic";
 };
 
 export type LogicRuleGroup = {

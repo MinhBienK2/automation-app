@@ -341,6 +341,93 @@ describe("runnerActionExecutors", () => {
 
     expect(runtime.outputs.result).toBe(true);
   });
+
+  test("registers dynamic evaluate_logic resolver and evaluates lazily when referenced", async () => {
+    let scriptCallCount = 0;
+    const page = {
+      evaluate: async (fn: any, args: any) => {
+        scriptCallCount++;
+        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
+        return parsedFn(args.outputs);
+      },
+    } as any;
+    
+    const outputs: Record<string, unknown> = { counter: 10 };
+    const resolvers = new Map<string, any>();
+    Object.defineProperty(outputs, "__dynamicResolvers", {
+      value: resolvers,
+      writable: true,
+      enumerable: false,
+    });
+    
+    const runtime = minimalRuntime({ page, outputs });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    await executeRegisteredAction(executors, {
+      type: "evaluate_logic",
+      config: {
+        output_name: "result",
+        mode: "script",
+        script: "outputs.counter > 5",
+        evaluation_type: "dynamic",
+      },
+    });
+
+    expect(scriptCallCount).toBe(0);
+    expect(resolvers.has("result")).toBe(true);
+
+    const { resolveDynamicOutputs } = await import("./variables");
+    await resolveDynamicOutputs(runtime.outputs, "{{result}}");
+
+    expect(scriptCallCount).toBe(1);
+    expect(runtime.outputs.result).toBe(true);
+
+    runtime.outputs.counter = 3;
+    await resolveDynamicOutputs(runtime.outputs, "{{result}}");
+    expect(scriptCallCount).toBe(2);
+    expect(runtime.outputs.result).toBe(false);
+  });
+
+  test("clears dynamic resolver if variable is written statically", async () => {
+    const outputs: Record<string, unknown> = {};
+    const resolvers = new Map<string, any>();
+    Object.defineProperty(outputs, "__dynamicResolvers", {
+      value: resolvers,
+      writable: true,
+      enumerable: false,
+    });
+    const runtime = minimalRuntime({ outputs });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    await executeRegisteredAction(executors, {
+      type: "evaluate_logic",
+      config: {
+        output_name: "result",
+        mode: "visual",
+        evaluation_type: "dynamic",
+        rules_group: {
+          operator: "and",
+          rules: [{ type: "value_compare", left_operand: "1", comparison: "equals", right_operand: "1" }]
+        }
+      },
+    });
+    expect(resolvers.has("result")).toBe(true);
+
+    await executeRegisteredAction(executors, {
+      type: "evaluate_logic",
+      config: {
+        output_name: "result",
+        mode: "visual",
+        evaluation_type: "static",
+        rules_group: {
+          operator: "and",
+          rules: [{ type: "value_compare", left_operand: "1", comparison: "equals", right_operand: "2" }]
+        }
+      },
+    });
+    expect(resolvers.has("result")).toBe(false);
+    expect(runtime.outputs.result).toBe(false);
+  });
 });
 
 

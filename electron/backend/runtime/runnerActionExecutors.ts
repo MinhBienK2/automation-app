@@ -1007,22 +1007,58 @@ export function createRunnerActionExecutors(
       runtime.outputs[action.config.key] = action.config.value;
     },
     evaluate_logic: async (action) => {
-      const { output_name, mode, script, rules_group } = action.config;
-      if (mode === "script") {
-        if (!script) throw new Error("Script is required in script mode");
-        const result = await runtime.page.evaluate((args) => {
-          if (!args) throw new Error("Arguments are required");
-          const { scriptText, outputs } = args;
-          try {
-            const fn = new Function("outputs", `return (${scriptText});`);
-            return Boolean(fn(outputs));
-          } catch (err: any) {
-            throw new Error(`Failed to evaluate JS: ${err.message}`);
-          }
-        }, { scriptText: script, outputs: runtime.outputs });
-        runtime.outputs[output_name] = result;
+      const { output_name, mode, script, rules_group, evaluation_type } = action.config;
+      const resolvers = (runtime.outputs as any).__dynamicResolvers;
+      if (evaluation_type === "dynamic" && resolvers) {
+        const { findReferencedVariables } = await import("./variables.js");
+        const refs = new Set<string>();
+        if (mode === "script" && script) {
+          findReferencedVariables(script, refs);
+        } else if (mode === "visual" && rules_group) {
+          findReferencedVariables(rules_group, refs);
+        }
+        resolvers.set(output_name, {
+          dependencies: Array.from(refs),
+          resolve: async () => {
+            if (mode === "script") {
+              if (!script) throw new Error("Script is required in script mode");
+              const result = await runtime.page.evaluate((args) => {
+                if (!args) throw new Error("Arguments are required");
+                const { scriptText, outputs } = args;
+                try {
+                  const fn = new Function("outputs", `return (${scriptText});`);
+                  return Boolean(fn(outputs));
+                } catch (err: any) {
+                  throw new Error(`Failed to evaluate JS: ${err.message}`);
+                }
+              }, { scriptText: script, outputs: runtime.outputs });
+              return result;
+            } else {
+              return await evaluateRuleGroup(rules_group, runtime);
+            }
+          },
+        });
+        runtime.outputs[output_name] = undefined;
       } else {
-        runtime.outputs[output_name] = await evaluateRuleGroup(rules_group, runtime);
+        if (resolvers) {
+          resolvers.delete(output_name);
+        }
+        if (mode === "script") {
+          if (!script) throw new Error("Script is required in script mode");
+          const result = await runtime.page.evaluate((args) => {
+            if (!args) throw new Error("Arguments are required");
+            const { scriptText, outputs } = args;
+            try {
+              const fn = new Function("outputs", `return (${scriptText});`);
+              return Boolean(fn(outputs));
+            } catch (err: any) {
+              throw new Error(`Failed to evaluate JS: ${err.message}`);
+            }
+          }, { scriptText: script, outputs: runtime.outputs });
+          runtime.outputs[output_name] = result;
+        } else {
+          runtime.outputs[output_name] = await evaluateRuleGroup(rules_group, runtime);
+        }
       }
     },
   });

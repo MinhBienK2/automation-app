@@ -6,6 +6,8 @@ export async function conditionMatches(runtime: RunnerActionRuntime, condition: 
   if (!condition || typeof condition !== "object" || !("kind" in condition)) {
     throw new Error("Condition kind is required");
   }
+  const { resolveDynamicOutputs } = await import("./variables.js");
+  await resolveDynamicOutputs(runtime.outputs, condition);
   const resolvedCondition = resolveObjectTemplates(condition, runtime.outputs);
   const typed = resolvedCondition as {
     kind: string;

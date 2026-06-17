@@ -9,6 +9,7 @@ import { Label } from "../../../components/ui/label";
 type VariableOption = {
   name: string;
   source: string;
+  evaluation_type?: "static" | "dynamic";
 };
 
 export const VariableOptionsContext = createContext<VariableOption[]>([]);
@@ -64,16 +65,32 @@ export const TemplateTextField = forwardRef<TemplateTextFieldRef, TemplateTextFi
   const normalizedQuery = query.trim().toLowerCase();
   const contextOptions = useContext(VariableOptionsContext);
   const allOptions = useMemo(() => mergeVariableOptions(variableOptions, contextOptions), [variableOptions, contextOptions]);
+  const [activeTab, setActiveTab] = useState<"static" | "dynamic">("static");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    }
+  }, [open]);
+
   const options = useMemo(
-    () =>
-      normalizedQuery
-        ? allOptions.filter(
+    () => {
+      const filteredByTab = allOptions.filter((option) => {
+        const isDynamic = option.evaluation_type === "dynamic";
+        return activeTab === "dynamic" ? isDynamic : !isDynamic;
+      });
+      return normalizedQuery
+        ? filteredByTab.filter(
             (option) =>
               option.name.toLowerCase().includes(normalizedQuery) ||
               option.source.toLowerCase().includes(normalizedQuery),
           )
-        : allOptions,
-    [allOptions, normalizedQuery],
+        : filteredByTab;
+    },
+    [allOptions, normalizedQuery, activeTab],
   );
 
   const updateCoords = () => {
@@ -279,7 +296,32 @@ export const TemplateTextField = forwardRef<TemplateTextFieldRef, TemplateTextFi
           role="listbox"
           aria-label={`${label} variables`}
         >
+          <div className="flex border-b border-[#233240]">
+            <button
+              type="button"
+              className={`flex-1 py-1 text-center text-xs font-semibold border-b-2 transition-all ${
+                activeTab === "static"
+                  ? "border-[var(--app-accent)] text-[var(--app-accent-text)]"
+                  : "border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text)]"
+              }`}
+              onClick={() => setActiveTab("static")}
+            >
+              Static
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-1 text-center text-xs font-semibold border-b-2 transition-all ${
+                activeTab === "dynamic"
+                  ? "border-[var(--app-accent)] text-[var(--app-accent-text)]"
+                  : "border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text)]"
+              }`}
+              onClick={() => setActiveTab("dynamic")}
+            >
+              Dynamic
+            </button>
+          </div>
           <Input
+            ref={searchInputRef}
             aria-label="Search variables"
             value={query}
             placeholder="Search variables..."
@@ -340,16 +382,32 @@ export function TemplateTextareaField({
   const normalizedQuery = query.trim().toLowerCase();
   const contextOptions = useContext(VariableOptionsContext);
   const allOptions = useMemo(() => mergeVariableOptions(variableOptions, contextOptions), [variableOptions, contextOptions]);
+  const [activeTab, setActiveTab] = useState<"static" | "dynamic">("static");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    }
+  }, [open]);
+
   const options = useMemo(
-    () =>
-      normalizedQuery
-        ? allOptions.filter(
+    () => {
+      const filteredByTab = allOptions.filter((option) => {
+        const isDynamic = option.evaluation_type === "dynamic";
+        return activeTab === "dynamic" ? isDynamic : !isDynamic;
+      });
+      return normalizedQuery
+        ? filteredByTab.filter(
             (option) =>
               option.name.toLowerCase().includes(normalizedQuery) ||
               option.source.toLowerCase().includes(normalizedQuery),
           )
-        : allOptions,
-    [allOptions, normalizedQuery],
+        : filteredByTab;
+    },
+    [allOptions, normalizedQuery, activeTab],
   );
 
   const updateCoords = () => {
@@ -526,7 +584,32 @@ export function TemplateTextareaField({
           role="listbox"
           aria-label={`${label} variables`}
         >
+          <div className="flex border-b border-[#233240]">
+            <button
+              type="button"
+              className={`flex-1 py-1 text-center text-xs font-semibold border-b-2 transition-all ${
+                activeTab === "static"
+                  ? "border-[var(--app-accent)] text-[var(--app-accent-text)]"
+                  : "border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text)]"
+              }`}
+              onClick={() => setActiveTab("static")}
+            >
+              Static
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-1 text-center text-xs font-semibold border-b-2 transition-all ${
+                activeTab === "dynamic"
+                  ? "border-[var(--app-accent)] text-[var(--app-accent-text)]"
+                  : "border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text)]"
+              }`}
+              onClick={() => setActiveTab("dynamic")}
+            >
+              Dynamic
+            </button>
+          </div>
           <Input
+            ref={searchInputRef}
             aria-label="Search variables"
             value={query}
             placeholder="Search variables..."

@@ -390,6 +390,7 @@ function compilePath(
           mode: stringField(node.config, "mode") === "script" ? "script" : "visual",
           script: stringField(node.config, "script") ?? undefined,
           rules_group: asRecord(node.config).rules_group as LogicRuleGroup | undefined,
+          evaluation_type: stringField(node.config, "evaluation_type") === "dynamic" ? "dynamic" : "static",
         },
       }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);

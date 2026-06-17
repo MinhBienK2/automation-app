@@ -102,6 +102,10 @@ export function writeVariableValue(
   value: unknown,
 ) {
   outputs[name] = value;
+  const resolvers = (outputs as any).__dynamicResolvers;
+  if (resolvers && resolvers.has(name)) {
+    resolvers.delete(name);
+  }
   if (isPlainRecord(value)) {
     flattenObject(outputs, name, value);
   }
@@ -178,6 +182,86 @@ export function resolveObjectTemplates(
   }
 
   return val;
+}
+
+export function findReferencedVariables(val: any, refs: Set<string>): void {
+  if (val === null || val === undefined) return;
+  if (typeof val === "string") {
+    const templateRegex = /\{\{\s*([^}]+?)\s*\}\}/g;
+    let match;
+    while ((match = templateRegex.exec(val)) !== null) {
+      refs.add(match[1].trim());
+    }
+    const scriptRegex1 = /outputs\.([a-zA-Z_][a-zA-Z0-9_]*)/g;
+    while ((match = scriptRegex1.exec(val)) !== null) {
+      refs.add(match[1].trim());
+    }
+    const scriptRegex2 = /outputs\[['"]([a-zA-Z_][a-zA-Z0-9_]*)['"]\]/g;
+    while ((match = scriptRegex2.exec(val)) !== null) {
+      refs.add(match[1].trim());
+    }
+    return;
+  }
+  if (Array.isArray(val)) {
+    for (const item of val) {
+      findReferencedVariables(item, refs);
+    }
+    return;
+  }
+  if (typeof val === "object") {
+    if ((val.kind === "output_equals" || val.kind === "output_contains") && typeof val.name === "string") {
+      refs.add(val.name.trim());
+    }
+    for (const child of Object.values(val)) {
+      findReferencedVariables(child, refs);
+    }
+  }
+}
+
+export async function ensureResolved(
+  outputs: Record<string, unknown>,
+  name: string,
+  resolving = new Set<string>()
+): Promise<void> {
+  const resolvers = (outputs as any).__dynamicResolvers;
+  if (!resolvers) return;
+  const entry = resolvers.get(name);
+  if (!entry) return;
+
+  if (resolving.has(name)) {
+    const path = Array.from(resolving).join(" -> ");
+    throw new Error(`Circular dependency detected: ${path} -> ${name}`);
+  }
+  resolving.add(name);
+
+  for (const dep of entry.dependencies) {
+    await ensureResolved(outputs, dep, resolving);
+  }
+
+  const val = await entry.resolve();
+  outputs[name] = val;
+  if (isPlainRecord(val)) {
+    flattenObject(outputs, name, val);
+  }
+}
+
+export async function resolveDynamicOutputs(
+  outputs: Record<string, unknown>,
+  target: any
+): Promise<void> {
+  const resolvers = (outputs as any).__dynamicResolvers;
+  if (!resolvers || resolvers.size === 0) return;
+
+  const referenced = new Set<string>();
+  findReferencedVariables(target, referenced);
+
+  if (referenced.size === 0) return;
+
+  for (const name of referenced) {
+    if (resolvers.has(name)) {
+      await ensureResolved(outputs, name);
+    }
+  }
 }
 
 

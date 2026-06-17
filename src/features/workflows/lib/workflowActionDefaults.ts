@@ -211,6 +211,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
             operator: "and",
             rules: [],
           },
+          evaluation_type: "static",
         },
       };
     case "update_number_variable":

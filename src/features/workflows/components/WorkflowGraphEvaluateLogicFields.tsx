@@ -105,6 +105,19 @@ export function WorkflowGraphEvaluateLogicFields({
             onValueChange={(value) => updateConfig({ mode: value })}
           />
         </div>
+
+        <div className="grid gap-1.5 mt-2">
+          <Label>Evaluation Type</Label>
+          <SegmentedControl
+            ariaLabel="Evaluation Type"
+            options={[
+              { label: "Static (Calculate Now)", value: "static" },
+              { label: "Dynamic (Lazy Evaluation)", value: "dynamic" },
+            ]}
+            value={config.evaluation_type ?? "static"}
+            onValueChange={(value) => updateConfig({ evaluation_type: value as "static" | "dynamic" })}
+          />
+        </div>
       </ActionConfigFieldGroup>
 
       {mode === "script" ? (
