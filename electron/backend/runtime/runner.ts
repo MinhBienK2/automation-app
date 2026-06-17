@@ -399,7 +399,23 @@ export class BrowserWorkflowRunner {
     const resolvedAction = structuredClone(action);
     const { resolveDynamicOutputs } = await import("./variables.js");
     await resolveDynamicOutputs(runtime.outputs, resolvedAction.config);
-    resolvedAction.config = resolveObjectTemplates(resolvedAction.config, runtime.outputs);
+    if (resolvedAction.type === "evaluate_logic") {
+      const config = resolvedAction.config as any;
+      if (config.evaluation_type === "dynamic") {
+        const { output_name, evaluation_type, mode } = config;
+        resolvedAction.config = {
+          output_name: resolveObjectTemplates(output_name, runtime.outputs),
+          evaluation_type,
+          mode,
+          rules_group: (action.config as any).rules_group,
+          script: (action.config as any).script,
+        } as any;
+      } else {
+        resolvedAction.config = resolveObjectTemplates(resolvedAction.config, runtime.outputs);
+      }
+    } else {
+      resolvedAction.config = resolveObjectTemplates(resolvedAction.config, runtime.outputs);
+    }
     await executeRegisteredAction(this.runnerActionExecutors(runtime), resolvedAction);
   }
 

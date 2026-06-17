@@ -1031,7 +1031,7 @@ export function createRunnerActionExecutors(
                 } catch (err: any) {
                   throw new Error(`Failed to evaluate JS: ${err.message}`);
                 }
-              }, { scriptText: script, outputs: runtime.outputs });
+              }, { scriptText: renderTemplate(script, runtime.outputs), outputs: runtime.outputs });
               return result;
             } else {
               return await evaluateRuleGroup(rules_group, runtime);
