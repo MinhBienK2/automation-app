@@ -34,13 +34,9 @@ vite.config.js
 *.njsproj
 *.sln
 *.sw?
-.gitnexus
 
-.codex
 CLAUDE.md
-.claude
 
 .worktrees/
 .stitch/
-
-.codex
+.gitnexus
