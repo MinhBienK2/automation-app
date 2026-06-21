@@ -597,6 +597,74 @@
   box-shadow: 0 0 0 4px rgba(50, 211, 230, 0.16);
 }
 
+.graph-handle-circle {
+  border-radius: 50%;
+}
+
+.graph-handle-diamond {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.graph-handle-diamond.graph-handle-input {
+  left: -9px;
+}
+
+.graph-handle-diamond.graph-handle-output {
+  right: -9px;
+}
+
+.graph-handle-square {
+  border-radius: 2px;
+}
+
+.graph-handle-triangle {
+  width: 0;
+  height: 0;
+  background: transparent;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 14px solid #f59e0b;
+  border-top: none;
+}
+
+.graph-handle-triangle.graph-handle-input {
+  left: -10px;
+}
+
+.graph-handle-triangle.graph-handle-output {
+  right: -10px;
+}
+
+.graph-handle-triangle::after {
+  display: none;
+}
+
+.graph-handle-hexagon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+}
+
+.graph-handle-diamond {
+  background: #a78bfa;
+}
+
+.graph-handle-square {
+  background: #34d399;
+}
+
+.graph-handle-triangle {
+  border-bottom-color: #f87171;
+}
+
+.graph-handle-hexagon {
+  background: #60a5fa;
+}
+
 .graph-canvas .react-flow__handle.connectingto.valid {
   border-color: #e7eef5;
   background: #39d98a;

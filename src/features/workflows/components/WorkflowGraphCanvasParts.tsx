@@ -16,6 +16,7 @@ import {
   type WorkflowFlowEdge,
   type WorkflowFlowNode,
   type WorkflowFlowNodeStatus,
+  portShape,
 } from "../lib/workflowGraph";
 import { graphNodeHeightForPorts } from "../lib/graphNodeDimensions";
 
@@ -80,11 +81,12 @@ export function WorkflowGraphNode({
 
       {inputPorts.map((port, index) => {
         const tooltip = graphPortTooltip(data.nodeType, port);
+        const shape = port.shape ?? portShape(port.id);
 
         return (
           <Handle
             aria-label={`${data.label} ${port.label} port`}
-            className="graph-handle graph-handle-input"
+            className={`graph-handle graph-handle-input graph-handle-${shape}`}
             data-tooltip={tooltip}
             id={port.id}
             isConnectable={isConnectable}
@@ -98,11 +100,12 @@ export function WorkflowGraphNode({
       })}
       {outputPorts.map((port, index) => {
         const tooltip = graphPortTooltip(data.nodeType, port);
+        const shape = port.shape ?? portShape(port.id);
 
         return (
           <Handle
             aria-label={`${data.label} ${port.label} port`}
-            className="graph-handle graph-handle-output"
+            className={`graph-handle graph-handle-output graph-handle-${shape}`}
             data-tooltip={tooltip}
             id={port.id}
             isConnectable={isConnectable}
