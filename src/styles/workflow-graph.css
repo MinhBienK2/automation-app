@@ -602,18 +602,27 @@
 }
 
 .graph-handle-diamond {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
-  transform: rotate(45deg);
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: none;
+}
+
+.graph-handle-diamond::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #a78bfa;
+  border: 1px solid #121c26;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
 }
 
 .graph-handle-diamond.graph-handle-input {
-  left: -9px;
+  left: -8px;
 }
 
 .graph-handle-diamond.graph-handle-output {
-  right: -9px;
+  right: -8px;
 }
 
 .graph-handle-square {
@@ -647,10 +656,6 @@
   height: 14px;
   border-radius: 2px;
   clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-}
-
-.graph-handle-diamond {
-  background: #a78bfa;
 }
 
 .graph-handle-square {
