@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { ActionType } from "../types/workflow";
-import { actionGroups, actionOptions, allActionOptions } from "./workflowUi";
+import { actionGroups, actionOptions, allActionOptions, buildRunIssues } from "./workflowUi";
 
 describe("workflow UI action taxonomy", () => {
   const removedActions = [
@@ -91,5 +91,36 @@ describe("workflow UI action taxonomy", () => {
       expect(actionOptions).not.toContain(actionType as ActionType);
       expect(allActionOptions).toContain(actionType as ActionType);
     });
+  });
+
+  test("buildRunIssues includes parent step hierarchy in diagnostics if parent_step_ids is provided", () => {
+    const runState: any = {
+      status: "failed",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: "failed-child",
+      current_step_number: 2,
+      completed_step_ids: [],
+      error: {
+        step_id: "failed-child",
+        step_number: 2,
+        step_name: "Failed Child",
+        action_type: "click",
+        reason: "Element not found",
+        diagnostics: {
+          compiled_step_id: "failed-child",
+          parent_step_id: "inner-repeat",
+          parent_step_ids: ["outer-repeat", "inner-repeat"],
+        },
+      },
+    };
+    const issues = buildRunIssues({
+      appError: "",
+      graphIssues: [],
+      runState,
+    });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].diagnostics).toContain("Parent step hierarchy: outer-repeat > inner-repeat");
+    expect(issues[0].diagnostics).not.toContain("Parent step id: inner-repeat");
   });
 });

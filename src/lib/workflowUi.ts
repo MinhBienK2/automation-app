@@ -419,11 +419,16 @@ function runtimeFailureDiagnostics(error: NonNullable<RunState["error"]>) {
   const diagnostics: string[] = [];
   const compiledStepId = error.diagnostics?.compiled_step_id?.trim();
   const parentStepId = error.diagnostics?.parent_step_id?.trim();
+  const parentStepIds = error.diagnostics?.parent_step_ids;
   const subflowNodeId = error.diagnostics?.subflow_node_id?.trim();
   const subflowId = error.diagnostics?.subflow_id?.trim();
   const subflowName = error.diagnostics?.subflow_name?.trim();
   if (compiledStepId) diagnostics.push(`Compiled step id: ${compiledStepId}`);
-  if (parentStepId) diagnostics.push(`Parent step id: ${parentStepId}`);
+  if (parentStepIds && parentStepIds.length > 0) {
+    diagnostics.push(`Parent step hierarchy: ${parentStepIds.join(" > ")}`);
+  } else if (parentStepId) {
+    diagnostics.push(`Parent step id: ${parentStepId}`);
+  }
   if (subflowNodeId) diagnostics.push(`Subflow node id: ${subflowNodeId}`);
   if (subflowId) diagnostics.push(`Subflow id: ${subflowId}`);
   if (subflowName) diagnostics.push(`Subflow name: ${subflowName}`);

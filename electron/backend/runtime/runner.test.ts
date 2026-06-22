@@ -5167,7 +5167,7 @@ describe("BrowserWorkflowRunner dynamic evaluate_logic", () => {
                 {
                   type: "execute_js",
                   graph_node_id: "failed-child",
-                  graph_label: "Failed Child Node",
+                  graph_label: "Repeat > Failed Child Node",
                   config: { script: "return 1", output_name: "value" },
                 },
               ],
@@ -5185,8 +5185,66 @@ describe("BrowserWorkflowRunner dynamic evaluate_logic", () => {
 
     expect(result.status).toBe("failed");
     expect(result.error?.step_id).toBe("failed-child");
-    expect(result.error?.step_name).toBe("Failed Child Node");
+    expect(result.error?.step_name).toBe("Repeat > Failed Child Node");
+    expect(result.error?.diagnostics?.parent_step_id).toBe("repeat");
+    expect(result.error?.diagnostics?.label_path).toEqual(["Repeat", "Failed Child Node"]);
   });
+
+  test("reports the exact failed child node ID on error inside nested loops with parent hierarchy", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("outer-repeat", "Outer Repeat", {
+            type: "repeat_times",
+            config: {
+              times: 1,
+              steps: [
+                {
+                  type: "repeat_times",
+                  graph_node_id: "inner-repeat",
+                  graph_label: "Outer Repeat > Inner Repeat",
+                  config: {
+                    times: 1,
+                    steps: [
+                      {
+                        type: "execute_js",
+                        graph_node_id: "failed-child",
+                        graph_label: "Outer Repeat > Inner Repeat > Failed Child Node",
+                        config: { script: "return 1", output_name: "value" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings({
+        run_policy: { execute_js_enabled: false } as Partial<
+          WorkflowSettings["run_policy"]
+        >,
+      }),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error?.step_id).toBe("failed-child");
+    expect(result.error?.step_name).toBe("Outer Repeat > Inner Repeat > Failed Child Node");
+    expect(result.error?.diagnostics?.parent_step_id).toBe("inner-repeat");
+    expect(result.error?.diagnostics?.parent_step_ids).toEqual(["outer-repeat", "inner-repeat"]);
+    expect(result.error?.diagnostics?.label_path).toEqual([
+      "Outer Repeat",
+      "Inner Repeat",
+      "Failed Child Node",
+    ]);
+  });
+
 
   test("resets completed step IDs inside loop body on new iteration", async () => {
     const runner = new BrowserWorkflowRunner({

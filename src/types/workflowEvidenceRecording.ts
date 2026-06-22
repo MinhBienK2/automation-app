@@ -531,6 +531,7 @@ export type RecordingWorkflowDraft = {
 export type RunErrorDiagnostics = {
   compiled_step_id?: string | null;
   parent_step_id?: string | null;
+  parent_step_ids?: string[] | null;
   subflow_node_id?: string | null;
   subflow_id?: string | null;
   subflow_name?: string | null;

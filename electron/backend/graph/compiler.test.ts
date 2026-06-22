@@ -290,7 +290,7 @@ describe("TypeScript graph compiler parity", () => {
               {
                 ...click,
                 graph_node_id: "click",
-                graph_label: "Click",
+                graph_label: "If Node > Click",
               },
             ],
             else_steps: [],
@@ -310,7 +310,7 @@ describe("TypeScript graph compiler parity", () => {
               {
                 type: "set_variable",
                 graph_node_id: "set-var",
-                graph_label: "Set Var",
+                graph_label: "Loop > Set Var",
                 config: {
                   name: null,
                   value: null,
@@ -323,7 +323,7 @@ describe("TypeScript graph compiler parity", () => {
               {
                 type: "update_list_variable",
                 graph_node_id: "update-var",
-                graph_label: "Update Var",
+                graph_label: "Loop > Update Var",
                 config: {
                   name: "row.tags",
                   operation: "push",
@@ -348,7 +348,7 @@ describe("TypeScript graph compiler parity", () => {
               {
                 ...clickAction("//retry"),
                 graph_node_id: "retry-click",
-                graph_label: "Retry Click",
+                graph_label: "Retry > Retry Click",
               },
             ],
             failed_steps: [],
@@ -702,7 +702,7 @@ describe("TypeScript graph compiler parity", () => {
         then_steps: [
           expect.objectContaining({
             graph_node_id: "true-node",
-            graph_label: "True Node",
+            graph_label: "If Node > True Node",
             type: "click",
           }),
         ],
@@ -803,7 +803,7 @@ describe("TypeScript graph compiler parity", () => {
               {
                 ...branchAction,
                 graph_node_id: "branch-step",
-                graph_label: "Branch Step",
+                graph_label: "If Node > Branch Step",
               },
             ],
             else_steps: [],

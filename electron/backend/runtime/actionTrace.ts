@@ -52,6 +52,8 @@ type RuntimeDiagnosticSource = {
     action_type: string;
     action_summary: string | null;
     metadata: CompiledStepMetadata | null;
+    parent_step_id?: string | null;
+    parent_step_ids?: string[] | null;
   } | null;
 };
 
@@ -113,9 +115,11 @@ export function runtimeErrorDiagnostics(
   const subflow = failedInfo
     ? (failedInfo.metadata?.subflow ?? null)
     : (runtime.currentStepMetadata?.subflow ?? null);
+  const parentStepId = failedInfo?.parent_step_id ?? stepParts.parentStepId ?? null;
   return {
     compiled_step_id: compiledStepId,
-    ...(stepParts.parentStepId ? { parent_step_id: stepParts.parentStepId } : {}),
+    ...(parentStepId ? { parent_step_id: parentStepId } : {}),
+    ...(failedInfo?.parent_step_ids ? { parent_step_ids: failedInfo.parent_step_ids } : {}),
     ...(stepParts.subflowNodeId ? { subflow_node_id: stepParts.subflowNodeId } : {}),
     ...(subflow ? {
       subflow_id: subflow.id,

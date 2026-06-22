@@ -135,6 +135,8 @@ type Runtime = {
     action_type: string;
     action_summary: string | null;
     metadata: CompiledStepMetadata | null;
+    parent_step_id?: string | null;
+    parent_step_ids?: string[] | null;
   } | null;
 };
 
@@ -515,13 +517,24 @@ export class BrowserWorkflowRunner {
         this.reportProgress(runtime);
       } catch (error) {
         if (!(error instanceof LoopControl)) {
-          runtime.failedStepInfo = {
-            step_id: action.graph_node_id,
-            step_name: action.graph_label ?? action.graph_node_id,
-            action_type: action.type,
-            action_summary: actionConfigSummary(action),
-            metadata: action.graph_metadata ?? null,
-          };
+          if (!runtime.failedStepInfo) {
+            runtime.failedStepInfo = {
+              step_id: action.graph_node_id,
+              step_name: action.graph_label ?? action.graph_node_id,
+              action_type: action.type,
+              action_summary: actionConfigSummary(action),
+              metadata: action.graph_metadata ?? null,
+              parent_step_id: previous.runtimeStepId,
+              parent_step_ids: previous.runtimeStepId ? [previous.runtimeStepId] : [],
+            };
+          } else if (previous.runtimeStepId) {
+            if (!runtime.failedStepInfo.parent_step_ids) {
+              runtime.failedStepInfo.parent_step_ids = [];
+            }
+            if (!runtime.failedStepInfo.parent_step_ids.includes(previous.runtimeStepId)) {
+              runtime.failedStepInfo.parent_step_ids.unshift(previous.runtimeStepId);
+            }
+          }
         }
         throw error;
       } finally {

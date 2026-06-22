@@ -38,7 +38,7 @@ Run errors include:
 - `action_type`
 - `reason`
 - optional `diagnostics`: structured runtime context for failure display and
-  audit logs. It may include `compiled_step_id`, `parent_step_id`,
+  audit logs. It may include `compiled_step_id`, `parent_step_id`, `parent_step_ids`,
   `subflow_node_id`, `subflow_id`, `subflow_name`, `subflow_step_number`,
   `subflow_step_count`, `label_path`, and `action_summary`. UI should prefer
   `label_path`, subflow step ordinal, the failing serialized action/node type,
