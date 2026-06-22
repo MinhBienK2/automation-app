@@ -81,6 +81,24 @@ describe("collectVariableOptions", () => {
     expect(names).toContain("varC");
   });
 
+  test("collects item_name from upstream repeat_for_each node", () => {
+    const loopNode = graphNode("loop", "repeat_for_each", { item_name: "user", array_variable: "users", items: [] });
+    const childNode = graphNode("child", "set_variable", { name: "x", value_type: "text", value: "1" });
+    const graph2: WorkflowGraph = {
+      version: 2,
+      nodes: [loopNode, childNode],
+      edges: [{
+        id: "e1", source_node_id: "loop", source_port: "loop",
+        target_node_id: "child", target_port: "in", label: "", condition: null,
+      }],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+    const options = collectVariableOptions(graph2, childNode);
+    const names = options.map((opt) => opt.name);
+    expect(names).toContain("user");
+    expect(options.find((opt) => opt.name === "user")?.source).toBe("Loop variable");
+  });
+
   test("collects initial variables from settings and profile variables", () => {
     const initialVariables = [
       { name: "settingsVar1", value_type: "text" as const, value: "val1" },
