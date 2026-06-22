@@ -2825,7 +2825,7 @@ describe("BrowserWorkflowRunner", () => {
 
     expect(result.status).toBe("success");
     expect(result.completed_step_ids.filter((stepId) => stepId === "loop-body"))
-      .toEqual(["loop-body", "loop-body"]);
+      .toEqual(["loop-body"]);
     expect(
       traces.filter((trace) => trace.node_id === "loop-body").map((trace) => ({
         parent_node_id: trace.parent_node_id,
@@ -5148,5 +5148,89 @@ describe("BrowserWorkflowRunner dynamic evaluate_logic", () => {
     expect(result.status).toBe("success");
     expect(context.page.events).toContain("fill://input:val 15");
     expect(context.page.events).toContain("fill://input:val 35");
+  });
+
+  test("reports the exact failed child node ID on error inside a loop", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("repeat", "Repeat", {
+            type: "repeat_times",
+            config: {
+              times: 1,
+              steps: [
+                {
+                  type: "execute_js",
+                  graph_node_id: "failed-child",
+                  graph_label: "Failed Child Node",
+                  config: { script: "return 1", output_name: "value" },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings({
+        run_policy: { execute_js_enabled: false } as Partial<
+          WorkflowSettings["run_policy"]
+        >,
+      }),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error?.step_id).toBe("failed-child");
+    expect(result.error?.step_name).toBe("Failed Child Node");
+  });
+
+  test("resets completed step IDs inside loop body on new iteration", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const reportedCompletedStepIds: string[][] = [];
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("repeat", "Repeat", {
+            type: "repeat_times",
+            config: {
+              times: 2,
+              steps: [
+                {
+                  type: "set_variable",
+                  graph_node_id: "loop-child",
+                  graph_label: "Loop Child",
+                  config: {
+                    variables: [{ name: "foo", value_type: "text", value: "bar" }],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+      onProgress: (state) => {
+        if (state.completed_step_ids) {
+          reportedCompletedStepIds.push([...state.completed_step_ids]);
+        }
+      },
+    });
+
+    expect(result.status).toBe("success");
+    const hasBeenReset = reportedCompletedStepIds.some((stepIds, index) => {
+      if (index === 0) return false;
+      const prev = reportedCompletedStepIds[index - 1];
+      return prev.includes("loop-child") && !stepIds.includes("loop-child");
+    });
+    expect(hasBeenReset).toBe(true);
   });
 });

@@ -303,5 +303,35 @@ describe("RunMonitorDrawer", () => {
     expect(screen.getByText("value2")).toBeInTheDocument();
     expect(screen.queryByText("var1")).not.toBeInTheDocument();
   });
+
+  test("renders parent logic node and subflow context labels when present in trace", () => {
+    const runStateWithParentContext: RunState = {
+      ...baseRunState,
+      completed_step_ids: ["step-1"],
+      status: "success",
+      outputs: {
+        __action_traces: [
+          {
+            node_id: "step-1",
+            subflow_name: "Login Flow",
+            parent_node_id: "step-2",
+            output_summary: { added_keys: [], changed_keys: [], removed_keys: [] },
+            output_values: {},
+          },
+        ],
+      },
+    };
+
+    render(
+      <RunMonitorDrawer
+        graph={graph}
+        runState={runStateWithParentContext}
+        onClose={vi.fn()}
+        onFocusNode={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Subflow: Login Flow · Logic: Click button")).toBeInTheDocument();
+  });
 });
 
