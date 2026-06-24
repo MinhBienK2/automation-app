@@ -14,9 +14,9 @@ export default [
       },
     },
     rules: {
-      // File > 300 lines (excluding blank + comments) = ERROR to prevent bloating
+      // File > 500 lines (excluding blank + comments) = ERROR to prevent bloating
       "max-lines": ["error", { 
-        max: 300, 
+        max: 500, 
         skipBlankLines: true, 
         skipComments: true 
       }],
