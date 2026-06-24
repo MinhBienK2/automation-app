@@ -23,6 +23,7 @@ import {
 } from "./graphLayout";
 import { objectConfig } from "./configUtils";
 import { graphNodeHeightForPorts, graphNodeWidth } from "./graphNodeDimensions";
+import { displayPositionsForGraphNodes } from "./workflowGraphPositions";
 
 const graphIssueKey = "__graph__";
 const graphNodeCollisionClearance = 24;
@@ -179,7 +180,7 @@ export function toReactFlowGraph(
   const edgeOrders = graphEdgeOrders(graph);
   const nodeLabels = new Map(graph.nodes.map((node) => [node.id, node.label]));
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
-  const nodePositions = displayPositionsForGraphNodes(graph.nodes);
+  const nodePositions = displayPositionsForGraphNodes(graph.nodes, graph.edges);
 
   const baseFlowGraph: WorkflowReactFlowGraph = {
     nodes: graph.nodes.map((node) => ({
@@ -293,59 +294,6 @@ export function applyReactFlowGraphState(
   };
 }
 
-function displayPositionsForGraphNodes(nodes: GraphNode[]) {
-  const positions = new Map<string, GraphPosition>();
-  const buckets = new Map<number, Array<{ x: number; y: number; height: number }>>();
-  const orderedNodes = [...nodes].sort((left, right) => {
-    const yDiff = left.position.y - right.position.y;
-    if (yDiff !== 0) return yDiff;
-    const xDiff = left.position.x - right.position.x;
-    if (xDiff !== 0) return xDiff;
-    return left.id.localeCompare(right.id);
-  });
-
-  for (const node of orderedNodes) {
-    const height = graphNodeHeightForPorts(node.ports);
-    let y = node.position.y;
-
-    const bucketX = Math.floor(node.position.x / graphNodeWidth);
-
-    // Only check current bucket and its immediate adjacent neighbors
-    for (let b = bucketX - 1; b <= bucketX + 1; b++) {
-      const placedInBucket = buckets.get(b);
-      if (!placedInBucket) continue;
-      for (const placedNode of placedInBucket) {
-        if (!nodeColumnsOverlap(node.position.x, placedNode.x)) continue;
-        y = Math.max(
-          y,
-          placedNode.y + placedNode.height + graphNodeCollisionClearance,
-        );
-      }
-    }
-
-    positions.set(
-      node.id,
-      y === node.position.y ? node.position : { ...node.position, y },
-    );
-
-    let bucket = buckets.get(bucketX);
-    if (!bucket) {
-      bucket = [];
-      buckets.set(bucketX, bucket);
-    }
-    bucket.push({
-      x: node.position.x,
-      y,
-      height,
-    });
-  }
-
-  return positions;
-}
-
-function nodeColumnsOverlap(leftX: number, rightX: number) {
-  return leftX < rightX + graphNodeWidth && rightX < leftX + graphNodeWidth;
-}
 
 function applyReactFlowEdgeState(
   edge: WorkflowFlowEdge,
