@@ -110,6 +110,32 @@ export function displayPositionsForGraphNodes(
     });
   }
 
+  // Precalculate node map for O(1) lookups
+  const nodeById = new Map<string, GraphNode>();
+  for (const node of nodes) {
+    nodeById.set(node.id, node);
+  }
+
+  // Precalculate constant horizontal spans for all valid edges to perform fast pruning
+  const activeEdges = edges
+    .map((edge) => {
+      const sourceNode = nodeById.get(edge.source_node_id);
+      const targetNode = nodeById.get(edge.target_node_id);
+      if (!sourceNode || !targetNode) return null;
+      const sourceX = sourceNode.position.x;
+      const targetX = targetNode.position.x;
+      const minX = Math.min(sourceX, targetX);
+      const maxX = Math.max(sourceX + graphNodeWidth, targetX + graphNodeWidth);
+      return {
+        edge,
+        sourceNode,
+        targetNode,
+        minX,
+        maxX,
+      };
+    })
+    .filter((e): e is NonNullable<typeof e> => e !== null);
+
   // 2. Iterative pass: Resolve node-edge overlaps and re-resolve node-node overlaps
   let changed = true;
   let iterations = 0;
@@ -128,15 +154,21 @@ export function displayPositionsForGraphNodes(
       const nw = graphNodeWidth;
       const clearance = 24;
 
-      for (const edge of edges) {
+      const nodeMinX = node.position.x - clearance;
+      const nodeMaxX = node.position.x + nw + clearance;
+
+      for (const activeEdge of activeEdges) {
+        const { edge, sourceNode, targetNode, minX, maxX } = activeEdge;
+
         // A node doesn't overlap edges connected directly to it
         if (edge.source_node_id === node.id || edge.target_node_id === node.id) {
           continue;
         }
 
-        const sourceNode = nodes.find((n) => n.id === edge.source_node_id);
-        const targetNode = nodes.find((n) => n.id === edge.target_node_id);
-        if (!sourceNode || !targetNode) continue;
+        // Fast horizontal pruning: if node horizontal range doesn't overlap edge horizontal range, skip
+        if (maxX < nodeMinX || minX > nodeMaxX) {
+          continue;
+        }
 
         const sourcePos = positions.get(edge.source_node_id)!;
         const targetPos = positions.get(edge.target_node_id)!;
@@ -155,7 +187,7 @@ export function displayPositionsForGraphNodes(
             const maxSegX = Math.max(seg.x1, seg.x2);
 
             // Check if node is horizontally within segment's range
-            if (maxSegX >= node.position.x - clearance && minSegX <= node.position.x + nw + clearance) {
+            if (maxSegX >= nodeMinX && minSegX <= nodeMaxX) {
               // Check if segment crosses vertically through node
               if (seg.y1 > y - clearance && seg.y1 < y + nh + clearance) {
                 const newY = seg.y1 + clearance;
@@ -171,7 +203,7 @@ export function displayPositionsForGraphNodes(
             const maxSegY = Math.max(seg.y1, seg.y2);
 
             // Check if node is horizontally overlapping vertical segment X coordinate
-            if (seg.x1 >= node.position.x - clearance && seg.x1 <= node.position.x + nw + clearance) {
+            if (seg.x1 >= nodeMinX && seg.x1 <= nodeMaxX) {
               // Check if vertical segment overlaps node's Y range
               if (maxSegY > y - clearance && minSegY < y + nh + clearance) {
                 const newY = maxSegY + clearance;
