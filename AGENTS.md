@@ -25,6 +25,8 @@ Skip: For small, normal change.
 
 ## Verification
 For small or isolated changes, run only the relevant focused checks
+- `rtk npm run lint [file]`
+- `rtk npm run test [file]`
 For complex, big changes and high-risk changes. The appropriate component will be run.
 - `rtk npm run lint`
 - `rtk npm run test` read 30 last lines
