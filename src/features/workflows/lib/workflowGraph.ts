@@ -26,7 +26,6 @@ import { graphNodeHeightForPorts, graphNodeWidth } from "./graphNodeDimensions";
 import { displayPositionsForGraphNodes } from "./workflowGraphPositions";
 
 const graphIssueKey = "__graph__";
-const graphNodeCollisionClearance = 24;
 
 export type WorkflowFlowNodeStatus = "idle" | "running" | "completed" | "failed";
 

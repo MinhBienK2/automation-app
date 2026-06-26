@@ -169,7 +169,7 @@ describe("App CSS", () => {
     expect(detailScreen).toContain("max-width: none");
     expect(graphLayout).toContain("grid-template-columns: minmax(0, 1fr)");
     expect(graphLayout).toContain("position: relative");
-    expect(graphCanvas).toContain("height: clamp(460px, calc(100dvh - 260px), 640px)");
+    expect(graphCanvas).toContain("height: clamp(460px, calc(100dvh - 220px), 85vh)");
     expect(graphFlow).toContain("height: 100%");
     expect(inspectorDrawer).toContain("position: absolute");
     expect(inspectorDrawer).toContain("right: 0");
