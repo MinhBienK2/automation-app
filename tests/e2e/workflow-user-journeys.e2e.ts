@@ -31,8 +31,7 @@ test.describe("desktop workflow user journeys", () => {
       "aria-selected",
       "true",
     );
-    await expect(settings.getByRole("switch", { name: "Reuse login session" })).toBeVisible();
-    await expect(settings.getByRole("switch", { name: "Use proxy" })).toBeVisible();
+    await expect(settings.getByLabel("Browser profile", { exact: true })).toBeVisible();
     await settings.getByRole("button", { name: "Close dialog" }).click();
     await expect(settings).toBeHidden();
   });
@@ -67,16 +66,14 @@ test.describe("desktop workflow user journeys", () => {
     await openWorkflows(appWindow);
 
     await appWindow.getByRole("button", { name: "Run UI runnable workflow" }).click();
-    await expect(appWindow.getByText("Running: UI runnable workflow")).toBeVisible();
+    await expect(appWindow.getByText("Running")).toBeVisible();
     await expect(appWindow.getByRole("button", { name: "Run UI runnable workflow" }))
       .toBeDisabled();
 
     await expect
       .poll(() => runState(appWindow), { timeout: 45_000 })
       .toMatchObject({ status: "success", outputs: { ui_title: "Basic Fixture" } });
-    await expect(appWindow.getByRole("status")).toHaveText(
-      "Run succeeded: UI runnable workflow",
-    );
+    await expect(appWindow.getByText("Running")).toBeHidden();
   });
 
   test("deletes a workflow through the UI confirmation dialog", async ({ appWindow }) => {

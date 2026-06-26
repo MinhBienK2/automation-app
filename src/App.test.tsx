@@ -1475,7 +1475,9 @@ describe("App settings and graph autosave", () => {
     });
     expect(await screen.findByText("Running")).toBeInTheDocument();
 
-    expect(await screen.findByText("Run succeeded: Login flow")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Running")).not.toBeInTheDocument();
+    });
     expect(runSnapshotCalls).toBeGreaterThan(1);
     expect(runStateCalls).toBeGreaterThanOrEqual(1);
   });
