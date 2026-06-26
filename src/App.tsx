@@ -716,9 +716,7 @@ function App() {
               browserProfiles={selectedBrowserProfiles}
               selectedProfileIdDraft={workflowsWorkspace.selectedProfileIdDraft}
               appError={appError}
-              runState={runState}
               runSnapshots={runSnapshots}
-              activeRunWorkflowName={activeRunWorkflowName}
               onWorkflowNameDraftChange={workflowsWorkspace.setWorkflowNameDraft}
               onSelectedProfileIdDraftChange={workflowsWorkspace.setSelectedProfileIdDraft}
               onSubmitWorkflowDialog={workflowsWorkspace.submitWorkflowDialog}

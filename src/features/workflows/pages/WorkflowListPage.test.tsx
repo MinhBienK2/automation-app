@@ -931,6 +931,39 @@ describe("Workflow list integration", () => {
     expect(screen.queryByText("XPath not found"))
       .not.toBeInTheDocument();
   });
+
+  test("does not render the global run status indicator in the header", async () => {
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: workflow.id,
+          workflow_name: workflow.name,
+          source: "manual",
+          started_at: "2026-05-17T09:00:00.000Z",
+          state: {
+            ...idleRunState,
+            status: "failed",
+            mode: "run_workflow",
+            error: {
+              step_id: "step-1",
+              step_number: 1,
+              step_name: "Wait",
+              action_type: "wait",
+              reason: "XPath not found",
+            },
+          },
+        },
+      ],
+    });
+
+    renderApp();
+
+    await openWorkflows();
+
+    expect(screen.queryByText(/Run failed/i)).not.toBeInTheDocument();
+  });
 });
 
 function recordingSession(): RecordingSession {

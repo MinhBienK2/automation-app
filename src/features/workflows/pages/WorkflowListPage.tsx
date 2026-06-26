@@ -1,6 +1,6 @@
 import { CircleDot, Copy, Download, Eye, Pencil, Play, Square, Trash2, Upload } from "lucide-react";
 import { Select } from "../../../components/ui/select";
-import type { BrowserProfile, RunState, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
+import type { BrowserProfile, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
 import { IconButton } from "../../../components/ui/icon-button";
@@ -23,9 +23,7 @@ type WorkflowListPageProps = {
   browserProfiles: BrowserProfile[];
   selectedProfileIdDraft: string | null;
   appError: string;
-  runState: RunState;
   runSnapshots: WorkflowRunSnapshot[];
-  activeRunWorkflowName?: string | null;
   onWorkflowNameDraftChange: (name: string) => void;
   onSelectedProfileIdDraftChange: (id: string | null) => void;
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
@@ -49,9 +47,7 @@ export function WorkflowListPage({
   browserProfiles,
   selectedProfileIdDraft,
   appError,
-  runState,
   runSnapshots,
-  activeRunWorkflowName,
   onWorkflowNameDraftChange,
   onSelectedProfileIdDraftChange,
   onSubmitWorkflowDialog,
@@ -80,10 +76,6 @@ export function WorkflowListPage({
       .filter((snapshot) => snapshot.state.status === "running")
       .map((snapshot) => [snapshot.workflow_id, snapshot]),
   );
-  const runStatusText =
-    runState.status === "idle"
-      ? null
-      : `${runStatusLabel(runState)}${activeRunWorkflowName ? `: ${activeRunWorkflowName}` : ""}`;
 
   return (
     <section className="app-screen workflow-list-screen">
@@ -120,11 +112,6 @@ export function WorkflowListPage({
         {appError ? (
           <p className="field-error" role="alert">
             {appError}
-          </p>
-        ) : null}
-        {runStatusText ? (
-          <p className="muted" role="status">
-            {runStatusText}
           </p>
         ) : null}
       </header>
