@@ -1717,6 +1717,9 @@ describe("Workflow graph editor integration", () => {
     );
     expect(within(toolbar).queryByRole("button", { name: removedSelectionLayoutLabel }))
       .not.toBeInTheDocument();
+    const summary = within(toolbar).getByLabelText("Graph summary");
+    expect(summary).toBeInTheDocument();
+    expect(summary).toHaveTextContent(/nodes \/ .* edges/);
     expect(workflowGraphToolbarSource).not.toContain(removedSelectionLayoutLabel);
     expect(workflowGraphToolbarSource).not.toContain(removedSelectionLayoutDisabledProp);
     expect(workflowGraphToolbarSource).not.toContain(removedSelectionLayoutCallbackProp);

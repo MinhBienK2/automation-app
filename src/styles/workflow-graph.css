@@ -133,14 +133,13 @@
 
 .graph-canvas-wrap {
   display: grid;
-  grid-template-rows: auto auto;
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
   min-width: 0;
 }
 
 .graph-canvas {
   position: relative;
-  height: clamp(460px, calc(100dvh - 220px), 85vh);
+  height: clamp(460px, calc(100dvh - 180px), 85vh);
   overflow: hidden;
   border: 1px solid #233240;
   border-radius: 8px;
@@ -676,16 +675,17 @@
   box-shadow: 0 0 0 4px rgba(0, 197, 115, 0.2);
 }
 
-.graph-minimap {
+.graph-toolbar-summary {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  justify-self: end;
-  padding: 4px 8px;
-  border: 1px solid #233240;
-  border-radius: 8px;
   color: #667d8d;
   font-size: 12px;
+  padding-right: 4px;
+}
+
+.graph-toolbar-status {
+  color: #667d8d;
 }
 
 .graph-arrange-error {
