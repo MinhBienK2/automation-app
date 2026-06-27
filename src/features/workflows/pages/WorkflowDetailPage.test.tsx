@@ -32,7 +32,7 @@ describe("Workflow detail integration", () => {
   });
 
   async function launchRun(scope: HTMLElement = document.body) {
-    await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
+    await userEvent.click(within(scope).getByRole("button", { name: "Run" }));
   }
 
   async function openWorkflows() {
@@ -135,7 +135,7 @@ describe("Workflow detail integration", () => {
     expect(within(controlsRow).getByRole("button", { name: "Save" }))
       .toHaveClass("workflow-command-icon");
     expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
-    expect(within(controlsRow).getByRole("button", { name: "Launch Run" }))
+    expect(within(controlsRow).getByRole("button", { name: "Run" }))
       .toHaveAttribute("data-slot", "button");
     expect(within(controlsRow).queryByRole("button", { name: "Record Replacement" }))
       .not.toBeInTheDocument();
@@ -158,14 +158,14 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await openWorkflowDetails();
-    await userEvent.click(await screen.findByRole("button", { name: "Launch Run" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Run" }));
 
     await waitFor(() => {
       expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow", {
         workflowId: "workflow-1",
       });
     });
-    expect(screen.queryByRole("dialog", { name: "Launch Run" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Run" })).not.toBeInTheDocument();
   });
 
   test("shows run monitor event timeline in execution order and focuses the current graph node", async () => {
@@ -1130,7 +1130,7 @@ describe("Workflow detail integration", () => {
     });
     await launchRun(controlsRow);
 
-    expect(within(controlsRow).getByRole("button", { name: "Launch Run" })).toBeDisabled();
+    expect(within(controlsRow).getByRole("button", { name: "Run" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Test to Here" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Test All" }))
@@ -1324,7 +1324,7 @@ describe("Workflow detail integration", () => {
       name: "Workflow controls row",
     });
 
-    expect(within(controlsRow).getByRole("button", { name: "Launch Run" }))
+    expect(within(controlsRow).getByRole("button", { name: "Run" }))
       .not.toBeDisabled();
     expect(within(controlsRow).queryByRole("button", { name: "Stop" }))
       .not.toBeInTheDocument();

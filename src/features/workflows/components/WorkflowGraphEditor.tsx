@@ -820,6 +820,9 @@ export function WorkflowGraphEditor({
         onSelectMode={() => setIsToolbarPanMode(false)}
         onTogglePanMode={() => setIsToolbarPanMode((current) => !current)}
         onUndo={undoGraphEdit}
+        nodeCount={graph.nodes.length}
+        edgeCount={graph.edges.length}
+        arrangeError={arrangeError}
       />
 
       <div className="workflow-graph-layout">
@@ -929,15 +932,6 @@ export function WorkflowGraphEditor({
                 onClose={() => setLinkContextMenu(null)}
                 onDelete={() => deleteEdge(linkContextMenu.edgeId)}
               />
-            ) : null}
-          </div>
-          <div className="graph-minimap" aria-label="Graph summary">
-            {graph.nodes.length} nodes / {graph.edges.length} edges
-            {isArrangingGraph ? (
-              <span role="status">Arranging graph...</span>
-            ) : null}
-            {arrangeError ? (
-              <span className="graph-arrange-error" role="status">{arrangeError}</span>
             ) : null}
           </div>
         </div>

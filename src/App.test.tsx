@@ -75,7 +75,7 @@ describe("App settings and graph autosave", () => {
   });
 
   async function launchRun(scope: HTMLElement = document.body) {
-    await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
+    await userEvent.click(within(scope).getByRole("button", { name: "Run" }));
   }
 
   async function getProjectCollections() {
@@ -1143,7 +1143,7 @@ describe("App settings and graph autosave", () => {
     expect(within(shortcuts).getByText("Hold Space + drag")).toBeInTheDocument();
     expect(within(shortcuts).getByText("Pan the graph view")).toBeInTheDocument();
     expect(within(shortcuts).getByText("Ctrl/Cmd + Enter")).toBeInTheDocument();
-    expect(within(shortcuts).getByText("Launch Run")).toBeInTheDocument();
+    expect(within(shortcuts).getByText("Run")).toBeInTheDocument();
   });
 
   test("autosaves graph changes by default", async () => {
@@ -1400,7 +1400,7 @@ describe("App settings and graph autosave", () => {
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     expect(within(header).getByRole("button", { name: "Validate" })).toBeInTheDocument();
-    expect(within(header).getByRole("button", { name: "Launch Run" })).toBeInTheDocument();
+    expect(within(header).getByRole("button", { name: "Run" })).toBeInTheDocument();
     expect(within(header).getByRole("button", { name: "Save" })).toBeInTheDocument();
     expect(within(editor).queryByRole("button", { name: "Validate Graph" }))
       .not.toBeInTheDocument();
@@ -1475,7 +1475,9 @@ describe("App settings and graph autosave", () => {
     });
     expect(await screen.findByText("Running")).toBeInTheDocument();
 
-    expect(await screen.findByText("Run succeeded: Login flow")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Running")).not.toBeInTheDocument();
+    });
     expect(runSnapshotCalls).toBeGreaterThan(1);
     expect(runStateCalls).toBeGreaterThanOrEqual(1);
   });

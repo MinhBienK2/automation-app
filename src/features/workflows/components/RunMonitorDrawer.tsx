@@ -237,6 +237,19 @@ export function RunMonitorDrawer({
                 const isExpanded = expandedEventNumbers[item.eventNumber] ?? false;
                 const isShowAll = showAllVars[item.eventNumber] ?? false;
                 const trace = traces[item.traceIndex];
+                const contextText = (() => {
+                  if (!trace) return null;
+                  const parts: string[] = [];
+                  if (trace.subflow_name) {
+                    parts.push(`Subflow: ${trace.subflow_name}`);
+                  }
+                  if (trace.parent_node_id) {
+                    const parentNode = nodeById.get(trace.parent_node_id);
+                    const parentLabel = parentNode?.label || trace.parent_node_id;
+                    parts.push(`Logic: ${parentLabel}`);
+                  }
+                  return parts.length > 0 ? parts.join(" · ") : null;
+                })();
 
                 return (
                   <li key={item.id} className="run-monitor-timeline-item">
@@ -265,6 +278,11 @@ export function RunMonitorDrawer({
                       <span className="run-monitor-step-copy">
                         <span>Event {item.eventNumber} · {timelineEventTitle(item.status)}</span>
                         <strong>Step {item.stepNumber} · {item.label}</strong>
+                        {contextText && (
+                          <span className="run-monitor-step-parent">
+                            {contextText}
+                          </span>
+                        )}
                       </span>
                       <span className="run-monitor-step-status-cell">
                         <small>{monitorStatusLabel(item.status)}</small>

@@ -43,6 +43,9 @@ type WorkflowGraphToolbarProps = {
   onSelectMode: () => void;
   onTogglePanMode: () => void;
   onUndo: () => void;
+  nodeCount: number;
+  edgeCount: number;
+  arrangeError: string | null;
 };
 
 export function WorkflowGraphToolbar({
@@ -60,6 +63,9 @@ export function WorkflowGraphToolbar({
   onSelectMode,
   onTogglePanMode,
   onUndo,
+  nodeCount,
+  edgeCount,
+  arrangeError,
 }: WorkflowGraphToolbarProps) {
   const visibleLogicNodeGroups =
     graphKind === "subflow"
@@ -201,14 +207,25 @@ export function WorkflowGraphToolbar({
         </IconButton>
       </div>
 
-      <IconButton
-        label="Shortcuts"
-        type="button"
-        variant="ghost"
-        onClick={onOpenShortcuts}
-      >
-        <Keyboard aria-hidden="true" />
-      </IconButton>
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
+        <IconButton
+          label="Shortcuts"
+          type="button"
+          variant="ghost"
+          onClick={onOpenShortcuts}
+        >
+          <Keyboard aria-hidden="true" />
+        </IconButton>
+        <div className="graph-toolbar-summary" aria-label="Graph summary">
+          {nodeCount} nodes / {edgeCount} edges
+          {isArranging ? (
+            <span role="status" className="graph-toolbar-status">Arranging...</span>
+          ) : null}
+          {arrangeError ? (
+            <span className="graph-arrange-error" role="status">{arrangeError}</span>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

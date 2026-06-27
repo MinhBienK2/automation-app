@@ -181,6 +181,11 @@
   text-transform: uppercase;
 }
 
+.run-monitor-step-copy .run-monitor-step-parent {
+  color: #9aaebd;
+  text-transform: none;
+}
+
 .run-monitor-step[data-status="running"] small {
   color: #32d3e6;
 }

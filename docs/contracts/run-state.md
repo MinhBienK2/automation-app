@@ -38,7 +38,7 @@ Run errors include:
 - `action_type`
 - `reason`
 - optional `diagnostics`: structured runtime context for failure display and
-  audit logs. It may include `compiled_step_id`, `parent_step_id`,
+  audit logs. It may include `compiled_step_id`, `parent_step_id`, `parent_step_ids`,
   `subflow_node_id`, `subflow_id`, `subflow_name`, `subflow_step_number`,
   `subflow_step_count`, `label_path`, and `action_summary`. UI should prefer
   `label_path`, subflow step ordinal, the failing serialized action/node type,
@@ -65,7 +65,7 @@ source vocabulary for Overview, workflow row status, and Evidence filtering.
 
 - `run_workflow` delegates to the run manager to create a run-id scoped snapshot, close only a conflicting retained browser session for the same workflow/profile when launching a fresh session, then set that snapshot status to `running`, mode, target step id, and clears progress/error.
 - `run_workflow_from_node` reuses an existing retained session and runs from a selected main-path graph node. It requires browser retention `retain`, a persistent selected browser profile, and a retained session matching the workflow/profile. The operator can choose the scope (only rerun selected node vs run from selected node onward) directly from the Run from selected action menu on the detail page, which also persists that choice back to the workflow settings. Selected-node compilation resolves Call Subflow nodes the same way as full workflow runs.
-- Progress events set current step and completed step ids. Nested compiled graph actions also report their original graph node ids while they execute, allowing branch/body nodes to surface in the same run-state fields as top-level continuation nodes. Repeated nested executions append repeated ids to `completed_step_ids` so live monitors can show each loop/retry occurrence as a separate activity log entry; canvas completion styling should treat the array as membership rather than uniqueness.
+- Progress events set current step and completed step ids. Nested compiled graph actions also report their original graph node ids while they execute, allowing branch/body nodes to surface in the same run-state fields as top-level continuation nodes. To ensure loop/retry body nodes reset their completion styling on new iterations, starting a loop or retry iteration clears their nested child step IDs from `completed_step_ids`, so only the current iteration's progress is highlighted.
 - Multiple different workflows can run concurrently when they do not share a persistent browser profile. A second run for the same workflow fails with a workflow conflict, and a second run that would reuse the same persistent browser profile fails with a profile conflict.
 - `run_batch_workflow` remains globally exclusive. A batch blocks normal runs while active, normal runs block a batch start, batch reports progress through the same state shape, and it can be stopped through `stop_run`.
 - `stop_run(runId)` delegates to the run manager to set the targeted run status to `stopped` and clear error. Omitting `runId` is allowed only when there is exactly one active run; omitting it while multiple runs are active fails with a command error. Batch stopping remains supported through the same command.

@@ -22,6 +22,7 @@ import {
   type BrowserDriverPage,
   type RetainedSession,
 } from "../browser/sessionManager.js";
+import { collectNestedNodeIds } from "./nestedExecutionHelpers.js";
 import {
   executeRegisteredAction,
 } from "../actions/execution.js";
@@ -128,6 +129,15 @@ type Runtime = {
   liveState: RunState;
   onProgress?: (state: Partial<RunState>) => void;
   signal?: AbortSignal;
+  failedStepInfo?: {
+    step_id: string;
+    step_name: string;
+    action_type: string;
+    action_summary: string | null;
+    metadata: CompiledStepMetadata | null;
+    parent_step_id?: string | null;
+    parent_step_ids?: string[] | null;
+  } | null;
 };
 
 type EvidenceArtifact = {
@@ -233,6 +243,7 @@ export class BrowserWorkflowRunner {
       liveState: state,
       onProgress: request.onProgress,
       signal: request.signal,
+      failedStepInfo: null,
     };
     runtime.outputs.browser_identity = await browserIdentityEvidence(
       request.settings,
@@ -272,10 +283,11 @@ export class BrowserWorkflowRunner {
               ? "stopped"
               : "failed";
         if (error.status === "failure") {
+          const failedInfo = runtime.failedStepInfo;
           state.error = {
-            step_id: state.current_step_id,
+            step_id: failedInfo ? failedInfo.step_id : (state.current_step_id ?? ""),
             step_number: state.current_step_number ?? 0,
-            step_name: runtime.currentStepName,
+            step_name: failedInfo ? failedInfo.step_name : runtime.currentStepName,
             action_type: "stop_workflow",
             reason: error.message,
             diagnostics: runtimeErrorDiagnostics(runtime),
@@ -285,11 +297,12 @@ export class BrowserWorkflowRunner {
         state.status = "stopped";
       } else {
         state.status = "failed";
+        const failedInfo = runtime.failedStepInfo;
         state.error = {
-          step_id: state.current_step_id,
+          step_id: failedInfo ? failedInfo.step_id : (state.current_step_id ?? ""),
           step_number: state.current_step_number ?? 0,
-          step_name: runtime.currentStepName,
-          action_type: runtime.currentActionType ?? "unknown",
+          step_name: failedInfo ? failedInfo.step_name : runtime.currentStepName,
+          action_type: failedInfo ? failedInfo.action_type : (runtime.currentActionType ?? "unknown"),
           reason: error instanceof Error ? error.message : String(error),
           diagnostics: runtimeErrorDiagnostics(runtime),
         };
@@ -502,6 +515,28 @@ export class BrowserWorkflowRunner {
         await this.executeNestedAction(runtime, action, previous.runtimeStepId);
         runtime.liveState.completed_step_ids.push(action.graph_node_id);
         this.reportProgress(runtime);
+      } catch (error) {
+        if (!(error instanceof LoopControl)) {
+          if (!runtime.failedStepInfo) {
+            runtime.failedStepInfo = {
+              step_id: action.graph_node_id,
+              step_name: action.graph_label ?? action.graph_node_id,
+              action_type: action.type,
+              action_summary: actionConfigSummary(action),
+              metadata: action.graph_metadata ?? null,
+              parent_step_id: previous.runtimeStepId,
+              parent_step_ids: previous.runtimeStepId ? [previous.runtimeStepId] : [],
+            };
+          } else if (previous.runtimeStepId) {
+            if (!runtime.failedStepInfo.parent_step_ids) {
+              runtime.failedStepInfo.parent_step_ids = [];
+            }
+            if (!runtime.failedStepInfo.parent_step_ids.includes(previous.runtimeStepId)) {
+              runtime.failedStepInfo.parent_step_ids.unshift(previous.runtimeStepId);
+            }
+          }
+        }
+        throw error;
       } finally {
         runtime.currentStepId = previous.runtimeStepId;
         runtime.currentActionType = previous.runtimeActionType;
@@ -560,6 +595,14 @@ export class BrowserWorkflowRunner {
     runtime: Runtime,
     steps: CompiledNestedAction[],
   ): Promise<"completed" | "break" | "continue"> {
+    const nestedIds = collectNestedNodeIds(steps);
+    if (nestedIds.length > 0) {
+      const nestedSet = new Set(nestedIds);
+      runtime.liveState.completed_step_ids = runtime.liveState.completed_step_ids.filter(
+        (id) => !nestedSet.has(id),
+      );
+      this.reportProgress(runtime);
+    }
     try {
       await this.executeActions(runtime, steps);
       return "completed";
@@ -966,6 +1009,14 @@ export class BrowserWorkflowRunner {
   ) {
     let lastError: unknown;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const nestedIds = collectNestedNodeIds(steps);
+      if (nestedIds.length > 0) {
+        const nestedSet = new Set(nestedIds);
+        runtime.liveState.completed_step_ids = runtime.liveState.completed_step_ids.filter(
+          (id) => !nestedSet.has(id),
+        );
+        this.reportProgress(runtime);
+      }
       try {
         await this.executeActions(runtime, steps);
         return;

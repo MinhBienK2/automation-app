@@ -46,6 +46,15 @@ type RuntimeDiagnosticSource = {
   currentStepMetadata: CompiledStepMetadata | null;
   currentActionSummary: string | null;
   liveState: Pick<RunState, "current_step_id">;
+  failedStepInfo?: {
+    step_id: string;
+    step_name: string;
+    action_type: string;
+    action_summary: string | null;
+    metadata: CompiledStepMetadata | null;
+    parent_step_id?: string | null;
+    parent_step_ids?: string[] | null;
+  } | null;
 };
 
 type TraceEffectSource = {
@@ -97,13 +106,20 @@ const runnerActionCapabilities: Partial<Record<ActionType, RunnerActionCapabilit
 export function runtimeErrorDiagnostics(
   runtime: RuntimeDiagnosticSource,
 ): NonNullable<RunState["error"]>["diagnostics"] {
-  const compiledStepId = runtime.currentStepId ?? runtime.liveState.current_step_id ?? null;
+  const failedInfo = runtime.failedStepInfo;
+  const compiledStepId = failedInfo
+    ? failedInfo.step_id
+    : (runtime.currentStepId ?? runtime.liveState.current_step_id ?? null);
   const stepParts = compiledStepParts(compiledStepId);
-  const labelPath = labelPathFor(runtime.currentStepName);
-  const subflow = runtime.currentStepMetadata?.subflow ?? null;
+  const labelPath = labelPathFor(failedInfo ? failedInfo.step_name : runtime.currentStepName);
+  const subflow = failedInfo
+    ? (failedInfo.metadata?.subflow ?? null)
+    : (runtime.currentStepMetadata?.subflow ?? null);
+  const parentStepId = failedInfo?.parent_step_id ?? stepParts.parentStepId ?? null;
   return {
     compiled_step_id: compiledStepId,
-    ...(stepParts.parentStepId ? { parent_step_id: stepParts.parentStepId } : {}),
+    ...(parentStepId ? { parent_step_id: parentStepId } : {}),
+    ...(failedInfo?.parent_step_ids ? { parent_step_ids: failedInfo.parent_step_ids } : {}),
     ...(stepParts.subflowNodeId ? { subflow_node_id: stepParts.subflowNodeId } : {}),
     ...(subflow ? {
       subflow_id: subflow.id,
@@ -112,7 +128,7 @@ export function runtimeErrorDiagnostics(
       subflow_step_count: subflow.step_count,
     } : {}),
     ...(labelPath.length ? { label_path: labelPath } : {}),
-    action_summary: runtime.currentActionSummary,
+    action_summary: failedInfo ? failedInfo.action_summary : runtime.currentActionSummary,
   };
 }
 

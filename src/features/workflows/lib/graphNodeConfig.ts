@@ -19,14 +19,15 @@ export type RandomChoiceGraphConfig = {
 
 export function switchPortsForCases(cases: string[]): GraphPort[] {
   return [
-    { id: "in", label: "In", direction: "input" },
+    { id: "in", label: "In", direction: "input", shape: "circle" },
     ...cases.map((_, index) => ({
       id: `case_${index + 1}`,
       label: `Case ${index + 1}`,
       direction: "output" as const,
+      shape: "diamond" as const,
     })),
-    { id: "default", label: "Default", direction: "output" },
-    { id: "done", label: "Done", direction: "output" },
+    { id: "default", label: "Default", direction: "output", shape: "diamond" },
+    { id: "done", label: "Done", direction: "output", shape: "square" },
   ];
 }
 
@@ -35,26 +36,28 @@ export function routerPortsForCases(
   defaultLabel = "Default",
 ): GraphPort[] {
   return [
-    { id: "in", label: "In", direction: "input" },
+    { id: "in", label: "In", direction: "input", shape: "circle" },
     ...cases.map((caseValue) => ({
       id: `case_${caseValue.id}`,
       label: caseValue.label.trim() || "Case",
       direction: "output" as const,
+      shape: "diamond" as const,
     })),
-    { id: "default", label: defaultLabel.trim() || "Default", direction: "output" },
-    { id: "done", label: "Done", direction: "output" },
+    { id: "default", label: defaultLabel.trim() || "Default", direction: "output", shape: "diamond" },
+    { id: "done", label: "Done", direction: "output", shape: "square" },
   ];
 }
 
 export function randomChoicePortsForChoices(choices: RandomChoiceOption[]): GraphPort[] {
   return [
-    { id: "in", label: "In", direction: "input" },
+    { id: "in", label: "In", direction: "input", shape: "circle" },
     ...choices.map((choice) => ({
       id: `choice_${choice.id}`,
       label: choice.label.trim() || "Choice",
       direction: "output" as const,
+      shape: "diamond" as const,
     })),
-    { id: "done", label: "Done", direction: "output" },
+    { id: "done", label: "Done", direction: "output", shape: "square" },
   ];
 }
 

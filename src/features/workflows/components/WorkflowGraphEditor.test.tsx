@@ -89,7 +89,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   async function launchRun() {
-    await userEvent.click(screen.getByRole("button", { name: "Launch Run" }));
+    await userEvent.click(screen.getByRole("button", { name: "Run" }));
   }
 
   async function openWorkflowDetails() {
@@ -561,7 +561,7 @@ describe("Workflow graph editor integration", () => {
       name: "Workflow detail header",
     });
     expect(within(workflowHeader).getByText("Login flow")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Launch Run" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeInTheDocument();
   });
 
   test("opens the called subflow detail from the node context menu", async () => {
@@ -1717,6 +1717,9 @@ describe("Workflow graph editor integration", () => {
     );
     expect(within(toolbar).queryByRole("button", { name: removedSelectionLayoutLabel }))
       .not.toBeInTheDocument();
+    const summary = within(toolbar).getByLabelText("Graph summary");
+    expect(summary).toBeInTheDocument();
+    expect(summary).toHaveTextContent(/nodes \/ .* edges/);
     expect(workflowGraphToolbarSource).not.toContain(removedSelectionLayoutLabel);
     expect(workflowGraphToolbarSource).not.toContain(removedSelectionLayoutDisabledProp);
     expect(workflowGraphToolbarSource).not.toContain(removedSelectionLayoutCallbackProp);

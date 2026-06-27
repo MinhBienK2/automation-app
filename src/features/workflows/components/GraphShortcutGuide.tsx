@@ -40,7 +40,7 @@ const graphShortcutGroups: GraphShortcutGroup[] = [
     title: "Run and save",
     items: [
       { keys: "Ctrl/Cmd + S", description: "Save graph" },
-      { keys: "Ctrl/Cmd + Enter", description: "Launch Run" },
+      { keys: "Ctrl/Cmd + Enter", description: "Run" },
       { keys: "Ctrl/Cmd + Shift + Enter", description: "Validate graph" },
     ],
   },

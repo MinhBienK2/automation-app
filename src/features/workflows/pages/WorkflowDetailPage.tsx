@@ -344,7 +344,7 @@ export function WorkflowDetailPage({
               onClick={onRunGraph}
               disabled={isRunning}
             >
-              Launch Run
+              Run
             </Button>
             {isRunning ? (
               <Button

@@ -133,14 +133,13 @@
 
 .graph-canvas-wrap {
   display: grid;
-  grid-template-rows: auto auto;
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
   min-width: 0;
 }
 
 .graph-canvas {
   position: relative;
-  height: clamp(460px, calc(100dvh - 260px), 640px);
+  height: clamp(460px, calc(100dvh - 180px), 85vh);
   overflow: hidden;
   border: 1px solid #233240;
   border-radius: 8px;
@@ -597,22 +596,96 @@
   box-shadow: 0 0 0 4px rgba(50, 211, 230, 0.16);
 }
 
+.graph-handle-circle {
+  border-radius: 50%;
+}
+
+.graph-handle-diamond {
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: none;
+}
+
+.graph-handle-diamond::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #a78bfa;
+  border: 1px solid #121c26;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.graph-handle-diamond.graph-handle-input {
+  left: -8px;
+}
+
+.graph-handle-diamond.graph-handle-output {
+  right: -8px;
+}
+
+.graph-handle-square {
+  border-radius: 2px;
+}
+
+.graph-handle-triangle {
+  width: 0;
+  height: 0;
+  background: transparent;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 14px solid #f59e0b;
+  border-top: none;
+}
+
+.graph-handle-triangle.graph-handle-input {
+  left: -10px;
+}
+
+.graph-handle-triangle.graph-handle-output {
+  right: -10px;
+}
+
+.graph-handle-triangle::after {
+  display: none;
+}
+
+.graph-handle-hexagon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+}
+
+.graph-handle-square {
+  background: #34d399;
+}
+
+.graph-handle-triangle {
+  border-bottom-color: #f87171;
+}
+
+.graph-handle-hexagon {
+  background: #60a5fa;
+}
+
 .graph-canvas .react-flow__handle.connectingto.valid {
   border-color: #e7eef5;
   background: #39d98a;
   box-shadow: 0 0 0 4px rgba(0, 197, 115, 0.2);
 }
 
-.graph-minimap {
+.graph-toolbar-summary {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  justify-self: end;
-  padding: 4px 8px;
-  border: 1px solid #233240;
-  border-radius: 8px;
   color: #667d8d;
   font-size: 12px;
+  padding-right: 4px;
+}
+
+.graph-toolbar-status {
+  color: #667d8d;
 }
 
 .graph-arrange-error {

@@ -62,6 +62,7 @@ export type GraphNodeType =
   | "evaluate_expression";
 
 export type GraphPortDirection = "input" | "output";
+export type GraphPortShape = "circle" | "diamond" | "square" | "triangle" | "hexagon";
 export type GraphValidationLevel = "error" | "warning";
 
 export type GraphPosition = {
@@ -79,6 +80,7 @@ export type GraphPort = {
   id: string;
   label: string;
   direction: GraphPortDirection;
+  shape?: GraphPortShape;
 };
 
 export type CallSubflowGraphConfig = {

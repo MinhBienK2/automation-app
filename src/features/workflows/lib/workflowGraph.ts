@@ -6,6 +6,7 @@ import type {
   GraphNode,
   GraphNodeType,
   GraphPort,
+  GraphPortShape,
   GraphPosition,
   GraphViewport,
   GraphValidationIssue,
@@ -22,9 +23,9 @@ import {
 } from "./graphLayout";
 import { objectConfig } from "./configUtils";
 import { graphNodeHeightForPorts, graphNodeWidth } from "./graphNodeDimensions";
+import { displayPositionsForGraphNodes } from "./workflowGraphPositions";
 
 const graphIssueKey = "__graph__";
-const graphNodeCollisionClearance = 24;
 
 export type WorkflowFlowNodeStatus = "idle" | "running" | "completed" | "failed";
 
@@ -178,7 +179,7 @@ export function toReactFlowGraph(
   const edgeOrders = graphEdgeOrders(graph);
   const nodeLabels = new Map(graph.nodes.map((node) => [node.id, node.label]));
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
-  const nodePositions = displayPositionsForGraphNodes(graph.nodes);
+  const nodePositions = displayPositionsForGraphNodes(graph.nodes, graph.edges);
 
   const baseFlowGraph: WorkflowReactFlowGraph = {
     nodes: graph.nodes.map((node) => ({
@@ -292,59 +293,6 @@ export function applyReactFlowGraphState(
   };
 }
 
-function displayPositionsForGraphNodes(nodes: GraphNode[]) {
-  const positions = new Map<string, GraphPosition>();
-  const buckets = new Map<number, Array<{ x: number; y: number; height: number }>>();
-  const orderedNodes = [...nodes].sort((left, right) => {
-    const yDiff = left.position.y - right.position.y;
-    if (yDiff !== 0) return yDiff;
-    const xDiff = left.position.x - right.position.x;
-    if (xDiff !== 0) return xDiff;
-    return left.id.localeCompare(right.id);
-  });
-
-  for (const node of orderedNodes) {
-    const height = graphNodeHeightForPorts(node.ports);
-    let y = node.position.y;
-
-    const bucketX = Math.floor(node.position.x / graphNodeWidth);
-
-    // Only check current bucket and its immediate adjacent neighbors
-    for (let b = bucketX - 1; b <= bucketX + 1; b++) {
-      const placedInBucket = buckets.get(b);
-      if (!placedInBucket) continue;
-      for (const placedNode of placedInBucket) {
-        if (!nodeColumnsOverlap(node.position.x, placedNode.x)) continue;
-        y = Math.max(
-          y,
-          placedNode.y + placedNode.height + graphNodeCollisionClearance,
-        );
-      }
-    }
-
-    positions.set(
-      node.id,
-      y === node.position.y ? node.position : { ...node.position, y },
-    );
-
-    let bucket = buckets.get(bucketX);
-    if (!bucket) {
-      bucket = [];
-      buckets.set(bucketX, bucket);
-    }
-    bucket.push({
-      x: node.position.x,
-      y,
-      height,
-    });
-  }
-
-  return positions;
-}
-
-function nodeColumnsOverlap(leftX: number, rightX: number) {
-  return leftX < rightX + graphNodeWidth && rightX < leftX + graphNodeWidth;
-}
 
 function applyReactFlowEdgeState(
   edge: WorkflowFlowEdge,
@@ -770,82 +718,86 @@ export function createDefaultGraphNode(
 export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
   switch (nodeType) {
     case "start":
-      return [outputPort("out", "Out")];
+      return [outputPort("out", "Out", "circle")];
     case "end_success":
     case "end_failure":
-      return [inputPort("in", "In")];
+      return [inputPort("in", "In", "circle")];
     case "merge":
-      return [inputPort("in", "In"), outputPort("out", "Out")];
+      return [inputPort("in", "In", "circle"), outputPort("out", "Out", "circle")];
     case "call_subflow":
-      return [inputPort("in", "In"), outputPort("out", "Out")];
+      return [inputPort("in", "In", "circle"), outputPort("out", "Out", "circle")];
     case "router":
       return [
-        inputPort("in", "In"),
-        outputPort("case_1", "Case 1"),
-        outputPort("default", "Default"),
-        outputPort("done", "Done"),
+        inputPort("in", "In", "circle"),
+        outputPort("case_1", "Case 1", "diamond"),
+        outputPort("default", "Default", "diamond"),
+        outputPort("done", "Done", "square"),
       ];
     case "random_choice":
       return [
-        inputPort("in", "In"),
-        outputPort("choice_1", "Choice 1"),
-        outputPort("choice_2", "Choice 2"),
-        outputPort("done", "Done"),
+        inputPort("in", "In", "circle"),
+        outputPort("choice_1", "Choice 1", "diamond"),
+        outputPort("choice_2", "Choice 2", "diamond"),
+        outputPort("done", "Done", "square"),
       ];
     case "if":
       return [
-        inputPort("in", "In"),
-        outputPort("true", "True"),
-        outputPort("false", "False"),
-        outputPort("done", "Done"),
+        inputPort("in", "In", "circle"),
+        outputPort("true", "True", "diamond"),
+        outputPort("false", "False", "diamond"),
+        outputPort("done", "Done", "square"),
       ];
     case "switch":
       return [
-        inputPort("in", "In"),
-        outputPort("case_1", "Case 1"),
-        outputPort("default", "Default"),
-        outputPort("done", "Done"),
+        inputPort("in", "In", "circle"),
+        outputPort("case_1", "Case 1", "diamond"),
+        outputPort("default", "Default", "diamond"),
+        outputPort("done", "Done", "square"),
       ];
     case "repeat_times":
     case "repeat_for_each":
     case "while":
-      return [inputPort("in", "In"), outputPort("loop", "Loop"), outputPort("done", "Done")];
+      return [
+        inputPort("in", "In", "circle"),
+        outputPort("loop", "Loop", "circle"),
+        outputPort("done", "Done", "square"),
+      ];
     case "repeat_until":
       return [
-        inputPort("in", "In"),
-        outputPort("loop", "Loop"),
-        outputPort("done", "Done"),
-        outputPort("timeout", "Timeout"),
+        inputPort("in", "In", "circle"),
+        outputPort("loop", "Loop", "circle"),
+        outputPort("done", "Done", "square"),
+        outputPort("timeout", "Timeout", "triangle"),
       ];
     case "try_catch":
       return [
-        inputPort("in", "In"),
-        outputPort("try", "Try"),
-        outputPort("success", "Success"),
-        outputPort("error", "Error"),
-        outputPort("finally", "Finally"),
-        outputPort("done", "Done"),
+        inputPort("in", "In", "circle"),
+        outputPort("try", "Try", "hexagon"),
+        outputPort("success", "Success", "square"),
+        outputPort("error", "Error", "triangle"),
+        outputPort("finally", "Finally", "square"),
+        outputPort("done", "Done", "square"),
       ];
     case "retry":
       return [
-        inputPort("in", "In"),
-        outputPort("try", "Try"),
-        outputPort("success", "Success"),
-        outputPort("failed", "Failed"),
+        inputPort("in", "In", "circle"),
+        outputPort("try", "Try", "hexagon"),
+        outputPort("success", "Success", "square"),
+        outputPort("failed", "Failed", "triangle"),
       ];
     case "fallback":
       return [
-        inputPort("in", "In"),
-        outputPort("primary", "Primary"),
-        outputPort("fallback", "Fallback"),
-        outputPort("done", "Done"),
+        inputPort("in", "In", "circle"),
+        outputPort("primary", "Primary", "circle"),
+        outputPort("fallback", "Fallback", "triangle"),
+        outputPort("done", "Done", "square"),
       ];
     case "break_loop":
     case "continue_loop":
     case "stop_workflow":
-      return [inputPort("in", "In")];
+      return [inputPort("in", "In", "circle")];
     default:
-      return [inputPort("in", "In"), outputPort("out", "Out")];
+      return [inputPort("in", "In", "circle"), outputPort("out", "Out", "circle")];
   }
 }
 
@@ -1116,10 +1068,19 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
   }
 }
 
-function inputPort(id: string, label: string): GraphPort {
-  return { id, label, direction: "input" };
+function inputPort(id: string, label: string, shape?: GraphPortShape): GraphPort {
+  return { id, label, direction: "input", shape };
 }
 
-function outputPort(id: string, label: string): GraphPort {
-  return { id, label, direction: "output" };
+function outputPort(id: string, label: string, shape?: GraphPortShape): GraphPort {
+  return { id, label, direction: "output", shape };
+}
+
+export function portShape(portId: string): GraphPortShape {
+  if (portId === "true" || portId === "false") return "diamond";
+  if (portId === "done" || portId === "success" || portId === "finally") return "square";
+  if (portId === "error" || portId === "failed" || portId === "timeout") return "triangle";
+  if (portId === "try") return "hexagon";
+  if (portId.startsWith("case_") || portId.startsWith("choice_") || portId === "default") return "diamond";
+  return "circle";
 }

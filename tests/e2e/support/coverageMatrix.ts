@@ -99,6 +99,10 @@ export const actionCoverage = {
   mock_response: entry(captureNetwork),
   set_local_storage: entry(contextStorage),
   set_session_storage: entry(contextStorage),
+  find_element: entry(runnerTests, "backend_contract", "Tested at backend level"),
+  count_elements: entry(runnerTests, "backend_contract", "Tested at backend level"),
+  extract_regex_matches: entry(runnerTests, "backend_contract", "Tested at backend level"),
+  write_text_file: entry(runnerTests, "backend_contract", "Tested at backend level"),
 } satisfies Partial<Record<ActionType, CoverageEntry>>;
 
 export const hiddenActionCoverage = {
@@ -119,6 +123,14 @@ export const hiddenActionCoverage = {
   transform_variable: backendGuard("hidden graph-internal action; backend runner tests cover transformation"),
   assert_output: backendGuard("hidden graph-internal action; backend runner tests cover output assertion"),
   domain_allowlist: entry([...runValidation, "electron/backend/runtime/runner.test.ts"], "desktop_e2e_and_backend", "Hidden graph-internal node; E2E verifies navigation policy."),
+  random_choice: backendGuard("hidden graph-internal action; backend runner tests cover random choice"),
+  update_number_variable: backendGuard("hidden graph-internal action; backend runner tests cover variable updates"),
+  update_text_variable: backendGuard("hidden graph-internal action; backend runner tests cover variable updates"),
+  update_flag_variable: backendGuard("hidden graph-internal action; backend runner tests cover variable updates"),
+  update_list_variable: backendGuard("hidden graph-internal action; backend runner tests cover variable updates"),
+  update_object_variable: backendGuard("hidden graph-internal action; backend runner tests cover variable updates"),
+  evaluate_logic: backendGuard("hidden graph-internal action; backend runner tests cover logic evaluation"),
+  evaluate_expression: backendGuard("hidden graph-internal action; backend runner tests cover expression evaluation"),
 } satisfies Partial<Record<ActionType, CoverageEntry>>;
 
 export const graphNodeCoverage = {
@@ -186,14 +198,14 @@ export const workflowJourneyCoverage = {
   evidence_persistence: entry([
     ...batchEvidence,
     "tests/e2e/capture-network.e2e.ts",
-    "electron/backend/commands.test.ts",
+    "electron/backend/commands/settingsCommands.test.ts",
   ], "desktop_e2e_and_backend"),
   import_export: entry([
     ...workflowPackage,
     "src/features/workflows/pages/WorkflowListPage.test.tsx",
-    "electron/backend/commands.test.ts",
+    "electron/backend/commands/packageCommands.test.ts",
   ], "desktop_e2e_and_backend"),
-  batch_execution: entry([...batchEvidence, "electron/backend/commands.test.ts"], "desktop_e2e_and_backend"),
+  batch_execution: entry([...batchEvidence, "electron/backend/commands/workflowCommands.test.ts"], "desktop_e2e_and_backend"),
 } satisfies Record<string, CoverageEntry>;
 
 export type BehaviorCapabilityStatus = "covered" | "gap" | "not_applicable";

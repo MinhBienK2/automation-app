@@ -571,13 +571,19 @@ function compileNestedConfigs(
   visited: Set<string>,
   options: CompileWorkflowGraphOptions = {},
 ): CompiledNestedAction[] {
+  const parentNode = graph.nodes.find((n) => n.id === sourceNodeId);
+  const parentLabel = parentNode?.label;
+
   const nestedSteps: CompiledGraphStep[] = [];
   compileTransition(
     graph,
     nextTransition(graph, sourceNodeId, sourcePort),
     new Set(visited),
     nestedSteps,
-    options,
+    {
+      ...options,
+      labelPrefix: [...(options.labelPrefix ?? []), ...(parentLabel ? [parentLabel] : [])],
+    },
   );
   return nestedSteps.map((compiledStep) => ({
     ...compiledStep.config,

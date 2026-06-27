@@ -210,12 +210,13 @@ function normalizeElkPositions(positions: Map<string, GraphPosition>) {
   );
 }
 
-function applyPortOrderToPositions(
+export function applyPortOrderToPositions(
   graph: WorkflowGraph,
   positions: Map<string, GraphPosition>,
   options: { includeBranchLaneConstraints?: boolean } = {},
 ) {
-  const constraints = portOrderConstraintsByColumn(graph, positions, options);
+  const columnKeys = getColumnKeys(positions);
+  const constraints = portOrderConstraintsByColumn(graph, positions, options, columnKeys);
   if (constraints.size === 0) return positions;
 
   const nextPositions = new Map(positions);
@@ -249,8 +250,9 @@ function alignBranchLanePositions(
     graph.nodes.map((node) => [node.id, graphNodeHeightForPorts(node.ports)]),
   );
   const nodeIdsByColumn = new Map<string, string[]>();
+  const columnKeys = getColumnKeys(positions);
   for (const node of graph.nodes) {
-    const column = columnKey(positions.get(node.id));
+    const column = columnKeys.get(node.id);
     if (!column) continue;
     nodeIdsByColumn.set(column, [...(nodeIdsByColumn.get(column) ?? []), node.id]);
   }
@@ -313,13 +315,46 @@ function branchLaneYByNodeId(
   };
 
   for (const node of graph.nodes) {
-    for (const portId of branchLaneOutputPortIds(node)) {
-      for (const edge of edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? []) {
-        const targetY = positions.get(edge.target_node_id)?.y;
-        if (targetY == null) continue;
-        assignLaneY(edge.target_node_id, targetY);
+    const branchPorts = branchLaneOutputPortIds(node);
+    if (branchPorts.length === 0) continue;
+
+    const targets = branchPorts.map((portId) => {
+      const edge = edgesBySourcePort.get(edgeSourcePortKey(node.id, portId))?.[0];
+      const targetId = edge?.target_node_id;
+      const y = targetId ? positions.get(targetId)?.y : null;
+      const isMerge = targetId ? (incomingCounts.get(targetId) ?? 0) > 1 : false;
+      return { portId, targetId, y, isMerge };
+    });
+
+    const adjustedYValues = targets.map((t) => t.y ?? (positions.get(node.id)?.y ?? 0));
+
+    // Propagate constraints from merge nodes (which cannot move)
+    for (let i = 0; i < targets.length; i++) {
+      if (targets[i].isMerge) {
+        // Propagate backwards (upwards)
+        for (let j = i - 1; j >= 0; j--) {
+          adjustedYValues[j] = Math.min(adjustedYValues[j], adjustedYValues[j+1] - layoutLaneGap);
+        }
+        // Propagate forwards (downwards)
+        for (let j = i + 1; j < targets.length; j++) {
+          adjustedYValues[j] = Math.max(adjustedYValues[j], adjustedYValues[j-1] + layoutLaneGap);
+        }
       }
     }
+
+    // Final sweep to ensure minimum separation for all non-merge nodes
+    for (let i = 1; i < targets.length; i++) {
+      if (adjustedYValues[i] - adjustedYValues[i-1] < 50) {
+        adjustedYValues[i] = adjustedYValues[i-1] + layoutLaneGap;
+      }
+    }
+
+    branchPorts.forEach((portId, index) => {
+      const laneYVal = adjustedYValues[index];
+      for (const edge of edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? []) {
+        assignLaneY(edge.target_node_id, laneYVal);
+      }
+    });
   }
 
   for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
@@ -360,6 +395,7 @@ function portOrderConstraintsByColumn(
   graph: WorkflowGraph,
   positions: Map<string, GraphPosition>,
   options: { includeBranchLaneConstraints?: boolean } = {},
+  columnKeys: Map<string, string>,
 ) {
   const constraints = new Map<string, Array<[string, string]>>();
   const edgesBySourcePort = new Map<string, GraphEdge[]>();
@@ -386,20 +422,33 @@ function portOrderConstraintsByColumn(
       (edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? [])
         .map((edge) => edge.target_node_id),
     );
-    addColumnConstraints(outputTargets, positions, constraints);
+    addColumnConstraints(outputTargets, constraints, columnKeys);
 
     const inputSourceGroups = orderedInputPortIds(node).map((portId) =>
       (edgesByTargetPort.get(edgeTargetPortKey(node.id, portId)) ?? [])
         .map((edge) => edge.source_node_id),
     );
-    addColumnGroupConstraints(inputSourceGroups, positions, constraints);
+    addColumnGroupConstraints(inputSourceGroups, constraints, columnKeys);
   }
 
   if (options.includeBranchLaneConstraints !== false) {
-    addBranchLaneConstraints(graph, positions, constraints, edgesBySourcePort);
+    addBranchLaneConstraints(graph, positions, constraints, edgesBySourcePort, columnKeys);
   }
 
   return constraints;
+}
+
+function compareLaneRanks(a: number[] | undefined, b: number[] | undefined): number {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  const minLen = Math.min(a.length, b.length);
+  for (let i = 0; i < minLen; i++) {
+    if (a[i] !== b[i]) {
+      return a[i]! - b[i]!;
+    }
+  }
+  return a.length - b.length;
 }
 
 function addBranchLaneConstraints(
@@ -407,6 +456,7 @@ function addBranchLaneConstraints(
   positions: Map<string, GraphPosition>,
   constraints: Map<string, Array<[string, string]>>,
   edgesBySourcePort: Map<string, GraphEdge[]>,
+  columnKeys: Map<string, string>,
 ) {
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const incomingCounts = new Map<string, number>();
@@ -414,22 +464,21 @@ function addBranchLaneConstraints(
     incomingCounts.set(edge.target_node_id, (incomingCounts.get(edge.target_node_id) ?? 0) + 1);
   }
 
-  const laneRanks = new Map<string, number>();
+  const laneRanks = new Map<string, number[]>();
   const queue: string[] = [];
-  const assignLaneRank = (nodeId: string, rank: number) => {
+  const assignLaneRank = (nodeId: string, rank: number[]) => {
     if ((incomingCounts.get(nodeId) ?? 0) > 1) return;
-    const currentRank = laneRanks.get(nodeId);
-    if (currentRank != null && currentRank <= rank) return;
+    const current = laneRanks.get(nodeId);
+    if (current != null && compareLaneRanks(current, rank) <= 0) return;
     laneRanks.set(nodeId, rank);
     queue.push(nodeId);
   };
 
-  for (const node of graph.nodes) {
-    const branchTargets = branchLaneOutputPortIds(node).flatMap((portId) =>
-      (edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? [])
-        .map((edge) => edge.target_node_id),
-    );
-    branchTargets.forEach((targetNodeId, index) => assignLaneRank(targetNodeId, index));
+  // Initialize with root nodes (nodes with 0 incoming edges)
+  const roots = graph.nodes.filter((node) => (incomingCounts.get(node.id) ?? 0) === 0);
+  for (const root of roots) {
+    laneRanks.set(root.id, []);
+    queue.push(root.id);
   }
 
   for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
@@ -438,16 +487,26 @@ function addBranchLaneConstraints(
     const node = nodeById.get(nodeId);
     const rank = laneRanks.get(nodeId);
     if (!node || rank == null) continue;
-    for (const portId of sameLaneOutputPortIds(node)) {
-      for (const edge of edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? []) {
-        assignLaneRank(edge.target_node_id, rank);
+
+    const branchPorts = branchLaneOutputPortIds(node);
+    if (branchPorts.length > 0) {
+      branchPorts.forEach((portId, index) => {
+        for (const edge of edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? []) {
+          assignLaneRank(edge.target_node_id, [...rank, index]);
+        }
+      });
+    } else {
+      for (const portId of sameLaneOutputPortIds(node)) {
+        for (const edge of edgesBySourcePort.get(edgeSourcePortKey(node.id, portId)) ?? []) {
+          assignLaneRank(edge.target_node_id, rank);
+        }
       }
     }
   }
 
   const rankedNodeIdsByColumn = new Map<string, string[]>();
   for (const [nodeId] of laneRanks) {
-    const column = columnKey(positions.get(nodeId));
+    const column = columnKeys.get(nodeId);
     if (!column) continue;
     rankedNodeIdsByColumn.set(column, [...(rankedNodeIdsByColumn.get(column) ?? []), nodeId]);
   }
@@ -455,20 +514,19 @@ function addBranchLaneConstraints(
   for (const nodeIds of rankedNodeIdsByColumn.values()) {
     addColumnConstraints(
       [...nodeIds].sort((left, right) => {
-        const rankDiff = (laneRanks.get(left) ?? 0) - (laneRanks.get(right) ?? 0);
+        const rankDiff = compareLaneRanks(laneRanks.get(left), laneRanks.get(right));
         if (rankDiff !== 0) return rankDiff;
         return comparePositionOrder(left, right, positions);
       }),
-      positions,
       constraints,
+      columnKeys,
     );
   }
 }
 
 function branchLaneOutputPortIds(node: GraphNode) {
-  return orderedOutputPortIds(node).filter((portId) =>
-    isBranchPort(node, portId) || isRecoveryPort(node, portId),
-  );
+  const ports = orderedOutputPortIds(node);
+  return ports.length > 1 ? ports : [];
 }
 
 function sameLaneOutputPortIds(node: GraphNode) {
@@ -478,8 +536,8 @@ function sameLaneOutputPortIds(node: GraphNode) {
 
 function addColumnConstraints(
   orderedNodeIds: string[],
-  positions: Map<string, GraphPosition>,
   constraints: Map<string, Array<[string, string]>>,
+  columnKeys: Map<string, string>,
 ) {
   const seen = new Set<string>();
   const uniqueNodeIds = orderedNodeIds.filter((nodeId) => {
@@ -492,14 +550,14 @@ function addColumnConstraints(
     const above = uniqueNodeIds[index];
     const below = uniqueNodeIds[index + 1];
     if (!above || !below) continue;
-    addColumnConstraint(above, below, positions, constraints);
+    addColumnConstraint(above, below, constraints, columnKeys);
   }
 }
 
 function addColumnGroupConstraints(
   orderedNodeIdGroups: string[][],
-  positions: Map<string, GraphPosition>,
   constraints: Map<string, Array<[string, string]>>,
+  columnKeys: Map<string, string>,
 ) {
   const uniqueGroups = orderedNodeIdGroups
     .map((nodeIds) => [...new Set(nodeIds)])
@@ -513,7 +571,7 @@ function addColumnGroupConstraints(
       if (!belowGroup) continue;
       for (const above of aboveGroup) {
         for (const below of belowGroup) {
-          addColumnConstraint(above, below, positions, constraints);
+          addColumnConstraint(above, below, constraints, columnKeys);
         }
       }
     }
@@ -523,12 +581,12 @@ function addColumnGroupConstraints(
 function addColumnConstraint(
   above: string,
   below: string,
-  positions: Map<string, GraphPosition>,
   constraints: Map<string, Array<[string, string]>>,
+  columnKeys: Map<string, string>,
 ) {
   if (above === below) return;
-  const aboveColumn = columnKey(positions.get(above));
-  const belowColumn = columnKey(positions.get(below));
+  const aboveColumn = columnKeys.get(above);
+  const belowColumn = columnKeys.get(below);
   if (!aboveColumn || aboveColumn !== belowColumn) return;
   constraints.set(aboveColumn, [...(constraints.get(aboveColumn) ?? []), [above, below]]);
 }
@@ -590,8 +648,29 @@ function comparePositionOrder(
   return left.localeCompare(right);
 }
 
-function columnKey(position?: GraphPosition) {
-  return position ? String(Math.round(position.x)) : null;
+function getColumnKeys(positions: Map<string, GraphPosition>): Map<string, string> {
+  const nodeIds = [...positions.keys()];
+  const nodeXs = nodeIds
+    .map((id) => ({ id, x: positions.get(id)?.x ?? 0 }))
+    .sort((left, right) => left.x - right.x);
+
+  const columnKeys = new Map<string, string>();
+  if (nodeXs.length === 0) return columnKeys;
+
+  let currentClusterId = 0;
+  let currentClusterX = nodeXs[0].x;
+  columnKeys.set(nodeXs[0].id, String(currentClusterId));
+
+  for (let i = 1; i < nodeXs.length; i++) {
+    const node = nodeXs[i];
+    if (node.x - currentClusterX > 100) {
+      currentClusterId++;
+      currentClusterX = node.x;
+    }
+    columnKeys.set(node.id, String(currentClusterId));
+  }
+
+  return columnKeys;
 }
 
 function toElkGraph(graph: WorkflowGraph, selectedNodeIds?: Set<string>): ElkNode {

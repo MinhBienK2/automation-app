@@ -25,7 +25,7 @@ Create → Draft → [Edit Graph / Edit Settings] → Save → Validate → Comp
 - Project-scoped reusable graph fragments, same DTO shape as workflows.
 - CRUD: create, open, rename (Subflow Settings), save, duplicate, delete.
 - Deletion blocked while referenced by workflows.
-- No nested Call Subflow (MVP), no Launch Run.
+- No nested Call Subflow (MVP), no Run.
 
 ## Run
 

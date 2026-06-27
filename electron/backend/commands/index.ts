@@ -148,18 +148,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const current = repository.getWorkflowSummary(workflow.id);
       if (!current?.browser_profile_id) {
         const ownerProject = repository.getProject(projectId) ?? project;
-        const persistedSettings = repository.getWorkflowSettings(workflow.id);
-        const browserProfile = persistedSettings
-          ? repository.createBrowserProfile(ownerProject.id, {
-              name: `${workflow.name} browser profile`,
-              description: "Migrated workflow browser profile",
-              browser_launch: settingsService.normalizeWorkflowSettings(
-                persistedSettings,
-                workflow,
-              ).browser_launch,
-              is_default: false,
-            })
-          : ensureDefaultBrowserProfile(ownerProject);
+        const browserProfile = ensureDefaultBrowserProfile(ownerProject);
         repository.assignWorkflowBrowserProfile(workflow.id, browserProfile.id);
       }
     }

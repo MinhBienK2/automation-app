@@ -482,6 +482,14 @@ export function collectVariableOptions(
       }
     }
 
+    if (node.node_type === "repeat_for_each") {
+      const config = objectConfig(node.config);
+      const itemName = typeof config.item_name === "string" ? config.item_name.trim() : "";
+      if (itemName) {
+        options.push({ name: itemName, source: "Loop variable" });
+      }
+    }
+
     if (node.node_type === "action" && isActionConfig(node.config)) {
       const outputName = outputNameForAction(node.config);
       if (outputName) options.push({ name: outputName, source: node.label });
