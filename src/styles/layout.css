@@ -403,6 +403,7 @@
   overflow: hidden;
   padding-block: 24px 16px;
   padding-inline: 16px;
+  gap: var(--space-sm) !important;
 }
 
 .projects-workspace {

@@ -1,5 +1,5 @@
-import { Plus, Search, Upload } from "lucide-react";
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { Copy, Download, MoreVertical, Search, Trash, Upload } from "lucide-react";
+import { useMemo, useState, useEffect, type FormEvent, type ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -33,6 +33,9 @@ export type ProjectsPageProps = {
   onCreateProject: (input: { name: string; description?: string | null }) => Promise<void>;
   onImportProjectPackageFile: (file: File | null) => void;
   onCollectionChange: (collection: ProjectCollection) => void;
+  onDuplicateProject?: (projectId: string) => void;
+  onExportProject?: (projectId: string) => void;
+  onDeleteProject?: (projectId: string) => void;
 };
 
 const projectCollections: Array<{
@@ -57,6 +60,9 @@ export function ProjectsPage({
   onCreateProject,
   onImportProjectPackageFile,
   onCollectionChange,
+  onDuplicateProject,
+  onExportProject,
+  onDeleteProject,
 }: ProjectsPageProps) {
   const [browsing, setBrowsing] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -64,6 +70,19 @@ export function ProjectsPage({
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState("");
   const [projectError, setProjectError] = useState("");
   const [gridSearchDraft, setGridSearchDraft] = useState("");
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (openActionMenuId && !(event.target as HTMLElement).closest(".action-menu-wrapper")) {
+        setOpenActionMenuId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openActionMenuId]);
 
   const activeCollectionLabel =
     projectCollections.find((collection) => collection.id === activeCollection)?.label ??
@@ -117,54 +136,72 @@ export function ProjectsPage({
     setProjectError("");
   }
 
-  const headerActions = (
-    <>
-      <label className="workflow-import-button">
-        <Upload aria-hidden="true" />
-        Import project
-        <input
-          aria-label="Project package file"
-          className="workflow-package-file-input"
-          type="file"
-          accept="application/json,.json"
-          onChange={(event) => {
-            onImportProjectPackageFile(event.currentTarget.files?.[0] ?? null);
-            event.currentTarget.value = "";
-          }}
-        />
-      </label>
-      <Button shape="pill" type="button" onClick={openCreateDialog}>
-        <Plus aria-hidden="true" />
-        Create Project
-      </Button>
-    </>
-  );
-
   return (
     <section className="app-screen projects-screen" aria-label="Projects">
       <WorkspaceHeader
-        actions={headerActions}
         onCreateProject={openCreateDialog}
         onSelectProject={handleSelectProject}
         onViewAllProjects={() => setBrowsing(true)}
         projects={projects}
-        selectedProject={selectedProject}
+        selectedProject={browsing ? null : selectedProject}
       />
 
       {browsing || !selectedProject ? (
         <div className="project-grid-view">
           <div className="project-grid-header">
-            <div className="project-search">
+            <div className="search-input-wrapper">
               <Search aria-hidden="true" />
               <Label className="sr-only" htmlFor="project-grid-search">
                 Search projects
               </Label>
               <Input
                 id="project-grid-search"
-                placeholder="Search projects"
+                className="text-input"
+                placeholder="Search projects..."
                 value={gridSearchDraft}
                 onChange={(event) => setGridSearchDraft(event.currentTarget.value)}
               />
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <label
+                className="btn"
+                style={{
+                  position: "relative",
+                  cursor: "pointer",
+                  borderRadius: "9999px",
+                  padding: "5px 16px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <Upload style={{ width: "12px", height: "12px" }} />
+                Import Project
+                <input
+                  aria-label="Project package file"
+                  className="workflow-package-file-input"
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={(event) => {
+                    onImportProjectPackageFile(event.currentTarget.files?.[0] ?? null);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </label>
+              <button
+                className="btn btn-primary"
+                style={{
+                  borderRadius: "9999px",
+                  padding: "5px 16px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                }}
+                type="button"
+                onClick={openCreateDialog}
+              >
+                Create Project
+              </button>
             </div>
           </div>
           {projects.length === 0 ? (
@@ -188,10 +225,18 @@ export function ProjectsPage({
                 const initials = project.name.slice(0, 2).toUpperCase();
                 return (
                   <li key={project.id}>
-                    <button
-                      className="project-card"
-                      type="button"
+                    <div
+                      className={`project-card${openActionMenuId === project.id ? " menu-open" : ""}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={project.name}
                       onClick={() => handleSelectProject(project.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSelectProject(project.id);
+                        }
+                      }}
                     >
                       <div className="project-card-top">
                         <div className="project-card-icon">{initials}</div>
@@ -215,12 +260,64 @@ export function ProjectsPage({
                         </div>
                       </div>
                       <div className="project-card-footer">
-                        <span className="project-card-status">
-                          <span className="project-card-status-dot" />
-                          Active
-                        </span>
+                        <div className="action-menu-wrapper">
+                          <button
+                            className="btn-action-circle"
+                            type="button"
+                            aria-label="More actions"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenActionMenuId(openActionMenuId === project.id ? null : project.id);
+                            }}
+                          >
+                            <MoreVertical />
+                          </button>
+                          {openActionMenuId === project.id && (
+                            <div className="action-dropdown" onClick={(e) => e.stopPropagation()}>
+                              {onDuplicateProject && (
+                                <button
+                                  className="action-dropdown-item"
+                                  type="button"
+                                  onClick={() => {
+                                    onDuplicateProject(project.id);
+                                    setOpenActionMenuId(null);
+                                  }}
+                                >
+                                  <Copy className="h-4 w-4" /> Duplicate
+                                </button>
+                              )}
+                              {onExportProject && (
+                                <button
+                                  className="action-dropdown-item"
+                                  type="button"
+                                  onClick={() => {
+                                    onExportProject(project.id);
+                                    setOpenActionMenuId(null);
+                                  }}
+                                >
+                                  <Download className="h-4 w-4" /> Export
+                                </button>
+                              )}
+                              {onDeleteProject && (
+                                <>
+                                  <div className="action-dropdown-sep" />
+                                  <button
+                                    className="action-dropdown-item destructive"
+                                    type="button"
+                                    onClick={() => {
+                                      onDeleteProject(project.id);
+                                      setOpenActionMenuId(null);
+                                    }}
+                                  >
+                                    <Trash className="h-4 w-4" /> Delete
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   </li>
                 );
               })}
@@ -229,32 +326,32 @@ export function ProjectsPage({
         </div>
       ) : (
         <section aria-label="Project detail" className="projects-detail-panel">
-          <nav aria-label="Project sections" className="project-collection-tabs">
-            {projectCollections.map((collection) => {
-              const count = collection.stat
-                ? selectedStats?.[collection.stat] ?? 0
-                : null;
-              const isActive = activeCollection === collection.id;
-              return (
-                <Button
-                  aria-current={isActive ? "page" : undefined}
-                  className="project-collection-item"
-                  data-active={isActive ? "true" : "false"}
-                  key={collection.id}
-                  type="button"
-                  variant={isActive ? "default" : "ghost"}
-                  onClick={() => onCollectionChange(collection.id)}
-                >
-                  {collection.label}
-                  {count !== null && count > 0 ? (
-                    <span aria-hidden="true" className="project-collection-count">
-                      {count}
-                    </span>
-                  ) : null}
-                </Button>
-              );
-            })}
-          </nav>
+          <div className="project-tabs-bar">
+            <nav aria-label="Project sections" className="horizontal-tabs">
+              {projectCollections.map((collection) => {
+                const count = collection.stat
+                  ? selectedStats?.[collection.stat] ?? 0
+                  : null;
+                const isActive = activeCollection === collection.id;
+                return (
+                  <button
+                    aria-current={isActive ? "page" : undefined}
+                    className={`h-tab ${isActive ? "active" : ""}`}
+                    key={collection.id}
+                    type="button"
+                    onClick={() => onCollectionChange(collection.id)}
+                  >
+                    {collection.label}
+                    {count !== null && count > 0 ? (
+                      <span aria-hidden="true" className="tab-badge">
+                        {count}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
           <section
             aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
             className="project-collection-panel"

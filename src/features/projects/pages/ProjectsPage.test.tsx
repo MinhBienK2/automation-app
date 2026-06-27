@@ -37,6 +37,9 @@ function renderPage(overrides: Partial<ProjectsPageProps> = {}) {
     onCreateProject: vi.fn(),
     onImportProjectPackageFile: vi.fn(),
     onCollectionChange: vi.fn(),
+    onDuplicateProject: vi.fn(),
+    onExportProject: vi.fn(),
+    onDeleteProject: vi.fn(),
     children: <section aria-label="Workflow Library">library</section>,
     ...overrides,
   };
@@ -62,13 +65,20 @@ describe("ProjectsPage", () => {
   test("shows a card grid with stats after View all projects is opened", () => {
     const { props } = renderPage();
 
+    // Before click, header shows selected project name
+    expect(screen.getByRole("button", { name: /tiktok automation/i })).toBeInTheDocument();
+
     // breadcrumb "Projects" opens the browse grid
     fireEvent.click(screen.getByRole("button", { name: "Projects" }));
+
+    // Now header should show "All Projects"
+    expect(screen.getByText("All Projects")).toBeInTheDocument();
 
     const grid = screen.getByRole("list", { name: /projects/i });
     expect(within(grid).getByText("Tiktok Automation")).toBeInTheDocument();
     expect(within(grid).getByText("Facebook CRM")).toBeInTheDocument();
     expect(within(grid).getAllByText("4").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
 
     fireEvent.click(within(grid).getByText("Facebook CRM"));
     expect(props.onSelectProject).toHaveBeenCalledWith("project-2");
@@ -88,8 +98,8 @@ describe("ProjectsPage", () => {
     expect(props.onSelectProject).toHaveBeenCalledWith("project-2");
   });
 
-  test("offers import and create actions in the workspace header", async () => {
-    const { props } = renderPage();
+  test("offers import and create actions in the projects list grid", async () => {
+    const { props } = renderPage({ selectedProject: null });
 
     await userEvent.upload(
       screen.getByLabelText("Project package file"),
@@ -126,5 +136,47 @@ describe("ProjectsPage", () => {
     expect(
       screen.getByRole("dialog", { name: /create project/i }),
     ).toBeInTheDocument();
+  });
+
+  test("shows action menu dropdown on project card in list and handles actions", () => {
+    const { props } = renderPage();
+
+    // Open projects grid
+    fireEvent.click(screen.getByRole("button", { name: "Projects" }));
+
+    const grid = screen.getByRole("list", { name: /projects/i });
+    const card = within(grid).getAllByRole("listitem")[0];
+
+    // Find and click the "More actions" button
+    const actionsBtn = within(card).getByRole("button", { name: /more actions/i });
+    expect(actionsBtn).toBeInTheDocument();
+    fireEvent.click(actionsBtn);
+
+    // Dropdown items should be visible
+    const duplicateBtn = screen.getByRole("button", { name: /duplicate/i });
+    const exportBtn = screen.getByRole("button", { name: /export/i });
+    const deleteBtn = screen.getByRole("button", { name: /delete/i });
+
+    expect(duplicateBtn).toBeInTheDocument();
+    expect(exportBtn).toBeInTheDocument();
+    expect(deleteBtn).toBeInTheDocument();
+
+    // Test Duplicate callback
+    fireEvent.click(duplicateBtn);
+    expect(props.onDuplicateProject).toHaveBeenCalledWith("project-1");
+
+    // Reopen menu
+    fireEvent.click(actionsBtn);
+    
+    // Test Export callback
+    fireEvent.click(screen.getByRole("button", { name: /export/i }));
+    expect(props.onExportProject).toHaveBeenCalledWith("project-1");
+
+    // Reopen menu
+    fireEvent.click(actionsBtn);
+
+    // Test Delete callback
+    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+    expect(props.onDeleteProject).toHaveBeenCalledWith("project-1");
   });
 });

@@ -33,13 +33,11 @@ function renderHeader(overrides: Partial<React.ComponentProps<typeof WorkspaceHe
 }
 
 describe("WorkspaceHeader", () => {
-  test("renders the Projects breadcrumb and a dropdown trigger", () => {
+  test("renders the Projects breadcrumb and a text label for All Projects", () => {
     renderHeader();
 
     expect(screen.getByRole("button", { name: "Projects" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /all projects/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("All Projects")).toBeInTheDocument();
   });
 
   test("shows the selected project name in the trigger when one is selected", () => {
@@ -51,9 +49,9 @@ describe("WorkspaceHeader", () => {
   });
 
   test("opens a searchable project dropdown when the trigger is clicked", () => {
-    renderHeader();
+    renderHeader({ selectedProject: projects[0] });
 
-    fireEvent.click(screen.getByRole("button", { name: /all projects/i }));
+    fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
 
     const menu = screen.getByRole("listbox", { name: /select project/i });
     expect(within(menu).getByPlaceholderText(/search projects/i)).toBeInTheDocument();
@@ -64,8 +62,8 @@ describe("WorkspaceHeader", () => {
   });
 
   test("filters the project list by the search query", () => {
-    renderHeader();
-    fireEvent.click(screen.getByRole("button", { name: /all projects/i }));
+    renderHeader({ selectedProject: projects[0] });
+    fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
 
     const menu = screen.getByRole("listbox", { name: /select project/i });
     fireEvent.change(within(menu).getByPlaceholderText(/search projects/i), {
@@ -80,9 +78,9 @@ describe("WorkspaceHeader", () => {
 
   test("selects a project and closes the dropdown", () => {
     const onSelectProject = vi.fn();
-    renderHeader({ onSelectProject });
+    renderHeader({ selectedProject: projects[0], onSelectProject });
 
-    fireEvent.click(screen.getByRole("button", { name: /all projects/i }));
+    fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
     fireEvent.click(
       screen.getByRole("option", { name: /facebook crm/i }),
     );
@@ -95,14 +93,14 @@ describe("WorkspaceHeader", () => {
     const onSelectProject = vi.fn();
     const onViewAllProjects = vi.fn();
     const onCreateProject = vi.fn();
-    renderHeader({ onSelectProject, onViewAllProjects, onCreateProject });
+    renderHeader({ selectedProject: projects[0], onSelectProject, onViewAllProjects, onCreateProject });
 
-    fireEvent.click(screen.getByRole("button", { name: /all projects/i }));
+    fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /create project/i }));
     expect(onCreateProject).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByRole("button", { name: /all projects/i }));
+    fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
     fireEvent.click(screen.getByRole("button", { name: /view all projects/i }));
     expect(onViewAllProjects).toHaveBeenCalledOnce();
   });

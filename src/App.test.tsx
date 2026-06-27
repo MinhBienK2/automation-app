@@ -580,7 +580,9 @@ describe("App settings and graph autosave", () => {
     const file = new File([JSON.stringify(projectPackage)], "owned-lab.project.json", {
       type: "application/json",
     });
-    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    const breadcrumbLink = within(breadcrumb).getByRole("button", { name: "Projects" });
+    await userEvent.click(breadcrumbLink);
     await userEvent.upload(
       screen.getByLabelText("Project package file"),
       file,
@@ -732,6 +734,13 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    const breadcrumb = screen.queryByRole("navigation", { name: "Breadcrumb" });
+    if (breadcrumb) {
+      const breadcrumbLink = within(breadcrumb).queryByRole("button", { name: "Projects" });
+      if (breadcrumbLink) {
+        await userEvent.click(breadcrumbLink);
+      }
+    }
     await userEvent.click(screen.getByRole("button", { name: "Create Project" }));
     const dialog = await screen.findByRole("dialog", { name: "Create Project" });
     await userEvent.type(within(dialog).getByLabelText("Project name"), "Owned Staging");

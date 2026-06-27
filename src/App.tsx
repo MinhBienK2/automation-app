@@ -684,6 +684,15 @@ function App() {
           onCreateProject={(input) => projectsWorkspace.createProject(input)}
           onImportProjectPackageFile={importProjectPackageFile}
           onCollectionChange={(coll) => projectsWorkspace.setProjectCollection(coll)}
+          onDuplicateProject={(projectId) => {
+            void projectsWorkspace.duplicateProject(projectId);
+          }}
+          onExportProject={(projectId) => {
+            void exportProjectPackageFile(projectId);
+          }}
+          onDeleteProject={(projectId) => {
+            void projectsWorkspace.deleteProject(projectId);
+          }}
         >
           {projectsWorkspace.projectCollection === "subflows" ? (
             <SubflowListPage

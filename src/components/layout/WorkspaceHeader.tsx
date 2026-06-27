@@ -64,8 +64,6 @@ export function WorkspaceHeader({
       )
     : projects;
 
-  const triggerLabel = selectedProject?.name ?? "All Projects";
-
   return (
     <header className="workspace-header">
       <nav aria-label="Breadcrumb" className="workspace-breadcrumb">
@@ -79,39 +77,43 @@ export function WorkspaceHeader({
           Projects
         </button>
         <span className="workspace-breadcrumb-separator">/</span>
-        <div className="project-selector" ref={containerRef}>
-          <Button
-            aria-expanded={open}
-            aria-haspopup="listbox"
-            className="dropdown-trigger"
-            type="button"
-            variant="ghost"
-            onClick={() => setOpen((prev) => !prev)}
-          >
-            {triggerLabel}
-            <ChevronDown aria-hidden="true" />
-          </Button>
-          {open ? (
-            <ProjectDropdownMenu
-              onCreateProject={() => {
-                onCreateProject();
-                close();
-              }}
-              onSelectProject={(id) => {
-                onSelectProject(id);
-                close();
-              }}
-              onViewAllProjects={() => {
-                onViewAllProjects();
-                close();
-              }}
-              projects={visibleProjects}
-              search={search}
-              selectedProjectId={selectedProject?.id ?? null}
-              onSearchChange={setSearch}
-            />
-          ) : null}
-        </div>
+        {selectedProject ? (
+          <div className="project-selector" ref={containerRef}>
+            <Button
+              aria-expanded={open}
+              aria-haspopup="listbox"
+              className="dropdown-trigger"
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen((prev) => !prev)}
+            >
+              {selectedProject.name}
+              <ChevronDown aria-hidden="true" />
+            </Button>
+            {open ? (
+              <ProjectDropdownMenu
+                onCreateProject={() => {
+                  onCreateProject();
+                  close();
+                }}
+                onSelectProject={(id) => {
+                  onSelectProject(id);
+                  close();
+                }}
+                onViewAllProjects={() => {
+                  onViewAllProjects();
+                  close();
+                }}
+                projects={visibleProjects}
+                search={search}
+                selectedProjectId={selectedProject.id}
+                onSearchChange={setSearch}
+              />
+            ) : null}
+          </div>
+        ) : (
+          <span className="workspace-breadcrumb-current">All Projects</span>
+        )}
       </nav>
       {actions ? <div className="workspace-header-actions">{actions}</div> : null}
     </header>

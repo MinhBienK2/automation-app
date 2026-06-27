@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
-import { SettingsFieldGroup } from "../../../components/ui/settings-field-group";
 import type { Project } from "../../../types/workflow";
 
 type ProjectSettingsProps = {
@@ -109,12 +108,7 @@ export function ProjectSettings({
       className="panel settings-panel settings-project-environments-panel"
       aria-label="Project Settings"
     >
-      <div className="panel-heading">
-        <div>
-          <h2>Project Settings</h2>
-        </div>
-      </div>
-
+      <h2 className="sr-only">Project Settings</h2>
       {error ? (
         <p className="field-error" role="alert">
           {error}
@@ -126,64 +120,81 @@ export function ProjectSettings({
         </p>
       ) : null}
 
-      <SettingsFieldGroup title="Project details">
-        <div className="project-name-control">
-          <label className="field project-session-seed-field">
-            <span>Project name</span>
-            <Input
-              aria-label="Project name"
-              value={projectNameDraft}
-              disabled={!project || projectActionPending}
-              onChange={(event) => setProjectNameDraft(event.target.value)}
-            />
-          </label>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              void saveProjectName();
-            }}
-            disabled={!project || !projectNameChanged || projectActionPending}
-          >
-            Save
-          </Button>
+      <div className="settings-grid">
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>Project Details</h3>
+            <p>Manage project details and backups</p>
+          </div>
+          <div className="settings-section-body">
+            <div className="project-name-control">
+              <label className="form-label" htmlFor="project-settings-name">Project name</label>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <Input
+                  id="project-settings-name"
+                  className="text-input-full"
+                  aria-label="Project name"
+                  value={projectNameDraft}
+                  disabled={!project || projectActionPending}
+                  onChange={(event) => setProjectNameDraft(event.target.value)}
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    void saveProjectName();
+                  }}
+                  disabled={!project || !projectNameChanged || projectActionPending}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "8px", marginTop: "20px" }}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  void duplicateProject();
+                }}
+                disabled={!project || projectActionPending}
+              >
+                Duplicate project
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  void exportProjectPackage();
+                }}
+                disabled={!project || projectActionPending}
+              >
+                <Download aria-hidden="true" style={{ width: "16px", height: "16px" }} />
+                Export project
+              </Button>
+            </div>
+          </div>
         </div>
 
-        <div className="project-session-actions">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              void duplicateProject();
-            }}
-            disabled={!project || projectActionPending}
-          >
-            Duplicate project
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              void exportProjectPackage();
-            }}
-            disabled={!project || projectActionPending}
-          >
-            <Download aria-hidden="true" />
-            Export project
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="destructive"
-            onClick={() => setDeleteDialogOpen(true)}
-            disabled={!project || projectActionPending}
-          >
-            Delete project
-          </Button>
+        <div className="settings-section" style={{ borderColor: "var(--destructive-border)" }}>
+          <div className="settings-section-header">
+            <h3 style={{ color: "var(--destructive)" }}>Danger Zone</h3>
+            <p>Irreversible actions for this project</p>
+          </div>
+          <div className="settings-section-body">
+            <p style={{ color: "var(--fg-secondary)", fontSize: "13px", marginBottom: "16px" }}>
+              Once you delete a project, there is no going back. All workflows, subflows, and browser profiles will be permanently lost.
+            </p>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={!project || projectActionPending}
+            >
+              Delete project
+            </Button>
+          </div>
         </div>
-      </SettingsFieldGroup>
+      </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
