@@ -249,7 +249,7 @@ export function WorkflowDetailPage({
               </Button>
             ) : null}
             {showRunGraphFromSelected ? (
-              <div ref={dropdownRef} className="run-from-selected-container" style={{ position: "relative" }}>
+              <div ref={dropdownRef} className="run-from-selected-container">
                 <Button
                   className="workflow-command-secondary"
                   variant="secondary"
@@ -268,40 +268,10 @@ export function WorkflowDetailPage({
                     className="run-from-selected-menu"
                     role="menu"
                     aria-label="Run from selected options"
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      right: 0,
-                      marginTop: "4px",
-                      zIndex: 50,
-                      width: "240px",
-                      backgroundColor: "var(--app-surface, #121c26)",
-                      border: "1px solid var(--app-border, #233240)",
-                      borderRadius: "var(--app-radius-sm, 8px)",
-                      padding: "4px",
-                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "2px",
-                    }}
                   >
                     <button
                       className="run-from-selected-item"
                       role="menuitem"
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        background: "none",
-                        border: "none",
-                        padding: "8px 12px",
-                        fontSize: "13px",
-                        color: "var(--app-text, #e7eef5)",
-                        borderRadius: "var(--app-radius-xs, 4px)",
-                        cursor: "pointer",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
                       onClick={() => {
                         setIsRunFromSelectedOpen(false);
                         onRunGraphFromSelected("selected_only");
@@ -312,20 +282,6 @@ export function WorkflowDetailPage({
                     <button
                       className="run-from-selected-item"
                       role="menuitem"
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        background: "none",
-                        border: "none",
-                        padding: "8px 12px",
-                        fontSize: "13px",
-                        color: "var(--app-text, #e7eef5)",
-                        borderRadius: "var(--app-radius-xs, 4px)",
-                        cursor: "pointer",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
                       onClick={() => {
                         setIsRunFromSelectedOpen(false);
                         onRunGraphFromSelected("from_selected");

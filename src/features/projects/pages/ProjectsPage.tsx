@@ -1,5 +1,5 @@
-import { Folder, Plus, Search, Upload } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { Plus, Search, Upload } from "lucide-react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -11,15 +11,23 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { WorkspaceHeader } from "../../../components/layout/WorkspaceHeader";
 import type { Project } from "../../../types/workflow";
 
 export type ProjectCollection = "workflows" | "subflows" | "profiles" | "settings";
 
-type ProjectsPageProps = {
+export type ProjectStats = {
+  workflows: number;
+  subflows: number;
+  profiles: number;
+};
+
+export type ProjectsPageProps = {
   projects: Project[];
   selectedProject: Project | null;
   activeCollection: ProjectCollection;
   error: string;
+  projectStats?: Record<string, ProjectStats>;
   children: ReactNode;
   onSelectProject: (projectId: string) => void;
   onCreateProject: (input: { name: string; description?: string | null }) => Promise<void>;
@@ -27,10 +35,14 @@ type ProjectsPageProps = {
   onCollectionChange: (collection: ProjectCollection) => void;
 };
 
-const projectCollections: Array<{ id: ProjectCollection; label: string }> = [
-  { id: "workflows", label: "Workflows" },
-  { id: "subflows", label: "Subflows" },
-  { id: "profiles", label: "Profiles" },
+const projectCollections: Array<{
+  id: ProjectCollection;
+  label: string;
+  stat?: keyof ProjectStats;
+}> = [
+  { id: "workflows", label: "Workflows", stat: "workflows" },
+  { id: "subflows", label: "Subflows", stat: "subflows" },
+  { id: "profiles", label: "Profiles", stat: "profiles" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -39,17 +51,47 @@ export function ProjectsPage({
   selectedProject,
   activeCollection,
   error,
+  projectStats,
   children,
   onSelectProject,
   onCreateProject,
   onImportProjectPackageFile,
   onCollectionChange,
 }: ProjectsPageProps) {
+  const [browsing, setBrowsing] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [projectNameDraft, setProjectNameDraft] = useState("");
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState("");
-  const [projectSearchDraft, setProjectSearchDraft] = useState("");
   const [projectError, setProjectError] = useState("");
+  const [gridSearchDraft, setGridSearchDraft] = useState("");
+
+  const activeCollectionLabel =
+    projectCollections.find((collection) => collection.id === activeCollection)?.label ??
+    "Workflows";
+
+  const selectedStats = selectedProject
+    ? (projectStats?.[selectedProject.id] ?? { workflows: 0, subflows: 0, profiles: 0 })
+    : null;
+
+  const visibleProjects = useMemo(() => {
+    const normalized = gridSearchDraft.trim().toLocaleLowerCase();
+    if (!normalized) return projects;
+    return projects.filter((project) =>
+      `${project.name} ${project.description ?? ""}`
+        .toLocaleLowerCase()
+        .includes(normalized),
+    );
+  }, [projects, gridSearchDraft]);
+
+  function handleSelectProject(projectId: string) {
+    setBrowsing(false);
+    onSelectProject(projectId);
+  }
+
+  function openCreateDialog() {
+    setBrowsing(false);
+    setCreateDialogOpen(true);
+  }
 
   async function submitProject(event: FormEvent) {
     event.preventDefault();
@@ -75,151 +117,158 @@ export function ProjectsPage({
     setProjectError("");
   }
 
-  const activeCollectionLabel =
-    projectCollections.find((collection) => collection.id === activeCollection)?.label ??
-    "Workflows";
-  const normalizedProjectSearch = projectSearchDraft.trim().toLocaleLowerCase();
-  const visibleProjects = normalizedProjectSearch
-    ? projects.filter((project) =>
-        `${project.name} ${project.description ?? ""}`
-          .toLocaleLowerCase()
-          .includes(normalizedProjectSearch),
-      )
-    : projects;
+  const headerActions = (
+    <>
+      <label className="workflow-import-button">
+        <Upload aria-hidden="true" />
+        Import project
+        <input
+          aria-label="Project package file"
+          className="workflow-package-file-input"
+          type="file"
+          accept="application/json,.json"
+          onChange={(event) => {
+            onImportProjectPackageFile(event.currentTarget.files?.[0] ?? null);
+            event.currentTarget.value = "";
+          }}
+        />
+      </label>
+      <Button shape="pill" type="button" onClick={openCreateDialog}>
+        <Plus aria-hidden="true" />
+        Create Project
+      </Button>
+    </>
+  );
 
   return (
     <section className="app-screen projects-screen" aria-label="Projects">
-      <header className="app-header">
-        <div>
-          <h2>Project Workspace</h2>
-          {selectedProject ? (
-            <p className="muted">{selectedProject.name}</p>
-          ) : (
-            <p className="muted">Create or select a project to manage workflows and subflows.</p>
-          )}
-        </div>
-        <div className="page-header-actions">
-          <div className="header-stats" aria-label="Project summary">
-            <span>{projects.length} projects</span>
-          </div>
-          <label className="workflow-import-button">
-            <Upload aria-hidden="true" />
-            Import project
-            <input
-              aria-label="Project package file"
-              className="workflow-package-file-input"
-              type="file"
-              accept="application/json,.json"
-              onChange={(event) => {
-                onImportProjectPackageFile(event.currentTarget.files?.[0] ?? null);
-                event.currentTarget.value = "";
-              }}
-            />
-          </label>
-          <Button shape="pill" type="button" onClick={() => setCreateDialogOpen(true)}>
-            <Plus aria-hidden="true" />
-            Create Project
-          </Button>
-        </div>
-        {error ? (
-          <p className="field-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </header>
+      <WorkspaceHeader
+        actions={headerActions}
+        onCreateProject={openCreateDialog}
+        onSelectProject={handleSelectProject}
+        onViewAllProjects={() => setBrowsing(true)}
+        projects={projects}
+        selectedProject={selectedProject}
+      />
 
-      <div className="projects-workspace">
-        <aside className="projects-list-panel panel" aria-label="Project list">
-          <div className="projects-list-tools">
-            <div className="projects-list-summary">
-              <span>Projects</span>
-              <small>
-                {visibleProjects.length} of {projects.length}
-              </small>
-            </div>
+      {browsing || !selectedProject ? (
+        <div className="project-grid-view">
+          <div className="project-grid-header">
             <div className="project-search">
               <Search aria-hidden="true" />
-              <Label className="sr-only" htmlFor="project-search">
+              <Label className="sr-only" htmlFor="project-grid-search">
                 Search projects
               </Label>
               <Input
-                id="project-search"
+                id="project-grid-search"
                 placeholder="Search projects"
-                value={projectSearchDraft}
-                onChange={(event) => setProjectSearchDraft(event.currentTarget.value)}
+                value={gridSearchDraft}
+                onChange={(event) => setGridSearchDraft(event.currentTarget.value)}
               />
             </div>
           </div>
           {projects.length === 0 ? (
-            <div className="empty-state">
+            <div className="empty-state panel">
               <h2>No projects yet</h2>
               <p className="muted">Create a project before authoring workflows.</p>
             </div>
           ) : visibleProjects.length === 0 ? (
-            <div className="empty-state">
+            <div className="empty-state panel">
               <h2>No matching projects</h2>
               <p className="muted">Try a different project name or description.</p>
             </div>
           ) : (
-            <div className="projects-list-scroll">
-              <div className="projects-list">
-                {visibleProjects.map((project) => {
-                  const active = selectedProject?.id === project.id;
-                  return (
-                    <div className="project-list-item" key={project.id}>
-                      <button
-                        className="project-row"
-                        data-active={active ? "true" : "false"}
-                        type="button"
-                        onClick={() => onSelectProject(project.id)}
-                      >
-                        <Folder aria-hidden="true" />
-                        <span>
-                          <strong>{project.name}</strong>
-                          {project.description ? <small>{project.description}</small> : null}
+            <ul aria-label="Projects" className="project-grid-layout" role="list">
+              {visibleProjects.map((project) => {
+                const stat = projectStats?.[project.id] ?? {
+                  workflows: 0,
+                  subflows: 0,
+                  profiles: 0,
+                };
+                const initials = project.name.slice(0, 2).toUpperCase();
+                return (
+                  <li key={project.id}>
+                    <button
+                      className="project-card"
+                      type="button"
+                      onClick={() => handleSelectProject(project.id)}
+                    >
+                      <div className="project-card-top">
+                        <div className="project-card-icon">{initials}</div>
+                        <span className="project-card-name">{project.name}</span>
+                      </div>
+                      <p className="project-card-desc">
+                        {project.description ?? "No description"}
+                      </p>
+                      <div className="project-card-stats">
+                        <div className="project-card-stat">
+                          <span className="project-card-stat-num">{stat.workflows}</span>
+                          <span className="project-card-stat-label">Workflows</span>
+                        </div>
+                        <div className="project-card-stat">
+                          <span className="project-card-stat-num">{stat.subflows}</span>
+                          <span className="project-card-stat-label">Subflows</span>
+                        </div>
+                        <div className="project-card-stat">
+                          <span className="project-card-stat-num">{stat.profiles}</span>
+                          <span className="project-card-stat-label">Profiles</span>
+                        </div>
+                      </div>
+                      <div className="project-card-footer">
+                        <span className="project-card-status">
+                          <span className="project-card-status-dot" />
+                          Active
                         </span>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </aside>
-
-        <section className="projects-detail-panel" aria-label="Project detail">
-          {selectedProject ? (
-            <>
-              <nav aria-label="Project sections" className="project-collection-tabs">
-                {projectCollections.map((collection) => (
-                  <Button
-                    aria-current={activeCollection === collection.id ? "page" : undefined}
-                    className="project-collection-item"
-                    data-active={activeCollection === collection.id ? "true" : "false"}
-                    key={collection.id}
-                    type="button"
-                    variant={activeCollection === collection.id ? "default" : "ghost"}
-                    onClick={() => onCollectionChange(collection.id)}
-                  >
-                    {collection.label}
-                  </Button>
-                ))}
-              </nav>
-              <section
-                aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
-                className="project-collection-panel"
-              >
-                {children}
-              </section>
-            </>
-          ) : (
-            <div className="empty-state panel">
-              <h2>No project selected</h2>
-              <p className="muted">Select a project to view its workflows, subflows, and settings.</p>
-            </div>
-          )}
+        </div>
+      ) : (
+        <section aria-label="Project detail" className="projects-detail-panel">
+          <nav aria-label="Project sections" className="project-collection-tabs">
+            {projectCollections.map((collection) => {
+              const count = collection.stat
+                ? selectedStats?.[collection.stat] ?? 0
+                : null;
+              const isActive = activeCollection === collection.id;
+              return (
+                <Button
+                  aria-current={isActive ? "page" : undefined}
+                  className="project-collection-item"
+                  data-active={isActive ? "true" : "false"}
+                  key={collection.id}
+                  type="button"
+                  variant={isActive ? "default" : "ghost"}
+                  onClick={() => onCollectionChange(collection.id)}
+                >
+                  {collection.label}
+                  {count !== null && count > 0 ? (
+                    <span aria-hidden="true" className="project-collection-count">
+                      {count}
+                    </span>
+                  ) : null}
+                </Button>
+              );
+            })}
+          </nav>
+          <section
+            aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
+            className="project-collection-panel"
+          >
+            {children}
+          </section>
         </section>
-      </div>
+      )}
+
+      {error ? (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       <Dialog
         open={createDialogOpen}

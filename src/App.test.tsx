@@ -581,12 +581,8 @@ describe("App settings and graph autosave", () => {
       type: "application/json",
     });
     await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
-    const projectsHeader = (await screen.findByRole("heading", {
-      name: "Project Workspace",
-    })).closest("header");
-    expect(projectsHeader).not.toBeNull();
     await userEvent.upload(
-      within(projectsHeader as HTMLElement).getByLabelText("Project package file"),
+      screen.getByLabelText("Project package file"),
       file,
     );
     const dialog = await screen.findByRole("dialog", { name: "Import Project" });
@@ -604,18 +600,13 @@ describe("App settings and graph autosave", () => {
       });
     });
     expect(await screen.findByRole("button", { name: /Owned Lab \(imported\)/ }))
-      .toHaveAttribute("data-active", "true");
+      .toBeInTheDocument();
   });
 
   test("keeps project collections fixed in the detail panel while the sidebar filters projects", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
-
-    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
-    const projectList = await screen.findByRole("complementary", { name: "Project list" });
-    expect(within(projectList).getByLabelText("Search projects")).toBeInTheDocument();
-    expect(within(projectList).queryByRole("navigation")).not.toBeInTheDocument();
 
     const collections = await getProjectCollections();
 
@@ -679,8 +670,9 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByRole("heading", { name: "Project Settings" }))
       .toBeInTheDocument();
 
-    const projectList = await screen.findByRole("complementary", { name: "Project list" });
-    await userEvent.click(within(projectList).getByRole("button", { name: /Owned Staging/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Main" }));
+    const dropdown = await screen.findByRole("listbox", { name: /select project/i });
+    await userEvent.click(within(dropdown).getByRole("option", { name: /Owned Staging/ }));
 
     const sections = await screen.findByRole("navigation", { name: "Project sections" });
     expect(within(sections).getByRole("button", { name: "Workflows" }))

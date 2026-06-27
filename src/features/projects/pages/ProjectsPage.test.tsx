@@ -1,117 +1,130 @@
 import { render, screen, within } from "@testing-library/react";
+import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { ProjectsPage } from "./ProjectsPage";
+import { ProjectsPage, type ProjectsPageProps } from "./ProjectsPage";
 import type { Project } from "../../../types/workflow";
 
 const project: Project = {
   id: "project-1",
-  name: "Main",
+  name: "Tiktok Automation",
   description: "Owned staging workflows",
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",
 };
 
+const otherProject: Project = {
+  id: "project-2",
+  name: "Facebook CRM",
+  description: "Lead ads sync",
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+};
+
+const stats = {
+  "project-1": { workflows: 4, subflows: 3, profiles: 2 },
+  "project-2": { workflows: 1, subflows: 1, profiles: 1 },
+};
+
+function renderPage(overrides: Partial<ProjectsPageProps> = {}) {
+  const props: ProjectsPageProps = {
+    projects: [project, otherProject],
+    selectedProject: project,
+    activeCollection: "workflows",
+    error: "",
+    projectStats: stats,
+    onSelectProject: vi.fn(),
+    onCreateProject: vi.fn(),
+    onImportProjectPackageFile: vi.fn(),
+    onCollectionChange: vi.fn(),
+    children: <section aria-label="Workflow Library">library</section>,
+    ...overrides,
+  };
+  return { props, ...render(<ProjectsPage {...props} />) };
+}
+
 describe("ProjectsPage", () => {
-  test("keeps project filtering in the sidebar and collection navigation in the detail panel", async () => {
-    const projects = [
-      project,
-      {
-        id: "project-2",
-        name: "Owned Staging",
-        description: "Checkout and account integrity workflows",
-        created_at: "2026-01-01T00:00:00.000Z",
-        updated_at: "2026-01-01T00:00:00.000Z",
-      },
-      {
-        id: "project-3",
-        name: "Archive Lab",
-        description: "Legacy flows",
-        created_at: "2026-01-01T00:00:00.000Z",
-        updated_at: "2026-01-01T00:00:00.000Z",
-      },
-    ];
-    const { container } = render(
-      <ProjectsPage
-        projects={projects}
-        selectedProject={project}
-        activeCollection="workflows"
-        error=""
-        onSelectProject={vi.fn()}
-        onCreateProject={vi.fn()}
-        onImportProjectPackageFile={vi.fn()}
-        onCollectionChange={vi.fn()}
-      >
-        <section className="app-screen workflow-list-screen" aria-label="Workflow Library">
-          <header className="app-header">
-            <h2>Workflows</h2>
-          </header>
-        </section>
-      </ProjectsPage>,
-    );
+  test("shows collection tabs and children by default when a project is selected", () => {
+    renderPage();
 
-    const projectList = screen.getByRole("complementary", { name: "Project list" });
-    expect(within(projectList).queryByRole("navigation")).not.toBeInTheDocument();
-    expect(within(projectList).getByLabelText("Search projects")).toBeInTheDocument();
-    expect(within(projectList).getByRole("button", { name: /Owned Staging/ }))
-      .toBeInTheDocument();
-
-    const detail = screen.getByRole("region", { name: "Project detail" });
-    const sections = within(detail).getByRole("navigation", { name: "Project sections" });
+    const sections = screen.getByRole("navigation", { name: "Project sections" });
     expect(within(sections).getByRole("button", { name: "Workflows" }))
       .toHaveAttribute("aria-current", "page");
-    expect(within(sections).getByRole("button", { name: "Subflows" })).toBeInTheDocument();
-    expect(within(sections).getByRole("button", { name: "Settings" })).toBeInTheDocument();
-    expect(within(detail).getByRole("region", {
-      name: "Main Workflows",
-    })).toBeInTheDocument();
-    expect(within(detail).getByRole("heading", { name: "Workflows" })).toBeInTheDocument();
-    expect(within(detail).queryByText("Selected Project")).not.toBeInTheDocument();
-    expect(container.querySelector(".projects-detail-header")).not.toBeInTheDocument();
-
-    await userEvent.type(within(projectList).getByLabelText("Search projects"), "archive");
-
-    expect(within(projectList).queryByRole("button", { name: /Owned Staging/ }))
-      .not.toBeInTheDocument();
-    expect(within(projectList).getByRole("button", { name: /Archive Lab/ }))
+    expect(within(sections).getByRole("button", { name: "Subflows" }))
       .toBeInTheDocument();
+
+    expect(
+      screen.getByRole("region", { name: /tiktok automation workflows/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: /projects/i })).not.toBeInTheDocument();
   });
 
-  test("puts project import next to project creation in the workspace header", async () => {
-    const importProjectPackageFile = vi.fn();
-    const { container } = render(
-      <ProjectsPage
-        projects={[project]}
-        selectedProject={project}
-        activeCollection="workflows"
-        error=""
-        onSelectProject={vi.fn()}
-        onCreateProject={vi.fn()}
-        onImportProjectPackageFile={importProjectPackageFile}
-        onCollectionChange={vi.fn()}
-      >
-        <section className="app-screen workflow-list-screen" aria-label="Workflow Library">
-          <header className="app-header">
-            <h2>Workflows</h2>
-          </header>
-        </section>
-      </ProjectsPage>,
-    );
+  test("shows a card grid with stats after View all projects is opened", () => {
+    const { props } = renderPage();
 
-    const projectsHeader = container.querySelector(".projects-screen > .app-header");
-    expect(projectsHeader).not.toBeNull();
-    expect(within(projectsHeader as HTMLElement).getByRole("button", {
-      name: "Create Project",
-    })).toBeInTheDocument();
+    // breadcrumb "Projects" opens the browse grid
+    fireEvent.click(screen.getByRole("button", { name: "Projects" }));
 
-    const packageFile = new File(["{}"], "owned-lab.project.json", {
-      type: "application/json",
+    const grid = screen.getByRole("list", { name: /projects/i });
+    expect(within(grid).getByText("Tiktok Automation")).toBeInTheDocument();
+    expect(within(grid).getByText("Facebook CRM")).toBeInTheDocument();
+    expect(within(grid).getAllByText("4").length).toBeGreaterThan(0);
+
+    fireEvent.click(within(grid).getByText("Facebook CRM"));
+    expect(props.onSelectProject).toHaveBeenCalledWith("project-2");
+    expect(screen.queryByRole("list", { name: /projects/i })).not.toBeInTheDocument();
+  });
+
+  test("switches the selected project via the header dropdown search", () => {
+    const { props } = renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
+    const menu = screen.getByRole("listbox", { name: /select project/i });
+    fireEvent.change(within(menu).getByPlaceholderText(/search projects/i), {
+      target: { value: "facebook" },
     });
-    await userEvent.upload(
-      within(projectsHeader as HTMLElement).getByLabelText("Project package file"),
-      packageFile,
-    );
+    fireEvent.click(within(menu).getByRole("option", { name: /facebook crm/i }));
 
-    expect(importProjectPackageFile).toHaveBeenCalledWith(packageFile);
+    expect(props.onSelectProject).toHaveBeenCalledWith("project-2");
+  });
+
+  test("offers import and create actions in the workspace header", async () => {
+    const { props } = renderPage();
+
+    await userEvent.upload(
+      screen.getByLabelText("Project package file"),
+      new File(["{}"], "lab.project.json", { type: "application/json" }),
+    );
+    expect(props.onImportProjectPackageFile).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /^create project$/i }));
+    expect(
+      await screen.findByRole("dialog", { name: /create project/i }),
+    ).toBeInTheDocument();
+  });
+
+  test("shows count badges on collection tabs reflecting selected project stats", () => {
+    renderPage();
+
+    const sections = screen.getByRole("navigation", { name: "Project sections" });
+    const workflowsTab = within(sections).getByRole("button", { name: "Workflows" });
+    const subflowsTab = within(sections).getByRole("button", { name: "Subflows" });
+    const profilesTab = within(sections).getByRole("button", { name: "Profiles" });
+
+    expect(within(workflowsTab).getByText("4")).toBeInTheDocument();
+    expect(within(subflowsTab).getByText("3")).toBeInTheDocument();
+    expect(within(profilesTab).getByText("2")).toBeInTheDocument();
+  });
+
+  test("opens the create project dialog from the header dropdown", () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
+    const menu = screen.getByRole("listbox", { name: /select project/i });
+    fireEvent.click(within(menu).getByRole("button", { name: "Create project" }));
+
+    expect(
+      screen.getByRole("dialog", { name: /create project/i }),
+    ).toBeInTheDocument();
   });
 });

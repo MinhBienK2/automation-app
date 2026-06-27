@@ -127,7 +127,16 @@ export function SubflowListPage({
         ) : null}
       </header>
 
-      <section className="workflow-library" aria-label="Subflow list">
+      <section aria-label="Subflow metrics" className="metric-summary">
+        <div className="metric-card">
+          <div className="metric-card-text">
+            <span className="metric-label">Total</span>
+            <span className="metric-val">{subflows.length}</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="workflow-library data-table-card" aria-label="Subflow list">
         {subflows.length === 0 ? (
           <div className="empty-state panel">
             <h2>No subflows yet</h2>
@@ -135,18 +144,16 @@ export function SubflowListPage({
           </div>
         ) : (
           subflows.map((subflow) => (
-            <Card className="workflow-card subflow-card" key={subflow.id}>
-              <div className="workflow-card-main">
-                <div>
-                  <h2>{subflow.name}</h2>
-                  {subflow.description ? (
-                    <p className="muted">{subflow.description}</p>
-                  ) : null}
-                  <p className="muted">
-                    {subflow.used_by_count}{" "}
-                    {subflow.used_by_count === 1 ? "workflow" : "workflows"}
-                  </p>
-                </div>
+            <Card className="workflow-card subflow-card grid-row" key={subflow.id}>
+              <div className="workflow-card-main row-title-cell">
+                <h2 className="row-title">{subflow.name}</h2>
+                {subflow.description ? (
+                  <p className="muted row-desc">{subflow.description}</p>
+                ) : null}
+                <p className="muted row-desc">
+                  {subflow.used_by_count}{" "}
+                  {subflow.used_by_count === 1 ? "workflow" : "workflows"}
+                </p>
               </div>
               <div className="row-actions">
                 <IconButton

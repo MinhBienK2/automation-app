@@ -131,4 +131,21 @@ describe("shadcn UI components", () => {
     );
     expect(screen.getByText("Scrollable help")).toBeInTheDocument();
   });
+
+  test("renders status badge variants with semantic token colors", () => {
+    const { container } = render(
+      <>
+        <Badge variant="success">ok</Badge>
+        <Badge variant="attention">warn</Badge>
+        <Badge variant="failure">err</Badge>
+        <Badge variant="running">run</Badge>
+      </>,
+    );
+
+    const badges = container.querySelectorAll("[data-slot='badge']");
+    expect(badges[0]?.className).toContain("var(--app-success)");
+    expect(badges[1]?.className).toContain("var(--app-warning)");
+    expect(badges[2]?.className).toContain("var(--app-danger-text)");
+    expect(badges[3]?.className).toContain("var(--app-accent)");
+  });
 });

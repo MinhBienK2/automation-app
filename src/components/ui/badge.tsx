@@ -13,6 +13,14 @@ const badgeVariants = cva(
         destructive:
           "border-[var(--app-danger-border)] bg-[var(--app-surface)] text-[var(--app-danger-text)]",
         outline: "border-[var(--app-border-strong)] bg-transparent text-[var(--app-text)]",
+        success:
+          "border-[var(--app-success)]/30 bg-[var(--app-success)]/10 text-[var(--app-success)]",
+        attention:
+          "border-[var(--app-warning)]/30 bg-[var(--app-warning)]/10 text-[var(--app-warning)]",
+        failure:
+          "border-[var(--app-danger-border)] bg-[var(--app-danger)]/10 text-[var(--app-danger-text)]",
+        running:
+          "border-[var(--app-accent-border)] bg-[var(--app-accent)]/10 text-[var(--app-accent)]",
       },
     },
     defaultVariants: {

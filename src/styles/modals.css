@@ -3,9 +3,9 @@
   gap: 18px;
   width: min(480px, 100%);
   padding: 20px;
-  border: 1px solid #233240;
-  border-radius: 8px;
-  background: #0b1016;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-bg);
 }
 
 .modal-header {
@@ -24,9 +24,9 @@
   max-height: min(760px, calc(100vh - 48px));
   overflow: hidden;
   padding: 20px;
-  border: 1px solid #233240;
-  border-radius: 8px;
-  background: #0b1016;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-bg);
 }
 
 .action-help-dialog {

@@ -98,10 +98,19 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
         {error ? <p className="field-error" role="alert">{error}</p> : null}
       </header>
 
-      <section className="workflow-library" aria-label="Browser profiles list">
+      <section aria-label="Profile metrics" className="metric-summary">
+        <div className="metric-card">
+          <div className="metric-card-text">
+            <span className="metric-label">Total</span>
+            <span className="metric-val">{browserProfiles.length}</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="workflow-library data-table-card" aria-label="Browser profiles list">
         {browserProfiles.length === 0 ? (
-          <div className="empty-state panel" style={{ minHeight: "240px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            <Fingerprint aria-hidden="true" style={{ width: "36px", height: "36px", color: "var(--app-muted)", marginBottom: "12px" }} />
+          <div className="empty-state panel profile-empty-state">
+            <Fingerprint aria-hidden="true" className="profile-empty-icon" />
             <h2>No profiles configured</h2>
             <p className="muted">Add a profile to start setting up browser configurations.</p>
           </div>
@@ -109,24 +118,15 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
           browserProfiles.map((env) => {
             const count = workflows.filter((w) => w.browser_profile_id === env.id).length;
             return (
-              <Card className="workflow-card" key={env.id}>
-                <div className="workflow-card-main">
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "6px",
-                      background: "rgba(50, 211, 230, 0.06)",
-                      border: "1px solid rgba(50, 211, 230, 0.15)"
-                    }}>
-                      <Fingerprint style={{ width: "20px", height: "20px", color: "var(--app-accent)" }} />
+              <Card className="workflow-card grid-row" key={env.id}>
+                <div className="workflow-card-main row-title-cell profile-card-main">
+                  <div className="profile-card-head">
+                    <div className="profile-card-icon">
+                      <Fingerprint aria-hidden="true" />
                     </div>
                     <div>
-                      <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "var(--app-text)" }}>{env.name}</h2>
-                      <p className="muted" style={{ margin: "4px 0 0", fontSize: "12px" }}>
+                      <h2 className="row-title">{env.name}</h2>
+                      <p className="muted row-desc">
                         {count === 0 ? "Not used" : `Used by ${count} workflow${count === 1 ? "" : "s"}`}
                       </p>
                     </div>

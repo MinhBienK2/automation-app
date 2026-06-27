@@ -76,6 +76,12 @@ export function WorkflowListPage({
       .filter((snapshot) => snapshot.state.status === "running")
       .map((snapshot) => [snapshot.workflow_id, snapshot]),
   );
+  const activeRunCount = activeRunsByWorkflow.size;
+
+  const metrics = [
+    { label: "Total", value: workflows.length },
+    { label: "Active", value: activeRunCount },
+  ];
 
   return (
     <section className="app-screen workflow-list-screen">
@@ -116,7 +122,18 @@ export function WorkflowListPage({
         ) : null}
       </header>
 
-      <section className="workflow-library" aria-label="Workflow list">
+      <section aria-label="Workflow metrics" className="metric-summary">
+        {metrics.map((metric) => (
+          <div className="metric-card" key={metric.label}>
+            <div className="metric-card-text">
+              <span className="metric-label">{metric.label}</span>
+              <span className="metric-val">{metric.value}</span>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="workflow-library data-table-card" aria-label="Workflow list">
         {workflows.length === 0 ? (
           <div className="empty-state panel">
             <h2>No workflows yet</h2>
@@ -127,16 +144,14 @@ export function WorkflowListPage({
             const activeRun = activeRunsByWorkflow.get(workflow.id);
             const hasActiveRun = Boolean(activeRun);
             return (
-              <Card className="workflow-card" key={workflow.id}>
-                <div className="workflow-card-main">
-                  <div>
-                    <h2>{workflow.name}</h2>
-                    {activeRun ? (
-                      <p className="muted workflow-row-run-status" role="status">
-                        {runStatusLabel(activeRun.state)}
-                      </p>
-                    ) : null}
-                  </div>
+              <Card className="workflow-card grid-row" key={workflow.id}>
+                <div className="workflow-card-main row-title-cell">
+                  <h2 className="row-title workflow-card-title">{workflow.name}</h2>
+                  {activeRun ? (
+                    <p className="muted workflow-row-run-status row-desc" role="status">
+                      {runStatusLabel(activeRun.state)}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="row-actions">
                   <IconButton
