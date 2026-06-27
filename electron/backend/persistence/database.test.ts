@@ -316,6 +316,13 @@ describe("Electron database initialization", () => {
 
     expect(profiles).toEqual([{ id: "profile-1", name: "Profile 1" }]);
     expect(workflows).toEqual([{ id: "workflow-1", browser_profile_id: "profile-1" }]);
+
+    const tables = database
+      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .all()
+      .map((row) => (row as { name: string }).name);
+    expect(tables).not.toContain("project_environments");
+
     database.close();
   });
 

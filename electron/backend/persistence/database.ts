@@ -283,6 +283,7 @@ function migrateBrowserProfileSchema(database: DatabaseSync) {
       INSERT OR IGNORE INTO browser_profiles (id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at)
       SELECT id, project_id, name, description, is_default, browser_launch_json, created_at, updated_at
       FROM project_environments;
+      DROP TABLE project_environments;
     `);
   }
 
