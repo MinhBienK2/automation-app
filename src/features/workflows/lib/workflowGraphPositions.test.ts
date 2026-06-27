@@ -138,4 +138,104 @@ describe("displayPositionsForGraphNodes - Node-Edge collision resolution", () =>
     // Vertical segment bottom is max(141, 341) = 341. Node C should be pushed below 341 + 24 = 365
     expect(posC?.y).toBeGreaterThanOrEqual(365);
   });
+
+  // Test case 4: Node overlaps a horizontal edge segment closer to the bottom (pushes UP)
+  test("pushes up a node overlapping a horizontal segment when the overlap is mostly in the bottom half of the node", () => {
+    const nodes: GraphNode[] = [
+      {
+        id: "nodeA",
+        node_type: "action",
+        label: "Node A",
+        position: { x: 0, y: 100 },
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+        config: {},
+      },
+      {
+        id: "nodeC",
+        node_type: "action",
+        label: "Node C",
+        position: { x: 260, y: 70 }, // Edge Y is 141. Node C Y span is [70, 152]. Overlap is in bottom part of node (141 is near 152).
+        ports: [
+          { id: "in", label: "In", direction: "input" },
+          { id: "out", label: "Out", direction: "output" },
+        ],
+        config: {},
+      },
+      {
+        id: "nodeB",
+        node_type: "action",
+        label: "Node B",
+        position: { x: 520, y: 100 },
+        ports: [{ id: "in", label: "In", direction: "input" }],
+        config: {},
+      },
+    ];
+
+    const edges: GraphEdge[] = [
+      {
+        id: "edgeAB",
+        source_node_id: "nodeA",
+        source_port: "out",
+        target_node_id: "nodeB",
+        target_port: "in",
+      },
+    ];
+
+    const positions = displayPositionsForGraphNodes(nodes, edges);
+
+    const posC = positions.get("nodeC");
+    // Edge is at Y = 141. Since overlap is closer to bottom of Node C (71px from top, which is 86.6%),
+    // Node C should be pushed UP to at most 141 - 82 - 24 = 35.
+    expect(posC?.y).toBeLessThanOrEqual(35);
+  });
+
+  // Test case 5: Node overlaps a vertical edge segment closer to the top (pushes UP)
+  test("pushes up a node overlapping a vertical segment when the node's center is above the segment's center", () => {
+    const nodes: GraphNode[] = [
+      {
+        id: "nodeA",
+        node_type: "action",
+        label: "Node A",
+        position: { x: 0, y: 100 },
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+        config: {},
+      },
+      {
+        id: "nodeC",
+        node_type: "action",
+        label: "Node C",
+        position: { x: 260, y: 120 }, // vertical segment is 141 to 341 (center 241). Node C center is 161 (above 241).
+        ports: [
+          { id: "in", label: "In", direction: "input" },
+          { id: "out", label: "Out", direction: "output" },
+        ],
+        config: {},
+      },
+      {
+        id: "nodeB",
+        node_type: "action",
+        label: "Node B",
+        position: { x: 520, y: 300 },
+        ports: [{ id: "in", label: "In", direction: "input" }],
+        config: {},
+      },
+    ];
+
+    const edges: GraphEdge[] = [
+      {
+        id: "edgeAB",
+        source_node_id: "nodeA",
+        source_port: "out",
+        target_node_id: "nodeB",
+        target_port: "in",
+      },
+    ];
+
+    const positions = displayPositionsForGraphNodes(nodes, edges);
+
+    const posC = positions.get("nodeC");
+    // Vertical segment top is 141. Node C should be pushed UP to at most 141 - 82 - 24 = 35
+    expect(posC?.y).toBeLessThanOrEqual(35);
+  });
 });
+

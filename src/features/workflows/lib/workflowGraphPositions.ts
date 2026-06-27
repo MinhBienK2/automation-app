@@ -190,10 +190,20 @@ export function displayPositionsForGraphNodes(
             if (maxSegX >= nodeMinX && minSegX <= nodeMaxX) {
               // Check if segment crosses vertically through node
               if (seg.y1 > y - clearance && seg.y1 < y + nh + clearance) {
-                const newY = seg.y1 + clearance;
-                if (newY > y) {
-                  y = newY;
-                  changed = true;
+                const nodeCenterY = y + nh / 2;
+                const segCenterY = seg.y1;
+                if (nodeCenterY >= segCenterY) {
+                  const newY = seg.y1 + clearance;
+                  if (newY > y) {
+                    y = newY;
+                    changed = true;
+                  }
+                } else {
+                  const newY = seg.y1 - nh - clearance;
+                  if (newY < y) {
+                    y = newY;
+                    changed = true;
+                  }
                 }
               }
             }
@@ -206,10 +216,20 @@ export function displayPositionsForGraphNodes(
             if (seg.x1 >= nodeMinX && seg.x1 <= nodeMaxX) {
               // Check if vertical segment overlaps node's Y range
               if (maxSegY > y - clearance && minSegY < y + nh + clearance) {
-                const newY = maxSegY + clearance;
-                if (newY > y) {
-                  y = newY;
-                  changed = true;
+                const nodeCenterY = y + nh / 2;
+                const segCenterY = (minSegY + maxSegY) / 2;
+                if (nodeCenterY >= segCenterY) {
+                  const newY = maxSegY + clearance;
+                  if (newY > y) {
+                    y = newY;
+                    changed = true;
+                  }
+                } else {
+                  const newY = minSegY - nh - clearance;
+                  if (newY < y) {
+                    y = newY;
+                    changed = true;
+                  }
                 }
               }
             }
