@@ -64,7 +64,7 @@ actions. Never use color alone to communicate state.
 
 - Icon-only controls must have accessible labels and tooltip text.
 - Focus indicators use the cyan treatment against dark surfaces.
-- Consequential primary commands use clear text, for example `Launch Run` and
+- Consequential primary commands use clear text, for example `Run` and
   `New Workflow`.
 - Active execution may use small indicators, but large panels and layout regions
   remain stable.

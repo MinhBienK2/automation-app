@@ -116,7 +116,7 @@ Ensure all checks pass on a simple test page (input, button, iframe, dialog, dow
 - [ ] **Cookies**: Set Cookie and Clear Cookies.
 
 ### 6. Run Execution & Batching
-- [ ] Launch Run starts save/validation/run pipeline without confirmation.
+- [ ] Run starts save/validation/run pipeline without confirmation.
 - [ ] Live Run Navigator shows node activity timeline (running, completed, failed) where clicking rows opens the inspector. Follow current behaves per settings.
 - [ ] Scheduled runs: Disabled schedules, active interval/daily/weekly/monthly runs. Schedule history tracks start/skip/miss decisions with conflict details.
 - [ ] Run from selected: group scope selects Rerun Selected or Run From Selected. Session retains browser, runs sub-plan, and detects manual browser closure.

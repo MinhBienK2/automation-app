@@ -30,7 +30,7 @@ describe("Workflow list integration", () => {
   });
 
   async function launchRun(scope: HTMLElement = document.body) {
-    await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
+    await userEvent.click(within(scope).getByRole("button", { name: "Run" }));
   }
 
   async function openWorkflows() {

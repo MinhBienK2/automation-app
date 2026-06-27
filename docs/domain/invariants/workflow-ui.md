@@ -19,10 +19,10 @@ Preserve these unless the task explicitly changes them.
 - Compact header: project name in metadata, Settings/Validate/Save as icon controls with tooltips.
 - Settings opens Workflow Settings at Browser Launch.
 - Save disabled when no content changes; enables on change or failed autosave retry.
-- `Launch Run` is primary text action; Stop appears only while running; Run from selected is always shown (but is disabled if prerequisites are not met).
+- `Run` is primary text action; Stop appears only while running; Run from selected is always shown (but is disabled if prerequisites are not met).
 - Header actions: single row at desktop widths; compact layouts may wrap.
 - Graph save state shown (saved/unsaved/saving/autosave failed/autosave off) without raw `updated_at`.
-- `Launch Run` invokes save/settings/validation/run pipeline. `Run from selected` is retained-session debug command.
+- `Run` invokes save/settings/validation/run pipeline. `Run from selected` is retained-session debug command.
 - Running saves visible graph and dirty settings before execution.
 - If graph save or settings save fails, run does not start.
 - Blocked launch attempt creates one `launch_blocked` attention item on Overview. Manual Validate alone does not.

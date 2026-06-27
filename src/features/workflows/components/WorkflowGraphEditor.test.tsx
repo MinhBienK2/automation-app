@@ -89,7 +89,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   async function launchRun() {
-    await userEvent.click(screen.getByRole("button", { name: "Launch Run" }));
+    await userEvent.click(screen.getByRole("button", { name: "Run" }));
   }
 
   async function openWorkflowDetails() {
@@ -561,7 +561,7 @@ describe("Workflow graph editor integration", () => {
       name: "Workflow detail header",
     });
     expect(within(workflowHeader).getByText("Login flow")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Launch Run" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeInTheDocument();
   });
 
   test("opens the called subflow detail from the node context menu", async () => {
