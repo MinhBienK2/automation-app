@@ -438,7 +438,7 @@ export function collectVariableOptions(
       if (name) {
         options.push({
           name,
-          source: node.label || (node.node_type === "evaluate_logic" ? "Check Condition" : "Calculate Value"),
+          source: node.label || (node.node_type === "evaluate_logic" ? "Check Conditions" : "Calculate Value"),
           evaluation_type: config.evaluation_type === "dynamic" ? "dynamic" : "static",
         });
       }

@@ -19,7 +19,7 @@ export function ConditionFields({ condition, onChange }: ConditionFieldsProps) {
           value={condition.kind}
           onChange={(event) => onChange(defaultCondition(event.currentTarget.value))}
         >
-          <option value="variable_is_true">Variable is True</option>
+          <option value="variable_is_true">Check variable (boolean)</option>
           <option value="text_visible">Text visible</option>
           <option value="url_contains">URL contains</option>
           <option value="element_visible">Element visible</option>

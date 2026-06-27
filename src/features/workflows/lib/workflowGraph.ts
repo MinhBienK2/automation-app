@@ -859,6 +859,8 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
   if (nodeType === "set_json_variables") return "Set JSON Variables";
   if (nodeType === "random_choice") return "Random Choice";
   if (nodeType === "call_subflow") return "Call Subflow";
+  if (nodeType === "evaluate_logic") return "Check Conditions";
+  if (nodeType === "evaluate_expression") return "Calculate Value";
   if (nodeType === "update_flag_variable") return "Update Flag Variable (Yes/No)";
   if (nodeType === "update_object_variable") return "Update Object Variable (JSON)";
 

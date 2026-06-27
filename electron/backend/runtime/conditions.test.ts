@@ -5,7 +5,7 @@ import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
 import { conditionMatches } from "./conditions.js";
 
 describe("conditions", () => {
-  test("matches variable is true conditions", async () => {
+  test("matches check variable boolean conditions", async () => {
     const runtime = {
       outputs: {
         status: true,

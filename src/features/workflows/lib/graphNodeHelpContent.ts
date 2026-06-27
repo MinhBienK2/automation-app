@@ -382,7 +382,7 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("Result Output Variable Name", "Tên biến lưu kết quả.", ["Kết quả lưu dưới dạng boolean true hoặc false."]),
       field("Evaluation Mode", "Chọn chế độ visual rules hoặc viết mã JS.", ["Mã JS chạy trên ngữ cảnh browser và nhận outputs.", "Dùng {{name}} để chèn biến, hoặc outputs.name để truy cập trực tiếp."]),
     ]),
-    en: nodeWithFields("Check Condition", "Evaluate visual rules or JS expression and store the boolean result.", [
+    en: nodeWithFields("Check Conditions", "Evaluate visual rules or JS expression and store the boolean result.", [
       field("Result Output Variable Name", "The name of the variable to store the output.", ["Saves the result as a boolean true or false."]),
       field("Evaluation Mode", "Choose between visual rules builder or JS script.", ["JS script evaluates in the browser context with outputs available.", "Use {{name}} to insert variables (resolved before execution), or outputs.name for direct access."]),
     ], "en"),
@@ -677,7 +677,7 @@ function graphNodeFieldOptions(
   const vi = language === "vi";
   if (fieldName === "Condition") {
     return [
-      graphOption("Variable is True", "variable_is_true", vi ? "Biến truyền vào phải mang giá trị True." : "The variable must hold a true value.", vi ? "Dùng để kiểm tra kết quả từ node Kiểm tra điều kiện." : "Use to check the output of a Check Conditions node.", vi ? "Đảm bảo tên biến chính xác." : "Ensure the variable name is exact."),
+      graphOption(vi ? "Kiểm tra biến (boolean)" : "Check variable (boolean)", "variable_is_true", vi ? "Biến truyền vào phải mang giá trị true (hoặc truthy)." : "The variable must be true (or truthy).", vi ? "Dùng để kiểm tra kết quả từ node Kiểm tra điều kiện." : "Use to check the output of a Check Conditions node.", vi ? "Đảm bảo tên biến chính xác." : "Ensure the variable name is exact."),
       graphOption("Text visible", "text_visible", vi ? "Trang hiện tại phải hiển thị text." : "The current page must show the text.", vi ? "Dùng khi trạng thái nằm trên UI." : "Use when the state is visible in the UI.", vi ? "Tránh với text theo ngôn ngữ động." : "Avoid locale-dependent text."),
       graphOption("URL contains", "url_contains", vi ? "URL hiện tại chứa đoạn mong đợi." : "Current URL contains the expected fragment.", vi ? "Dùng sau login hoặc điều hướng." : "Use after login or navigation.", vi ? "Tránh với SPA không đổi URL." : "Avoid SPAs that do not change URL."),
       graphOption("Element visible", "element_visible", vi ? "Element XPath hoặc Find Element ref phải visible." : "Element XPath or Find Element ref must be visible.", vi ? "Dùng khi nhánh phụ thuộc một control đang hiện." : "Use when branching depends on a visible control.", vi ? "Tránh nếu chỉ cần DOM presence." : "Avoid when DOM presence is enough."),
