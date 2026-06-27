@@ -9,8 +9,6 @@ import {
   Square,
   Trash2,
   Upload,
-  Layers,
-  Activity,
   Search,
 } from "lucide-react";
 import { Select } from "../../../components/ui/select";
@@ -91,7 +89,6 @@ export function WorkflowListPage({
       .filter((snapshot) => snapshot.state.status === "running")
       .map((snapshot) => [snapshot.workflow_id, snapshot]),
   );
-  const activeRunCount = activeRunsByWorkflow.size;
 
   const filteredWorkflows = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -108,34 +105,13 @@ export function WorkflowListPage({
         </p>
       ) : null}
 
-      {/* Stat summary mini cards */}
-      <section aria-label="Workflow metrics" className="stats-summary">
-        <div className="metric-card">
-          <div>
-            <span className="metric-label">Total</span>
-            <div className="metric-val">{workflows.length}</div>
-          </div>
-          <div className="metric-icon-box">
-            <Layers size={16} aria-hidden="true" />
-          </div>
-        </div>
-        <div className="metric-card">
-          <div>
-            <span className="metric-label">Active</span>
-            <div className="metric-val">{activeRunCount}</div>
-          </div>
-          <div className="metric-icon-box">
-            <Activity size={16} aria-hidden="true" />
-          </div>
-        </div>
-      </section>
-
       {/* Toolbar Filter */}
       <div className="toolbar">
         <div className="search-input-wrapper">
           <Search aria-hidden="true" />
           <Input
             className="text-input"
+            style={{ paddingLeft: 32 }}
             placeholder="Search workflows..."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.currentTarget.value)}

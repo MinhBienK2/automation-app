@@ -49,6 +49,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
   const [screen, setScreen] = useState<AppScreen>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [overviewFocus, setOverviewFocus] = useState<OverviewFocus>(null);
+  const [projectsBrowseMode, setProjectsBrowseMode] = useState<"grid" | "detail">("grid");
 
   const {
     requestGraphExitNavigation,
@@ -86,6 +87,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     setProjectCollection(collection);
     setSidebarCollapsed(false);
     setAppError("");
+    setProjectsBrowseMode("grid");
     void (async () => {
       const loaded = await loadProjectModel();
       const projectId =
@@ -111,10 +113,14 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
 
   const backToList = useCallback(() => {
     void requestGraphExitNavigation(() => {
-      performOpenProjects("workflows");
+      setScreen("projects");
+      setProjectCollection("workflows");
+      setProjectsBrowseMode("detail");
+      setSidebarCollapsed(false);
+      setAppError("");
       void loadWorkflows();
     });
-  }, [requestGraphExitNavigation, performOpenProjects, loadWorkflows]);
+  }, [requestGraphExitNavigation, loadWorkflows]);
 
   const performOpenOverview = useCallback((focus: OverviewFocus = null) => {
     setScreen("overview");
@@ -173,13 +179,18 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
         }
         return openWorkflow(target.workflowId);
       }
-      performOpenProjects("subflows");
+      setScreen("projects");
+      setProjectCollection("subflows");
+      setProjectsBrowseMode("detail");
+      setSidebarCollapsed(false);
+      setAppError("");
+      void loadSubflowsForProject();
     });
   }, [
     subflowBackTarget,
     detail,
     openWorkflow,
-    performOpenProjects,
+    loadSubflowsForProject,
     requestGraphExitNavigation,
     setSelectedSubflow,
     setSelectedSubflowGraph,
@@ -311,6 +322,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     screen,
     sidebarCollapsed,
     overviewFocus,
+    projectsBrowseMode,
     setScreen,
     setSidebarCollapsed,
     setOverviewFocus,

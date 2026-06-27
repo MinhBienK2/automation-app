@@ -28,6 +28,7 @@ export type ProjectsPageProps = {
   activeCollection: ProjectCollection;
   error: string;
   projectStats?: Record<string, ProjectStats>;
+  browseMode?: "grid" | "detail";
   children: ReactNode;
   onSelectProject: (projectId: string) => void;
   onCreateProject: (input: { name: string; description?: string | null }) => Promise<void>;
@@ -55,6 +56,7 @@ export function ProjectsPage({
   activeCollection,
   error,
   projectStats,
+  browseMode,
   children,
   onSelectProject,
   onCreateProject,
@@ -64,7 +66,13 @@ export function ProjectsPage({
   onExportProject,
   onDeleteProject,
 }: ProjectsPageProps) {
-  const [browsing, setBrowsing] = useState(false);
+  const [browsing, setBrowsing] = useState(true);
+
+  useEffect(() => {
+    if (browseMode !== undefined) {
+      setBrowsing(browseMode === "grid");
+    }
+  }, [browseMode]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [projectNameDraft, setProjectNameDraft] = useState("");
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState("");

@@ -676,6 +676,7 @@ function App() {
           projects={projectsWorkspace.projects}
           selectedProject={selectedProject}
           activeCollection={projectsWorkspace.projectCollection}
+          browseMode={nav.projectsBrowseMode}
           error={selectedProject ? "" : appError}
           projectStats={projectStats}
           onSelectProject={(projectId) => {

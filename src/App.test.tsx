@@ -80,6 +80,9 @@ describe("App settings and graph autosave", () => {
 
   async function getProjectCollections() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    const grid = await screen.findByRole("list", { name: /projects/i });
+    const firstCard = within(grid).getAllByRole("button")[0];
+    await userEvent.click(firstCard);
     const detail = await screen.findByRole("region", { name: "Project detail" });
     return within(detail).findByRole("navigation", {
       name: "Project sections",

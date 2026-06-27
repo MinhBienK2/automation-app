@@ -35,6 +35,9 @@ describe("Workflow list integration", () => {
 
   async function openWorkflows() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    const grid = await screen.findByRole("list", { name: /projects/i });
+    const projectCard = within(grid).getAllByRole("button")[0];
+    await userEvent.click(projectCard);
     const projectDetail = await screen.findByRole("region", { name: "Project detail" });
     const collections = await within(projectDetail).findByRole("navigation", {
       name: "Project sections",
@@ -516,45 +519,6 @@ describe("Workflow list integration", () => {
       name: "Run Support flow",
     })).not.toBeDisabled();
     expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-1");
-  });
-
-  test("shows metric cards for total and active workflow counts", async () => {
-    const secondWorkflow = {
-      id: "workflow-2",
-      name: "Support flow",
-      step_count: 0,
-      created_at: "2",
-      updated_at: "2",
-    };
-    mockWorkflowBridgeCommands({
-      ...listWorkflowScenario([workflow, secondWorkflow]),
-      list_run_states: [
-        {
-          run_id: "run-1",
-          workflow_id: workflow.id,
-          workflow_name: workflow.name,
-          source: "manual",
-          started_at: "2026-05-17T09:00:00.000Z",
-          state: {
-            ...idleRunState,
-            status: "running",
-            mode: "run_workflow",
-            current_step_number: 1,
-          },
-        },
-      ],
-      stop_run: { ...idleRunState, status: "stopped" },
-    });
-
-    renderApp();
-
-    await openWorkflows();
-
-    const summary = await screen.findByRole("region", { name: "Workflow metrics" });
-    expect(within(summary).getByText("Total")).toBeInTheDocument();
-    expect(within(summary).getByText("Active")).toBeInTheDocument();
-    expect(within(summary).getByText("2")).toBeInTheDocument();
-    expect(within(summary).getByText("1")).toBeInTheDocument();
   });
 
   test("workflow list handles multiple active runs without a Runs sidebar workspace", async () => {

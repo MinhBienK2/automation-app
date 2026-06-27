@@ -46,9 +46,23 @@ function renderPage(overrides: Partial<ProjectsPageProps> = {}) {
   return { props, ...render(<ProjectsPage {...props} />) };
 }
 
+function openProjectDetail() {
+  const grid = screen.getByRole("list", { name: /projects/i });
+  fireEvent.click(within(grid).getByLabelText("Tiktok Automation"));
+}
+
 describe("ProjectsPage", () => {
-  test("shows collection tabs and children by default when a project is selected", () => {
+  test("defaults to the projects grid when navigated to via the sidebar", () => {
     renderPage();
+
+    expect(screen.getByRole("list", { name: /projects/i })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Project sections" })).not.toBeInTheDocument();
+  });
+
+  test("shows collection tabs and children after opening a project from the grid", () => {
+    renderPage();
+
+    openProjectDetail();
 
     const sections = screen.getByRole("navigation", { name: "Project sections" });
     expect(within(sections).getByRole("button", { name: "Workflows" }))
@@ -62,16 +76,10 @@ describe("ProjectsPage", () => {
     expect(screen.queryByRole("list", { name: /projects/i })).not.toBeInTheDocument();
   });
 
-  test("shows a card grid with stats after View all projects is opened", () => {
+  test("shows a card grid with stats and lets users open a project", () => {
     const { props } = renderPage();
 
-    // Before click, header shows selected project name
-    expect(screen.getByRole("button", { name: /tiktok automation/i })).toBeInTheDocument();
-
-    // breadcrumb "Projects" opens the browse grid
-    fireEvent.click(screen.getByRole("button", { name: "Projects" }));
-
-    // Now header should show "All Projects"
+    // Default view is the grid (no selected detail yet)
     expect(screen.getByText("All Projects")).toBeInTheDocument();
 
     const grid = screen.getByRole("list", { name: /projects/i });
@@ -87,6 +95,9 @@ describe("ProjectsPage", () => {
 
   test("switches the selected project via the header dropdown search", () => {
     const { props } = renderPage();
+
+    // Must open a project first to see the header dropdown
+    openProjectDetail();
 
     fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
     const menu = screen.getByRole("listbox", { name: /select project/i });
@@ -116,6 +127,9 @@ describe("ProjectsPage", () => {
   test("shows count badges on collection tabs reflecting selected project stats", () => {
     renderPage();
 
+    // Must open a project first to see collection tabs
+    openProjectDetail();
+
     const sections = screen.getByRole("navigation", { name: "Project sections" });
     const workflowsTab = within(sections).getByRole("button", { name: "Workflows" });
     const subflowsTab = within(sections).getByRole("button", { name: "Subflows" });
@@ -129,6 +143,9 @@ describe("ProjectsPage", () => {
   test("opens the create project dialog from the header dropdown", () => {
     renderPage();
 
+    // Must open a project first to see the header dropdown
+    openProjectDetail();
+
     fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
     const menu = screen.getByRole("listbox", { name: /select project/i });
     fireEvent.click(within(menu).getByRole("button", { name: "Create project" }));
@@ -140,9 +157,6 @@ describe("ProjectsPage", () => {
 
   test("shows action menu dropdown on project card in list and handles actions", () => {
     const { props } = renderPage();
-
-    // Open projects grid
-    fireEvent.click(screen.getByRole("button", { name: "Projects" }));
 
     const grid = screen.getByRole("list", { name: /projects/i });
     const card = within(grid).getAllByRole("listitem")[0];

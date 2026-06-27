@@ -32,6 +32,7 @@ export interface AppNavigationAPI {
   sidebarCollapsed: boolean;
   screen: AppScreen;
   overviewFocus: OverviewFocus;
+  projectsBrowseMode: "grid" | "detail";
   setScreen: (screen: AppScreen) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setOverviewFocus: (focus: OverviewFocus) => void;
