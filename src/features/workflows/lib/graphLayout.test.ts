@@ -1,9 +1,10 @@
 import { describe, expect, test } from "vitest";
-import type { GraphNode, GraphNodeType, WorkflowGraph } from "../../../types/workflow";
+import type { GraphNode, GraphNodeType, WorkflowGraph, GraphPosition } from "../../../types/workflow";
 import { createDefaultGraphNode } from "./workflowGraph";
 import {
   classifyWorkflowGraphEdge,
   layoutWorkflowGraph,
+  applyPortOrderToPositions,
 } from "./graphLayout";
 import { graphNodeHeightForPorts } from "./graphNodeDimensions";
 
@@ -153,6 +154,55 @@ describe("workflow graph layout", () => {
     expect(positions.get("source-first")?.y).toBeLessThan(
       positions.get("source-second")?.y ?? 0,
     );
+  });
+
+  test("applyPortOrderToPositions orders target nodes correctly even with slightly different X coordinates", () => {
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "nodeA",
+          node_type: "action",
+          label: "Node A",
+          position: { x: 0, y: 100 },
+          ports: [
+            { id: "out1", label: "Out 1", direction: "output" },
+            { id: "out2", label: "Out 2", direction: "output" },
+            { id: "out3", label: "Out 3", direction: "output" },
+          ],
+          config: {},
+        },
+        { id: "nodeB", node_type: "action", label: "Node B", position: { x: 240, y: 120 }, ports: [], config: {} },
+        { id: "nodeC", node_type: "action", label: "Node C", position: { x: 241, y: 100 }, ports: [], config: {} },
+        { id: "nodeD", node_type: "action", label: "Node D", position: { x: 240, y: 140 }, ports: [], config: {} },
+      ],
+      edges: [
+        { id: "edge1", source_node_id: "nodeA", source_port: "out1", target_node_id: "nodeB", target_port: "in" },
+        { id: "edge2", source_node_id: "nodeA", source_port: "out2", target_node_id: "nodeC", target_port: "in" },
+        { id: "edge3", source_node_id: "nodeA", source_port: "out3", target_node_id: "nodeD", target_port: "in" },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    const initialPositions = new Map<string, GraphPosition>([
+      ["nodeA", { x: 0, y: 100 }],
+      ["nodeB", { x: 240, y: 120 }], // target 1
+      ["nodeC", { x: 241, y: 100 }], // target 2
+      ["nodeD", { x: 240, y: 140 }], // target 3
+    ]);
+
+    const ordered = applyPortOrderToPositions(graph, initialPositions);
+
+    // Node C is connected to out2, Node B to out1, Node D to out3.
+    // So the order of Y should be B (out1) < C (out2) < D (out3).
+    // The Y values available are 100, 120, 140.
+    // So:
+    // - B should get Y = 100
+    // - C should get Y = 120
+    // - D should get Y = 140
+    expect(ordered.get("nodeB")?.y).toBe(100);
+    expect(ordered.get("nodeC")?.y).toBe(120);
+    expect(ordered.get("nodeD")?.y).toBe(140);
   });
 
   test("classifies edge intent without persisting layout metadata", () => {
