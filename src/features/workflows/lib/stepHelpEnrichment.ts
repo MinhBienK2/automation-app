@@ -393,6 +393,8 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "set_local_storage":
     case "set_session_storage":
       return ["Key", "Value"];
+    case "get_current_url":
+      return ["Output"];
     case "evaluate_logic":
       return ["Output name", "Mode", "Script", "Rules group"];
     case "evaluate_expression":

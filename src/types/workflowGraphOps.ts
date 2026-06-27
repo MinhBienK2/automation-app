@@ -59,7 +59,8 @@ export type GraphNodeType =
   | "assert_output"
   | "domain_allowlist"
   | "evaluate_logic"
-  | "evaluate_expression";
+  | "evaluate_expression"
+  | "get_current_url";
 
 export type GraphPortDirection = "input" | "output";
 export type GraphPortShape = "circle" | "diamond" | "square" | "triangle" | "hexagon";

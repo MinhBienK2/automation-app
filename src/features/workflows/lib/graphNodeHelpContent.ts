@@ -499,6 +499,14 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("Allowed domains", "Allowed domains, one per line.", ["Use domains without paths, such as example.com.", "If the workflow leaves the allowlist, the run should be blocked by existing semantics."]),
     ], "en"),
   },
+  get_current_url: {
+    vi: nodeWithFields("Get Current URL", "Lấy URL trang hiện tại và lưu vào system.current_url.", [
+      field("Output", "Dữ liệu URL được lưu vào system.current_url.", ["Không cần cấu hình thêm."]),
+    ]),
+    en: nodeWithFields("Get Current URL", "Capture the current page URL and store it in system.current_url.", [
+      field("Output", "URL data is stored in system.current_url.", ["No additional configuration needed."]),
+    ], "en"),
+  },
 };
 
 export const graphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> =

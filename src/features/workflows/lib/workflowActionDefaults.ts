@@ -403,5 +403,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "set_local_storage":
     case "set_session_storage":
       return { type: actionType, config: { key: "key", value: "value" } } as ActionConfig;
+    case "get_current_url":
+      return { type: actionType, config: {} } as ActionConfig;
   }
 }

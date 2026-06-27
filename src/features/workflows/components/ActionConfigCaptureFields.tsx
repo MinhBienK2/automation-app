@@ -208,6 +208,8 @@ export function CaptureActionFields({
           </ActionConfigFieldGroup>
         </>
       );
+    case "get_current_url":
+      return null;
 
     default:
       return null;

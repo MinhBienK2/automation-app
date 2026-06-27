@@ -131,6 +131,7 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("mock_response", "network"),
   definition("set_local_storage", "browser_context"),
   definition("set_session_storage", "browser_context"),
+  definition("get_current_url", "capture"),
 ];
 
 const definitionsByType = new Map(actionDefinitions.map((definition) => [definition.type, definition]));

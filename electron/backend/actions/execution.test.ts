@@ -98,6 +98,7 @@ describe("backend action execution registry", () => {
       mock_response: async () => calls.push("mock_response"),
       set_local_storage: async () => calls.push("set_local_storage"),
       set_session_storage: async () => calls.push("set_session_storage"),
+      get_current_url: async () => calls.push("get_current_url"),
       evaluate_logic: async () => calls.push("evaluate_logic"),
       evaluate_expression: async () => calls.push("evaluate_expression"),
     });

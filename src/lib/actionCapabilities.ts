@@ -94,6 +94,7 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   mock_response: "implemented",
   set_local_storage: "implemented",
   set_session_storage: "implemented",
+  get_current_url: "implemented",
 };
 
 export const allActionTypes = Object.keys(actionCapabilities) as ActionType[];

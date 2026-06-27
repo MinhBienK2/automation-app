@@ -969,6 +969,7 @@ export const actionDescriptions: Record<ActionType, string> = {
   mock_response: "Mock a response",
   set_local_storage: "Set local storage",
   set_session_storage: "Set session storage",
+  get_current_url: "Capture current page URL and components",
 };
 
 export function ActionNodePalette({

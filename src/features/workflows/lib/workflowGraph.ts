@@ -863,6 +863,7 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
   if (nodeType === "evaluate_expression") return "Calculate Value";
   if (nodeType === "update_flag_variable") return "Update Flag Variable (Yes/No)";
   if (nodeType === "update_object_variable") return "Update Object Variable (JSON)";
+  if (nodeType === "get_current_url") return "Get Current URL";
 
   return nodeType
     .split("_")
@@ -1063,6 +1064,8 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { name: "output", match: "equals", value: "" };
     case "domain_allowlist":
       return { domains: [] };
+    case "get_current_url":
+      return {};
     case "call_subflow":
       return { subflow_id: "", input_mapping: [], output_prefix: null };
     default:

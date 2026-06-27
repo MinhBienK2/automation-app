@@ -72,6 +72,7 @@ const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
   update_object_variable: true,
   assert_output: true,
   domain_allowlist: true,
+  get_current_url: true,
   end_success: true,
   end_failure: true,
 };

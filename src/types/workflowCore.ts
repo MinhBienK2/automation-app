@@ -86,7 +86,8 @@ export type ActionType =
   | "block_request"
   | "mock_response"
   | "set_local_storage"
-  | "set_session_storage";
+  | "set_session_storage"
+  | "get_current_url";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -957,6 +958,10 @@ export type ActionConfig =
   | {
       type: "set_session_storage";
       config: { key: string; value: string };
+    }
+  | {
+      type: "get_current_url";
+      config: Record<string, never>;
     }
   | {
       type: "evaluate_logic";

@@ -468,6 +468,28 @@ const baseStepHelpContent: Record<
       commonMistakes: ["Hover only moves the mouse; it does not click.", "If a menu opens by click, use Click instead of Hover."],
     },
   },
+  get_current_url: {
+    vi: {
+      title: "Trợ giúp Get Current URL",
+      summary: "Lấy URL trang hiện tại và lưu vào system.current_url.",
+      useWhen: ["Dùng khi cần lấy URL, query params, hoặc path segments của trang hiện tại."],
+      fields: [
+        { name: "Output", description: "Dữ liệu URL được lưu vào system.current_url với các field: href, origin, protocol, hostname, port, pathname, search, hash, params, segments, base." },
+      ],
+      examples: [],
+      commonMistakes: ["Đảm bảo trang đã navigate xong trước khi lấy URL."],
+    },
+    en: {
+      title: "Get Current URL Help",
+      summary: "Capture the current page URL and store it in system.current_url.",
+      useWhen: ["Use when you need the current URL, query params, or path segments."],
+      fields: [
+        { name: "Output", description: "URL data is stored in system.current_url with fields: href, origin, protocol, hostname, port, pathname, search, hash, params, segments, base." },
+      ],
+      examples: [],
+      commonMistakes: ["Make sure the page has finished navigating before capturing the URL."],
+    },
+  },
 };
 
 const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {

@@ -4276,6 +4276,107 @@ test("createCloakBrowserDriver launches through cloakbrowser with humanize enabl
   });
 });
 
+  test("executes get_current_url action and stores parsed URL components", async () => {
+    const page = new FakePage();
+    page.urlValue = "https://example.com:8080/products?q=laptop&sort=price&lang=vi#reviews";
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("get_url", "Get Current URL", {
+            type: "get_current_url",
+            config: {},
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.completed_step_ids).toEqual(["get_url"]);
+    const urlData = result.outputs?.system?.current_url as Record<string, unknown>;
+    expect(urlData).toBeDefined();
+    expect(urlData.href).toBe("https://example.com:8080/products?q=laptop&sort=price&lang=vi#reviews");
+    expect(urlData.origin).toBe("https://example.com:8080");
+    expect(urlData.protocol).toBe("https:");
+    expect(urlData.hostname).toBe("example.com");
+    expect(urlData.port).toBe("8080");
+    expect(urlData.pathname).toBe("/products");
+    expect(urlData.search).toBe("?q=laptop&sort=price&lang=vi");
+    expect(urlData.hash).toBe("#reviews");
+    expect(urlData.params).toEqual({ q: "laptop", sort: "price", lang: "vi" });
+    expect(urlData.segments).toEqual(["products"]);
+    expect(urlData.base).toBe("https://example.com:8080/products");
+  });
+
+  test("get_current_url overwrites previous value on re-run", async () => {
+    const page = new FakePage();
+    page.urlValue = "https://first.com/page?a=1";
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("get_url_1", "Get URL 1", {
+            type: "get_current_url",
+            config: {},
+          }),
+          step("get_url_2", "Get URL 2", {
+            type: "get_current_url",
+            config: {},
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    const urlData = result.outputs?.system?.current_url as Record<string, unknown>;
+    expect(urlData).toBeDefined();
+    expect(urlData.href).toBe("https://first.com/page?a=1");
+    expect(urlData.params).toEqual({ a: "1" });
+  });
+
+  test("get_current_url always stores to system.current_url", async () => {
+    const page = new FakePage();
+    page.urlValue = "https://default.test/path";
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("get_url", "Get URL", {
+            type: "get_current_url",
+            config: {},
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    const urlData = result.outputs?.system?.current_url as Record<string, unknown>;
+    expect(urlData).toBeDefined();
+    expect(urlData.href).toBe("https://default.test/path");
+    expect(urlData.hostname).toBe("default.test");
+  });
+
 function step(nodeId: string, label: string, config: ActionConfig) {
   return { node_id: nodeId, label, config };
 }

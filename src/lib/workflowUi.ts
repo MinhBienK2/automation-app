@@ -96,6 +96,7 @@ export const actionLabels: Record<ActionType, string> = {
   mock_response: "Mock Response",
   set_local_storage: "Set Local Storage",
   set_session_storage: "Set Session Storage",
+  get_current_url: "Get Current URL",
 };
 
 const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
@@ -168,6 +169,7 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
       "take_screenshot",
       "write_text_file",
       "wait_for_download",
+      "get_current_url",
     ],
   },
   {

@@ -99,6 +99,7 @@ describe("backend action registry", () => {
       "mock_response",
       "set_local_storage",
       "set_session_storage",
+      "get_current_url",
     ]);
     expect(getActionDefinition("execute_js")).toMatchObject({
       type: "execute_js",

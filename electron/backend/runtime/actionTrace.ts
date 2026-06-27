@@ -94,6 +94,7 @@ const runnerActionCapabilities: Partial<Record<ActionType, RunnerActionCapabilit
   wait_for_download: "cloak_native",
   take_screenshot: "cloak_native",
   execute_js: "direct_dom",
+  get_current_url: "direct_dom",
   set_local_storage: "direct_dom",
   set_session_storage: "direct_dom",
   clear_cookies: "direct_dom",
@@ -288,6 +289,8 @@ export function actionConfigSummary(action: ActionConfig): string | null {
       return `Output ${action.config.output_name}`;
     case "execute_js":
       return action.config.output_name ? `Output ${action.config.output_name}` : "Script";
+    case "get_current_url":
+      return "System.current_url";
     default:
       return null;
   }

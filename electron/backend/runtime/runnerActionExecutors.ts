@@ -1106,6 +1106,27 @@ export function createRunnerActionExecutors(
         runtime.outputs[output_name] = result;
       }
     },
+    get_current_url: async () => {
+      const href = await runtime.page.evaluate<string>(executableJavaScript("return window.location.href"));
+      const url = new URL(href);
+      const urlData = {
+        href: url.href,
+        origin: url.origin,
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port,
+        pathname: url.pathname,
+        search: url.search,
+        hash: url.hash,
+        params: Object.fromEntries(url.searchParams.entries()),
+        segments: url.pathname.split("/").filter(Boolean),
+        base: url.origin + url.pathname,
+      };
+      if (!runtime.outputs.system || typeof runtime.outputs.system !== "object") {
+        runtime.outputs.system = {};
+      }
+      (runtime.outputs.system as Record<string, unknown>).current_url = urlData;
+    },
   });
 }
 

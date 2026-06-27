@@ -316,6 +316,7 @@ export function updateActionConfigField(
     case "domain_allowlist":
     case "evaluate_logic":
     case "evaluate_expression":
+    case "get_current_url":
       return config;
   }
 }

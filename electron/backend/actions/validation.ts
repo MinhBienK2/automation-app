@@ -630,6 +630,7 @@ const actionValidators = createActionValidatorMap({
     requiredActionString(config.config.key, "key", "Storage key is required"),
   set_session_storage: (config) =>
     requiredActionString(config.config.key, "key", "Storage key is required"),
+  get_current_url: () => null,
   evaluate_logic: (config) => {
     const { output_name, mode, script, rules_group, evaluation_type } = config.config;
     if (!output_name || !output_name.trim()) {
