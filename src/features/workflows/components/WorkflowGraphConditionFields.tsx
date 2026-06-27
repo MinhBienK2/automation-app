@@ -19,34 +19,22 @@ export function ConditionFields({ condition, onChange }: ConditionFieldsProps) {
           value={condition.kind}
           onChange={(event) => onChange(defaultCondition(event.currentTarget.value))}
         >
-          <option value="output_equals">Output equals</option>
-          <option value="output_contains">Output contains</option>
+          <option value="variable_is_true">Variable is True</option>
           <option value="text_visible">Text visible</option>
           <option value="url_contains">URL contains</option>
           <option value="element_visible">Element visible</option>
         </Select>
       </Label>
-      {condition.kind === "output_equals" || condition.kind === "output_contains" ? (
-        <>
-          <Label>
-            Output name
-            <Input
-              value={condition.name}
-              onChange={(event) =>
-                onChange({ ...condition, name: event.currentTarget.value })
-              }
-            />
-          </Label>
-          <Label>
-            Value
-            <Input
-              value={condition.value}
-              onChange={(event) =>
-                onChange({ ...condition, value: event.currentTarget.value })
-              }
-            />
-          </Label>
-        </>
+      {condition.kind === "variable_is_true" ? (
+        <Label>
+          Variable name
+          <Input
+            value={condition.name}
+            onChange={(event) =>
+              onChange({ ...condition, name: event.currentTarget.value })
+            }
+          />
+        </Label>
       ) : null}
       {condition.kind === "text_visible" ? (
         <Label>
@@ -120,13 +108,11 @@ export function ConditionFields({ condition, onChange }: ConditionFieldsProps) {
 export function conditionFromConfig(config: unknown): WorkflowCondition {
   const condition = objectConfig(config).condition;
   if (isWorkflowCondition(condition)) return condition;
-  return { kind: "output_equals", name: "name", value: "" };
+  return { kind: "variable_is_true", name: "name" };
 }
 
 function defaultCondition(kind: string): WorkflowCondition {
   switch (kind) {
-    case "output_contains":
-      return { kind: "output_contains", name: "name", value: "" };
     case "text_visible":
       return { kind: "text_visible", text: "" };
     case "url_contains":
@@ -134,15 +120,14 @@ function defaultCondition(kind: string): WorkflowCondition {
     case "element_visible":
       return { kind: "element_visible", xpath: "" };
     default:
-      return { kind: "output_equals", name: "name", value: "" };
+      return { kind: "variable_is_true", name: "name" };
   }
 }
 
 function isWorkflowCondition(value: unknown): value is WorkflowCondition {
   if (!value || typeof value !== "object" || !("kind" in value)) return false;
   return [
-    "output_equals",
-    "output_contains",
+    "variable_is_true",
     "text_visible",
     "url_contains",
     "element_visible",

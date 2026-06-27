@@ -5,23 +5,26 @@ import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
 import { conditionMatches } from "./conditions.js";
 
 describe("conditions", () => {
-  test("matches output equality and containment conditions", async () => {
+  test("matches variable is true conditions", async () => {
     const runtime = {
       outputs: {
-        status: "ready",
-        message: "hello owned world",
+        status: true,
+        message: "true",
+        wrong: false,
       },
     } as RunnerActionRuntime;
 
     await expect(conditionMatches(runtime, {
-      kind: "output_equals",
+      kind: "variable_is_true",
       name: "status",
-      value: "ready",
     })).resolves.toBe(true);
     await expect(conditionMatches(runtime, {
-      kind: "output_contains",
+      kind: "variable_is_true",
       name: "message",
-      value: "owned",
     })).resolves.toBe(true);
+    await expect(conditionMatches(runtime, {
+      kind: "variable_is_true",
+      name: "wrong",
+    })).resolves.toBe(false);
   });
 });

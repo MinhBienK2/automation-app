@@ -18,9 +18,9 @@ export async function conditionMatches(runtime: RunnerActionRuntime, condition: 
     xpath?: string | null;
     target_ref?: string | null;
   };
-  if (typed.kind === "output_equals") return String(runtime.outputs[typed.name ?? ""]) === typed.value;
-  if (typed.kind === "output_contains") {
-    return String(runtime.outputs[typed.name ?? ""]).includes(typed.value ?? "");
+  if (typed.kind === "variable_is_true") {
+    const val = runtime.outputs[typed.name ?? ""];
+    return val === true || val === "true" || val === 1 || val === "1";
   }
   if (typed.kind === "url_contains") {
     const href = String(

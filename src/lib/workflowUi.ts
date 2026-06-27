@@ -81,7 +81,7 @@ export const actionLabels: Record<ActionType, string> = {
   update_object_variable: "Update Object Variable (JSON)",
   assert_output: "Assert Output",
   domain_allowlist: "Domain Allowlist",
-  evaluate_logic: "Check Condition",
+  evaluate_logic: "Check Conditions",
   evaluate_expression: "Calculate Value",
   set_cookie: "Set Cookie",
   clear_cookies: "Clear Cookies",

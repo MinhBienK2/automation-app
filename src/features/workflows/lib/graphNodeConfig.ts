@@ -105,7 +105,7 @@ export function randomChoiceConfig(config: unknown): RandomChoiceGraphConfig {
 }
 
 export function defaultCondition(): WorkflowCondition {
-  return { kind: "output_equals", name: "name", value: "" };
+  return { kind: "variable_is_true", name: "name" };
 }
 
 export function isWorkflowCondition(value: unknown): value is WorkflowCondition {

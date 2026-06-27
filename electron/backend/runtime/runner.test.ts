@@ -2077,9 +2077,27 @@ describe("BrowserWorkflowRunner", () => {
               items: ["skip", "stop", "later"],
               steps: [
                 {
+                  type: "evaluate_logic",
+                  config: {
+                    output_name: "should_skip",
+                    mode: "visual",
+                    rules_group: {
+                      operator: "and",
+                      rules: [
+                        {
+                          type: "value_compare",
+                          left_operand: "{{item}}",
+                          comparison: "equals",
+                          right_operand: "skip",
+                        },
+                      ],
+                    },
+                  },
+                },
+                {
                   type: "if_condition",
                   config: {
-                    condition: { kind: "output_equals", name: "item", value: "skip" },
+                    condition: { kind: "variable_is_true", name: "should_skip" },
                     then_steps: [{ type: "continue_loop", graph_node_id: "continue-node", config: {} }],
                     else_steps: [],
                   },
@@ -2093,9 +2111,27 @@ describe("BrowserWorkflowRunner", () => {
                   },
                 },
                 {
+                  type: "evaluate_logic",
+                  config: {
+                    output_name: "should_stop",
+                    mode: "visual",
+                    rules_group: {
+                      operator: "and",
+                      rules: [
+                        {
+                          type: "value_compare",
+                          left_operand: "{{item}}",
+                          comparison: "equals",
+                          right_operand: "stop",
+                        },
+                      ],
+                    },
+                  },
+                },
+                {
                   type: "if_condition",
                   config: {
-                    condition: { kind: "output_equals", name: "item", value: "stop" },
+                    condition: { kind: "variable_is_true", name: "should_stop" },
                     then_steps: [{ type: "break_loop", graph_node_id: "break-node", config: {} }],
                     else_steps: [],
                   },
@@ -2182,14 +2218,14 @@ describe("BrowserWorkflowRunner", () => {
           step("until", "Until", {
             type: "repeat_until",
             config: {
-              condition: { kind: "output_equals", name: "ready", value: "yes" },
+              condition: { kind: "variable_is_true", name: "ready" },
               max_attempts: 1,
               steps: [
                 {
                   type: "set_variable",
                   config: {
                     variables: [
-                      { name: "ready", value_type: "text", value: "not-yet" },
+                      { name: "ready", value_type: "text", value: "false" },
                     ],
                   },
                 },
@@ -2215,7 +2251,7 @@ describe("BrowserWorkflowRunner", () => {
     expect(result.status).toBe("success");
     expect(result.outputs).toMatchObject({
       url_branch: "matched",
-      ready: "not-yet",
+      ready: "false",
       until_timeout: "ran",
     });
   });
@@ -2396,7 +2432,10 @@ describe("BrowserWorkflowRunner", () => {
           step("seed", "Seed", {
             type: "set_variable",
             config: {
-              variables: [{ name: "state", value_type: "text", value: "challenge-visible" }],
+              variables: [
+                { name: "is_expired", value_type: "text", value: "false" },
+                { name: "is_challenge", value_type: "text", value: "true" },
+              ],
             },
           }),
           step("router", "Router", {
@@ -2407,7 +2446,7 @@ describe("BrowserWorkflowRunner", () => {
                 {
                   id: "expired",
                   label: "Expired",
-                  condition: { kind: "output_equals", name: "state", value: "expired" },
+                  condition: { kind: "variable_is_true", name: "is_expired" },
                   steps: [
                     {
                       type: "set_variable",
@@ -2420,7 +2459,7 @@ describe("BrowserWorkflowRunner", () => {
                 {
                   id: "challenge",
                   label: "Challenge",
-                  condition: { kind: "output_contains", name: "state", value: "challenge" },
+                  condition: { kind: "variable_is_true", name: "is_challenge" },
                   steps: [
                     {
                       type: "set_variable",
@@ -2477,7 +2516,7 @@ describe("BrowserWorkflowRunner", () => {
                 {
                   id: "expired",
                   label: "Expired",
-                  condition: { kind: "output_equals", name: "state", value: "expired" },
+                  condition: { kind: "variable_is_true", name: "is_expired" },
                   steps: [
                     {
                       type: "set_variable",
@@ -2584,13 +2623,13 @@ describe("BrowserWorkflowRunner", () => {
           step("seed", "Seed", {
             type: "set_variable",
             config: {
-              variables: [{ name: "state", value_type: "text", value: "ready" }],
+              variables: [{ name: "is_ready", value_type: "text", value: "true" }],
             },
           }),
           step("if", "If", {
             type: "if_condition",
             config: {
-              condition: { kind: "output_equals", name: "state", value: "ready" },
+              condition: { kind: "variable_is_true", name: "is_ready" },
               then_steps: [
                 {
                   type: "set_variable",
@@ -2795,13 +2834,13 @@ describe("BrowserWorkflowRunner", () => {
           step("seed", "Seed", {
             type: "set_variable",
             config: {
-              variables: [{ name: "keep_going", value_type: "text", value: "yes" }],
+              variables: [{ name: "keep_going", value_type: "text", value: "true" }],
             },
           }),
           step("while", "While", {
             type: "while_loop",
             config: {
-              condition: { kind: "output_equals", name: "keep_going", value: "yes" },
+              condition: { kind: "variable_is_true", name: "keep_going" },
               max_attempts: 2,
               timeout_ms: null,
               steps: [
@@ -3042,7 +3081,7 @@ describe("BrowserWorkflowRunner", () => {
           step("repeat-timeout", "Repeat timeout", {
             type: "repeat_until",
             config: {
-              condition: { kind: "output_equals", name: "done", value: "yes" },
+              condition: { kind: "variable_is_true", name: "done" },
               max_attempts: 100,
               timeout_ms: 1,
               steps: [

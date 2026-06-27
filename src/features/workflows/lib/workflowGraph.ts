@@ -999,11 +999,11 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
     case "action":
       return null;
     case "if":
-      return { condition: { kind: "output_equals", name: "name", value: "" } };
+      return { condition: { kind: "variable_is_true", name: "name" } };
     case "repeat_until":
     case "while":
       return {
-        condition: { kind: "output_equals", name: "name", value: "" },
+        condition: { kind: "variable_is_true", name: "name" },
         max_attempts: 10,
         timeout_ms: null,
       };
@@ -1016,7 +1016,7 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
           {
             id: "1",
             label: "Case 1",
-            condition: { kind: "output_equals", name: "name", value: "" },
+            condition: { kind: "variable_is_true", name: "name" },
           },
         ],
         default_label: "Default",

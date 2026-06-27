@@ -106,7 +106,7 @@ describe("WorkflowGraphInspectorFields", () => {
               {
                 id: "ready",
                 label: "Ready",
-                condition: { kind: "output_equals", name: "state", value: "ready" },
+                condition: { kind: "variable_is_true", name: "state" },
               },
             ],
             default_label: "Fallback",

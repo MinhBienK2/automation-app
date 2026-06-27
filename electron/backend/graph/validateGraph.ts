@@ -965,10 +965,8 @@ function nodeCondition(node: GraphNode): WorkflowCondition {
 function validateWorkflowCondition(condition: WorkflowCondition) {
   const conditionRecord = condition as { kind?: unknown; target_ref?: unknown };
   switch (condition.kind) {
-    case "output_equals":
-    case "output_contains":
-      if (!condition.name.trim()) throw validationError("name", "Condition output name is required");
-      if (!condition.value.trim()) throw validationError("value", "Condition value is required");
+    case "variable_is_true":
+      if (!condition.name.trim()) throw validationError("name", "Condition variable name is required");
       break;
     case "text_visible":
       if (!condition.text.trim()) throw validationError("text", "Condition text is required");

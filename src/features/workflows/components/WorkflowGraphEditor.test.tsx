@@ -960,7 +960,7 @@ describe("Workflow graph editor integration", () => {
             config: {
               type: "while_loop",
               config: {
-                condition: { kind: "output_equals", name: "ready", value: "yes" },
+                condition: { kind: "variable_is_true", name: "ready" },
                 max_attempts: 2,
                 steps: [],
               },
@@ -1174,10 +1174,8 @@ describe("Workflow graph editor integration", () => {
       (await screen.findByRole("dialog", { name: "Choose a logic node" }))
         .querySelector('[data-value="if"]') as HTMLElement,
     );
-    await userEvent.clear(within(editor).getByLabelText("Output name"));
-    await userEvent.type(within(editor).getByLabelText("Output name"), "logged_in");
-    await userEvent.clear(within(editor).getByLabelText("Value"));
-    await userEvent.type(within(editor).getByLabelText("Value"), "false");
+    await userEvent.clear(within(editor).getByLabelText("Variable name"));
+    await userEvent.type(within(editor).getByLabelText("Variable name"), "logged_in");
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
     await userEvent.click(
@@ -1202,9 +1200,8 @@ describe("Workflow graph editor integration", () => {
                 node_type: "if",
                 config: {
                   condition: {
-                    kind: "output_equals",
+                    kind: "variable_is_true",
                     name: "logged_in",
-                    value: "false",
                   },
                 },
               }),

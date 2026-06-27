@@ -91,7 +91,7 @@ describe("backend action validation registry", () => {
       validateActionConfig({
         type: "if_condition",
         config: {
-          condition: { kind: "output_equals", name: "state", value: "ready" },
+          condition: { kind: "variable_is_true", name: "state" },
           then_steps: [{ type: "legacy_action", config: {} }],
           else_steps: [],
         },

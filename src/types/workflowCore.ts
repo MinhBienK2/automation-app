@@ -1010,8 +1010,7 @@ export type FindElementFilter = {
 };
 
 export type WorkflowCondition =
-  | { kind: "output_equals"; name: string; value: string }
-  | { kind: "output_contains"; name: string; value: string }
+  | { kind: "variable_is_true"; name: string }
   | { kind: "text_visible"; text: string }
   | { kind: "url_contains"; value: string }
   | {

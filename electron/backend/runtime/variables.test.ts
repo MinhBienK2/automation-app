@@ -135,7 +135,7 @@ describe("runner variable helpers", () => {
     findReferencedVariables("Hello {{ name }} and {{ user.email }}", refs);
     findReferencedVariables("outputs.status === 'active'", refs);
     findReferencedVariables("outputs['config_value']", refs);
-    findReferencedVariables({ kind: "output_equals", name: "is_verified", value: "true" }, refs);
+    findReferencedVariables({ kind: "variable_is_true", name: "is_verified" }, refs);
     expect(Array.from(refs)).toEqual(["name", "user.email", "status", "config_value", "is_verified"]);
   });
 

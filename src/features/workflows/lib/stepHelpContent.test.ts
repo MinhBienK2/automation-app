@@ -367,7 +367,7 @@ describe("step help content", () => {
     expect(
       graphNodeHelpContent.if.en.fieldReference?.find((field) => field.name === "Condition")
         ?.options?.map((option) => option.label),
-    ).toEqual(["Output equals", "Output contains", "Text visible", "URL contains", "Element visible"]);
+    ).toEqual(["Variable is True", "Text visible", "URL contains", "Element visible"]);
     expect(
       graphNodeHelpContent.assert_output.en.fieldReference?.find((field) => field.name === "Match")
         ?.options?.map((option) => option.label),

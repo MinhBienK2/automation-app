@@ -234,9 +234,8 @@ describe("TypeScript graph compiler parity", () => {
   test("compiles branch, loop, retry, variable, and terminal graph nodes", async () => {
     const { handlers } = await createTestHandlers();
     const condition: WorkflowCondition = {
-      kind: "output_equals",
+      kind: "variable_is_true",
       name: "status",
-      value: "ready",
     };
     const click = clickAction("//button");
     const graph = graphOf(
@@ -642,7 +641,7 @@ describe("TypeScript graph compiler parity", () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
-        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("if-node", "if", { config: { condition: variableIsTrueCondition() } }),
         graphNode("branch-step", "action", { config: clickAction("//branch") }),
         graphNode("after-if", "action", { config: clickAction("//after") }),
       ],
@@ -748,7 +747,7 @@ describe("TypeScript graph compiler parity", () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
-        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("if-node", "if", { config: { condition: variableIsTrueCondition() } }),
         graphNode("branch-step", "action", { config: waitAction(100) }),
         graphNode("after-if", "action", { config: clickAction("//after") }),
       ],
@@ -779,7 +778,7 @@ describe("TypeScript graph compiler parity", () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
-        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("if-node", "if", { config: { condition: variableIsTrueCondition() } }),
         graphNode("branch-step", "action", { config: branchAction }),
         graphNode("after-if", "action", { config: continuationAction }),
       ],
@@ -798,7 +797,7 @@ describe("TypeScript graph compiler parity", () => {
         config: {
           type: "if_condition",
           config: {
-            condition: outputEqualsCondition(),
+            condition: variableIsTrueCondition(),
             then_steps: [
               {
                 ...branchAction,
@@ -823,7 +822,7 @@ describe("TypeScript graph compiler parity", () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
-        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("if-node", "if", { config: { condition: variableIsTrueCondition() } }),
         graphNode("true-step", "action", { config: waitAction(100) }),
         graphNode("false-step", "action", { config: waitAction(200) }),
         graphNode("merge", "merge"),
@@ -865,7 +864,7 @@ describe("TypeScript graph compiler parity", () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
-        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("if-node", "if", { config: { condition: variableIsTrueCondition() } }),
         graphNode("left", "action", { config: waitAction(100) }),
         graphNode("right", "action", { config: waitAction(200) }),
         graphNode("shared", "action", { config: clickAction("//shared") }),
@@ -890,8 +889,8 @@ describe("TypeScript graph compiler parity", () => {
 
   test("compiles Router cases with stable case ids and done continuation", async () => {
     const { handlers } = await createTestHandlers();
-    const firstCondition = { kind: "output_equals", name: "state", value: "expired" } as const;
-    const secondCondition = { kind: "output_contains", name: "state", value: "challenge" } as const;
+    const firstCondition = { kind: "variable_is_true", name: "is_expired" } as const;
+    const secondCondition = { kind: "variable_is_true", name: "is_challenge" } as const;
     const graph = graphOf(
       [
         graphNode("start", "start"),
@@ -1046,8 +1045,8 @@ describe("TypeScript graph compiler parity", () => {
           config: {
             mode: "first_match",
             cases: [
-              { id: "same", label: " ", condition: { kind: "output_equals", name: "", value: "" } },
-              { id: "same", label: "Duplicate", condition: outputEqualsCondition() },
+              { id: "same", label: " ", condition: { kind: "variable_is_true", name: "" } },
+              { id: "same", label: "Duplicate", condition: variableIsTrueCondition() },
             ],
           },
           ports: [
@@ -1069,7 +1068,7 @@ describe("TypeScript graph compiler parity", () => {
     expect(messages).toEqual(expect.arrayContaining([
       "Router case ids must be unique",
       "Router case labels are required",
-      "Condition output name is required",
+      "Condition variable name is required",
       "Edge edge-router-case_removed-removed-in source port does not exist",
     ]));
   });
@@ -1539,7 +1538,7 @@ describe("TypeScript graph compiler parity", () => {
     const validation = validateActionConfig({
       type: "if_condition",
       config: {
-        condition: outputEqualsCondition(),
+        condition: variableIsTrueCondition(),
         then_steps: [{ type: "navigate", config: { url: "" } }],
         else_steps: [],
       },
@@ -1556,7 +1555,7 @@ describe("TypeScript graph compiler parity", () => {
       validateActionConfig({
         type: "if_condition",
         config: {
-          condition: outputEqualsCondition(),
+          condition: variableIsTrueCondition(),
           then_steps: [{ type: "mystery_action", config: {} }],
           else_steps: [],
         },
@@ -1787,11 +1786,10 @@ function waitAction(duration_ms: number): ActionConfig {
   };
 }
 
-function outputEqualsCondition(): WorkflowCondition {
+function variableIsTrueCondition(): WorkflowCondition {
   return {
-    kind: "output_equals",
+    kind: "variable_is_true",
     name: "status",
-    value: "ready",
   };
 }
 

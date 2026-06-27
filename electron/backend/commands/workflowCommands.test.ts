@@ -1436,7 +1436,7 @@ describe("Workflow commands integration", () => {
           label: "If",
           config: {
             type: "if_condition",
-            config: { condition: { kind: "output_equals", name: "state", value: "ready" }, then_steps: [], else_steps: [] },
+            config: { condition: { kind: "variable_is_true", name: "state" }, then_steps: [], else_steps: [] },
           },
         },
         {
@@ -1452,7 +1452,7 @@ describe("Workflow commands integration", () => {
           label: "While",
           config: {
             type: "while_loop",
-            config: { condition: { kind: "output_equals", name: "keep", value: "yes" }, max_attempts: 2, timeout_ms: null, steps: [] },
+            config: { condition: { kind: "variable_is_true", name: "keep" }, max_attempts: 2, timeout_ms: null, steps: [] },
           },
         },
         {
@@ -2059,7 +2059,7 @@ describe("Workflow commands integration", () => {
           config: {
             type: "if_condition",
             config: {
-              condition: { kind: "output_equals", name: "ready", value: "yes" },
+              condition: { kind: "variable_is_true", name: "ready" },
               then_steps: [{ type: "mystery_action", config: {} }],
               else_steps: [],
             },

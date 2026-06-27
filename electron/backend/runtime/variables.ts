@@ -209,7 +209,7 @@ export function findReferencedVariables(val: any, refs: Set<string>): void {
     return;
   }
   if (typeof val === "object") {
-    if ((val.kind === "output_equals" || val.kind === "output_contains") && typeof val.name === "string") {
+    if (val.kind === "variable_is_true" && typeof val.name === "string") {
       refs.add(val.name.trim());
     }
     for (const child of Object.values(val)) {

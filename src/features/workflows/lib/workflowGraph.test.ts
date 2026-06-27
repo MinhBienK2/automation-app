@@ -145,7 +145,7 @@ describe("workflow graph helpers", () => {
         {
           id: "1",
           label: "Case 1",
-          condition: { kind: "output_equals", name: "name", value: "" },
+          condition: { kind: "variable_is_true", name: "name" },
         },
       ],
       default_label: "Default",
@@ -403,7 +403,7 @@ describe("workflow graph helpers", () => {
           label: "If account is ready",
           position: { x: 240, y: 0 },
           config: {
-            condition: { kind: "output_equals", name: "ready", value: "yes" },
+            condition: { kind: "variable_is_true", name: "ready" },
           },
           ports: nodePorts("if"),
           group_id: null,

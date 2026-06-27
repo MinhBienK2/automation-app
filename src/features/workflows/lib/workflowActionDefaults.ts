@@ -264,7 +264,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return {
         type: actionType,
         config: {
-          condition: { kind: "output_equals", name: "name", value: "" },
+          condition: { kind: "variable_is_true", name: "name" },
           then_steps: [],
           else_steps: [],
         },
@@ -278,7 +278,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
             {
               id: "1",
               label: "Case 1",
-              condition: { kind: "output_equals", name: "name", value: "" },
+              condition: { kind: "variable_is_true", name: "name" },
               steps: [],
             },
           ],
@@ -314,7 +314,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return {
         type: actionType,
         config: {
-          condition: { kind: "output_equals", name: "name", value: "true" },
+          condition: { kind: "variable_is_true", name: "name" },
           max_attempts: 1,
           timeout_ms: null,
           steps: [],
@@ -324,7 +324,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return {
         type: actionType,
         config: {
-          condition: { kind: "output_equals", name: "name", value: "true" },
+          condition: { kind: "variable_is_true", name: "name" },
           max_attempts: 1,
           timeout_ms: null,
           steps: [],
