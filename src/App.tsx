@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { SettingsHelpPage } from "./features/settings/pages/SettingsHelpPage";
 import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnostics";
@@ -16,6 +16,8 @@ import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
 import { SubflowListPage } from "./features/workflows/pages/SubflowListPage";
 import { SubflowDetailPage } from "./features/workflows/pages/SubflowDetailPage";
 import { AppShell } from "./layouts/AppShell";
+import { TweaksPanel } from "./components/layout/TweaksPanel";
+import { useThemePreferences } from "./app/useThemePreferences";
 import {
   listProjects,
   listBrowserProfiles,
@@ -75,6 +77,9 @@ import { useGraphExitNavigation } from "./lib/useGraphExitNavigation";
 
 
 function App() {
+  // --- Appearance preferences (theme / accent / density) ---
+  const themePreferences = useThemePreferences();
+
   // --- States ---
   const [appError, setAppError] = useState("");
   const [toastMessage, setToastMessage] = useState("");
@@ -574,11 +579,36 @@ function App() {
       )
     : projectsWorkspace.browserProfiles;
 
+  const projectStats = useMemo(() => {
+    const stats: Record<string, { workflows: number; subflows: number; profiles: number }> = {};
+    for (const project of projectsWorkspace.projects) {
+      stats[project.id] = {
+        workflows: workflowsWorkspace.workflows.filter(
+          (workflow) =>
+            !workflow.project_id || workflow.project_id === project.id,
+        ).length,
+        subflows: subflowsWorkspace.subflows.filter(
+          (subflow) => subflow.project_id === project.id,
+        ).length,
+        profiles: projectsWorkspace.browserProfiles.filter(
+          (profile) => profile.project_id === project.id,
+        ).length,
+      };
+    }
+    return stats;
+  }, [
+    projectsWorkspace.projects,
+    workflowsWorkspace.workflows,
+    subflowsWorkspace.subflows,
+    projectsWorkspace.browserProfiles,
+  ]);
+
   const activeProfileId = workflowsWorkspace.detail?.workflow.browser_profile_id;
   const activeProfile = selectedBrowserProfiles.find((profile) => profile.id === activeProfileId);
   const profileVariables = activeProfile?.environment?.variables ?? null;
 
   return (
+    <>
     <AppShell
       activeItem={
         nav.screen === "settings" || nav.screen === "settings-help"
@@ -646,13 +676,24 @@ function App() {
           projects={projectsWorkspace.projects}
           selectedProject={selectedProject}
           activeCollection={projectsWorkspace.projectCollection}
+          browseMode={nav.projectsBrowseMode}
           error={selectedProject ? "" : appError}
+          projectStats={projectStats}
           onSelectProject={(projectId) => {
             void projectsWorkspace.selectProject(projectId);
           }}
           onCreateProject={(input) => projectsWorkspace.createProject(input)}
           onImportProjectPackageFile={importProjectPackageFile}
           onCollectionChange={(coll) => projectsWorkspace.setProjectCollection(coll)}
+          onDuplicateProject={(projectId) => {
+            void projectsWorkspace.duplicateProject(projectId);
+          }}
+          onExportProject={(projectId) => {
+            void exportProjectPackageFile(projectId);
+          }}
+          onDeleteProject={(projectId) => {
+            void projectsWorkspace.deleteProject(projectId);
+          }}
         >
           {projectsWorkspace.projectCollection === "subflows" ? (
             <SubflowListPage
@@ -946,6 +987,15 @@ function App() {
         onCancelDeleteWorkflow={workflowsWorkspace.cancelDeleteWorkflow}
       />
     </AppShell>
+    <TweaksPanel
+      theme={themePreferences.theme}
+      accent={themePreferences.accent}
+      density={themePreferences.density}
+      onThemeChange={themePreferences.setTheme}
+      onAccentChange={themePreferences.setAccent}
+      onDensityChange={themePreferences.setDensity}
+    />
+    </>
   );
 }
 

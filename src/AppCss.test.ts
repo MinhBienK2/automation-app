@@ -45,7 +45,8 @@ describe("App CSS", () => {
     expect(appCss).toContain('@import "./styles/modals.css";');
     expect(appCss).not.toContain('@import "./styles/monitor.css";');
     expect(appCss).toContain('@import "./styles/responsive.css";');
-    expect(appCss.split("\n").length).toBeLessThanOrEqual(12);
+    expect(appCss).toContain('@import "./styles/mission-control.css";');
+    expect(appCss.split("\n").length).toBeLessThanOrEqual(13);
   });
 
   test("keeps step help modal content scrollable on small screens", () => {
@@ -96,10 +97,18 @@ describe("App CSS", () => {
   test("exposes design tokens for shared UI primitives", () => {
     const root = cssRule(":root");
 
-    expect(root).toContain("--app-bg: #0b1016");
-    expect(root).toContain("--app-surface: #121c26");
-    expect(root).toContain("--app-accent: #32d3e6");
-    expect(root).toContain("--app-radius-pill: 8px");
+    // Source design tokens (dark theme defaults)
+    expect(root).toContain("--bg: #0b1016");
+    expect(root).toContain("--surface: #121c26");
+    expect(root).toContain("--accent: #32d3e6");
+    // Legacy --app-* aliases reference the theming tokens (not hardcoded)
+    expect(root).toContain("--app-bg: var(--bg)");
+    expect(root).toContain("--app-accent: var(--accent)");
+    expect(root).toContain("--app-radius-pill: var(--radius-lg)");
+    // Theme/accent/density switch blocks drive the token overrides
+    expect(css).toContain('html[data-theme="light"]');
+    expect(css).toContain('html[data-accent="teal"]');
+    expect(css).toContain('html[data-density="compact"]');
     expect(buttonSource).toContain("var(--app-accent-border)");
     expect(buttonSource).not.toContain("#32d3e6");
   });

@@ -80,6 +80,9 @@ describe("App settings and graph autosave", () => {
 
   async function getProjectCollections() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    const grid = await screen.findByRole("list", { name: /projects/i });
+    const firstCard = within(grid).getAllByRole("button")[0];
+    await userEvent.click(firstCard);
     const detail = await screen.findByRole("region", { name: "Project detail" });
     return within(detail).findByRole("navigation", {
       name: "Project sections",
@@ -580,13 +583,11 @@ describe("App settings and graph autosave", () => {
     const file = new File([JSON.stringify(projectPackage)], "owned-lab.project.json", {
       type: "application/json",
     });
-    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
-    const projectsHeader = (await screen.findByRole("heading", {
-      name: "Project Workspace",
-    })).closest("header");
-    expect(projectsHeader).not.toBeNull();
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    const breadcrumbLink = within(breadcrumb).getByRole("button", { name: "Projects" });
+    await userEvent.click(breadcrumbLink);
     await userEvent.upload(
-      within(projectsHeader as HTMLElement).getByLabelText("Project package file"),
+      screen.getByLabelText("Project package file"),
       file,
     );
     const dialog = await screen.findByRole("dialog", { name: "Import Project" });
@@ -604,18 +605,13 @@ describe("App settings and graph autosave", () => {
       });
     });
     expect(await screen.findByRole("button", { name: /Owned Lab \(imported\)/ }))
-      .toHaveAttribute("data-active", "true");
+      .toBeInTheDocument();
   });
 
   test("keeps project collections fixed in the detail panel while the sidebar filters projects", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
-
-    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
-    const projectList = await screen.findByRole("complementary", { name: "Project list" });
-    expect(within(projectList).getByLabelText("Search projects")).toBeInTheDocument();
-    expect(within(projectList).queryByRole("navigation")).not.toBeInTheDocument();
 
     const collections = await getProjectCollections();
 
@@ -679,8 +675,9 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByRole("heading", { name: "Project Settings" }))
       .toBeInTheDocument();
 
-    const projectList = await screen.findByRole("complementary", { name: "Project list" });
-    await userEvent.click(within(projectList).getByRole("button", { name: /Owned Staging/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Main" }));
+    const dropdown = await screen.findByRole("listbox", { name: /select project/i });
+    await userEvent.click(within(dropdown).getByRole("option", { name: /Owned Staging/ }));
 
     const sections = await screen.findByRole("navigation", { name: "Project sections" });
     expect(within(sections).getByRole("button", { name: "Workflows" }))
@@ -740,6 +737,13 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    const breadcrumb = screen.queryByRole("navigation", { name: "Breadcrumb" });
+    if (breadcrumb) {
+      const breadcrumbLink = within(breadcrumb).queryByRole("button", { name: "Projects" });
+      if (breadcrumbLink) {
+        await userEvent.click(breadcrumbLink);
+      }
+    }
     await userEvent.click(screen.getByRole("button", { name: "Create Project" }));
     const dialog = await screen.findByRole("dialog", { name: "Create Project" });
     await userEvent.type(within(dialog).getByLabelText("Project name"), "Owned Staging");

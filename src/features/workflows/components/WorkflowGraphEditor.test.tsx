@@ -94,7 +94,13 @@ describe("Workflow graph editor integration", () => {
   }
 
   async function openWorkflowDetails() {
+    // Navigate to Projects screen (shows grid by default)
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    // Select the first project from the grid
+    const grid = await screen.findByRole("list", { name: /projects/i });
+    const projectCard = within(grid).getAllByRole("button")[0];
+    await userEvent.click(projectCard);
+    // Now the project detail view should be visible
     const projectDetail = await screen.findByRole("region", { name: "Project detail" });
     const collections = await within(projectDetail).findByRole("navigation", {
       name: "Project sections",

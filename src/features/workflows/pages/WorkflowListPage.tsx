@@ -1,8 +1,19 @@
-import { CircleDot, Copy, Download, Eye, Pencil, Play, Square, Trash2, Upload } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  CircleDot,
+  Copy,
+  Download,
+  Eye,
+  Pencil,
+  Play,
+  Square,
+  Trash2,
+  Upload,
+  Search,
+} from "lucide-react";
 import { Select } from "../../../components/ui/select";
 import type { BrowserProfile, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
-import { Card } from "../../../components/ui/card";
 import { IconButton } from "../../../components/ui/icon-button";
 import {
   Dialog,
@@ -63,6 +74,7 @@ export function WorkflowListPage({
   onOpenWorkflow,
   onDeleteWorkflow,
 }: WorkflowListPageProps) {
+  const [searchQuery, setSearchQuery] = useState("");
   const workflowDialogTitle =
     workflowDialogMode === "create" ? "Create Workflow" : "Edit Workflow";
   const workflowDialogDescription =
@@ -71,22 +83,41 @@ export function WorkflowListPage({
       : "Rename the workflow without changing its graph.";
   const workflowNameLabel =
     workflowDialogMode === "create" ? "New workflow name" : "Workflow name";
+
   const activeRunsByWorkflow = new Map(
     runSnapshots
       .filter((snapshot) => snapshot.state.status === "running")
       .map((snapshot) => [snapshot.workflow_id, snapshot]),
   );
 
+  const filteredWorkflows = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return workflows;
+    return workflows.filter((wf) => wf.name.toLowerCase().includes(query));
+  }, [workflows, searchQuery]);
+
   return (
-    <section className="app-screen workflow-list-screen">
-      <header className="app-header">
-        <div>
-          <h1>Workflows</h1>
+    <div className="tab-content-area">
+      <h1 className="sr-only">Workflows</h1>
+      {appError ? (
+        <p className="field-error" role="alert">
+          {appError}
+        </p>
+      ) : null}
+
+      {/* Toolbar Filter */}
+      <div className="toolbar">
+        <div className="search-input-wrapper">
+          <Search aria-hidden="true" />
+          <Input
+            className="text-input"
+            style={{ paddingLeft: 32 }}
+            placeholder="Search workflows..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.currentTarget.value)}
+          />
         </div>
-        <div className="page-header-actions">
-          <div className="header-stats" aria-label="Workflow summary">
-            <span>{workflows.length} workflows</span>
-          </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <label className="workflow-import-button">
             <Upload aria-hidden="true" />
             Import Workflow
@@ -109,101 +140,119 @@ export function WorkflowListPage({
             Create Workflow
           </Button>
         </div>
-        {appError ? (
-          <p className="field-error" role="alert">
-            {appError}
-          </p>
-        ) : null}
-      </header>
+      </div>
 
-      <section className="workflow-library" aria-label="Workflow list">
-        {workflows.length === 0 ? (
+      {/* Workflows Table */}
+      <section className="workflow-library data-table-card" aria-label="Workflow list">
+        {filteredWorkflows.length === 0 ? (
           <div className="empty-state panel">
             <h2>No workflows yet</h2>
             <p className="muted">Create one to begin building an automation graph.</p>
           </div>
         ) : (
-          workflows.map((workflow) => {
-            const activeRun = activeRunsByWorkflow.get(workflow.id);
-            const hasActiveRun = Boolean(activeRun);
-            return (
-              <Card className="workflow-card" key={workflow.id}>
-                <div className="workflow-card-main">
-                  <div>
-                    <h2>{workflow.name}</h2>
-                    {activeRun ? (
-                      <p className="muted workflow-row-run-status" role="status">
-                        {runStatusLabel(activeRun.state)}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="row-actions">
-                  <IconButton
-                    label="View Details"
-                    type="button"
-                    onClick={() => onOpenWorkflow(workflow.id)}
-                  >
-                    <Eye aria-hidden="true" />
-                  </IconButton>
-                  <IconButton
-                    label={`Run ${workflow.name}`}
-                    type="button"
-                    variant="secondary"
-                    disabled={hasActiveRun}
-                    onClick={() => onRunWorkflow(workflow)}
-                  >
-                    <Play aria-hidden="true" />
-                  </IconButton>
-                  {activeRun ? (
-                    <IconButton
-                      label={`Stop ${workflow.name}`}
-                      type="button"
-                      variant="destructive"
-                      onClick={() => onStopRun(activeRun.run_id)}
-                    >
-                      <Square aria-hidden="true" />
-                    </IconButton>
-                  ) : null}
-                  <IconButton
-                    variant="secondary"
-                    type="button"
-                    label={`Edit ${workflow.name}`}
-                    onClick={() => onOpenEditWorkflow(workflow)}
-                  >
-                    <Pencil aria-hidden="true" />
-                  </IconButton>
-                  <IconButton
-                    label={`Duplicate ${workflow.name}`}
-                    type="button"
-                    variant="secondary"
-                    disabled={hasActiveRun}
-                    onClick={() => onDuplicateWorkflow(workflow)}
-                  >
-                    <Copy aria-hidden="true" />
-                  </IconButton>
-                  <IconButton
-                    label={`Export ${workflow.name}`}
-                    type="button"
-                    variant="secondary"
-                    disabled={hasActiveRun}
-                    onClick={() => onOpenExportWorkflow(workflow)}
-                  >
-                    <Download aria-hidden="true" />
-                  </IconButton>
-                  <IconButton
-                    label={`Delete ${workflow.name}`}
-                    type="button"
-                    variant="destructive"
-                    disabled={hasActiveRun}
-                    onClick={() => onDeleteWorkflow(workflow.id)}
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </IconButton>
-                </div>
-              </Card>
-            );
-          })
+          <table className="grid-table">
+            <thead>
+              <tr>
+                <th>WORKFLOW</th>
+                <th style={{ textAlign: "right" }}>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredWorkflows.map((workflow) => {
+                const activeRun = activeRunsByWorkflow.get(workflow.id);
+                const hasActiveRun = Boolean(activeRun);
+                return (
+                  <tr key={workflow.id} className="grid-row" data-slot="card">
+                    <td>
+                      <div className="row-title-cell">
+                        <h2
+                          className="row-title"
+                          style={{ cursor: "pointer" }}
+                          onClick={() => onOpenWorkflow(workflow.id)}
+                        >
+                          {workflow.name}
+                        </h2>
+                        <span className="row-desc">
+                          {activeRun ? (
+                            <span className="badge badge-running">
+                              <span className="dot-pulse" />
+                              {runStatusLabel(activeRun.state)}
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <div style={{ display: "flex", gap: "3px", justifyContent: "flex-end", alignItems: "center" }}>
+                        <IconButton
+                          label="View Details"
+                          type="button"
+                          className="btn-action-circle"
+                          onClick={() => onOpenWorkflow(workflow.id)}
+                        >
+                          <Eye aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
+                          label={`Run ${workflow.name}`}
+                          type="button"
+                          className="btn-action-circle"
+                          disabled={hasActiveRun}
+                          onClick={() => onRunWorkflow(workflow)}
+                        >
+                          <Play aria-hidden="true" />
+                        </IconButton>
+                        {activeRun ? (
+                          <IconButton
+                            label={`Stop ${workflow.name}`}
+                            type="button"
+                            className="btn-action-circle btn-destruct"
+                            onClick={() => onStopRun(activeRun.run_id)}
+                          >
+                            <Square aria-hidden="true" />
+                          </IconButton>
+                        ) : null}
+                        <IconButton
+                          className="btn-action-circle"
+                          type="button"
+                          label={`Edit ${workflow.name}`}
+                          onClick={() => onOpenEditWorkflow(workflow)}
+                        >
+                          <Pencil aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
+                          label={`Duplicate ${workflow.name}`}
+                          type="button"
+                          className="btn-action-circle"
+                          disabled={hasActiveRun}
+                          onClick={() => onDuplicateWorkflow(workflow)}
+                        >
+                          <Copy aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
+                          label={`Export ${workflow.name}`}
+                          type="button"
+                          className="btn-action-circle"
+                          disabled={hasActiveRun}
+                          onClick={() => onOpenExportWorkflow(workflow)}
+                        >
+                          <Download aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
+                          label={`Delete ${workflow.name}`}
+                          type="button"
+                          className="btn-action-circle btn-destruct"
+                          disabled={hasActiveRun}
+                          onClick={() => onDeleteWorkflow(workflow.id)}
+                        >
+                          <Trash2 aria-hidden="true" />
+                        </IconButton>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </section>
 
@@ -267,6 +316,6 @@ export function WorkflowListPage({
           </DialogContent>
         ) : null}
       </Dialog>
-    </section>
+    </div>
   );
 }

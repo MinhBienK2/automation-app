@@ -20,6 +20,9 @@ describe("Subflow list integration", () => {
 
   async function openSubflows() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    const grid = await screen.findByRole("list", { name: /projects/i });
+    const projectCard = within(grid).getAllByRole("button")[0];
+    await userEvent.click(projectCard);
     const projectDetail = await screen.findByRole("region", { name: "Project detail" });
     const collections = await within(projectDetail).findByRole("navigation", {
       name: "Project sections",
