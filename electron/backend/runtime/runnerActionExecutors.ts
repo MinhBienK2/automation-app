@@ -1126,6 +1126,7 @@ export function createRunnerActionExecutors(
         runtime.outputs.system = {};
       }
       (runtime.outputs.system as Record<string, unknown>).current_url = urlData;
+      flattenObject(runtime.outputs, "system.current_url", urlData);
     },
   });
 }

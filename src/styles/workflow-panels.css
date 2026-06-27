@@ -383,6 +383,55 @@
   padding-top: 10px;
 }
 
+.run-monitor-env-tree-group {
+  display: grid;
+  gap: 2px;
+}
+
+.run-monitor-env-tree-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: #121c26;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 12px;
+  text-align: left;
+  color: inherit;
+}
+
+.run-monitor-env-tree-toggle:hover {
+  border-color: #233240;
+}
+
+.run-monitor-env-tree-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #667d8d;
+  flex-shrink: 0;
+}
+
+.run-monitor-env-tree-meta {
+  margin-left: auto;
+  color: #667d8d;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.run-monitor-env-tree-children {
+  display: grid;
+  gap: 2px;
+  margin-top: 2px;
+  border-left: 1px dashed #233240;
+  margin-left: 10px;
+  padding-left: 4px;
+}
+
 @keyframes run-monitor-slide-in {
   from {
     opacity: 0;

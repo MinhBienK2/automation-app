@@ -497,15 +497,7 @@ export function collectVariableOptions(
 
     if (node.node_type === "get_current_url" || (node.node_type === "action" && isActionConfig(node.config) && node.config.type === "get_current_url")) {
       options.push(
-        { name: "system.current_url.href", source: "Get Current URL" },
-        { name: "system.current_url.origin", source: "Get Current URL" },
-        { name: "system.current_url.protocol", source: "Get Current URL" },
-        { name: "system.current_url.host", source: "Get Current URL" },
-        { name: "system.current_url.hostname", source: "Get Current URL" },
-        { name: "system.current_url.port", source: "Get Current URL" },
-        { name: "system.current_url.pathname", source: "Get Current URL" },
-        { name: "system.current_url.search", source: "Get Current URL" },
-        { name: "system.current_url.hash", source: "Get Current URL" },
+        { name: "system.current_url", source: "Get Current URL" },
       );
     }
   }
