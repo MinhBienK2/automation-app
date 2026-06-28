@@ -1,4 +1,4 @@
-import { useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useState, type JSX, type MouseEvent as ReactMouseEvent } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 type RunMonitorEnvironmentProps = {
@@ -189,7 +189,7 @@ function insertChangeLeaf(
 ) {
   if (segments.length === 1) {
     const existing = nodes.find((n) => n.path === segments[0]);
-    if (existing && existing.kind === "leaf") {
+    if (existing && existing.kind === "leaf" && leaf.kind === "leaf") {
       const objectNode = createMutableObjectNode(segments[0]);
       objectNode.children = [leaf];
       bumpSelfCount(objectNode, existing.changeKind);
@@ -212,7 +212,8 @@ function insertChangeLeaf(
 
   if (!objectNode) {
     const existingLeaf = nodes.find(
-      (n) => n.kind === "leaf" && n.path === head,
+      (n): n is Extract<EnvironmentChangeNode, { kind: "leaf" }> =>
+        n.kind === "leaf" && n.path === head,
     );
     objectNode = createMutableObjectNode(head);
     if (existingLeaf) {
