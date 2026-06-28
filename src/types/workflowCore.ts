@@ -1062,6 +1062,9 @@ type DataCaptureElementConfig = {
   iframe_xpath?: string | null;
   output_name: string;
   timeout_ms?: number | null;
+  separator?: string | null;
+  join_list?: boolean | null;
+  join_separator?: string | null;
 };
 
 export type EvaluateLogicConfig = {

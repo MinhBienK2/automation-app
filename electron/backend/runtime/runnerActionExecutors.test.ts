@@ -495,7 +495,106 @@ describe("runnerActionExecutors", () => {
     expect(scriptCallCount).toBe(2);
     expect(runtime.outputs.result).toBe(25);
   });
+
+  test("extract_text extracts plain textContent without separator", async () => {
+    const runtime = minimalRuntime();
+    const mockLocator = {
+      textContent: async () => "Plain text",
+    } as any;
+
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies({
+      locatorForAction: async () => mockLocator,
+    }));
+
+    await executeRegisteredAction(executors, {
+      type: "extract_text",
+      config: {
+        output_name: "result",
+      },
+    } as any);
+
+    expect(runtime.outputs.result).toBe("Plain text");
+  });
+
+  test("extract_text joins child nodes with custom separator", async () => {
+    const runtime = minimalRuntime();
+    const mockLocator = {
+      evaluate: async (fn: any, separator: any) => {
+        const mockChildNodes = [
+          { textContent: "Hello" },
+          { textContent: "" },
+          { textContent: "World" },
+        ];
+        return mockChildNodes
+          .map(node => node.textContent?.trim() || '')
+          .filter(Boolean)
+          .join(separator);
+      },
+    } as any;
+
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies({
+      locatorForAction: async () => mockLocator,
+    }));
+
+    await executeRegisteredAction(executors, {
+      type: "extract_text",
+      config: {
+        output_name: "result",
+        separator: " - ",
+      },
+    } as any);
+
+    expect(runtime.outputs.result).toBe("Hello - World");
+  });
+
+  test("extract_list joins child nodes within each element and joins the list as a single string", async () => {
+    const runtime = minimalRuntime();
+    const element1 = {
+      evaluate: async (fn: any, separator: any) => {
+        return ["Item", "1"].join(separator);
+      },
+      textContent: async () => "Item1",
+    } as any;
+    const element2 = {
+      evaluate: async (fn: any, separator: any) => {
+        return ["Item", "2"].join(separator);
+      },
+      textContent: async () => "Item2",
+    } as any;
+
+    const mockLocator = {
+      count: async () => 2,
+      nth: (index: number) => {
+        return index === 0 ? element1 : element2;
+      },
+    } as any;
+
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies({
+      locatorForAction: async () => mockLocator,
+    }));
+
+    await executeRegisteredAction(executors, {
+      type: "extract_list",
+      config: {
+        output_name: "result_list",
+        separator: " / ",
+      },
+    } as any);
+    expect(runtime.outputs.result_list).toEqual(["Item / 1", "Item / 2"]);
+
+    await executeRegisteredAction(executors, {
+      type: "extract_list",
+      config: {
+        output_name: "result_joined",
+        separator: " / ",
+        join_list: true,
+        join_separator: ", ",
+      },
+    } as any);
+    expect(runtime.outputs.result_joined).toBe("Item / 1, Item / 2");
+  });
 });
+
 
 
 function minimalRuntime(overrides: Partial<RunnerActionRuntime> = {}): RunnerActionRuntime {

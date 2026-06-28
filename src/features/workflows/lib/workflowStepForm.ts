@@ -19,6 +19,8 @@ export type ActionConfigField =
   | "index"
   | "items"
   | "item_name"
+  | "join_list"
+  | "join_separator"
   | "json"
   | "key"
   | "keys"
@@ -842,6 +844,10 @@ function updateDataCaptureConfigField(
 
   if (field === "iframe_xpath") {
     return { type: config.type, config: { ...config.config, iframe_xpath: value || null } };
+  }
+
+  if (field === "join_list") {
+    return { type: config.type, config: { ...config.config, join_list: value === "true" } };
   }
 
   return { type: config.type, config: { ...config.config, [field]: value } };

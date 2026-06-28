@@ -869,6 +869,9 @@ function validateDataCaptureConfig(config: {
   target_ref?: string | null;
   output_name: string;
   timeout_ms?: number | null;
+  separator?: string | null;
+  join_list?: boolean | null;
+  join_separator?: string | null;
 }) {
   return firstValidation(
     validateElementTargetSource(config),

@@ -42,7 +42,6 @@ import {
   assertElementState,
   assertRuntimeEnumValue,
   executableJavaScript,
-  extractListLike,
   extractTable,
   requireLocatorMethod,
   setWebStorage,
@@ -342,12 +341,28 @@ export function createRunnerActionExecutors(
       );
     },
     extract_text: async (action) => {
-      runtime.outputs[action.config.output_name] =
-        (await requireLocatorMethod(
-          await deps.locatorForAction(runtime, action.config),
-          "textContent",
-          action.type,
-        )()) ?? "";
+      const locator = await deps.locatorForAction(runtime, action.config);
+      const separator = action.config.separator;
+      if (separator) {
+        runtime.outputs[action.config.output_name] =
+          ((await requireLocatorMethod(
+            locator,
+            "evaluate",
+            action.type,
+          )((element: any, sep: any) => {
+            return Array.from(element.childNodes)
+              .map((node: any) => node.textContent?.trim() || "")
+              .filter(Boolean)
+              .join(sep);
+          }, separator)) as string) ?? "";
+      } else {
+        runtime.outputs[action.config.output_name] =
+          (await requireLocatorMethod(
+            locator,
+            "textContent",
+            action.type,
+          )()) ?? "";
+      }
     },
     extract_attribute: async (action) => {
       runtime.outputs[action.config.output_name] =
@@ -368,9 +383,35 @@ export function createRunnerActionExecutors(
         )()) ?? "";
     },
     extract_list: async (action) => {
-      runtime.outputs[action.config.output_name] = await extractListLike(
-        await deps.locatorForAction(runtime, action.config),
-      );
+      const locator = await deps.locatorForAction(runtime, action.config);
+      const separator = action.config.separator;
+      const count = (await locator.count?.()) ?? 0;
+      const values: string[] = [];
+      for (let index = 0; index < count; index += 1) {
+        const itemLocator = locator.nth?.(index);
+        if (itemLocator) {
+          if (separator) {
+            const itemText = (await requireLocatorMethod(
+              itemLocator,
+              "evaluate",
+              action.type,
+            )((element: any, sep: any) => {
+              return Array.from(element.childNodes)
+                .map((node: any) => node.textContent?.trim() || "")
+                .filter(Boolean)
+                .join(sep);
+            }, separator)) as string;
+            values.push(itemText ?? "");
+          } else {
+            values.push((await itemLocator.textContent?.()) ?? "");
+          }
+        }
+      }
+      if (action.config.join_list) {
+        runtime.outputs[action.config.output_name] = values.join(action.config.join_separator ?? "");
+      } else {
+        runtime.outputs[action.config.output_name] = values;
+      }
     },
     count_elements: async (action) => {
       const locator = await deps.locatorForAction(runtime, action.config);

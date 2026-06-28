@@ -237,11 +237,62 @@ function DataCaptureFields({
   config: DataCaptureConfig;
   onChange: (config: ActionConfig) => void;
 }) {
+  const showFormatting = config.type === "extract_text" || config.type === "extract_list";
+
   return (
     <>
       <ActionConfigFieldGroup title="Capture target">
         <ElementTargetSourceFields config={config} onChange={onChange} />
       </ActionConfigFieldGroup>
+      {showFormatting && (
+        <ActionConfigFieldGroup title="Formatting options">
+          <TemplateTextField
+            label="Child separator"
+            value={formatSeparatorInput(config.config.separator ?? "")}
+            onChange={(val) =>
+              onChange(
+                updateActionConfigField(
+                  config,
+                  "separator",
+                  parseSeparatorInput(val),
+                ),
+              )
+            }
+          />
+          {config.type === "extract_list" && (
+            <>
+              <SwitchField
+                checked={config.config.join_list === true}
+                label="Join list into single string"
+                onCheckedChange={(checked) =>
+                  onChange(
+                    updateActionConfigField(
+                      config,
+                      "join_list",
+                      String(checked),
+                    ),
+                  )
+                }
+              />
+              {config.config.join_list && (
+                <TemplateTextField
+                  label="List join separator"
+                  value={formatSeparatorInput(config.config.join_separator ?? "")}
+                  onChange={(val) =>
+                    onChange(
+                      updateActionConfigField(
+                        config,
+                        "join_separator",
+                        parseSeparatorInput(val),
+                      ),
+                    )
+                  }
+                />
+              )}
+            </>
+          )}
+        </ActionConfigFieldGroup>
+      )}
       <ActionConfigFieldGroup title="Capture output">
         <Label>
           Output name
