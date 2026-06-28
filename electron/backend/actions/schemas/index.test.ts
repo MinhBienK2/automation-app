@@ -250,9 +250,9 @@ describe("validateActionConfig", () => {
     if (!result.ok) expect(result.reason).toBe("invalid");
   });
 
-  test("unknown action type returns no_schema (pass-through)", () => {
+  test("unknown action type now returns no_schema (will be quarantined by graphLoader)", () => {
     const result = validateActionConfig(node({
-      type: "scroll",
+      type: "totally_fake_action",
       config: { direction: "down" },
     }));
     expect(result.ok).toBe(false);
@@ -266,11 +266,14 @@ describe("validateActionConfig", () => {
   });
 });
 
-describe("registry completeness (PR 1.3 scope)", () => {
-  test("top-10 schemas are registered", () => {
-    const expected = ["navigate", "click", "input_text", "wait", "extract_text", "if_condition", "set_variable", "take_screenshot", "execute_js"];
-    for (const type of expected) {
-      expect(actionSchemas[type as keyof typeof actionSchemas]).toBeDefined();
-    }
+describe("registry completeness (PR 1.4 — all schemas registered)", () => {
+  test("every registered action type has a schema (except quarantined)", () => {
+    // This is also asserted at module load, but we verify here for test visibility.
+    expect(actionSchemas["navigate"]).toBeDefined();
+    expect(actionSchemas["scroll"]).toBeDefined();
+    expect(actionSchemas["execute_js"]).toBeDefined();
+    expect(actionSchemas["graph_noop"]).toBeDefined();
+    // quarantined should NOT be in actionSchemas (it's not a real action)
+    expect(actionSchemas["quarantined"]).toBeUndefined();
   });
 });

@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import type { ActionConfig } from "../../../src/types/workflow.js";
 
 export type ActionType = ActionConfig["type"];
@@ -19,6 +20,12 @@ export type ActionDefinition = {
   owner: ActionOwner;
   hiddenFromPalette: boolean;
   auditRisk: "normal" | "high";
+  configSchema?: z.ZodSchema;
+  deprecated?: {
+    since: string;
+    replacement?: ActionType;
+    reason: string;
+  };
 };
 
 const graphInternalActionTypes = new Set<ActionType>([

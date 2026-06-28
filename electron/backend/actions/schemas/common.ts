@@ -74,3 +74,10 @@ export const workflowConditionSchema = z.discriminatedUnion("kind", [
 export const positiveNumberSchema = z.number().positive();
 
 export const optionalPositiveNumberSchema = z.number().positive().nullable().optional();
+
+export const variableValueTypeSchema = z.enum(["text", "json", "number", "boolean"]);
+
+export const nestedActionSchema = z.object({
+  type: z.string(),
+  config: z.record(z.unknown()),
+}).passthrough();

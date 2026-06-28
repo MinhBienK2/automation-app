@@ -25,20 +25,20 @@ export function processGraphOnLoad(graph: WorkflowGraph): WorkflowGraph {
 
     const result = validateActionConfig(node);
     if (result.ok) continue;
-    if (result.reason === "no_schema") continue;
 
-    const message = result.issues
-      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-      .join("; ");
+    const message =
+      result.reason === "no_schema"
+        ? `Unknown action type: ${(node.config as { type?: string })?.type ?? "unknown"}`
+        : result.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
 
     notes.push({
       path: `node/${node.id}`,
       action: "review",
-      message: `Quarantined: ${result.issues[0]?.message ?? "invalid config"}`,
+      message: `Quarantined: ${result.reason === "no_schema" ? message : (result.issues[0]?.message ?? "invalid config")}`,
     });
 
     processed.nodes[i] = quarantineNode(node, {
-      reason: "invalid_config",
+      reason: result.reason === "no_schema" ? "unknown_type" : "invalid_config",
       message,
     });
   }
