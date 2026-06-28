@@ -47,6 +47,9 @@ import type {
   WorkflowScheduleUpdate,
   WorkflowSettings,
   WorkflowSettingsSectionId,
+  RevisionSummary,
+  RevisionDetail,
+  RestoreResult,
   WorkflowSummary,
   Project,
   Subflow,
@@ -208,6 +211,31 @@ export type WorkflowElectronBridge = {
   exportSubflow(subflowId: string): Promise<SubflowExport>;
   importSubflow(projectId: string, exported: SubflowExport): Promise<Subflow>;
   saveSubflowPackageFile(packageValue: SubflowExport): Promise<string | null>;
+
+  listWorkflowRevisions(
+    workflowId: string,
+    options?: { limit?: number; offset?: number },
+  ): Promise<RevisionSummary[]>;
+  getWorkflowRevision(revisionId: string): Promise<RevisionDetail | null>;
+  restoreWorkflowRevision(
+    workflowId: string,
+    revisionId: string,
+    options?: { comment?: string },
+  ): Promise<RestoreResult>;
+  tagWorkflowRevision(revisionId: string, tag: string): Promise<void>;
+  untagWorkflowRevision(revisionId: string): Promise<void>;
+  listSubflowRevisions(
+    subflowId: string,
+    options?: { limit?: number; offset?: number },
+  ): Promise<RevisionSummary[]>;
+  getSubflowRevision(revisionId: string): Promise<RevisionDetail | null>;
+  restoreSubflowRevision(
+    subflowId: string,
+    revisionId: string,
+    options?: { comment?: string },
+  ): Promise<RestoreResult>;
+  tagSubflowRevision(revisionId: string, tag: string): Promise<void>;
+  untagSubflowRevision(revisionId: string): Promise<void>;
 };
 
 declare global {

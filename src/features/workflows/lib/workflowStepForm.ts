@@ -317,6 +317,7 @@ export function updateActionConfigField(
     case "evaluate_logic":
     case "evaluate_expression":
     case "get_current_url":
+    case "quarantined":
       return config;
   }
 }

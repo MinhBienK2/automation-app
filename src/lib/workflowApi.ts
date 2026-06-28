@@ -412,3 +412,57 @@ export function importSubflow(projectId: string, exported: SubflowExport) {
 export function saveSubflowPackageFile(packageValue: SubflowExport) {
   return bridge().saveSubflowPackageFile(packageValue);
 }
+
+export function listWorkflowRevisions(
+  workflowId: string,
+  options?: { limit?: number; offset?: number },
+) {
+  return bridge().listWorkflowRevisions(workflowId, options);
+}
+
+export function getWorkflowRevision(revisionId: string) {
+  return bridge().getWorkflowRevision(revisionId);
+}
+
+export function restoreWorkflowRevision(
+  workflowId: string,
+  revisionId: string,
+  options?: { comment?: string },
+) {
+  return bridge().restoreWorkflowRevision(workflowId, revisionId, options);
+}
+
+export function tagWorkflowRevision(revisionId: string, tag: string) {
+  return bridge().tagWorkflowRevision(revisionId, tag);
+}
+
+export function untagWorkflowRevision(revisionId: string) {
+  return bridge().untagWorkflowRevision(revisionId);
+}
+
+export function listSubflowRevisions(
+  subflowId: string,
+  options?: { limit?: number; offset?: number },
+) {
+  return bridge().listSubflowRevisions(subflowId, options);
+}
+
+export function getSubflowRevision(revisionId: string) {
+  return bridge().getSubflowRevision(revisionId);
+}
+
+export function restoreSubflowRevision(
+  subflowId: string,
+  revisionId: string,
+  options?: { comment?: string },
+) {
+  return bridge().restoreSubflowRevision(subflowId, revisionId, options);
+}
+
+export function tagSubflowRevision(revisionId: string, tag: string) {
+  return bridge().tagSubflowRevision(revisionId, tag);
+}
+
+export function untagSubflowRevision(revisionId: string) {
+  return bridge().untagSubflowRevision(revisionId);
+}

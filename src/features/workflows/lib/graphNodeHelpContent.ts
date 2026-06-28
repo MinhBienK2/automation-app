@@ -507,6 +507,14 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("Output", "URL data is stored in system.current_url.", ["No additional configuration needed."]),
     ], "en"),
   },
+  quarantined: {
+    vi: nodeWithFields("Cách ly (Quarantined)", "Nút bị cách ly do schema không hợp lệ hoặc không được hỗ trợ.", [
+      field("Trạng thái", "Nút bị giữ lại để tham khảo nhưng không được bi dịch hoặc thực thi.", ["Sửa hoặc thay thế payload hành động trước khi chạy lại."]),
+    ]),
+    en: nodeWithFields("Quarantined", "Node quarantined due to an invalid or unsupported schema.", [
+      field("Status", "Node is retained for reference but not compiled or executed.", ["Fix or replace the action payload before running again."]),
+    ]),
+  },
 };
 
 export const graphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> =

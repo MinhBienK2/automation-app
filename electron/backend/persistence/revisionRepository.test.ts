@@ -13,6 +13,7 @@ import {
   tagRevision,
   untagRevision,
   pruneRevisions,
+  restoreRevision,
 } from "./revisionRepository.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
 
@@ -204,6 +205,83 @@ describe("revisionRepository — pruning", () => {
 
     const tagged = remaining.filter((r) => r.tag === "release");
     expect(tagged).toHaveLength(5);
+
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+});
+
+describe("revisionRepository — restore", () => {
+  test("restoreRevision restores the graph and captures pre-restore state", () => {
+    const root = tempRoot();
+    const db = initializeDatabase(createAppPaths(root));
+    const repo = new WorkflowRepository(db);
+
+    const project = repo.listProjects()[0] ?? repo.createProject("Main");
+    const graphV1 = sampleGraph();
+    const wf = repo.createWorkflow("Test", graphV1, new Date(), { projectId: project.id });
+
+    // Save version 1 (2 nodes)
+    repo.saveWorkflowGraph(wf.id, graphV1);
+
+    // Save version 2 (3 nodes)
+    const graphV2 = {
+      ...graphV1,
+      nodes: [...graphV1.nodes, {
+        id: "extra",
+        node_type: "end_failure" as const,
+        label: "Extra",
+        position: { x: 200, y: 0 },
+        config: null,
+        ports: [],
+      }],
+    };
+    repo.saveWorkflowGraph(wf.id, graphV2);
+
+    // Get revision for version 1 (revision_number = 1)
+    const revisions = listRevisions(db, "workflow", wf.id);
+    const v1Revision = revisions.find((r) => r.revision_number === 1)!;
+
+    // Restore to v1
+    const result = restoreRevision(db, "workflow", wf.id, v1Revision.id, { comment: "Rollback to v1" });
+    expect(result.restoredRevisionNumber).toBe(1);
+    expect(result.capturedRevisionNumber).toBe(3); // pre-restore snapshot
+
+    // Verify graph is now v1 (2 nodes)
+    const restored = repo.getWorkflowGraph(wf.id);
+    expect(restored!.nodes).toHaveLength(2);
+
+    // A new revision was created capturing the pre-restore state (v2)
+    const allRevisions = listRevisions(db, "workflow", wf.id);
+    expect(allRevisions).toHaveLength(3);
+    const capturedRev = allRevisions.find((r) => r.revision_number === 3)!;
+    expect(capturedRev.comment).toBe("Rollback to v1");
+
+    // Undo the undo: restore back to v2 (revision 3 has the v2 snapshot)
+    const undoResult = restoreRevision(db, "workflow", wf.id, capturedRev.id, { comment: "Undo rollback" });
+    expect(undoResult.restoredRevisionNumber).toBe(3);
+
+    const afterUndo = repo.getWorkflowGraph(wf.id);
+    expect(afterUndo!.nodes).toHaveLength(3);
+    expect(afterUndo!.nodes[2].id).toBe("extra");
+
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  test("restoreRevision throws for non-existent revision", () => {
+    const root = tempRoot();
+    const db = initializeDatabase(createAppPaths(root));
+    const repo = new WorkflowRepository(db);
+    const graph = sampleGraph();
+
+    const project = repo.listProjects()[0] ?? repo.createProject("Main");
+    const wf = repo.createWorkflow("Test", graph, new Date(), { projectId: project.id });
+    repo.saveWorkflowGraph(wf.id, graph);
+
+    expect(() =>
+      restoreRevision(db, "workflow", wf.id, "nonexistent-revision-id"),
+    ).toThrow("Revision nonexistent-revision-id not found");
 
     db.close();
     fs.rmSync(root, { recursive: true, force: true });

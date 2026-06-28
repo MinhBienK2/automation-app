@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { WorkflowGraph, WorkflowSettings } from "../../../src/types/workflow.js";
+import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 
 export type WorkflowRevision = {
   id: string;
@@ -252,8 +253,165 @@ export function pruneRevisions(db: DatabaseSync, owner: RevisionOwner): { pruned
          )`,
       )
       .run(id, Math.min(toDelete, 100));
-    pruned += result.changes;
+    pruned += Number(result.changes);
   }
 
   return { pruned };
+}
+
+export type RestoreResult = {
+  restoredRevisionNumber: number;
+  capturedRevisionNumber: number;
+};
+
+/**
+ * Restore a workflow or subflow to a previous revision.
+ * Atomically:
+ * 1. Captures the current graph as a new revision (so restores are undoable)
+ * 2. Writes the target revision's graph back to the normalized tables
+ * Returns the restored revision number and the captured (pre-restore) revision number.
+ */
+export function restoreRevision(
+  db: DatabaseSync,
+  owner: RevisionOwner,
+  ownerId: string,
+  revisionId: string,
+  options: { comment?: string; createdAt?: string } = {},
+): RestoreResult {
+  const revision = getRevision(db, owner, revisionId);
+  if (!revision) {
+    throw new Error(`Revision ${revisionId} not found`);
+  }
+
+  const graph = JSON.parse(revision.graph_snapshot_json) as WorkflowGraph;
+  const createdAt = options.createdAt ?? new Date().toISOString();
+
+  // Capture pre-restore state as a new revision
+  const captured = captureCurrentState(db, owner, ownerId, {
+    comment: options.comment ?? "Pre-restore snapshot",
+    createdAt,
+  });
+
+  // Write the target graph back to normalized tables
+  if (owner === "workflow") {
+    writeWorkflowGraph(db, ownerId, graph, createdAt);
+  } else {
+    writeSubflowGraph(db, ownerId, graph, createdAt);
+  }
+
+  return {
+    restoredRevisionNumber: revision.revision_number,
+    capturedRevisionNumber: captured,
+  };
+}
+
+function captureCurrentState(
+  db: DatabaseSync,
+  owner: RevisionOwner,
+  ownerId: string,
+  options: { comment?: string; createdAt: string },
+): number {
+  const graph = owner === "workflow"
+    ? readWorkflowGraph(db, ownerId)
+    : readSubflowGraph(db, ownerId);
+
+  if (!graph) {
+    throw new Error(`${owner} ${ownerId} not found`);
+  }
+
+  const rev = snapshotRevision(db, owner, ownerId, graph, {
+    comment: options.comment,
+    createdAt: options.createdAt,
+  });
+  return rev.revision_number;
+}
+
+function readWorkflowGraph(db: DatabaseSync, workflowId: string): WorkflowGraph | null {
+  const meta = db
+    .prepare("SELECT graph_version, viewport_json, migration_notes_json FROM workflows WHERE id = ?")
+    .get(workflowId) as { graph_version: number | null; viewport_json: string | null; migration_notes_json: string } | undefined;
+  if (!meta) return null;
+
+  const nodes = db
+    .prepare("SELECT * FROM workflow_nodes WHERE workflow_id = ? ORDER BY ordinal")
+    .all(workflowId) as Array<Record<string, unknown>>;
+  const edges = db
+    .prepare("SELECT * FROM workflow_edges WHERE workflow_id = ? ORDER BY ordinal")
+    .all(workflowId) as Array<Record<string, unknown>>;
+
+  return assembleGraph(meta, nodes, edges);
+}
+
+function readSubflowGraph(db: DatabaseSync, subflowId: string): WorkflowGraph | null {
+  const meta = db
+    .prepare("SELECT graph_version, viewport_json, migration_notes_json FROM subflows WHERE id = ?")
+    .get(subflowId) as { graph_version: number | null; viewport_json: string | null; migration_notes_json: string } | undefined;
+  if (!meta) return null;
+
+  const nodes = db
+    .prepare("SELECT * FROM subflow_nodes WHERE subflow_id = ? ORDER BY ordinal")
+    .all(subflowId) as Array<Record<string, unknown>>;
+  const edges = db
+    .prepare("SELECT * FROM subflow_edges WHERE subflow_id = ? ORDER BY ordinal")
+    .all(subflowId) as Array<Record<string, unknown>>;
+
+  return assembleGraph(meta, nodes, edges);
+}
+
+function writeWorkflowGraph(db: DatabaseSync, workflowId: string, graph: WorkflowGraph, timestamp: string): void {
+  db.prepare("UPDATE workflows SET updated_at = ? WHERE id = ?").run(timestamp, workflowId);
+  writeGraphToNormalizedTables(db, graph, "workflow", workflowId, timestamp);
+}
+
+function writeSubflowGraph(db: DatabaseSync, subflowId: string, graph: WorkflowGraph, timestamp: string): void {
+  db.prepare("UPDATE subflows SET updated_at = ? WHERE id = ?").run(timestamp, subflowId);
+  writeGraphToNormalizedTables(db, graph, "subflow", subflowId, timestamp);
+}
+
+type GraphMetaRow = {
+  graph_version: number | null;
+  viewport_json: string | null;
+  migration_notes_json: string;
+};
+
+type RevisionRow = {
+  id: string;
+  revision_number: number;
+  created_at: string;
+  created_by: string | null;
+  comment: string | null;
+  tag: string | null;
+  size_bytes: number;
+};
+
+function assembleGraph(
+  meta: GraphMetaRow,
+  nodes: Array<Record<string, unknown>>,
+  edges: Array<Record<string, unknown>>,
+): WorkflowGraph {
+  const graphNodes = nodes.map((row) => ({
+    id: row.id as string,
+    node_type: row.node_type as WorkflowGraph["nodes"][number]["node_type"],
+    label: (row.label as string) ?? "",
+    position: { x: row.position_x as number, y: row.position_y as number },
+    config: JSON.parse(row.config_json as string),
+    ports: JSON.parse(row.ports_json as string) as WorkflowGraph["nodes"][number]["ports"],
+    ...(row.group_id ? { group_id: row.group_id as string } : {}),
+  }));
+
+  const graphEdges = edges.map((row) => ({
+    id: row.id as string,
+    source_node_id: row.source_node_id as string,
+    source_port: (row.source_handle as string) ?? "",
+    target_node_id: row.target_node_id as string,
+    target_port: (row.target_handle as string) ?? "",
+  }));
+
+  return {
+    version: meta.graph_version ?? 2,
+    nodes: graphNodes,
+    edges: graphEdges,
+    viewport: meta.viewport_json ? JSON.parse(meta.viewport_json) : { x: 0, y: 0, zoom: 1 },
+    migration_notes: meta.migration_notes_json ? JSON.parse(meta.migration_notes_json) : [],
+  };
 }

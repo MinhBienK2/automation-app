@@ -29,7 +29,7 @@ export const elementTargetConstraintsSchema = z.object({
 export const elementTargetSchema = z.object({
   locators: z.array(locatorSchema),
   constraints: elementTargetConstraintsSchema.nullable().optional(),
-  iframe: z.lazy(() => elementTargetSchema).nullable().optional(),
+  iframe: z.lazy((): z.ZodType => elementTargetSchema).nullable().optional(),
 });
 
 export const elementTargetActionConfigSchema = z.object({

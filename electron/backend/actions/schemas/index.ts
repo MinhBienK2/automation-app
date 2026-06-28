@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { ActionConfig, WorkflowNode } from "../../../../src/types/workflow.js";
+import type { ActionConfig, GraphNode } from "../../../../src/types/workflow.js";
 import { actionDefinitions } from "../registry.js";
 
 import { navigateSchema } from "./navigate.js";
@@ -200,7 +200,7 @@ export type ValidationResult<T> =
  * With all schemas registered (PR 1.4), `no_schema` only fires for
  * truly unknown types — which are now quarantined rather than passed through.
  */
-export function validateActionConfig(node: WorkflowNode): ValidationResult<ActionConfig> {
+export function validateActionConfig(node: GraphNode): ValidationResult<ActionConfig> {
   const config = node.config as { type?: unknown } | null;
   if (!config || typeof config.type !== "string") {
     return { ok: false, reason: "no_schema", issues: [] };

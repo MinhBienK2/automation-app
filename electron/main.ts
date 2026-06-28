@@ -10,6 +10,7 @@ import {
 import { createAppPaths, initializeDatabase, dropGraphJsonColumn } from "./backend/persistence/database.js";
 import { migrateAllGraphs } from "./backend/persistence/migrateAllGraphs.js";
 import { backfillGraphTables } from "./backend/persistence/backfillGraphTables.js";
+import { pruneRevisions } from "./backend/persistence/revisionRepository.js";
 import {
   workflowIpcChannels,
   type WorkflowIpcChannelName,
@@ -104,6 +105,9 @@ app.whenReady().then(() => {
   const migrationReport = migrateAllGraphs(database);
   console.log("[startup] graph migration report:", migrationReport);
   dropGraphJsonColumn(database);
+  const workflowPrune = pruneRevisions(database, "workflow");
+  const subflowPrune = pruneRevisions(database, "subflow");
+  console.log("[startup] revision pruning:", { workflow: workflowPrune, subflow: subflowPrune });
   const handlers = createWorkflowCommandHandlers({
     appPaths,
     database,

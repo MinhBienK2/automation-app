@@ -92,6 +92,16 @@ const methodNames: BridgeMethodName[] = [
   "exportSubflow",
   "importSubflow",
   "saveSubflowPackageFile",
+  "listWorkflowRevisions",
+  "getWorkflowRevision",
+  "restoreWorkflowRevision",
+  "tagWorkflowRevision",
+  "untagWorkflowRevision",
+  "listSubflowRevisions",
+  "getSubflowRevision",
+  "restoreSubflowRevision",
+  "tagSubflowRevision",
+  "untagSubflowRevision",
 ];
 
 export const workflowBridgeMock = Object.fromEntries(

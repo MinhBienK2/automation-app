@@ -875,7 +875,7 @@ export function graphCanvasNodeKindLabel(node: GraphNode) {
   if (node.node_type !== "action") return graphNodeLabel(node.node_type);
 
   const actionConfig = actionConfigOrNull(node.config);
-  return actionConfig ? actionLabels[actionConfig.type] : graphNodeLabel(node.node_type);
+  return actionConfig ? actionLabels[actionConfig.type as ActionType] ?? actionConfig.type : graphNodeLabel(node.node_type);
 }
 
 export function callSubflowIdFromNode(node: GraphNode | null | undefined) {

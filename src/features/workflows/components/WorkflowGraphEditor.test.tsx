@@ -75,6 +75,7 @@ const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
   get_current_url: true,
   end_success: true,
   end_failure: true,
+  quarantined: true,
 };
 const graphNodeTypes = Object.keys(graphNodeTypeCoverage) as GraphNodeType[];
 

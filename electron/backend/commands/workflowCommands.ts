@@ -23,6 +23,13 @@ import {
 } from "../graph/compiler.js";
 import { browserProfileKey } from "../runtime/runManager.js";
 import { runBatchWorkflowRows } from "../runtime/batchWorkflowRun.js";
+import {
+  listRevisions,
+  getRevision,
+  restoreRevision,
+  tagRevision,
+  untagRevision,
+} from "../persistence/revisionRepository.js";
 
 function isUnsupportedGraphDiscriminantMessage(message: string) {
   return (
@@ -345,6 +352,54 @@ export function createWorkflowCommands(deps: CommandDeps) {
     dryRunValidateConfig(config: ActionConfig) {
       const validation = validateActionConfig(config);
       if (validation) throw commandError(validation.message, validation.field);
+    },
+
+    listWorkflowRevisions(workflowId: string, options?: { limit?: number; offset?: number }) {
+      requireWorkflow(workflowId);
+      return listRevisions(deps.context.database, "workflow", workflowId, options ?? {});
+    },
+
+    getWorkflowRevision(revisionId: string) {
+      return getRevision(deps.context.database, "workflow", revisionId);
+    },
+
+    restoreWorkflowRevision(workflowId: string, revisionId: string, options?: { comment?: string }) {
+      requireWorkflow(workflowId);
+      return restoreRevision(deps.context.database, "workflow", workflowId, revisionId, options ?? {});
+    },
+
+    tagWorkflowRevision(revisionId: string, tag: string) {
+      tagRevision(deps.context.database, "workflow", revisionId, tag);
+    },
+
+    untagWorkflowRevision(revisionId: string) {
+      untagRevision(deps.context.database, "workflow", revisionId);
+    },
+
+    listSubflowRevisions(subflowId: string, options?: { limit?: number; offset?: number }) {
+      if (!deps.context.database.prepare("SELECT id FROM subflows WHERE id = ?").get(subflowId)) {
+        throw commandError("Subflow not found", "subflowId");
+      }
+      return listRevisions(deps.context.database, "subflow", subflowId, options ?? {});
+    },
+
+    getSubflowRevision(revisionId: string) {
+      return getRevision(deps.context.database, "subflow", revisionId);
+    },
+
+    restoreSubflowRevision(subflowId: string, revisionId: string, options?: { comment?: string }) {
+      if (!deps.context.database.prepare("SELECT id FROM subflows WHERE id = ?").get(subflowId)) {
+        throw commandError("Subflow not found", "subflowId");
+      }
+      return restoreRevision(deps.context.database, "subflow", subflowId, revisionId, options ?? {});
+    },
+
+    tagSubflowRevision(revisionId: string, tag: string) {
+      tagRevision(deps.context.database, "subflow", revisionId, tag);
+    },
+
+    untagSubflowRevision(revisionId: string) {
+      untagRevision(deps.context.database, "subflow", revisionId);
     },
     
     // We expose startWorkflowRun as a helper for other domains (e.g., schedules) if needed

@@ -143,6 +143,26 @@ export type SubflowUsage = {
   workflow_name: string;
 };
 
+export type RevisionSummary = {
+  id: string;
+  revision_number: number;
+  created_at: string;
+  created_by: string | null;
+  comment: string | null;
+  tag: string | null;
+  size_bytes: number;
+};
+
+export type RevisionDetail = RevisionSummary & {
+  graph_snapshot_json: string;
+  settings_snapshot_json: string | null;
+};
+
+export type RestoreResult = {
+  restoredRevisionNumber: number;
+  capturedRevisionNumber: number;
+};
+
 export type GraphValidationIssue = {
   level: GraphValidationLevel;
   node_id?: string | null;

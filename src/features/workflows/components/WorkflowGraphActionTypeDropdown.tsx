@@ -119,7 +119,7 @@ export function ActionTypeDropdown({
 }
 
 export function GraphInternalActionConfigPanel({ config }: { config: ActionConfig }) {
-  const actionLabel = actionLabels[config.type] ?? config.type;
+  const actionLabel = actionLabels[config.type as ActionType] ?? config.type;
 
   return (
     <div className="graph-internal-action">

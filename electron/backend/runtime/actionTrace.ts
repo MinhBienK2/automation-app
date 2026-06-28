@@ -478,5 +478,5 @@ export function runnerCapabilityForAction(action: ActionConfig): RunnerActionCap
   if (action.type === "scroll") {
     return "custom_human";
   }
-  return runnerActionCapabilities[action.type] ?? null;
+  return runnerActionCapabilities[action.type as ActionType] ?? null;
 }

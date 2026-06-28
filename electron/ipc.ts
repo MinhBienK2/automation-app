@@ -82,6 +82,17 @@ export const workflowIpcChannels = {
   exportSubflow: "workflow:exportSubflow",
   importSubflow: "workflow:importSubflow",
   saveSubflowPackageFile: "workflow:saveSubflowPackageFile",
+
+  listWorkflowRevisions: "workflow:listWorkflowRevisions",
+  getWorkflowRevision: "workflow:getWorkflowRevision",
+  restoreWorkflowRevision: "workflow:restoreWorkflowRevision",
+  tagWorkflowRevision: "workflow:tagWorkflowRevision",
+  untagWorkflowRevision: "workflow:untagWorkflowRevision",
+  listSubflowRevisions: "workflow:listSubflowRevisions",
+  getSubflowRevision: "workflow:getSubflowRevision",
+  restoreSubflowRevision: "workflow:restoreSubflowRevision",
+  tagSubflowRevision: "workflow:tagSubflowRevision",
+  untagSubflowRevision: "workflow:untagSubflowRevision",
 } as const;
 
 export type WorkflowIpcChannelName = keyof typeof workflowIpcChannels;

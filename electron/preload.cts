@@ -196,6 +196,26 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("importSubflow", projectId, exported),
   saveSubflowPackageFile: (packageValue) =>
     invokeWorkflow("saveSubflowPackageFile", packageValue),
+  listWorkflowRevisions: (workflowId, options) =>
+    invokeWorkflow("listWorkflowRevisions", workflowId, options),
+  getWorkflowRevision: (revisionId) =>
+    invokeWorkflow("getWorkflowRevision", revisionId),
+  restoreWorkflowRevision: (workflowId, revisionId, options) =>
+    invokeWorkflow("restoreWorkflowRevision", workflowId, revisionId, options),
+  tagWorkflowRevision: (revisionId, tag) =>
+    invokeWorkflow("tagWorkflowRevision", revisionId, tag),
+  untagWorkflowRevision: (revisionId) =>
+    invokeWorkflow("untagWorkflowRevision", revisionId),
+  listSubflowRevisions: (subflowId, options) =>
+    invokeWorkflow("listSubflowRevisions", subflowId, options),
+  getSubflowRevision: (revisionId) =>
+    invokeWorkflow("getSubflowRevision", revisionId),
+  restoreSubflowRevision: (subflowId, revisionId, options) =>
+    invokeWorkflow("restoreSubflowRevision", subflowId, revisionId, options),
+  tagSubflowRevision: (revisionId, tag) =>
+    invokeWorkflow("tagSubflowRevision", revisionId, tag),
+  untagSubflowRevision: (revisionId) =>
+    invokeWorkflow("untagSubflowRevision", revisionId),
 };
 
 contextBridge.exposeInMainWorld("workflowApi", workflowApi);
