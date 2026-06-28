@@ -198,6 +198,91 @@ export function initializeDatabase(paths: AppPaths) {
       applied_json TEXT NOT NULL,
       failure_json TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS workflow_nodes (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      node_type TEXT NOT NULL,
+      action_type TEXT,
+      config_version INTEGER NOT NULL DEFAULT 1,
+      config_json TEXT NOT NULL,
+      position_x REAL NOT NULL DEFAULT 0,
+      position_y REAL NOT NULL DEFAULT 0,
+      label TEXT,
+      notes TEXT,
+      subflow_ref TEXT,
+      ports_json TEXT NOT NULL DEFAULT '[]',
+      ordinal INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE,
+      FOREIGN KEY (subflow_ref) REFERENCES subflows(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_workflow_nodes_workflow
+      ON workflow_nodes(workflow_id, ordinal);
+    CREATE INDEX IF NOT EXISTS idx_workflow_nodes_action_type
+      ON workflow_nodes(action_type);
+    CREATE INDEX IF NOT EXISTS idx_workflow_nodes_subflow_ref
+      ON workflow_nodes(subflow_ref);
+
+    CREATE TABLE IF NOT EXISTS workflow_edges (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      source_node_id TEXT NOT NULL,
+      source_handle TEXT,
+      target_node_id TEXT NOT NULL,
+      target_handle TEXT,
+      edge_kind TEXT NOT NULL DEFAULT 'flow',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      ordinal INTEGER NOT NULL,
+      FOREIGN KEY (workflow_id)    REFERENCES workflows(id)       ON DELETE CASCADE,
+      FOREIGN KEY (source_node_id) REFERENCES workflow_nodes(id) ON DELETE CASCADE,
+      FOREIGN KEY (target_node_id) REFERENCES workflow_nodes(id)  ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_workflow_edges_workflow
+      ON workflow_edges(workflow_id, ordinal);
+    CREATE INDEX IF NOT EXISTS idx_workflow_edges_source
+      ON workflow_edges(source_node_id);
+    CREATE INDEX IF NOT EXISTS idx_workflow_edges_target
+      ON workflow_edges(target_node_id);
+
+    CREATE TABLE IF NOT EXISTS subflow_nodes (
+      id TEXT PRIMARY KEY,
+      subflow_id TEXT NOT NULL,
+      node_type TEXT NOT NULL,
+      action_type TEXT,
+      config_version INTEGER NOT NULL DEFAULT 1,
+      config_json TEXT NOT NULL,
+      position_x REAL NOT NULL DEFAULT 0,
+      position_y REAL NOT NULL DEFAULT 0,
+      label TEXT,
+      notes TEXT,
+      subflow_ref TEXT,
+      ports_json TEXT NOT NULL DEFAULT '[]',
+      ordinal INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (subflow_id) REFERENCES subflows(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_subflow_nodes_subflow
+      ON subflow_nodes(subflow_id, ordinal);
+
+    CREATE TABLE IF NOT EXISTS subflow_edges (
+      id TEXT PRIMARY KEY,
+      subflow_id TEXT NOT NULL,
+      source_node_id TEXT NOT NULL,
+      source_handle TEXT,
+      target_node_id TEXT NOT NULL,
+      target_handle TEXT,
+      edge_kind TEXT NOT NULL DEFAULT 'flow',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      ordinal INTEGER NOT NULL,
+      FOREIGN KEY (subflow_id)      REFERENCES subflows(id)       ON DELETE CASCADE,
+      FOREIGN KEY (source_node_id)  REFERENCES subflow_nodes(id)  ON DELETE CASCADE,
+      FOREIGN KEY (target_node_id)  REFERENCES subflow_nodes(id)  ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_subflow_edges_subflow
+      ON subflow_edges(subflow_id, ordinal);
   `);
   migrateWorkflowSchema(database);
   migrateRunSchema(database);
@@ -231,6 +316,15 @@ function migrateWorkflowSchema(database: DatabaseSync) {
   }
   if (!columns.has("project_id")) {
     database.exec("ALTER TABLE workflows ADD COLUMN project_id TEXT");
+  }
+  if (!columns.has("graph_version")) {
+    database.exec("ALTER TABLE workflows ADD COLUMN graph_version INTEGER");
+  }
+  if (!columns.has("viewport_json")) {
+    database.exec("ALTER TABLE workflows ADD COLUMN viewport_json TEXT");
+  }
+  if (!columns.has("migration_notes_json")) {
+    database.exec("ALTER TABLE workflows ADD COLUMN migration_notes_json TEXT NOT NULL DEFAULT '[]'");
   }
 }
 
