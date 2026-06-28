@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Fingerprint, Pencil, Search, Layers } from "lucide-react";
+import { Plus, Trash2, Fingerprint, Pencil, Search } from "lucide-react";
 import { ProfileEditDialog } from "./ProfileEditDialog";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
@@ -89,19 +89,6 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
     <section className="app-screen workflow-list-screen" aria-label="Profiles workspace">
       <div role="group" aria-label="Browser Profiles" style={{ display: "contents" }}>
         {error ? <p className="field-error" role="alert">{error}</p> : null}
-
-        {/* Stat summary mini cards */}
-        <section aria-label="Profile metrics" className="stats-summary">
-          <div className="metric-card">
-            <div>
-              <span className="metric-label">Total</span>
-              <div className="metric-val">{browserProfiles.length}</div>
-            </div>
-            <div className="metric-icon-box">
-              <Layers size={16} aria-hidden="true" />
-            </div>
-          </div>
-        </section>
 
         {/* Toolbar Filter */}
         <div className="toolbar">
