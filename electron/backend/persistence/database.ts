@@ -186,6 +186,18 @@ export function initializeDatabase(paths: AppPaths) {
 
     CREATE INDEX IF NOT EXISTS idx_subflows_project_updated_at
       ON subflows(project_id, updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS migration_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      target_table TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      finished_at TEXT NOT NULL,
+      from_version INTEGER,
+      to_version INTEGER,
+      applied_json TEXT NOT NULL,
+      failure_json TEXT
+    );
   `);
   migrateWorkflowSchema(database);
   migrateRunSchema(database);

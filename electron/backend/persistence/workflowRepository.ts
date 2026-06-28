@@ -390,7 +390,12 @@ export class WorkflowRepository {
 
   getWorkflowGraph(id: string): WorkflowGraph | null {
     const row = this.getWorkflowRow(id);
-    return row ? processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json)) : null;
+    if (!row) return null;
+    const result = processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json));
+    if (result.migrationsApplied > 0 && !result.migrationFailed) {
+      this.saveWorkflowGraph(id, result.graph);
+    }
+    return result.graph;
   }
 
   saveWorkflowGraph(id: string, graph: WorkflowGraph, now = new Date()) {
@@ -484,7 +489,12 @@ export class WorkflowRepository {
 
   getSubflowGraph(subflowId: string): WorkflowGraph | null {
     const row = this.getSubflowRow(subflowId);
-    return row ? processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json)) : null;
+    if (!row) return null;
+    const result = processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json));
+    if (result.migrationsApplied > 0 && !result.migrationFailed) {
+      this.saveSubflowGraph(subflowId, result.graph);
+    }
+    return result.graph;
   }
 
   updateSubflow(

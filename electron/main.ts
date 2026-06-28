@@ -8,6 +8,7 @@ import {
   type WorkflowCommandHandlers,
 } from "./backend/commands.js";
 import { createAppPaths, initializeDatabase } from "./backend/persistence/database.js";
+import { migrateAllGraphs } from "./backend/persistence/migrateAllGraphs.js";
 import {
   workflowIpcChannels,
   type WorkflowIpcChannelName,
@@ -97,6 +98,8 @@ function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
 app.whenReady().then(() => {
   const appPaths = createAppPaths(app.getPath("appData"));
   const database = initializeDatabase(appPaths);
+  const migrationReport = migrateAllGraphs(database);
+  console.log("[startup] graph migration report:", migrationReport);
   const handlers = createWorkflowCommandHandlers({
     appPaths,
     database,

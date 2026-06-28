@@ -6,15 +6,23 @@ import { runMigrations } from "../graph/migrations/index.js";
 import { validateActionConfig } from "../actions/schemas/index.js";
 import { quarantineNode } from "../graph/quarantine.js";
 
+export type GraphLoadResult = {
+  graph: WorkflowGraph;
+  /** Number of migrations applied (0 if already up to date). */
+  migrationsApplied: number;
+  /** True if a migration failed (graph is last-successful state). */
+  migrationFailed: boolean;
+};
+
 /**
  * Load-path graph processing:
  * 1. Run migrations (version upgrades, audit trail)
  * 2. Validate each action node's config against its Zod schema
- * 3. Quarantine invalid nodes (pass-through for no_schema until PR 1.4)
+ * 3. Quarantine invalid nodes
  *
  * This never throws — malformed nodes are quarantined instead.
  */
-export function processGraphOnLoad(graph: WorkflowGraph): WorkflowGraph {
+export function processGraphOnLoad(graph: WorkflowGraph): GraphLoadResult {
   const migrationResult = runMigrations(graph);
   const processed = migrationResult.graph;
   const notes: WorkflowGraphMigrationNote[] = processed.migration_notes ?? [];
@@ -43,5 +51,9 @@ export function processGraphOnLoad(graph: WorkflowGraph): WorkflowGraph {
     });
   }
 
-  return { ...processed, migration_notes: notes };
+  return {
+    graph: { ...processed, migration_notes: notes },
+    migrationsApplied: migrationResult.applied.length,
+    migrationFailed: migrationResult.failed !== null,
+  };
 }
