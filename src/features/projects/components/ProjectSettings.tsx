@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -189,7 +189,13 @@ export function ProjectSettings({
               variant="destructive"
               onClick={() => setDeleteDialogOpen(true)}
               disabled={!project || projectActionPending}
+              style={{
+                backgroundColor: "#dc2626",
+                borderColor: "#dc2626",
+                color: "#ffffff",
+              }}
             >
+              <Trash2 />
               Delete project
             </Button>
           </div>
