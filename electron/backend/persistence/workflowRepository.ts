@@ -24,7 +24,6 @@ type WorkflowRow = {
   name: string;
   description: string;
   tags_json: string;
-  graph_json: string;
   settings_json: string | null;
   created_at: string;
   updated_at: string;
@@ -56,7 +55,6 @@ type SubflowRow = {
   name: string;
   description: string;
   tags_json: string;
-  graph_json: string;
   created_at: string;
   updated_at: string;
 };
@@ -296,18 +294,16 @@ export class WorkflowRepository {
           name,
           description,
           tags_json,
-          graph_json,
           settings_json,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, '', '[]', ?, NULL, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, '', '[]', NULL, ?, ?)`,
       )
       .run(
         id,
         ownership.projectId ?? null,
         profileId,
         name,
-        JSON.stringify(graph),
         timestamp,
         timestamp,
       );
@@ -391,21 +387,9 @@ export class WorkflowRepository {
   }
 
   getWorkflowGraph(id: string): WorkflowGraph | null {
-    // Read from normalized tables (source of truth after backfill).
-    // Fall back to graph_json for lazy migration if normalized tables are empty.
     const fromTables = assembleGraphFromTables(this.database, id);
-    if (fromTables) {
-      const result = processGraphOnLoad(fromTables);
-      if (result.migrationsApplied > 0 && !result.migrationFailed) {
-        this.saveWorkflowGraph(id, result.graph);
-      }
-      return result.graph;
-    }
-
-    // Fallback: read from graph_json (lazy migration path)
-    const row = this.getWorkflowRow(id);
-    if (!row) return null;
-    const result = processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json));
+    if (!fromTables) return null;
+    const result = processGraphOnLoad(fromTables);
     if (result.migrationsApplied > 0 && !result.migrationFailed) {
       this.saveWorkflowGraph(id, result.graph);
     }
@@ -414,19 +398,10 @@ export class WorkflowRepository {
 
   saveWorkflowGraph(id: string, graph: WorkflowGraph, now = new Date()) {
     const timestamp = now.toISOString();
-    const graphJson = JSON.stringify(graph);
-    // Dual-write: graph_json + normalized tables in one transaction
-    this.database.exec("BEGIN IMMEDIATE");
-    try {
-      this.database
-        .prepare("UPDATE workflows SET graph_json = ?, updated_at = ? WHERE id = ?")
-        .run(graphJson, timestamp, id);
-      writeGraphToNormalizedTables(this.database, graph, "workflow", id, timestamp);
-      this.database.exec("COMMIT");
-    } catch (error) {
-      this.database.exec("ROLLBACK");
-      throw error;
-    }
+    this.database
+      .prepare("UPDATE workflows SET updated_at = ? WHERE id = ?")
+      .run(timestamp, id);
+    writeGraphToNormalizedTables(this.database, graph, "workflow", id, timestamp);
   }
 
   getWorkflowSettings(id: string): WorkflowSettings | null {
@@ -470,12 +445,11 @@ export class WorkflowRepository {
           name,
           description,
           tags_json,
-          graph_json,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, '[]', ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, '[]', ?, ?)`,
       )
-      .run(id, projectId, name, description, JSON.stringify(graph), timestamp, timestamp);
+      .run(id, projectId, name, description, timestamp, timestamp);
     writeGraphToNormalizedTables(this.database, graph, "subflow", id, timestamp);
     return {
       id,
@@ -492,17 +466,16 @@ export class WorkflowRepository {
   listSubflows(projectId: string): SubflowSummary[] {
     const rows = this.database
       .prepare(
-        `SELECT id, project_id, name, description, tags_json, graph_json, created_at, updated_at
+        `SELECT id, project_id, name, description, tags_json, created_at, updated_at
          FROM subflows
          WHERE project_id = ?
          ORDER BY updated_at DESC, name ASC`,
       )
       .all(projectId) as SubflowRow[];
     return rows.map((row) => {
-      const subflow = rowToSubflow(row);
-      const { graph: _graph, ...summary } = subflow;
+      const subflow = rowToSubflowSummary(row);
       return {
-        ...summary,
+        ...subflow,
         used_by_count: this.getSubflowUsage(subflow.id).length,
       };
     });
@@ -510,24 +483,24 @@ export class WorkflowRepository {
 
   getSubflow(subflowId: string): Subflow | null {
     const row = this.getSubflowRow(subflowId);
-    return row ? rowToSubflow(row) : null;
+    if (!row) return null;
+    const graph = assembleSubflowGraphFromTables(this.database, subflowId);
+    return {
+      id: row.id,
+      project_id: row.project_id,
+      name: row.name,
+      description: row.description,
+      tags: parseJson<string[]>(row.tags_json),
+      graph: graph ?? { version: 2, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
   }
 
   getSubflowGraph(subflowId: string): WorkflowGraph | null {
-    // Read from normalized tables (source of truth after backfill).
     const fromTables = assembleSubflowGraphFromTables(this.database, subflowId);
-    if (fromTables) {
-      const result = processGraphOnLoad(fromTables);
-      if (result.migrationsApplied > 0 && !result.migrationFailed) {
-        this.saveSubflowGraph(subflowId, result.graph);
-      }
-      return result.graph;
-    }
-
-    // Fallback: read from graph_json (lazy migration path)
-    const row = this.getSubflowRow(subflowId);
-    if (!row) return null;
-    const result = processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json));
+    if (!fromTables) return null;
+    const result = processGraphOnLoad(fromTables);
     if (result.migrationsApplied > 0 && !result.migrationFailed) {
       this.saveSubflowGraph(subflowId, result.graph);
     }
@@ -558,19 +531,10 @@ export class WorkflowRepository {
 
   saveSubflowGraph(subflowId: string, graph: WorkflowGraph, now = new Date()) {
     const timestamp = now.toISOString();
-    const graphJson = JSON.stringify(graph);
-    // Dual-write: graph_json + normalized tables in one transaction
-    this.database.exec("BEGIN IMMEDIATE");
-    try {
-      this.database
-        .prepare("UPDATE subflows SET graph_json = ?, updated_at = ? WHERE id = ?")
-        .run(graphJson, timestamp, subflowId);
-      writeGraphToNormalizedTables(this.database, graph, "subflow", subflowId, timestamp);
-      this.database.exec("COMMIT");
-    } catch (error) {
-      this.database.exec("ROLLBACK");
-      throw error;
-    }
+    this.database
+      .prepare("UPDATE subflows SET updated_at = ? WHERE id = ?")
+      .run(timestamp, subflowId);
+    writeGraphToNormalizedTables(this.database, graph, "subflow", subflowId, timestamp);
   }
 
   duplicateSubflow(subflowId: string, name: string, now = new Date()): Subflow | null {
@@ -584,18 +548,17 @@ export class WorkflowRepository {
   }
 
   getSubflowUsage(subflowId: string): SubflowUsage[] {
-    const subflow = this.getSubflow(subflowId);
-    if (!subflow) return [];
-    return (this.database
-      .prepare(
-        `SELECT id, name, graph_json
-         FROM workflows
-         WHERE project_id = ?
-         ORDER BY name ASC`,
-      )
-      .all(subflow.project_id) as Array<Pick<WorkflowRow, "id" | "name" | "graph_json">>)
-      .filter((row) => workflowCallsSubflow(row.graph_json, subflowId))
-      .map((row) => ({ workflow_id: row.id, workflow_name: row.name }));
+    return (
+      this.database
+        .prepare(
+          `SELECT DISTINCT w.id AS workflow_id, w.name AS workflow_name
+           FROM workflow_nodes n
+           JOIN workflows w ON w.id = n.workflow_id
+           WHERE n.subflow_ref = ?
+           ORDER BY w.name ASC`,
+        )
+        .all(subflowId) as SubflowUsage[]
+    );
   }
 
   private getWorkflowRow(id: string): WorkflowRow | null {
@@ -609,7 +572,6 @@ export class WorkflowRepository {
                   workflows.name,
                   workflows.description,
                   workflows.tags_json,
-                  workflows.graph_json,
                   workflows.settings_json,
                   workflows.created_at,
                   workflows.updated_at
@@ -625,7 +587,7 @@ export class WorkflowRepository {
     return (
       (this.database
         .prepare(
-          `SELECT id, project_id, name, description, tags_json, graph_json, created_at, updated_at
+          `SELECT id, project_id, name, description, tags_json, created_at, updated_at
            FROM subflows
            WHERE id = ?`,
         )
@@ -677,14 +639,14 @@ function rowToSummary(row: WorkflowRow): WorkflowSummary {
   };
 }
 
-function rowToSubflow(row: SubflowRow): Subflow {
+function rowToSubflowSummary(row: SubflowRow): SubflowSummary {
   return {
     id: row.id,
     project_id: row.project_id,
     name: row.name,
     description: row.description,
     tags: parseJson<string[]>(row.tags_json),
-    graph: parseJson<WorkflowGraph>(row.graph_json),
+    used_by_count: 0,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -692,17 +654,4 @@ function rowToSubflow(row: SubflowRow): Subflow {
 
 function parseJson<T>(value: string): T {
   return JSON.parse(value) as T;
-}
-
-function workflowCallsSubflow(graphJson: string, subflowId: string): boolean {
-  try {
-    const graph = parseJson<WorkflowGraph>(graphJson);
-    return graph.nodes.some((node) => {
-      if (node.node_type !== "call_subflow") return false;
-      const config = node.config as { subflow_id?: unknown };
-      return config.subflow_id === subflowId;
-    });
-  } catch {
-    return false;
-  }
 }

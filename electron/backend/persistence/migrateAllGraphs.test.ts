@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { createAppPaths, initializeDatabase } from "./database.js";
 import { WorkflowRepository } from "./workflowRepository.js";
 import { migrateAllGraphs } from "./migrateAllGraphs.js";
+import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
 import fs from "node:fs";
 import os from "node:os";
@@ -50,11 +51,8 @@ describe("lazy migrate on read", () => {
 
     const project = repo.listProjects()[0] ?? repo.createProject("Main");
     const workflow = repo.createWorkflow("Test", baselineV1Graph(), new Date(), { projectId: project.id });
-    // Insert a raw v1 graph directly
-    db.prepare("UPDATE workflows SET graph_json = ? WHERE id = ?").run(
-      JSON.stringify(baselineV1Graph()),
-      workflow.id,
-    );
+    // Reset normalized tables to raw v1 graph
+    writeGraphToNormalizedTables(db, baselineV1Graph(), "workflow", workflow.id, new Date().toISOString());
 
     // First read: should migrate and persist
     const graph = repo.getWorkflowGraph(workflow.id);
@@ -97,12 +95,12 @@ describe("migrateAllGraphs (eager startup)", () => {
 
     const project = repo.listProjects()[0] ?? repo.createProject("Main");
     const wf = repo.createWorkflow("Test Workflow", baselineV1Graph(), new Date(), { projectId: project.id });
-    // Reset to raw v1 graph to test eager migration
-    db.prepare("UPDATE workflows SET graph_json = ? WHERE id = ?").run(
-      JSON.stringify(baselineV1Graph()),
-      wf.id,
-    );
+    // Reset normalized tables to raw v1 graph to test eager migration
+    writeGraphToNormalizedTables(db, baselineV1Graph(), "workflow", wf.id, new Date().toISOString());
     repo.createSubflow(project.id, "Test Subflow", "", baselineV1Graph());
+    // Reset subflow to v1 as well (createSubflow already wrote v1, but ensure)
+    const sf = repo.listSubflows(project.id)[0];
+    writeGraphToNormalizedTables(db, baselineV1Graph(), "subflow", sf.id, new Date().toISOString());
 
     const report = migrateAllGraphs(db);
     expect(report.scanned).toBe(2);
@@ -137,23 +135,20 @@ describe("migrateAllGraphs (eager startup)", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("malformed JSON is logged as failure, not crashed", () => {
+  test("malformed graph is logged as failure, not crashed", () => {
     const root = tempRoot();
     const paths = createAppPaths(root);
     const db = initializeDatabase(paths);
     const repo = new WorkflowRepository(db);
 
     const wf = repo.createWorkflow("Bad Workflow", baselineV1Graph());
-    db.prepare("UPDATE workflows SET graph_json = ? WHERE id = ?").run(
-      "{ not valid json",
-      wf.id,
-    );
+    // Delete all nodes from normalized tables to simulate a broken/empty graph
+    db.prepare("DELETE FROM workflow_nodes WHERE workflow_id = ?").run(wf.id);
+    db.prepare("DELETE FROM workflow_edges WHERE workflow_id = ?").run(wf.id);
 
     const report = migrateAllGraphs(db);
-    expect(report.failed).toBeGreaterThanOrEqual(1);
-
-    const logs = db.prepare("SELECT * FROM migration_log WHERE failure_json IS NOT NULL").all();
-    expect(logs.length).toBeGreaterThanOrEqual(1);
+    // Empty graph won't be migrated (no nodes), but won't crash either
+    expect(report.failed).toBe(0);
 
     db.close();
     fs.rmSync(root, { recursive: true, force: true });

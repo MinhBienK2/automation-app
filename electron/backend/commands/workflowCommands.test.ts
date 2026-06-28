@@ -36,12 +36,11 @@ describe("Workflow commands integration", () => {
 
     const created = handlers.createWorkflow("Login flow");
     const row = database
-      .prepare("SELECT id, name, graph_json, settings_json FROM workflows WHERE id = ?")
+      .prepare("SELECT id, name, settings_json FROM workflows WHERE id = ?")
       .get(created.id) as
       | {
           id: string;
           name: string;
-          graph_json: string;
           settings_json: string | null;
         }
       | undefined;
@@ -77,13 +76,15 @@ describe("Workflow commands integration", () => {
     expect(persistedSettings.browser_launch.human_preset).toBe(
       persistedSettings.browser_launch.persona.behavioral_timing_profile,
     );
-    expect(JSON.parse(row?.graph_json ?? "{}")).toMatchObject({
-      version: 2,
-      nodes: expect.arrayContaining([
+    const graphNodes = database
+      .prepare("SELECT id, node_type FROM workflow_nodes WHERE workflow_id = ? ORDER BY ordinal")
+      .all(created.id) as Array<{ id: string; node_type: string }>;
+    expect(graphNodes).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({ id: "start", node_type: "start" }),
         expect.objectContaining({ id: "new-node", node_type: "action" }),
       ]),
-    });
+    );
 
     const graph: WorkflowGraph = {
       version: 1,
@@ -205,8 +206,8 @@ describe("Workflow commands integration", () => {
     const initialIds = handlers.listWorkflows().map((workflow) => workflow.id);
     database.exec(`
       CREATE TRIGGER fail_duplicate_graph_copy
-      BEFORE UPDATE OF graph_json ON workflows
-      WHEN OLD.id != '${source.id}'
+      BEFORE INSERT ON workflow_nodes
+      WHEN NEW.workflow_id != '${source.id}'
       BEGIN
         SELECT RAISE(ABORT, 'graph copy failed');
       END;
@@ -403,9 +404,8 @@ describe("Workflow commands integration", () => {
       edges: [],
       viewport: { x: 0, y: 0, zoom: 1 },
     };
-    database
-      .prepare("UPDATE workflows SET graph_json = ? WHERE id = ?")
-      .run(JSON.stringify(graph), workflow.id);
+    const { writeGraphToNormalizedTables } = await import("../persistence/backfillGraphTables.js");
+    writeGraphToNormalizedTables(database, graph, "workflow", workflow.id, new Date().toISOString());
 
     const migrated = handlers.getWorkflowGraph(workflow.id);
 
@@ -426,17 +426,16 @@ describe("Workflow commands integration", () => {
       ],
       migration_notes: [],
     });
-    const persisted = JSON.parse(
-      String(
-        (
-          database
-            .prepare("SELECT graph_json FROM workflows WHERE id = ?")
-            .get(workflow.id) as { graph_json: string }
-        ).graph_json,
-      ),
-    );
-    expect(persisted.version).toBe(2);
-    expect(persisted.nodes[1].config.config).toHaveProperty("target");
+    const persistedVersion = (
+      database
+        .prepare("SELECT graph_version FROM workflows WHERE id = ?")
+        .get(workflow.id) as { graph_version: number }
+    ).graph_version;
+    expect(persistedVersion).toBe(2);
+    const persistedNode = database
+      .prepare("SELECT config_json FROM workflow_nodes WHERE workflow_id = ? AND id = ?")
+      .get(workflow.id, "click-submit") as { config_json: string };
+    expect(JSON.parse(persistedNode.config_json)).toHaveProperty("config.target");
   });
 
   test("validates settings and maps browser config through simplified launch section", async () => {

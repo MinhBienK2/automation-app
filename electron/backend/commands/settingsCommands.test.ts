@@ -99,7 +99,11 @@ describe("Settings commands integration", () => {
       },
     });
     const workflow = handlers.createWorkflow("Identity flow");
+    database.exec("PRAGMA foreign_keys = OFF");
     database.prepare("UPDATE workflows SET id = ? WHERE id = ?").run("workflow-identity", workflow.id);
+    database.prepare("UPDATE workflow_nodes SET workflow_id = ? WHERE workflow_id = ?").run("workflow-identity", workflow.id);
+    database.prepare("UPDATE workflow_edges SET workflow_id = ? WHERE workflow_id = ?").run("workflow-identity", workflow.id);
+    database.exec("PRAGMA foreign_keys = ON");
     const settings = handlers.getWorkflowSettings("workflow-identity");
     handlers.saveWorkflowSettings("workflow-identity", {
       ...settings,

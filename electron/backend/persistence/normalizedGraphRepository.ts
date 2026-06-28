@@ -31,13 +31,11 @@ type GraphMetaRow = {
   graph_version: number | null;
   viewport_json: string | null;
   migration_notes_json: string;
-  graph_json: string;
 };
 
 /**
  * Read a workflow graph from the normalized node/edge tables.
- * Used by PR 2.1 to verify the new tables produce identical output
- * to the legacy graph_json reader.
+ * Source of truth after PR 2.3 (graph_json dropped).
  */
 export function assembleGraphFromTables(
   db: DatabaseSync,
@@ -45,7 +43,7 @@ export function assembleGraphFromTables(
 ): WorkflowGraph | null {
   const meta = db
     .prepare(
-      "SELECT graph_version, viewport_json, migration_notes_json, graph_json FROM workflows WHERE id = ?",
+      "SELECT graph_version, viewport_json, migration_notes_json FROM workflows WHERE id = ?",
     )
     .get(workflowId) as GraphMetaRow | undefined;
   if (!meta) return null;
@@ -69,7 +67,9 @@ export function assembleSubflowGraphFromTables(
   subflowId: string,
 ): WorkflowGraph | null {
   const meta = db
-    .prepare("SELECT graph_json FROM subflows WHERE id = ?")
+    .prepare(
+      "SELECT graph_version, viewport_json, migration_notes_json FROM subflows WHERE id = ?",
+    )
     .get(subflowId) as GraphMetaRow | undefined;
   if (!meta) return null;
 

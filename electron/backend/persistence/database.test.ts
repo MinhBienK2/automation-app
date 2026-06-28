@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, test } from "vitest";
-import { createAppPaths, initializeDatabase } from "./database";
+import { createAppPaths, initializeDatabase, dropGraphJsonColumn } from "./database";
 
 const tempRoots: string[] = [];
 
@@ -41,6 +41,7 @@ describe("Electron database initialization", () => {
     expect(workflowColumns).toEqual(
       expect.arrayContaining(["project_id", "browser_profile_id"]),
     );
+    expect(workflowColumns).not.toContain("graph_json");
     expect(profileColumns).toContain("environment_json");
     expect(indexSql(database, "idx_browser_profiles_project_default")).toBe(
       "CREATE INDEX idx_browser_profiles_project_default ON browser_profiles(project_id, is_default)",
@@ -160,11 +161,13 @@ describe("Electron database initialization", () => {
     expect(columns).toEqual(
       expect.arrayContaining(["description", "tags_json", "settings_json"]),
     );
-    expect(() =>
-      database
-        .prepare("INSERT INTO workflows (id, name, graph_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
-        .run("workflow-1", "Legacy", "{}", "1", "1"),
-    ).not.toThrow();
+    expect(columns).toContain("graph_json"); // still present until drop
+    dropGraphJsonColumn(database);
+    const columnsAfterDrop = database
+      .prepare("PRAGMA table_info(workflows)")
+      .all()
+      .map((row) => (row as { name: string }).name);
+    expect(columnsAfterDrop).not.toContain("graph_json");
     database.close();
   });
 

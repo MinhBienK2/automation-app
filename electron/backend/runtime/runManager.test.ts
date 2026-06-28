@@ -33,13 +33,12 @@ describe("RunManager", () => {
     database
       .prepare(
         `INSERT INTO workflows (
-          id, name, description, tags_json, graph_json, settings_json, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?)`,
+          id, name, description, tags_json, settings_json, created_at, updated_at
+        ) VALUES (?, ?, '', '[]', ?, ?, ?)`,
       )
       .run(
         workflow.id,
         workflow.name,
-        JSON.stringify(graph),
         JSON.stringify(settings),
         workflow.created_at,
         workflow.updated_at,
@@ -101,13 +100,12 @@ describe("RunManager", () => {
     database
       .prepare(
         `INSERT INTO workflows (
-          id, name, description, tags_json, graph_json, settings_json, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?)`,
+          id, name, description, tags_json, settings_json, created_at, updated_at
+        ) VALUES (?, ?, '', '[]', ?, ?, ?)`,
       )
       .run(
         workflow.id,
         workflow.name,
-        JSON.stringify(graph),
         JSON.stringify(settings),
         workflow.created_at,
         workflow.updated_at,
@@ -184,13 +182,12 @@ describe("RunManager", () => {
     database
       .prepare(
         `INSERT INTO workflows (
-          id, name, description, tags_json, graph_json, settings_json, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?)`,
+          id, name, description, tags_json, settings_json, created_at, updated_at
+        ) VALUES (?, ?, '', '[]', ?, ?, ?)`,
       )
       .run(
         workflow.id,
         workflow.name,
-        JSON.stringify(graph),
         JSON.stringify(settings),
         workflow.created_at,
         workflow.updated_at,
@@ -261,13 +258,12 @@ describe("RunManager", () => {
     database
       .prepare(
         `INSERT INTO workflows (
-          id, name, description, tags_json, graph_json, settings_json, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?)`,
+          id, name, description, tags_json, settings_json, created_at, updated_at
+        ) VALUES (?, ?, '', '[]', ?, ?, ?)`,
       )
       .run(
         workflow.id,
         workflow.name,
-        JSON.stringify(graph),
         JSON.stringify(settings),
         workflow.created_at,
         workflow.updated_at,
@@ -338,13 +334,12 @@ describe("RunManager", () => {
     database
       .prepare(
         `INSERT INTO workflows (
-          id, name, description, tags_json, graph_json, settings_json, browser_profile_id, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?, ?)`,
+          id, name, description, tags_json, settings_json, browser_profile_id, created_at, updated_at
+        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?)`,
       )
       .run(
         workflow.id,
         workflow.name,
-        JSON.stringify(graph),
         JSON.stringify(settings),
         "profile-1",
         workflow.created_at,

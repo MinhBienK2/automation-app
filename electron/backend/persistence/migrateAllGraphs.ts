@@ -3,6 +3,8 @@ import type { WorkflowGraph } from "../../../src/types/workflow.js";
 import { runMigrations } from "../graph/migrations/index.js";
 import { validateActionConfig } from "../actions/schemas/index.js";
 import { quarantineNode } from "../graph/quarantine.js";
+import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "./normalizedGraphRepository.js";
+import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 
 export type MigrationReport = {
   scanned: number;
@@ -11,10 +13,12 @@ export type MigrationReport = {
   durationMs: number;
 };
 
-type GraphRow = { id: string; graph_json: string };
+type IdRow = { id: string };
 
 /**
  * Eagerly migrate every workflow and subflow graph on startup.
+ * Reads from normalized tables (source of truth after PR 2.3)
+ * and writes migrated graphs back to normalized tables.
  * Runs inside a single BEGIN IMMEDIATE / COMMIT transaction.
  * Per-row failures are logged to the migration_log table and skipped.
  */
@@ -29,28 +33,17 @@ export function migrateAllGraphs(db: DatabaseSync): MigrationReport {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
-  const updateWorkflowGraph = db.prepare(
-    "UPDATE workflows SET graph_json = ?, updated_at = ? WHERE id = ?",
-  );
-  const updateSubflowGraph = db.prepare(
-    "UPDATE subflows SET graph_json = ?, updated_at = ? WHERE id = ?",
-  );
-
   db.exec("BEGIN IMMEDIATE");
   try {
-    const workflows = db.prepare("SELECT id, graph_json FROM workflows").all() as GraphRow[];
-    const subflows = db.prepare("SELECT id, graph_json FROM subflows").all() as GraphRow[];
+    const workflows = db.prepare("SELECT id FROM workflows").all() as IdRow[];
+    const subflows = db.prepare("SELECT id FROM subflows").all() as IdRow[];
 
     for (const row of workflows) {
       scanned++;
-      const result = migrateRow(row, "workflows");
+      const result = migrateGraphRow(db, row.id, "workflow", assembleGraphFromTables);
       if (result.migrated) migrated++;
       if (result.failed) failed++;
       if (result.migrated || result.failed) {
-        const now = new Date().toISOString();
-        if (result.migrated) {
-          updateWorkflowGraph.run(result.graphJson, now, row.id);
-        }
         insertLog.run(
           "workflows",
           row.id,
@@ -66,14 +59,10 @@ export function migrateAllGraphs(db: DatabaseSync): MigrationReport {
 
     for (const row of subflows) {
       scanned++;
-      const result = migrateRow(row, "subflows");
+      const result = migrateGraphRow(db, row.id, "subflow", assembleSubflowGraphFromTables);
       if (result.migrated) migrated++;
       if (result.failed) failed++;
       if (result.migrated || result.failed) {
-        const now = new Date().toISOString();
-        if (result.migrated) {
-          updateSubflowGraph.run(result.graphJson, now, row.id);
-        }
         insertLog.run(
           "subflows",
           row.id,
@@ -96,10 +85,11 @@ export function migrateAllGraphs(db: DatabaseSync): MigrationReport {
   return { scanned, migrated, failed, durationMs: Date.now() - start };
 }
 
+type AssembleFn = (db: DatabaseSync, id: string) => WorkflowGraph | null;
+
 type RowMigrationResult = {
   migrated: boolean;
   failed: boolean;
-  graphJson: string | null;
   startedAt: string;
   finishedAt: string;
   fromVersion: number | null;
@@ -108,22 +98,25 @@ type RowMigrationResult = {
   failure: { version: number; error: string } | null;
 };
 
-function migrateRow(row: GraphRow, _targetTable: string): RowMigrationResult {
+function migrateGraphRow(
+  db: DatabaseSync,
+  id: string,
+  kind: "workflow" | "subflow",
+  assemble: AssembleFn,
+): RowMigrationResult {
   const startedAt = new Date().toISOString();
-  let graph: WorkflowGraph;
-  try {
-    graph = JSON.parse(row.graph_json) as WorkflowGraph;
-  } catch {
+
+  const graph = assemble(db, id);
+  if (!graph) {
     return {
       migrated: false,
-      failed: true,
-      graphJson: null,
+      failed: false,
       startedAt,
       finishedAt: new Date().toISOString(),
       fromVersion: null,
       toVersion: null,
       applied: [],
-      failure: { version: 0, error: "JSON parse error" },
+      failure: null,
     };
   }
 
@@ -154,10 +147,14 @@ function migrateRow(row: GraphRow, _targetTable: string): RowMigrationResult {
   const wasMigrated = migrationResult.applied.length > 0;
   const wasFailed = migrationResult.failed !== null;
 
+  if (wasMigrated && !wasFailed) {
+    const now = new Date().toISOString();
+    writeGraphToNormalizedTables(db, processed, kind, id, now);
+  }
+
   return {
     migrated: wasMigrated && !wasFailed,
     failed: wasFailed,
-    graphJson: wasMigrated && !wasFailed ? JSON.stringify(processed) : null,
     startedAt,
     finishedAt,
     fromVersion,

@@ -30,6 +30,7 @@ export function processGraphOnLoad(graph: WorkflowGraph): GraphLoadResult {
   for (let i = 0; i < processed.nodes.length; i++) {
     const node = processed.nodes[i];
     if (node.node_type !== "action") continue;
+    if (node.config === null) continue; // draft placeholder — skip validation
 
     const result = validateActionConfig(node);
     if (result.ok) continue;

@@ -71,8 +71,10 @@ export function initializeDatabase(paths: AppPaths) {
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       tags_json TEXT NOT NULL DEFAULT '[]',
-      graph_json TEXT NOT NULL,
       settings_json TEXT,
+      graph_version INTEGER,
+      viewport_json TEXT,
+      migration_notes_json TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
@@ -85,7 +87,9 @@ export function initializeDatabase(paths: AppPaths) {
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       tags_json TEXT NOT NULL DEFAULT '[]',
-      graph_json TEXT NOT NULL,
+      graph_version INTEGER,
+      viewport_json TEXT,
+      migration_notes_json TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -200,7 +204,7 @@ export function initializeDatabase(paths: AppPaths) {
     );
 
     CREATE TABLE IF NOT EXISTS workflow_nodes (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       workflow_id TEXT NOT NULL,
       node_type TEXT NOT NULL,
       action_type TEXT,
@@ -215,8 +219,8 @@ export function initializeDatabase(paths: AppPaths) {
       ordinal INTEGER NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE,
-      FOREIGN KEY (subflow_ref) REFERENCES subflows(id) ON DELETE SET NULL
+      PRIMARY KEY (workflow_id, id),
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_workflow_nodes_workflow
       ON workflow_nodes(workflow_id, ordinal);
@@ -226,7 +230,7 @@ export function initializeDatabase(paths: AppPaths) {
       ON workflow_nodes(subflow_ref);
 
     CREATE TABLE IF NOT EXISTS workflow_edges (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       workflow_id TEXT NOT NULL,
       source_node_id TEXT NOT NULL,
       source_handle TEXT,
@@ -235,9 +239,8 @@ export function initializeDatabase(paths: AppPaths) {
       edge_kind TEXT NOT NULL DEFAULT 'flow',
       metadata_json TEXT NOT NULL DEFAULT '{}',
       ordinal INTEGER NOT NULL,
-      FOREIGN KEY (workflow_id)    REFERENCES workflows(id)       ON DELETE CASCADE,
-      FOREIGN KEY (source_node_id) REFERENCES workflow_nodes(id) ON DELETE CASCADE,
-      FOREIGN KEY (target_node_id) REFERENCES workflow_nodes(id)  ON DELETE CASCADE
+      PRIMARY KEY (workflow_id, id),
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_workflow_edges_workflow
       ON workflow_edges(workflow_id, ordinal);
@@ -247,7 +250,7 @@ export function initializeDatabase(paths: AppPaths) {
       ON workflow_edges(target_node_id);
 
     CREATE TABLE IF NOT EXISTS subflow_nodes (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       subflow_id TEXT NOT NULL,
       node_type TEXT NOT NULL,
       action_type TEXT,
@@ -262,13 +265,14 @@ export function initializeDatabase(paths: AppPaths) {
       ordinal INTEGER NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
+      PRIMARY KEY (subflow_id, id),
       FOREIGN KEY (subflow_id) REFERENCES subflows(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_subflow_nodes_subflow
       ON subflow_nodes(subflow_id, ordinal);
 
     CREATE TABLE IF NOT EXISTS subflow_edges (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       subflow_id TEXT NOT NULL,
       source_node_id TEXT NOT NULL,
       source_handle TEXT,
@@ -277,9 +281,8 @@ export function initializeDatabase(paths: AppPaths) {
       edge_kind TEXT NOT NULL DEFAULT 'flow',
       metadata_json TEXT NOT NULL DEFAULT '{}',
       ordinal INTEGER NOT NULL,
-      FOREIGN KEY (subflow_id)      REFERENCES subflows(id)       ON DELETE CASCADE,
-      FOREIGN KEY (source_node_id)  REFERENCES subflow_nodes(id)  ON DELETE CASCADE,
-      FOREIGN KEY (target_node_id)  REFERENCES subflow_nodes(id)  ON DELETE CASCADE
+      PRIMARY KEY (subflow_id, id),
+      FOREIGN KEY (subflow_id) REFERENCES subflows(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_subflow_edges_subflow
       ON subflow_edges(subflow_id, ordinal);
@@ -330,6 +333,49 @@ function migrateWorkflowSchema(database: DatabaseSync) {
   }
   if (!columns.has("migration_notes_json")) {
     database.exec("ALTER TABLE workflows ADD COLUMN migration_notes_json TEXT NOT NULL DEFAULT '[]'");
+  }
+
+  const subflowColumns = new Set(
+    database
+      .prepare("PRAGMA table_info(subflows)")
+      .all()
+      .map((row) => (row as { name: string }).name),
+  );
+  if (!subflowColumns.has("graph_version")) {
+    database.exec("ALTER TABLE subflows ADD COLUMN graph_version INTEGER");
+  }
+  if (!subflowColumns.has("viewport_json")) {
+    database.exec("ALTER TABLE subflows ADD COLUMN viewport_json TEXT");
+  }
+  if (!subflowColumns.has("migration_notes_json")) {
+    database.exec("ALTER TABLE subflows ADD COLUMN migration_notes_json TEXT NOT NULL DEFAULT '[]'");
+  }
+}
+
+/**
+ * Drop the legacy graph_json column from workflows and subflows.
+ * Must be called AFTER backfillGraphTables has populated the normalized tables.
+ * Safe to call multiple times — no-op if the column is already gone.
+ */
+export function dropGraphJsonColumn(database: DatabaseSync) {
+  const workflowColumns = new Set(
+    database
+      .prepare("PRAGMA table_info(workflows)")
+      .all()
+      .map((row) => (row as { name: string }).name),
+  );
+  if (workflowColumns.has("graph_json")) {
+    database.exec("ALTER TABLE workflows DROP COLUMN graph_json");
+  }
+
+  const subflowColumns = new Set(
+    database
+      .prepare("PRAGMA table_info(subflows)")
+      .all()
+      .map((row) => (row as { name: string }).name),
+  );
+  if (subflowColumns.has("graph_json")) {
+    database.exec("ALTER TABLE subflows DROP COLUMN graph_json");
   }
 }
 

@@ -7,7 +7,7 @@ import {
   serializeCommandError,
   type WorkflowCommandHandlers,
 } from "./backend/commands.js";
-import { createAppPaths, initializeDatabase } from "./backend/persistence/database.js";
+import { createAppPaths, initializeDatabase, dropGraphJsonColumn } from "./backend/persistence/database.js";
 import { migrateAllGraphs } from "./backend/persistence/migrateAllGraphs.js";
 import { backfillGraphTables } from "./backend/persistence/backfillGraphTables.js";
 import {
@@ -99,10 +99,11 @@ function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
 app.whenReady().then(() => {
   const appPaths = createAppPaths(app.getPath("appData"));
   const database = initializeDatabase(appPaths);
-  const migrationReport = migrateAllGraphs(database);
-  console.log("[startup] graph migration report:", migrationReport);
   const backfillReport = backfillGraphTables(database);
   console.log("[startup] graph backfill report:", backfillReport);
+  const migrationReport = migrateAllGraphs(database);
+  console.log("[startup] graph migration report:", migrationReport);
+  dropGraphJsonColumn(database);
   const handlers = createWorkflowCommandHandlers({
     appPaths,
     database,
