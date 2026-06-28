@@ -82,6 +82,45 @@ Executable frontend/backend ports must agree:
 - `find_element` refs: not portable across runs. Used by `target_ref`, `source_ref`, `trigger_ref`.
 - Graph-internal: `{ type: "graph_noop", config: { kind: "merge" } }` and `{ type: "router_condition", ... }`.
 
+## Quarantined Nodes
+
+A node that fails to load (unknown `node_type`, corrupted `config`, or Zod
+validation failure) is converted to a `quarantined` placeholder instead of
+crashing the load path. The original payload is preserved verbatim.
+
+```ts
+{
+  id: <original id>,
+  node_type: "quarantined",
+  label: <original label> ?? "Quarantined node",
+  position: <original position> ?? { x: 0, y: 0 },
+  ports: [],
+  config: {
+    type: "quarantined",
+    config: {
+      original_type: string | null,
+      reason: "unknown_type" | "invalid_config" | "parse_error",
+      message: string,
+      original_payload: unknown,
+    }
+  }
+}
+```
+
+- The compiler treats `quarantined` as a no-op step that emits a warning.
+- `validateGraph.ts` reports each quarantined node as a `warning`-level issue
+  so the workflow stays runnable but the UI surfaces the problem.
+- `ActionConfig` includes a `{ type: "quarantined"; config: { ... } }` variant;
+  `GraphNodeType` includes `"quarantined"`.
+
+## Deprecation Field
+
+`ActionDefinition` in `electron/backend/actions/registry.ts` carries an
+optional `deprecated` field (`{ since, replacement?, reason }`) plus
+`configSchema: z.ZodSchema`. Deprecated actions still execute normally but
+`validateGraph.ts` emits one `warning` per deprecated node. The migration
+framework is the only removal path.
+
 ## Change Checklist
 
 - Update TypeScript DTOs, graph compiler, runner, and UI defaults together.

@@ -14,6 +14,11 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 - **Verify**: `src/types/workflow.ts`, `src/lib/actionCapabilities.ts`, action editor components, `electron/backend/actions/`, `electron/backend/graph/compiler.ts`, `electron/backend/runtime/runner.ts`
 - **Checks**: `npm test -- src/lib/actionCapabilities.test.ts` / `electron/backend/actions/` / `electron/backend/graph/`
 
+### Add Or Change A Zod Action Schema
+- **Read**: `domain/action-taxonomy.md` (deprecation policy), `contracts/action-configs.md` (Zod schema section), `architecture/persistence.md` (quarantine + migration framework)
+- **Verify**: `electron/backend/actions/schemas/` (one file per action type + `common.ts` + `index.ts` registry), `electron/backend/actions/registry.ts` (`configSchema`, `deprecated`), `electron/backend/persistence/graphLoader.ts` (`processGraphOnLoad` runs Zod validation + quarantine)
+- **Checks**: `npm test -- electron/backend/actions/schemas/`, `npx tsc --noEmit` (catches `assertSchemaCoverage()` drift at build time)
+
 ### Change Workflow UI Behavior
 - **Read**: `domain/workflow-lifecycle.md`, `domain/invariants/workflow-ui.md`, `architecture/frontend.md`; add `contracts/run-state.md` for run/test UI
 - **Verify**: `src/app/App.tsx`, `src/features/workflows/state/`, `src/features/workflows/components/`, `src/features/workflows/pages/`, `src/shared/types/workspaceContracts.ts`

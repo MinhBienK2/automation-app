@@ -76,6 +76,33 @@ Intent-focused UI labels preserve serialized action types. Examples: `input_text
 
 Removed actions: `open_url`, `sleep`, and `type_text` are not part of the current authoring contract.
 
+## Deprecation Policy
+
+`ActionDefinition` in `electron/backend/actions/registry.ts` carries an
+optional `deprecated` field:
+
+```ts
+deprecated?: {
+  since: string;          // app version, e.g. "0.42.0"
+  replacement?: ActionType;
+  reason: string;
+};
+```
+
+- Deprecated actions still execute normally.
+- `validateGraph.ts` emits one `warning` per deprecated node:
+  `Action '{type}' is deprecated since {since}. Use '{replacement}' instead. {reason}`.
+- The palette filters them out by default (toggle in dev settings to show).
+- The migration framework is the only removal path: a migration rewrites
+  every instance of a deprecated action into its replacement, then — after one
+  release cycle — a subsequent migration drops the type from the union and
+  updates the Zod schema registry in `electron/backend/actions/schemas/`.
+
+Every serialized `ActionType` has a Zod schema registered in
+`electron/backend/actions/schemas/`. `assertSchemaCoverage()` at module load
+fails the build if any `ActionType` is missing a schema, so schema drift is
+caught at compile time rather than at runtime.
+
 ## Change Rule
 
 When adding or changing an action, keep these in sync:

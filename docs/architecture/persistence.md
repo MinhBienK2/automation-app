@@ -55,12 +55,41 @@ Electron/Node now owns the production persistence layer.
 - Summaries sort by `updated_at DESC`, then name ascending.
 - `getWorkflow` returns workflow metadata; product graph authoring data is loaded from `getWorkflowGraph`.
 - New workflows create a `Start -> New node` draft workflow graph with an unconfigured action node saved as `config: null`.
-- Workflow graph authoring data is stored in `workflows.graph_json`.
+- Workflow graph authoring data is stored in normalized `workflow_nodes` and
+  `workflow_edges` tables (composite primary key `(owner_id, id)`; node ids
+  unique per workflow, not globally). The legacy `workflows.graph_json`
+  column was dropped in PR 2.3; normalized tables are the single source of
+  truth. Graph-level metadata (`graph_version`, `viewport_json`,
+  `migration_notes_json`) lives as columns on `workflows`.
 - Workflow Settings are stored in `workflows.settings_json`.
-- Subflow graph authoring data is stored in `subflows.graph_json`.
+- Subflow graph authoring data is stored in normalized `subflow_nodes` and
+  `subflow_edges` tables (mirror of the workflow shape). The legacy
+  `subflows.graph_json` column was dropped. Subflow-level graph metadata
+  (`graph_version`, `viewport_json`, `migration_notes_json`) lives as columns
+  on `subflows`.
 - Updating subflow metadata, such as the name changed through Subflow Settings,
   updates the `subflows` row and touches `updated_at` without rewriting the
   graph JSON.
+- On read, every graph is passed through the versioned migration framework
+  (`electron/backend/graph/migrations/`) before Zod per-action validation
+  (`electron/backend/actions/schemas/`). Migrated graphs are persisted back
+  lazily on read. Invalid or unknown action configs are converted to
+  `quarantined` placeholder nodes rather than crashing the load (draft
+  nodes with `config: null` are skipped). Startup runs an eager
+  `migrateAllGraphs` pass in a single `BEGIN IMMEDIATE` transaction;
+  per-row failures are logged to the `migration_log` table without aborting
+  the batch. A `backfillGraphTables` pass runs once at startup (gated by an
+  `app_meta` row) to populate the normalized tables from any legacy
+  `graph_json`, after which `dropGraphJsonColumn` removes the column.
+- Every `saveWorkflowGraph` / `saveSubflowGraph` captures an immutable
+  revision snapshot into `workflow_revisions` / `subflow_revisions`
+  (monotonic per-owner `revision_number`, optional `tag`, `size_bytes`,
+  `comment`). `restoreRevision` atomically captures the pre-restore state
+  as a new revision (so restores are themselves undoable) and writes the
+  target snapshot back to the normalized tables. Retention pruning keeps
+  the 50 most recent untagged revisions per owner plus all tagged
+  revisions indefinitely; pruning runs once at startup.
+- Saving graph JSON touches the parent workflow `updated_at`.
 - Browser profiles are stored in `browser_profiles.browser_launch_json`.
   Workflows point at the selected profile through `workflows.browser_profile_id`, and
   `getWorkflowSettings` overlays Browser Launch values from that profile for run
@@ -115,8 +144,9 @@ Electron/Node now owns the production persistence layer.
 - Migrations.
 - Timestamp updates.
 - Order index integrity.
-- Serialization/deserialization of stored action config JSON.
-- Serialization/deserialization of stored workflow graph JSON.
+- Serialization/deserialization of stored action config JSON (now split across
+  `workflow_nodes.config_json` / `subflow_nodes.config_json` rows plus
+  graph-level metadata columns, with Zod schema validation on load).
 - Persistence of Workflow Settings rows.
 - Persistence of project rows, browser profile rows, and subflow rows.
 - Persistence of workflow schedule rows and schedule event rows.

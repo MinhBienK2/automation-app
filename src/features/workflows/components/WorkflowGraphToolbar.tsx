@@ -2,6 +2,7 @@ import {
   Blocks,
   GitFork,
   Hand,
+  History,
   Keyboard,
   Maximize,
   MousePointer2,
@@ -32,6 +33,7 @@ type WorkflowGraphToolbarProps = {
   onAddSubflow: () => void;
   onAutoArrange: () => void;
   onFitView: () => void;
+  onOpenHistory?: () => void;
   onOpenShortcuts: () => void;
   onOpenNodePalette: (
     title: string,
@@ -57,6 +59,7 @@ export function WorkflowGraphToolbar({
   onAddSubflow,
   onAutoArrange,
   onFitView,
+  onOpenHistory,
   onOpenShortcuts,
   onOpenNodePalette,
   onRedo,
@@ -208,6 +211,16 @@ export function WorkflowGraphToolbar({
       </div>
 
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
+        {onOpenHistory ? (
+          <IconButton
+            label="Revision history"
+            type="button"
+            variant="ghost"
+            onClick={onOpenHistory}
+          >
+            <History aria-hidden="true" />
+          </IconButton>
+        ) : null}
         <IconButton
           label="Shortcuts"
           type="button"

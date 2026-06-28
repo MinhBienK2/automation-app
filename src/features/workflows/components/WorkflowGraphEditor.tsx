@@ -68,6 +68,7 @@ import { actionLabels, commandMessage } from "../../../lib/workflowUi";
 import { WorkflowGraphEdge, WorkflowGraphNode } from "./WorkflowGraphCanvasParts";
 import { WorkflowGraphInspector } from "./WorkflowGraphInspector";
 import { WorkflowGraphEditorDialogs } from "./WorkflowGraphEditorDialogs";
+import { RevisionHistoryDrawer } from "./RevisionHistoryDrawer";
 import { useWorkflowGraphShortcuts } from "./useWorkflowGraphShortcuts";
 import { useSelectionSubflowCreator } from "./useSelectionSubflowCreator";
 import { useWorkflowGraphDerivedState } from "./useWorkflowGraphDerivedState";
@@ -100,6 +101,7 @@ type WorkflowGraphEditorProps = {
   onOpenSubflowDetail?: (subflowId: string) => void;
   onSaveGraph?: () => void;
   onValidateGraph?: () => void;
+  ownerId?: string;
   defaultEdgeDelay?: GraphEdgeDelay | null;
   initialVariables?: Array<{ name: string; value: string }> | null;
   profileVariables?: Array<{ name: string; value: string }> | null;
@@ -135,6 +137,7 @@ export function WorkflowGraphEditor({
   onOpenSubflowDetail,
   onSaveGraph,
   onValidateGraph,
+  ownerId,
   initialVariables,
   profileVariables,
 }: WorkflowGraphEditorProps) {
@@ -164,6 +167,7 @@ export function WorkflowGraphEditor({
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [helpLanguage, setHelpLanguage] = useState<GraphNodeHelpLanguage>("vi");
   const [isShortcutGuideOpen, setIsShortcutGuideOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isArrangingGraph, setIsArrangingGraph] = useState(false);
   const [arrangeError, setArrangeError] = useState<string | null>(null);
   const [subflowInsertError, setSubflowInsertError] = useState<string | null>(null);
@@ -814,6 +818,7 @@ export function WorkflowGraphEditor({
         onAddSubflow={() => setIsSubflowPaletteOpen(true)}
         onAutoArrange={autoArrangeGraph}
         onFitView={() => reactFlowInstance?.fitView()}
+        onOpenHistory={ownerId ? () => setIsHistoryOpen(true) : undefined}
         onOpenShortcuts={() => setIsShortcutGuideOpen(true)}
         onOpenNodePalette={openNodePalette}
         onRedo={redoGraphEdit}
@@ -972,6 +977,19 @@ export function WorkflowGraphEditor({
           </aside>
         ) : null}
       </div>
+
+      {ownerId ? (
+        <RevisionHistoryDrawer
+          open={isHistoryOpen}
+          ownerId={ownerId}
+          ownerKind={graphKind}
+          onClose={() => setIsHistoryOpen(false)}
+          onRestore={(restoredGraph) => {
+            onChange(restoredGraph);
+            setIsHistoryOpen(false);
+          }}
+        />
+      ) : null}
 
       <ActionNodePalette
         open={isActionPaletteOpen}

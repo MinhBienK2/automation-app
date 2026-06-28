@@ -116,7 +116,20 @@ Set Viewport is a runtime viewport-size action. Active authoring exposes only `w
 
 ## Persistence
 
-Configs persist as JSON inside `workflows.graph_json` and workflow package `flow` payloads.
+Configs persist as JSON inside the normalized `workflow_nodes.config_json` and
+`subflow_nodes.config_json` columns (one row per node), with edges in
+`workflow_edges` / `subflow_edges`. The legacy `workflows.graph_json` and
+`subflows.graph_json` columns were dropped in PR 2.3; normalized tables are
+the single source of truth. Workflow package `flow` payloads still embed the
+graph as a single JSON blob for export/import.
+
+Every `ActionConfig` variant has a Zod schema registered in
+`electron/backend/actions/schemas/` (one file per action type plus
+`common.ts` for shared sub-schemas). `assertSchemaCoverage()` at module load
+fails the build if any `ActionType` is missing a schema. On load, invalid or
+unknown action configs are converted to `quarantined` placeholder nodes
+rather than crashing; the original payload is preserved verbatim inside the
+quarantined config.
 
 Preserve the current v2 graph JSON contract unless a schema change is intentionally designed.
 
