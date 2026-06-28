@@ -12,6 +12,7 @@ import type {
   WorkflowSettings,
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
+import { processGraphOnLoad } from "./graphLoader.js";
 
 type WorkflowRow = {
   id: string;
@@ -389,7 +390,7 @@ export class WorkflowRepository {
 
   getWorkflowGraph(id: string): WorkflowGraph | null {
     const row = this.getWorkflowRow(id);
-    return row ? parseJson<WorkflowGraph>(row.graph_json) : null;
+    return row ? processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json)) : null;
   }
 
   saveWorkflowGraph(id: string, graph: WorkflowGraph, now = new Date()) {
@@ -483,7 +484,7 @@ export class WorkflowRepository {
 
   getSubflowGraph(subflowId: string): WorkflowGraph | null {
     const row = this.getSubflowRow(subflowId);
-    return row ? parseJson<WorkflowGraph>(row.graph_json) : null;
+    return row ? processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json)) : null;
   }
 
   updateSubflow(
