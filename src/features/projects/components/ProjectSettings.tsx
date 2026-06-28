@@ -129,7 +129,7 @@ export function ProjectSettings({
           <div className="settings-section-body">
             <div className="project-name-control">
               <label className="form-label" htmlFor="project-settings-name">Project name</label>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <div className="project-name-input-row">
                 <Input
                   id="project-settings-name"
                   className="text-input-full"
@@ -149,7 +149,7 @@ export function ProjectSettings({
                 </Button>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "8px", marginTop: "20px" }}>
+            <div className="project-details-actions">
               <Button
                 type="button"
                 variant="secondary"

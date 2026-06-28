@@ -770,16 +770,38 @@
 }
 
 .project-name-control {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: end;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   min-width: 0;
 }
 
 .project-name-control .field {
   min-width: 0;
+}
+
+.project-name-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.project-name-input-row .text-input-full {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.project-name-input-row .button,
+.project-name-input-row button {
+  flex: 0 0 auto;
+}
+
+.project-details-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
 }
 
 .project-session-value-row {
