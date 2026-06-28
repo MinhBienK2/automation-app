@@ -15,6 +15,7 @@ import type {
 import { processGraphOnLoad } from "./graphLoader.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "./normalizedGraphRepository.js";
+import { snapshotRevision } from "./revisionRepository.js";
 
 type WorkflowRow = {
   id: string;
@@ -402,6 +403,7 @@ export class WorkflowRepository {
       .prepare("UPDATE workflows SET updated_at = ? WHERE id = ?")
       .run(timestamp, id);
     writeGraphToNormalizedTables(this.database, graph, "workflow", id, timestamp);
+    snapshotRevision(this.database, "workflow", id, graph, { createdAt: timestamp });
   }
 
   getWorkflowSettings(id: string): WorkflowSettings | null {
@@ -535,6 +537,7 @@ export class WorkflowRepository {
       .prepare("UPDATE subflows SET updated_at = ? WHERE id = ?")
       .run(timestamp, subflowId);
     writeGraphToNormalizedTables(this.database, graph, "subflow", subflowId, timestamp);
+    snapshotRevision(this.database, "subflow", subflowId, graph, { createdAt: timestamp });
   }
 
   duplicateSubflow(subflowId: string, name: string, now = new Date()): Subflow | null {

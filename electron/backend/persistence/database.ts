@@ -291,6 +291,43 @@ export function initializeDatabase(paths: AppPaths) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS workflow_revisions (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      revision_number INTEGER NOT NULL,
+      graph_snapshot_json TEXT NOT NULL,
+      settings_snapshot_json TEXT,
+      created_at TEXT NOT NULL,
+      created_by TEXT,
+      comment TEXT,
+      tag TEXT,
+      size_bytes INTEGER NOT NULL,
+      UNIQUE(workflow_id, revision_number),
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_workflow_revisions_workflow_created
+      ON workflow_revisions(workflow_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_workflow_revisions_tag
+      ON workflow_revisions(workflow_id, tag) WHERE tag IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS subflow_revisions (
+      id TEXT PRIMARY KEY,
+      subflow_id TEXT NOT NULL,
+      revision_number INTEGER NOT NULL,
+      graph_snapshot_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      created_by TEXT,
+      comment TEXT,
+      tag TEXT,
+      size_bytes INTEGER NOT NULL,
+      UNIQUE(subflow_id, revision_number),
+      FOREIGN KEY (subflow_id) REFERENCES subflows(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_subflow_revisions_subflow_created
+      ON subflow_revisions(subflow_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_subflow_revisions_tag
+      ON subflow_revisions(subflow_id, tag) WHERE tag IS NOT NULL;
   `);
   migrateWorkflowSchema(database);
   migrateRunSchema(database);
