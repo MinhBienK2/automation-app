@@ -2,22 +2,17 @@ import type {
   ElementTarget,
   WorkflowGraph,
 } from "../../../src/types/workflow.js";
+import { runMigrations } from "./migrations/index.js";
 
 export const CURRENT_WORKFLOW_GRAPH_VERSION = 2;
 
+/**
+ * Thin shim re-exporting the new migration pipeline under the legacy name.
+ * Delegates to `runMigrations`; on failure it returns the last-successful
+ * graph (same contract as before — no throwing on load).
+ */
 export function migrateWorkflowGraph(graph: WorkflowGraph): WorkflowGraph {
-  if (graph.version >= CURRENT_WORKFLOW_GRAPH_VERSION) {
-    return {
-      ...graph,
-      migration_notes: graph.migration_notes ?? [],
-    };
-  }
-
-  return {
-    ...graph,
-    version: CURRENT_WORKFLOW_GRAPH_VERSION,
-    migration_notes: graph.migration_notes ?? [],
-  };
+  return runMigrations(graph).graph;
 }
 
 export function elementTargetFromXpath(xpath: string, iframeXpath?: string | null): ElementTarget {
