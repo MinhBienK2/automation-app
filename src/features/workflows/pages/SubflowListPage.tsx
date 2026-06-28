@@ -1,4 +1,4 @@
-import { Copy, Eye, Plus, RefreshCw, Settings, Trash2, Download, Upload, Search, Layers } from "lucide-react";
+import { Copy, Eye, Plus, RefreshCw, Settings, Trash2, Download, Upload, Search } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "../../../components/ui/button";
 import {
@@ -95,19 +95,6 @@ export function SubflowListPage({
           {error}
         </p>
       ) : null}
-
-      {/* Stat summary mini cards */}
-      <section aria-label="Subflow metrics" className="stats-summary">
-        <div className="metric-card">
-          <div>
-            <span className="metric-label">Total</span>
-            <div className="metric-val">{subflows.length}</div>
-          </div>
-          <div className="metric-icon-box">
-            <Layers size={16} aria-hidden="true" />
-          </div>
-        </div>
-      </section>
 
       {/* Toolbar Filter */}
       <div className="toolbar">
