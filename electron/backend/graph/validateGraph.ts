@@ -67,6 +67,7 @@ const supportedGraphNodeTypes = new Set<string>([
   "transform_variable",
   "assert_output",
   "domain_allowlist",
+  "quarantined",
 ]);
 
 export function validateWorkflowGraph(
@@ -454,6 +455,16 @@ function pushNodeSemanticIssues(
         issues.push(error(node.id, null, "Allowed domains are required"));
       }
       break;
+    case "quarantined": {
+      const config = node.config as { config?: { original_type?: string | null; reason?: string; message?: string } } | null;
+      const inner = config?.config;
+      issues.push(warning(
+        node.id,
+        null,
+        `Quarantined node skipped: original_type=${inner?.original_type ?? "unknown"}, reason=${inner?.reason ?? "unknown"}`,
+      ));
+      break;
+    }
     default:
       issues.push(error(node.id, null, unsupportedGraphNodeTypeMessage(node.node_type)));
   }
@@ -705,6 +716,7 @@ function graphHasExecutableSteps(graph: WorkflowGraph): boolean {
 
 function nodeProducesCompiledStep(node: GraphNode): boolean {
   if (node.node_type === "start") return false;
+  if (node.node_type === "quarantined") return false;
   if (node.node_type === "end_success") {
     return asRecord(node.config).close_browser === true;
   }

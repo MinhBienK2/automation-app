@@ -101,6 +101,7 @@ describe("backend action execution registry", () => {
       get_current_url: async () => calls.push("get_current_url"),
       evaluate_logic: async () => calls.push("evaluate_logic"),
       evaluate_expression: async () => calls.push("evaluate_expression"),
+      quarantined: async () => calls.push("quarantined"),
     });
 
     assertActionExecutorCoverage(executors);

@@ -1128,6 +1128,10 @@ export function createRunnerActionExecutors(
       (runtime.outputs.system as Record<string, unknown>).current_url = urlData;
       flattenObject(runtime.outputs, "system.current_url", urlData);
     },
+    quarantined: async () => {
+      // No-op: quarantined nodes are skipped at compile time.
+      // This executor exists only to satisfy the registry coverage assertion.
+    },
   });
 }
 

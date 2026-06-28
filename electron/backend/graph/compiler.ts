@@ -498,6 +498,9 @@ function compilePath(
     case "start":
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
+    case "quarantined":
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
     default:
       throw validationError("node_type", unsupportedGraphNodeTypeMessage(node.node_type));
   }

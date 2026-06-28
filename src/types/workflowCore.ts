@@ -970,6 +970,15 @@ export type ActionConfig =
   | {
       type: "evaluate_expression";
       config: EvaluateExpressionConfig;
+    }
+  | {
+      type: "quarantined";
+      config: {
+        original_type: string | null;
+        reason: "unknown_type" | "invalid_config" | "parse_error";
+        message: string;
+        original_payload: unknown;
+      };
     };
 
 export type HeaderPair = {

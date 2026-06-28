@@ -86,6 +86,7 @@ describe("backend action registry", () => {
       "update_object_variable",
       "assert_output",
       "domain_allowlist",
+      "quarantined",
       "set_cookie",
       "clear_cookies",
       "set_viewport",

@@ -583,6 +583,7 @@ const actionValidators = createActionValidatorMap({
     ),
   domain_allowlist: (config) =>
     validateStringList(config.config.domains, "domains", "Allowed domains are required"),
+  quarantined: () => null,
   set_cookie: (config) =>
     firstValidation(
       requiredActionString(config.config.name, "name", "Cookie name is required"),

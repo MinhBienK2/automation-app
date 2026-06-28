@@ -40,6 +40,7 @@ const graphInternalActionTypes = new Set<ActionType>([
   "transform_variable",
   "assert_output",
   "domain_allowlist",
+  "quarantined",
 ]);
 
 export const actionDefinitions: ActionDefinition[] = [
@@ -118,6 +119,7 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("update_object_variable", "graph_internal"),
   definition("assert_output", "graph_internal"),
   definition("domain_allowlist", "graph_internal"),
+  definition("quarantined", "graph_internal"),
   definition("set_cookie", "browser_context"),
   definition("clear_cookies", "browser_context"),
   definition("set_viewport", "browser_context"),
