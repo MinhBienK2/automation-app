@@ -93,50 +93,8 @@ describe("normalized graph tables", () => {
     const graph = sampleGraph();
 
     const project = repo.listProjects()[0] ?? repo.createProject("Main");
+    // createWorkflow now dual-writes to normalized tables
     const wf = repo.createWorkflow("Test", graph, new Date(), { projectId: project.id });
-
-    // Populate normalized tables (simulating what PR 2.2 backfill will do)
-    const now = new Date().toISOString();
-    const insertNode = db.prepare(
-      `INSERT INTO workflow_nodes (id, workflow_id, node_type, config_json, position_x, position_y, label, ports_json, ordinal, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    );
-    const insertEdge = db.prepare(
-      `INSERT INTO workflow_edges (id, workflow_id, source_node_id, source_handle, target_node_id, target_handle, edge_kind, metadata_json, ordinal)
-       VALUES (?, ?, ?, ?, ?, ?, 'flow', '{}', ?)`,
-    );
-
-    graph.nodes.forEach((node, i) => {
-      insertNode.run(
-        node.id,
-        wf.id,
-        node.node_type,
-        JSON.stringify(node.config),
-        node.position.x,
-        node.position.y,
-        node.label,
-        JSON.stringify(node.ports),
-        i,
-        now,
-        now,
-      );
-    });
-    graph.edges.forEach((edge, i) => {
-      insertEdge.run(
-        edge.id,
-        wf.id,
-        edge.source_node_id,
-        edge.source_port,
-        edge.target_node_id,
-        edge.target_port,
-        i,
-      );
-    });
-
-    // Update workflow meta columns
-    db.prepare(
-      "UPDATE workflows SET graph_version = ?, viewport_json = ?, migration_notes_json = ? WHERE id = ?",
-    ).run(graph.version, JSON.stringify(graph.viewport), JSON.stringify(graph.migration_notes ?? []), wf.id);
 
     const fromTables = assembleGraphFromTables(db, wf.id);
     expect(fromTables).not.toBeNull();

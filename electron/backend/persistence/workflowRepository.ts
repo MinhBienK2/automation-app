@@ -13,6 +13,8 @@ import type {
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
 import { processGraphOnLoad } from "./graphLoader.js";
+import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
+import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "./normalizedGraphRepository.js";
 
 type WorkflowRow = {
   id: string;
@@ -309,7 +311,7 @@ export class WorkflowRepository {
         timestamp,
         timestamp,
       );
-
+    writeGraphToNormalizedTables(this.database, graph, "workflow", id, timestamp);
     return {
       id,
       name,
@@ -389,6 +391,18 @@ export class WorkflowRepository {
   }
 
   getWorkflowGraph(id: string): WorkflowGraph | null {
+    // Read from normalized tables (source of truth after backfill).
+    // Fall back to graph_json for lazy migration if normalized tables are empty.
+    const fromTables = assembleGraphFromTables(this.database, id);
+    if (fromTables) {
+      const result = processGraphOnLoad(fromTables);
+      if (result.migrationsApplied > 0 && !result.migrationFailed) {
+        this.saveWorkflowGraph(id, result.graph);
+      }
+      return result.graph;
+    }
+
+    // Fallback: read from graph_json (lazy migration path)
     const row = this.getWorkflowRow(id);
     if (!row) return null;
     const result = processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json));
@@ -399,9 +413,20 @@ export class WorkflowRepository {
   }
 
   saveWorkflowGraph(id: string, graph: WorkflowGraph, now = new Date()) {
-    this.database
-      .prepare("UPDATE workflows SET graph_json = ?, updated_at = ? WHERE id = ?")
-      .run(JSON.stringify(graph), now.toISOString(), id);
+    const timestamp = now.toISOString();
+    const graphJson = JSON.stringify(graph);
+    // Dual-write: graph_json + normalized tables in one transaction
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      this.database
+        .prepare("UPDATE workflows SET graph_json = ?, updated_at = ? WHERE id = ?")
+        .run(graphJson, timestamp, id);
+      writeGraphToNormalizedTables(this.database, graph, "workflow", id, timestamp);
+      this.database.exec("COMMIT");
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   getWorkflowSettings(id: string): WorkflowSettings | null {
@@ -451,6 +476,7 @@ export class WorkflowRepository {
         ) VALUES (?, ?, ?, ?, '[]', ?, ?, ?)`,
       )
       .run(id, projectId, name, description, JSON.stringify(graph), timestamp, timestamp);
+    writeGraphToNormalizedTables(this.database, graph, "subflow", id, timestamp);
     return {
       id,
       project_id: projectId,
@@ -488,6 +514,17 @@ export class WorkflowRepository {
   }
 
   getSubflowGraph(subflowId: string): WorkflowGraph | null {
+    // Read from normalized tables (source of truth after backfill).
+    const fromTables = assembleSubflowGraphFromTables(this.database, subflowId);
+    if (fromTables) {
+      const result = processGraphOnLoad(fromTables);
+      if (result.migrationsApplied > 0 && !result.migrationFailed) {
+        this.saveSubflowGraph(subflowId, result.graph);
+      }
+      return result.graph;
+    }
+
+    // Fallback: read from graph_json (lazy migration path)
     const row = this.getSubflowRow(subflowId);
     if (!row) return null;
     const result = processGraphOnLoad(parseJson<WorkflowGraph>(row.graph_json));
@@ -520,9 +557,20 @@ export class WorkflowRepository {
   }
 
   saveSubflowGraph(subflowId: string, graph: WorkflowGraph, now = new Date()) {
-    this.database
-      .prepare("UPDATE subflows SET graph_json = ?, updated_at = ? WHERE id = ?")
-      .run(JSON.stringify(graph), now.toISOString(), subflowId);
+    const timestamp = now.toISOString();
+    const graphJson = JSON.stringify(graph);
+    // Dual-write: graph_json + normalized tables in one transaction
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      this.database
+        .prepare("UPDATE subflows SET graph_json = ?, updated_at = ? WHERE id = ?")
+        .run(graphJson, timestamp, subflowId);
+      writeGraphToNormalizedTables(this.database, graph, "subflow", subflowId, timestamp);
+      this.database.exec("COMMIT");
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   duplicateSubflow(subflowId: string, name: string, now = new Date()): Subflow | null {

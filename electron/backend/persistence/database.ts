@@ -283,6 +283,11 @@ export function initializeDatabase(paths: AppPaths) {
     );
     CREATE INDEX IF NOT EXISTS idx_subflow_edges_subflow
       ON subflow_edges(subflow_id, ordinal);
+
+    CREATE TABLE IF NOT EXISTS app_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
   migrateWorkflowSchema(database);
   migrateRunSchema(database);
