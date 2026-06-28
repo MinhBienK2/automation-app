@@ -4,6 +4,7 @@ import {
   Copy,
   Download,
   Eye,
+  MoreHorizontal,
   Pencil,
   Play,
   Square,
@@ -11,6 +12,13 @@ import {
   Upload,
   Search,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
 import { Select } from "../../../components/ui/select";
 import type { BrowserProfile, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
@@ -211,41 +219,46 @@ export function WorkflowListPage({
                             <Square aria-hidden="true" />
                           </IconButton>
                         ) : null}
-                        <IconButton
-                          className="btn-action-circle"
-                          type="button"
-                          label={`Edit ${workflow.name}`}
-                          onClick={() => onOpenEditWorkflow(workflow)}
-                        >
-                          <Pencil aria-hidden="true" />
-                        </IconButton>
-                        <IconButton
-                          label={`Duplicate ${workflow.name}`}
-                          type="button"
-                          className="btn-action-circle"
-                          disabled={hasActiveRun}
-                          onClick={() => onDuplicateWorkflow(workflow)}
-                        >
-                          <Copy aria-hidden="true" />
-                        </IconButton>
-                        <IconButton
-                          label={`Export ${workflow.name}`}
-                          type="button"
-                          className="btn-action-circle"
-                          disabled={hasActiveRun}
-                          onClick={() => onOpenExportWorkflow(workflow)}
-                        >
-                          <Download aria-hidden="true" />
-                        </IconButton>
-                        <IconButton
-                          label={`Delete ${workflow.name}`}
-                          type="button"
-                          className="btn-action-circle btn-destruct"
-                          disabled={hasActiveRun}
-                          onClick={() => onDeleteWorkflow(workflow.id)}
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </IconButton>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <IconButton
+                              label={`More actions for ${workflow.name}`}
+                              type="button"
+                              className="btn-action-circle"
+                            >
+                              <MoreHorizontal aria-hidden="true" />
+                            </IconButton>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onSelect={() => onOpenEditWorkflow(workflow)}>
+                              <Pencil aria-hidden="true" size={16} />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={hasActiveRun}
+                              onSelect={() => onDuplicateWorkflow(workflow)}
+                            >
+                              <Copy aria-hidden="true" size={16} />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={hasActiveRun}
+                              onSelect={() => onOpenExportWorkflow(workflow)}
+                            >
+                              <Download aria-hidden="true" size={16} />
+                              Export
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              disabled={hasActiveRun}
+                              onSelect={() => onDeleteWorkflow(workflow.id)}
+                            >
+                              <Trash2 aria-hidden="true" size={16} />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   </tr>
