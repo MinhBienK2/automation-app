@@ -325,38 +325,25 @@ describe("Workflow list integration", () => {
 
     const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
 
-    expect(workflowCard).toBeInTheDocument();
     expect(within(workflowCard as HTMLElement).getByRole("button", {
       name: "View Details",
     })).toBeInTheDocument();
     expect(within(workflowCard as HTMLElement).getByRole("button", {
       name: "Run Login flow",
     })).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Edit Login flow",
-    })).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Duplicate Login flow",
-    })).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Delete Login flow",
-    })).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Delete Login flow",
-    })).toHaveAttribute("data-tooltip", "Delete Login flow");
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Run Login flow",
-    })).toHaveAttribute("data-tooltip", "Run Login flow");
-    expect(within(workflowCard as HTMLElement).queryByText("View Details"))
-      .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Run"))
-      .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Edit"))
-      .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Duplicate"))
-      .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Delete"))
-      .not.toBeInTheDocument();
+    
+    const moreActionsBtn = within(workflowCard as HTMLElement).getByRole("button", {
+      name: "More actions for Login flow",
+    });
+    expect(moreActionsBtn).toBeInTheDocument();
+    expect(moreActionsBtn).toHaveAttribute("data-tooltip", "More actions for Login flow");
+
+    await userEvent.click(moreActionsBtn);
+
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Duplicate" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Export" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
   });
 
   test("runs a saved workflow from the list without opening the detail page", async () => {
@@ -453,19 +440,16 @@ describe("Workflow list integration", () => {
     await openWorkflows();
 
     const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Duplicate Login flow",
-    })).toBeDisabled();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Export Login flow",
-    })).toBeDisabled();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Delete Login flow",
-    })).toBeDisabled();
+    const moreActionsBtn = within(workflowCard as HTMLElement).getByRole("button", {
+      name: "More actions for Login flow",
+    });
+    await userEvent.click(moreActionsBtn);
 
-    await userEvent.click(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Delete Login flow",
-    }));
+    expect(screen.getByRole("menuitem", { name: "Duplicate" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: "Export" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toHaveAttribute("aria-disabled", "true");
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 
     expect(screen.queryByRole("dialog", { name: "Delete Workflow" })).not.toBeInTheDocument();
     expect(workflowBridgeMock.deleteWorkflow).not.toHaveBeenCalled();
@@ -588,7 +572,8 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Delete Login flow" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions for Login flow" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Delete Workflow" });
     expect(within(dialog).getByText(/This removes Login flow/i)).toBeInTheDocument();
@@ -632,9 +617,8 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", {
-      name: "Duplicate Login flow",
-    }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions for Login flow" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Duplicate" }));
 
     await waitFor(() => {
       expect(workflowBridgeMock.duplicateWorkflow).toHaveBeenCalledWith(
@@ -674,8 +658,9 @@ describe("Workflow list integration", () => {
     await openWorkflows();
 
     await userEvent.click(await screen.findByRole("button", {
-      name: "Export Login flow",
+      name: "More actions for Login flow",
     }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Export" }));
     const dialog = await screen.findByRole("dialog", { name: "Export Workflow" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Export" }));
 
@@ -845,7 +830,8 @@ describe("Workflow list integration", () => {
     expect((await screen.findByText("Login flow")).closest("[data-slot='card']"))
       .toBeInTheDocument();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Edit Login flow" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions for Login flow" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
     const dialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
 
     expect(within(dialog).getByRole("tab", { name: "General" }))

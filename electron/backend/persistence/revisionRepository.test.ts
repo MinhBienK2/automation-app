@@ -286,4 +286,109 @@ describe("revisionRepository — restore", () => {
     db.close();
     fs.rmSync(root, { recursive: true, force: true });
   });
+
+  test("saveWorkflowGraph and saveSubflowGraph store comment and tag", () => {
+    const root = tempRoot();
+    const db = initializeDatabase(createAppPaths(root));
+    const repo = new WorkflowRepository(db);
+    const graph = sampleGraph();
+
+    const project = repo.listProjects()[0] ?? repo.createProject("Main");
+    const wf = repo.createWorkflow("Test", graph, new Date(), { projectId: project.id });
+
+    repo.saveWorkflowGraph(wf.id, graph, { comment: "First backup", tag: "backup-1" });
+
+    const revisions = listRevisions(db, "workflow", wf.id);
+    expect(revisions).toHaveLength(1);
+    expect(revisions[0].comment).toBe("First backup");
+    expect(revisions[0].tag).toBe("backup-1");
+
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  test("listRevisions onlyBackups option filters correctly", () => {
+    const root = tempRoot();
+    const db = initializeDatabase(createAppPaths(root));
+    const repo = new WorkflowRepository(db);
+    const graph = sampleGraph();
+
+    const project = repo.listProjects()[0] ?? repo.createProject("Main");
+    const wf = repo.createWorkflow("Test", graph, new Date(), { projectId: project.id });
+
+    // 1. Silent save (autosave)
+    repo.saveWorkflowGraph(wf.id, graph);
+    // 2. Manual backup
+    repo.saveWorkflowGraph(wf.id, graph, { comment: "Manual backup" });
+    // 3. Silent save (autosave)
+    repo.saveWorkflowGraph(wf.id, graph);
+
+    const allRevs = listRevisions(db, "workflow", wf.id);
+    expect(allRevs).toHaveLength(3);
+
+    const backupsOnly = listRevisions(db, "workflow", wf.id, { onlyBackups: true });
+    expect(backupsOnly).toHaveLength(1);
+    expect(backupsOnly[0].comment).toBe("Manual backup");
+
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  test("workflow backup bundles exclusive subflows and restore duplicates & remaps them", () => {
+    const root = tempRoot();
+    const db = initializeDatabase(createAppPaths(root));
+    const repo = new WorkflowRepository(db);
+    const graph = sampleGraph();
+
+    const project = repo.listProjects()[0] ?? repo.createProject("Main");
+    const sf = repo.createSubflow(project.id, "Subflow Component", "", graph);
+    
+    // Create workflow referencing the subflow
+    const wfGraph: WorkflowGraph = {
+      ...graph,
+      nodes: [
+        { id: "start", node_type: "start", label: "Start", position: { x: 0, y: 0 }, config: null, ports: [] },
+        {
+          id: "call-sf",
+          node_type: "call_subflow",
+          label: "Call",
+          position: { x: 100, y: 0 },
+          config: { subflow_id: sf.id, input_mapping: [], output_prefix: null },
+          ports: [],
+        },
+      ],
+    };
+    
+    const wf = repo.createWorkflow("Main Workflow", wfGraph, new Date(), { projectId: project.id });
+    
+    // Save workflow graph to commit the nodes to workflow_nodes (so getSubflowUsage sees it)
+    repo.saveWorkflowGraph(wf.id, wfGraph);
+    
+    // Create manual backup of workflow
+    repo.saveWorkflowGraph(wf.id, wfGraph, { comment: "Pre-change backup" });
+    
+    // Delete the original subflow to simulate a change/deletion
+    repo.deleteSubflow(sf.id);
+    
+    const revisions = listRevisions(db, "workflow", wf.id, { onlyBackups: true });
+    expect(revisions).toHaveLength(1);
+    
+    // Restore the backup
+    const restoreResult = restoreRevision(db, "workflow", wf.id, revisions[0].id, { comment: "Restore backup" });
+    expect(restoreResult.restoredRevisionNumber).toBe(2);
+    
+    // Verify a new subflow has been created
+    const subflows = repo.listSubflows(project.id);
+    expect(subflows).toHaveLength(1);
+    expect(subflows[0].name).toBe("Subflow Component (Backup)");
+    
+    // Verify the restored workflow's node config is remapped to the new subflow ID
+    const restoredWfGraph = repo.getWorkflowGraph(wf.id);
+    const callNode = restoredWfGraph!.nodes.find((n) => n.id === "call-sf")!;
+    expect((callNode.config as any).subflow_id).toBe(subflows[0].id);
+    
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
 });
+

@@ -83,13 +83,13 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
     setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
   }, [graphAutosaveEnabled, graphIssues.length, workflowGraph, setWorkflowGraph, setGraphIssuesNeedRecheck, setGraphRevision, setGraphSaveStatus]);
 
-  const persistCurrentGraph = useCallback(async () => {
+  const persistCurrentGraph = useCallback(async (options?: { comment?: string; tag?: string }) => {
     if (!detail || !workflowGraph) return false;
     setAppError("");
     setGraphSaveStatus("saving");
 
     try {
-      await saveWorkflowGraph(detail.workflow.id, workflowGraph);
+      await saveWorkflowGraph(detail.workflow.id, workflowGraph, options);
       setSavedGraphRevision(graphRevisionRef.current);
       savedGraphRevisionRef.current = graphRevisionRef.current;
       setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
@@ -114,8 +114,8 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
     }
   }, [workflowGraph, setGraphIssues, setGraphIssuesNeedRecheck, setAppError]);
 
-  const saveGraph = useCallback(async () => {
-    await persistCurrentGraph();
+  const saveGraph = useCallback(async (options?: { comment?: string; tag?: string }) => {
+    await persistCurrentGraph(options);
   }, [persistCurrentGraph]);
 
   return {

@@ -22,6 +22,8 @@ import {
   tagSubflowRevision,
   untagWorkflowRevision,
   untagSubflowRevision,
+  getWorkflowGraph,
+  getSubflowGraph,
 } from "../../../lib/workflowApi";
 
 type RevisionHistoryDrawerProps = {
@@ -30,6 +32,8 @@ type RevisionHistoryDrawerProps = {
   ownerKind: "workflow" | "subflow";
   onClose: () => void;
   onRestore: (graph: WorkflowGraph) => void;
+  onSaveBackup?: (options?: { comment?: string; tag?: string }) => void | Promise<unknown>;
+  currentGraph?: WorkflowGraph;
 };
 
 function formatBytes(bytes: number): string {
@@ -52,6 +56,8 @@ export function RevisionHistoryDrawer({
   ownerKind,
   onClose,
   onRestore,
+  onSaveBackup,
+  currentGraph,
 }: RevisionHistoryDrawerProps) {
   const [revisions, setRevisions] = useState<RevisionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,13 +69,19 @@ export function RevisionHistoryDrawer({
   const [tagDraft, setTagDraft] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Manual Backup States
+  const [isBackupDialogOpen, setIsBackupDialogOpen] = useState(false);
+  const [backupComment, setBackupComment] = useState("");
+  const [backupTag, setBackupTag] = useState("");
+  const [isSavingBackup, setIsSavingBackup] = useState(false);
+
   const loadRevisions = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const list = ownerKind === "workflow"
-        ? await listWorkflowRevisions(ownerId, { limit: 100 })
-        : await listSubflowRevisions(ownerId, { limit: 100 });
+        ? await listWorkflowRevisions(ownerId, { limit: 100, onlyBackups: true })
+        : await listSubflowRevisions(ownerId, { limit: 100, onlyBackups: true });
       setRevisions(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load revisions");
@@ -111,13 +123,16 @@ export function RevisionHistoryDrawer({
         : await restoreSubflowRevision(ownerId, restoreCandidate.id, {
             comment: `Restored revision ${restoreCandidate.revision_number}`,
           });
-      const restoredRevision = ownerKind === "workflow"
-        ? await getWorkflowRevision(restoreCandidate.id)
-        : await getSubflowRevision(restoreCandidate.id);
-      if (restoredRevision) {
-        const graph = JSON.parse(restoredRevision.graph_snapshot_json) as WorkflowGraph;
-        onRestore(graph);
+
+      // Fetch the newly restored active graph (containing duplicated/remapped subflows) from DB
+      const restoredGraph = ownerKind === "workflow"
+        ? await getWorkflowGraph(ownerId)
+        : await getSubflowGraph(ownerId);
+
+      if (restoredGraph) {
+        onRestore(restoredGraph);
       }
+      
       setRestoreCandidate(null);
       await loadRevisions();
       void result;
@@ -127,6 +142,24 @@ export function RevisionHistoryDrawer({
       setIsRestoring(false);
     }
   }, [restoreCandidate, ownerKind, ownerId, onRestore, loadRevisions]);
+
+  const handleCreateBackup = useCallback(async () => {
+    if (!onSaveBackup || !backupComment.trim()) return;
+    setIsSavingBackup(true);
+    setActionError(null);
+    try {
+      await onSaveBackup({
+        comment: backupComment.trim(),
+        tag: backupTag.trim() || undefined,
+      });
+      setIsBackupDialogOpen(false);
+      await loadRevisions();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to create backup");
+    } finally {
+      setIsSavingBackup(false);
+    }
+  }, [onSaveBackup, backupComment, backupTag, loadRevisions]);
 
   const handleTag = useCallback(async (revision: RevisionSummary) => {
     const tagValue = tagDraft[revision.id]?.trim();
@@ -182,6 +215,23 @@ export function RevisionHistoryDrawer({
         </IconButton>
       </div>
 
+      {onSaveBackup && (
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.1)" }}>
+          <Button
+            type="button"
+            style={{ width: "100%", display: "flex", justifyContent: "center", gap: "8px" }}
+            onClick={() => {
+              setBackupComment("");
+              setBackupTag("");
+              setIsBackupDialogOpen(true);
+            }}
+          >
+            <History style={{ width: "16px", height: "16px" }} />
+            Tạo bản sao lưu hiện tại
+          </Button>
+        </div>
+      )}
+
       {actionError ? (
         <p className="revision-history-error" role="alert">{actionError}</p>
       ) : null}
@@ -191,7 +241,7 @@ export function RevisionHistoryDrawer({
       ) : error ? (
         <p className="revision-history-error" role="alert">{error}</p>
       ) : revisions.length === 0 ? (
-        <p className="revision-history-empty">No revisions yet. Save the graph to create one.</p>
+        <p className="revision-history-empty">No backups yet. Create a backup to see it here.</p>
       ) : (
         <ul className="revision-list" role="list">
           {revisions.map((revision) => (
@@ -276,6 +326,7 @@ export function RevisionHistoryDrawer({
         </ul>
       )}
 
+      {/* Preview Dialog */}
       <Dialog open={!!previewRevision} onOpenChange={(o) => !o && setPreviewRevision(null)}>
         <DialogContent className="revision-preview-dialog">
           <DialogHeader>
@@ -315,6 +366,7 @@ export function RevisionHistoryDrawer({
         </DialogContent>
       </Dialog>
 
+      {/* Confirm Restore Dialog */}
       <Dialog open={!!restoreCandidate} onOpenChange={(o) => !o && setRestoreCandidate(null)}>
         <DialogContent>
           <DialogHeader>
@@ -339,6 +391,78 @@ export function RevisionHistoryDrawer({
               disabled={isRestoring}
             >
               {isRestoring ? "Restoring..." : "Restore"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Backup Dialog */}
+      <Dialog open={isBackupDialogOpen} onOpenChange={(o) => !o && setIsBackupDialogOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tạo bản sao lưu cho {ownerKind === "workflow" ? "Workflow" : "Subflow"}</DialogTitle>
+            <DialogDescription>
+              Lưu lại trạng thái hiện tại làm mốc backup quan trọng. Các subflow chỉ thuộc về workflow này cũng sẽ được tự động sao lưu.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px", margin: "16px 0" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "14px", fontWeight: 500 }}>Mô tả bản sao lưu (Bắt buộc)</label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Trước khi sửa logic hoặc v1.0.0 ổn định"
+                value={backupComment}
+                onChange={(e) => setBackupComment(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border, #ccc)",
+                  background: "transparent",
+                  color: "inherit",
+                  width: "100%"
+                }}
+                maxLength={200}
+                aria-label="Mô tả bản sao lưu"
+              />
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "14px", fontWeight: 500 }}>Tag / Thẻ nhãn (Tùy chọn)</label>
+              <input
+                type="text"
+                placeholder="Ví dụ: stable-v1 (Bản có Tag sẽ không bị tự động xóa)"
+                value={backupTag}
+                onChange={(e) => setBackupTag(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border, #ccc)",
+                  background: "transparent",
+                  color: "inherit",
+                  width: "100%"
+                }}
+                maxLength={32}
+                aria-label="Tag bản sao lưu"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setIsBackupDialogOpen(false)}
+              disabled={isSavingBackup}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateBackup}
+              disabled={isSavingBackup || !backupComment.trim()}
+            >
+              {isSavingBackup ? "Đang lưu..." : "Lưu sao lưu"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -60,7 +60,23 @@ export function snapshotRevision(
 ): WorkflowRevision | SubflowRevision {
   const createdAt = options.createdAt ?? new Date().toISOString();
   const id = crypto.randomUUID();
-  const graphJson = JSON.stringify(graph);
+
+  let graphJson = "";
+  if (owner === "workflow" && (options.comment || options.tag)) {
+    const subflowBackups = getSubflowSnapshotsForWorkflow(db, ownerId, graph);
+    if (subflowBackups.length > 0) {
+      const graphWithBackups = {
+        ...graph,
+        __subflow_backups__: subflowBackups,
+      };
+      graphJson = JSON.stringify(graphWithBackups);
+    } else {
+      graphJson = JSON.stringify(graph);
+    }
+  } else {
+    graphJson = JSON.stringify(graph);
+  }
+
   const settingsJson = options.settings ? JSON.stringify(options.settings) : null;
   const sizeBytes = graphJson.length + (settingsJson?.length ?? 0);
 
@@ -133,21 +149,25 @@ export function listRevisions(
   db: DatabaseSync,
   owner: RevisionOwner,
   ownerId: string,
-  options: { limit?: number; offset?: number } = {},
+  options: { limit?: number; offset?: number; onlyBackups?: boolean } = {},
 ): RevisionSummary[] {
   const table = owner === "workflow" ? "workflow_revisions" : "subflow_revisions";
   const ownerColumn = owner === "workflow" ? "workflow_id" : "subflow_id";
   const limit = options.limit ?? 50;
   const offset = options.offset ?? 0;
 
-  const rows = db
-    .prepare(
-      `SELECT id, revision_number, created_at, created_by, comment, tag, size_bytes
+  let query = `SELECT id, revision_number, created_at, created_by, comment, tag, size_bytes
        FROM ${table}
-       WHERE ${ownerColumn} = ?
-       ORDER BY revision_number DESC
-       LIMIT ? OFFSET ?`,
-    )
+       WHERE ${ownerColumn} = ?`;
+
+  if (options.onlyBackups) {
+    query += ` AND (comment IS NOT NULL OR tag IS NOT NULL)`;
+  }
+
+  query += ` ORDER BY revision_number DESC LIMIT ? OFFSET ?`;
+
+  const rows = db
+    .prepare(query)
     .all(ownerId, limit, offset) as RevisionRow[];
 
   return rows.map((row) => ({
@@ -283,14 +303,75 @@ export function restoreRevision(
     throw new Error(`Revision ${revisionId} not found`);
   }
 
-  const graph = JSON.parse(revision.graph_snapshot_json) as WorkflowGraph;
+  let graph = JSON.parse(revision.graph_snapshot_json) as WorkflowGraph & {
+    __subflow_backups__?: Array<{
+      subflowId: string;
+      name: string;
+      description: string;
+      graph: WorkflowGraph;
+    }>;
+  };
   const createdAt = options.createdAt ?? new Date().toISOString();
 
   // Capture pre-restore state as a new revision
+  const preRestoreComment = options.comment ?? (owner === "workflow"
+    ? `Pre-restore backup before restoring revision #${revision.revision_number}`
+    : `Pre-restore backup before restoring subflow revision #${revision.revision_number}`);
+
   const captured = captureCurrentState(db, owner, ownerId, {
-    comment: options.comment ?? "Pre-restore snapshot",
+    comment: preRestoreComment,
     createdAt,
   });
+
+  // If restoring a workflow with subflow backups, duplicate and remap them
+  if (owner === "workflow" && graph.__subflow_backups__ && graph.__subflow_backups__.length > 0) {
+    const subflowIdMap = new Map<string, string>();
+    const workflowRow = db
+      .prepare("SELECT project_id FROM workflows WHERE id = ?")
+      .get(ownerId) as { project_id: string } | undefined;
+    const projectId = workflowRow?.project_id;
+
+    if (projectId) {
+      for (const backup of graph.__subflow_backups__) {
+        const newSubflowId = crypto.randomUUID();
+        const newSubflowName = `${backup.name} (Backup)`;
+
+        db.prepare(
+          `INSERT INTO subflows (id, project_id, name, description, tags_json, created_at, updated_at)
+           VALUES (?, ?, ?, ?, '[]', ?, ?)`
+        ).run(newSubflowId, projectId, newSubflowName, backup.description, createdAt, createdAt);
+
+        writeSubflowGraph(db, newSubflowId, backup.graph, createdAt);
+
+        snapshotRevision(db, "subflow", newSubflowId, backup.graph, {
+          comment: `Created as backup subflow for restored workflow revision #${revision.revision_number}`,
+          createdAt,
+        });
+
+        subflowIdMap.set(backup.subflowId, newSubflowId);
+      }
+
+      graph = {
+        ...graph,
+        nodes: graph.nodes.map((node) => {
+          if (node.node_type !== "call_subflow") return node;
+          const config = node.config as { subflow_id?: unknown };
+          const oldSubflowId = config.subflow_id;
+          if (typeof oldSubflowId === "string" && subflowIdMap.has(oldSubflowId)) {
+            const newSubflowId = subflowIdMap.get(oldSubflowId)!;
+            return {
+              ...node,
+              config: {
+                ...config,
+                subflow_id: newSubflowId,
+              },
+            };
+          }
+          return node;
+        }),
+      };
+    }
+  }
 
   // Write the target graph back to normalized tables
   if (owner === "workflow") {
@@ -427,4 +508,60 @@ function assembleGraph(
     viewport: meta.viewport_json ? JSON.parse(meta.viewport_json) : { x: 0, y: 0, zoom: 1 },
     migration_notes: meta.migration_notes_json ? JSON.parse(meta.migration_notes_json) : [],
   };
+}
+
+function getSubflowSnapshotsForWorkflow(
+  db: DatabaseSync,
+  workflowId: string,
+  graph: WorkflowGraph,
+): Array<{
+  subflowId: string;
+  name: string;
+  description: string;
+  graph: WorkflowGraph;
+}> {
+  const subflowIds = [
+    ...new Set(
+      graph.nodes
+        .filter((node) => node.node_type === "call_subflow")
+        .map((node) => (node.config as { subflow_id?: unknown })?.subflow_id)
+        .filter((subflowId): subflowId is string => typeof subflowId === "string" && subflowId.trim().length > 0)
+    )
+  ];
+
+  const subflowBackups: Array<{
+    subflowId: string;
+    name: string;
+    description: string;
+    graph: WorkflowGraph;
+  }> = [];
+
+  for (const subflowId of subflowIds) {
+    const usages = db
+      .prepare(
+        `SELECT DISTINCT workflow_id FROM workflow_nodes WHERE subflow_ref = ?`
+      )
+      .all(subflowId) as Array<{ workflow_id: string }>;
+
+    const isExclusive = usages.length === 0 || (usages.length === 1 && usages[0].workflow_id === workflowId);
+    if (isExclusive) {
+      const subflowRow = db
+        .prepare("SELECT name, description FROM subflows WHERE id = ?")
+        .get(subflowId) as { name: string; description: string } | undefined;
+
+      if (subflowRow) {
+        const subflowGraph = readSubflowGraph(db, subflowId);
+        if (subflowGraph) {
+          subflowBackups.push({
+            subflowId,
+            name: subflowRow.name,
+            description: subflowRow.description,
+            graph: subflowGraph,
+          });
+        }
+      }
+    }
+  }
+
+  return subflowBackups;
 }

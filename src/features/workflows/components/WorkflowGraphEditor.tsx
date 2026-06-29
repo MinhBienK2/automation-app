@@ -99,8 +99,9 @@ type WorkflowGraphEditorProps = {
   onRunGraph?: () => void;
   onSelectedNodeChange?: (nodeId: string | null) => void;
   onOpenSubflowDetail?: (subflowId: string) => void;
-  onSaveGraph?: () => void;
+  onSaveGraph?: (options?: { comment?: string; tag?: string }) => void | Promise<unknown>;
   onValidateGraph?: () => void;
+  onRestoreRevision?: (graph: WorkflowGraph) => void | Promise<void>;
   ownerId?: string;
   defaultEdgeDelay?: GraphEdgeDelay | null;
   initialVariables?: Array<{ name: string; value: string }> | null;
@@ -137,6 +138,7 @@ export function WorkflowGraphEditor({
   onOpenSubflowDetail,
   onSaveGraph,
   onValidateGraph,
+  onRestoreRevision,
   ownerId,
   initialVariables,
   profileVariables,
@@ -984,10 +986,16 @@ export function WorkflowGraphEditor({
           ownerId={ownerId}
           ownerKind={graphKind}
           onClose={() => setIsHistoryOpen(false)}
-          onRestore={(restoredGraph) => {
-            onChange(restoredGraph);
+          onRestore={async (restoredGraph) => {
+            if (onRestoreRevision) {
+              await onRestoreRevision(restoredGraph);
+            } else {
+              onChange(restoredGraph);
+            }
             setIsHistoryOpen(false);
           }}
+          onSaveBackup={onSaveGraph}
+          currentGraph={graph}
         />
       ) : null}
 

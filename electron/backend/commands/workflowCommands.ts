@@ -199,11 +199,11 @@ export function createWorkflowCommands(deps: CommandDeps) {
       return getWorkflowGraph(workflowId);
     },
 
-    saveWorkflowGraph(workflowId: string, graph: WorkflowGraph) {
+    saveWorkflowGraph(workflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
       requireWorkflow(workflowId);
       const migrated = migrateWorkflowGraph(graph);
       assertNoUnsupportedGraphDiscriminants(migrated);
-      repository.saveWorkflowGraph(workflowId, migrated);
+      repository.saveWorkflowGraph(workflowId, migrated, options);
     },
 
     validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssue[] {
@@ -354,7 +354,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
       if (validation) throw commandError(validation.message, validation.field);
     },
 
-    listWorkflowRevisions(workflowId: string, options?: { limit?: number; offset?: number }) {
+    listWorkflowRevisions(workflowId: string, options?: { limit?: number; offset?: number; onlyBackups?: boolean }) {
       requireWorkflow(workflowId);
       return listRevisions(deps.context.database, "workflow", workflowId, options ?? {});
     },
@@ -376,7 +376,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
       untagRevision(deps.context.database, "workflow", revisionId);
     },
 
-    listSubflowRevisions(subflowId: string, options?: { limit?: number; offset?: number }) {
+    listSubflowRevisions(subflowId: string, options?: { limit?: number; offset?: number; onlyBackups?: boolean }) {
       if (!deps.context.database.prepare("SELECT id FROM subflows WHERE id = ?").get(subflowId)) {
         throw commandError("Subflow not found", "subflowId");
       }

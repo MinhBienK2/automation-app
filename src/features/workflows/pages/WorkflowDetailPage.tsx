@@ -53,6 +53,7 @@ type WorkflowDetailPageProps = {
   runGraphFromSelectedReason: string;
   onSaveGraph: () => void;
   onValidateGraph: () => void;
+  onRestoreRevision?: (graph: WorkflowGraph) => void | Promise<void>;
   initialVariables?: Array<{ name: string; value: string }> | null;
   profileVariables?: Array<{ name: string; value: string }> | null;
 };
@@ -87,6 +88,7 @@ export function WorkflowDetailPage({
   runGraphFromSelectedReason,
   onSaveGraph,
   onValidateGraph,
+  onRestoreRevision,
   initialVariables,
   profileVariables,
 }: WorkflowDetailPageProps) {
@@ -355,6 +357,7 @@ export function WorkflowDetailPage({
             onSelectedNodeChange={onSelectedGraphNodeChange}
             onSaveGraph={onSaveGraph}
             onValidateGraph={onValidateGraph}
+            onRestoreRevision={onRestoreRevision}
             initialVariables={initialVariables}
             profileVariables={profileVariables}
           />

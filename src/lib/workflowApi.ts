@@ -132,8 +132,8 @@ export function getSubflowGraph(subflowId: string) {
   return bridge().getSubflowGraph(subflowId);
 }
 
-export function saveSubflowGraph(subflowId: string, graph: WorkflowGraph) {
-  return bridge().saveSubflowGraph(subflowId, graph);
+export function saveSubflowGraph(subflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
+  return bridge().saveSubflowGraph(subflowId, graph, options);
 }
 
 export function duplicateSubflow(subflowId: string, name: string) {
@@ -228,8 +228,8 @@ export function getWorkflowGraph(workflowId: string) {
   return bridge().getWorkflowGraph(workflowId);
 }
 
-export function saveWorkflowGraph(workflowId: string, graph: WorkflowGraph) {
-  return bridge().saveWorkflowGraph(workflowId, graph);
+export function saveWorkflowGraph(workflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
+  return bridge().saveWorkflowGraph(workflowId, graph, options);
 }
 
 export function validateWorkflowGraph(graph: WorkflowGraph) {
@@ -415,7 +415,7 @@ export function saveSubflowPackageFile(packageValue: SubflowExport) {
 
 export function listWorkflowRevisions(
   workflowId: string,
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; onlyBackups?: boolean },
 ) {
   return bridge().listWorkflowRevisions(workflowId, options);
 }
@@ -442,7 +442,7 @@ export function untagWorkflowRevision(revisionId: string) {
 
 export function listSubflowRevisions(
   subflowId: string,
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; onlyBackups?: boolean },
 ) {
   return bridge().listSubflowRevisions(subflowId, options);
 }

@@ -159,12 +159,12 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
     setSubflowGraphSaveStatus("unsaved");
   }, [selectedSubflowGraph]);
 
-  const saveCurrentSubflowGraph = useCallback(async () => {
+  const saveCurrentSubflowGraph = useCallback(async (options?: { comment?: string; tag?: string }) => {
     if (!selectedSubflow || !selectedSubflowGraph) return true;
     setAppError("");
     setSubflowGraphSaveStatus("saving");
     try {
-      await saveSubflowGraph(selectedSubflow.id, selectedSubflowGraph);
+      await saveSubflowGraph(selectedSubflow.id, selectedSubflowGraph, options);
       setSubflowGraphSaveStatus("saved");
       setSelectedSubflowUsage(await getSubflowUsage(selectedSubflow.id));
       await loadSubflowsForProject(selectedSubflow.project_id);

@@ -62,8 +62,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("updateSubflow", subflowId, input),
   getSubflowGraph: (subflowId) =>
     invokeWorkflow("getSubflowGraph", subflowId),
-  saveSubflowGraph: (subflowId, graph) =>
-    invokeWorkflow("saveSubflowGraph", subflowId, graph),
+  saveSubflowGraph: (subflowId, graph, options) =>
+    invokeWorkflow("saveSubflowGraph", subflowId, graph, options),
   duplicateSubflow: (subflowId, name) =>
     invokeWorkflow("duplicateSubflow", subflowId, name),
   deleteSubflow: (subflowId) =>
@@ -113,8 +113,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("duplicateWorkflow", workflowId, name),
   getWorkflowGraph: (workflowId) =>
     invokeWorkflow("getWorkflowGraph", workflowId),
-  saveWorkflowGraph: (workflowId, graph) =>
-    invokeWorkflow("saveWorkflowGraph", workflowId, graph),
+  saveWorkflowGraph: (workflowId, graph, options) =>
+    invokeWorkflow("saveWorkflowGraph", workflowId, graph, options),
   validateWorkflowGraph: (graph) =>
     invokeWorkflow("validateWorkflowGraph", graph),
   compileWorkflowGraph: (graph) =>

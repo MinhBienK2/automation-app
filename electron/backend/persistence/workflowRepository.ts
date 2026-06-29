@@ -397,13 +397,22 @@ export class WorkflowRepository {
     return result.graph;
   }
 
-  saveWorkflowGraph(id: string, graph: WorkflowGraph, now = new Date()) {
+  saveWorkflowGraph(
+    id: string,
+    graph: WorkflowGraph,
+    options: { comment?: string | null; tag?: string | null } = {},
+    now = new Date(),
+  ) {
     const timestamp = now.toISOString();
     this.database
       .prepare("UPDATE workflows SET updated_at = ? WHERE id = ?")
       .run(timestamp, id);
     writeGraphToNormalizedTables(this.database, graph, "workflow", id, timestamp);
-    snapshotRevision(this.database, "workflow", id, graph, { createdAt: timestamp });
+    snapshotRevision(this.database, "workflow", id, graph, {
+      createdAt: timestamp,
+      comment: options.comment,
+      tag: options.tag,
+    });
   }
 
   getWorkflowSettings(id: string): WorkflowSettings | null {
@@ -531,13 +540,22 @@ export class WorkflowRepository {
     };
   }
 
-  saveSubflowGraph(subflowId: string, graph: WorkflowGraph, now = new Date()) {
+  saveSubflowGraph(
+    subflowId: string,
+    graph: WorkflowGraph,
+    options: { comment?: string | null; tag?: string | null } = {},
+    now = new Date(),
+  ) {
     const timestamp = now.toISOString();
     this.database
       .prepare("UPDATE subflows SET updated_at = ? WHERE id = ?")
       .run(timestamp, subflowId);
     writeGraphToNormalizedTables(this.database, graph, "subflow", subflowId, timestamp);
-    snapshotRevision(this.database, "subflow", subflowId, graph, { createdAt: timestamp });
+    snapshotRevision(this.database, "subflow", subflowId, graph, {
+      createdAt: timestamp,
+      comment: options.comment,
+      tag: options.tag,
+    });
   }
 
   duplicateSubflow(subflowId: string, name: string, now = new Date()): Subflow | null {

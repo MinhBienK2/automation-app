@@ -115,9 +115,9 @@ export interface WorkflowGraphStateAPI {
   setSelectedGraphNodeId: (nodeId: string | null) => void;
 
   changeWorkflowGraph: (graph: WorkflowGraph) => void;
-  persistCurrentGraph: () => Promise<boolean>;
+  persistCurrentGraph: (options?: { comment?: string; tag?: string }) => Promise<boolean>;
   validateGraph: () => Promise<void>;
-  saveGraph: () => Promise<void>;
+  saveGraph: (options?: { comment?: string; tag?: string }) => Promise<void>;
 }
 
 export interface WorkflowSettingsStateAPI {
@@ -204,7 +204,7 @@ export interface SubflowWorkspaceAPI {
   duplicateProjectSubflow: (subflow: SubflowSummary | Subflow) => Promise<void>;
   deleteProjectSubflow: (subflowId: string) => Promise<void>;
   changeSubflowGraph: (graph: WorkflowGraph) => void;
-  saveCurrentSubflowGraph: () => Promise<boolean>;
+  saveCurrentSubflowGraph: (options?: { comment?: string; tag?: string }) => Promise<boolean>;
   exportProjectSubflow: (subflowId: string) => Promise<void>;
   importProjectSubflowFile: (file: File | null) => Promise<void>;
 }

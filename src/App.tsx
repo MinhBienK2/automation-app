@@ -876,6 +876,10 @@ function App() {
             runGraphFromSelectedReason={runFromSelectedAvailability.reason}
             onSaveGraph={graphState.saveGraph}
             onValidateGraph={graphState.validateGraph}
+            onRestoreRevision={async (restoredGraph) => {
+              graphState.changeWorkflowGraph(restoredGraph);
+              await subflowsWorkspace.loadSubflowsForProject(workflowsWorkspace.detail?.workflow.project_id);
+            }}
           />
         </>
       ) : null}

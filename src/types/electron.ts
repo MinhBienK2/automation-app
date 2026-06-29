@@ -100,7 +100,7 @@ export type WorkflowElectronBridge = {
     input: { name?: string; description?: string | null },
   ): Promise<Subflow>;
   getSubflowGraph(subflowId: string): Promise<WorkflowGraph>;
-  saveSubflowGraph(subflowId: string, graph: WorkflowGraph): Promise<void>;
+  saveSubflowGraph(subflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }): Promise<void>;
   duplicateSubflow(subflowId: string, name: string): Promise<Subflow>;
   deleteSubflow(subflowId: string): Promise<void>;
   getSubflowUsage(subflowId: string): Promise<SubflowUsage[]>;
@@ -134,7 +134,7 @@ export type WorkflowElectronBridge = {
   deleteWorkflow(id: string, options?: WorkflowDeleteOptions): Promise<void>;
   duplicateWorkflow(workflowId: string, name: string): Promise<WorkflowDetail>;
   getWorkflowGraph(workflowId: string): Promise<WorkflowGraph>;
-  saveWorkflowGraph(workflowId: string, graph: WorkflowGraph): Promise<void>;
+  saveWorkflowGraph(workflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }): Promise<void>;
   validateWorkflowGraph(graph: WorkflowGraph): Promise<GraphValidationIssue[]>;
   compileWorkflowGraph(graph: WorkflowGraph): Promise<CompiledWorkflowGraph>;
   runWorkflow(workflowId: string): Promise<WorkflowRunSnapshot>;
@@ -214,7 +214,7 @@ export type WorkflowElectronBridge = {
 
   listWorkflowRevisions(
     workflowId: string,
-    options?: { limit?: number; offset?: number },
+    options?: { limit?: number; offset?: number; onlyBackups?: boolean },
   ): Promise<RevisionSummary[]>;
   getWorkflowRevision(revisionId: string): Promise<RevisionDetail | null>;
   restoreWorkflowRevision(
@@ -226,7 +226,7 @@ export type WorkflowElectronBridge = {
   untagWorkflowRevision(revisionId: string): Promise<void>;
   listSubflowRevisions(
     subflowId: string,
-    options?: { limit?: number; offset?: number },
+    options?: { limit?: number; offset?: number; onlyBackups?: boolean },
   ): Promise<RevisionSummary[]>;
   getSubflowRevision(revisionId: string): Promise<RevisionDetail | null>;
   restoreSubflowRevision(

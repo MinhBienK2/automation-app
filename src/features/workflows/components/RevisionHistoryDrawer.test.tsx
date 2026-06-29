@@ -17,6 +17,8 @@ vi.mock("../../../lib/workflowApi", () => ({
   tagSubflowRevision: (...args: unknown[]) => (workflowBridgeMock.tagSubflowRevision as (...a: unknown[]) => unknown)(...args),
   untagWorkflowRevision: (...args: unknown[]) => (workflowBridgeMock.untagWorkflowRevision as (...a: unknown[]) => unknown)(...args),
   untagSubflowRevision: (...args: unknown[]) => (workflowBridgeMock.untagSubflowRevision as (...a: unknown[]) => unknown)(...args),
+  getWorkflowGraph: (...args: unknown[]) => (workflowBridgeMock.getWorkflowGraph as (...a: unknown[]) => unknown)(...args),
+  getSubflowGraph: (...args: unknown[]) => (workflowBridgeMock.getSubflowGraph as (...a: unknown[]) => unknown)(...args),
 }));
 
 const sampleRevisions: RevisionSummary[] = [
@@ -76,6 +78,8 @@ describe("RevisionHistoryDrawer", () => {
     workflowBridgeMock.tagSubflowRevision.mockResolvedValue(undefined);
     workflowBridgeMock.untagWorkflowRevision.mockResolvedValue(undefined);
     workflowBridgeMock.untagSubflowRevision.mockResolvedValue(undefined);
+    workflowBridgeMock.getWorkflowGraph.mockResolvedValue(sampleGraph);
+    workflowBridgeMock.getSubflowGraph.mockResolvedValue(sampleGraph);
   });
 
   test("does not render when closed", () => {
@@ -125,7 +129,7 @@ describe("RevisionHistoryDrawer", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/No revisions yet/)).toBeTruthy();
+      expect(screen.getByText(/No backups yet/)).toBeTruthy();
     });
   });
 
@@ -285,7 +289,7 @@ describe("RevisionHistoryDrawer", () => {
     );
 
     await waitFor(() => {
-      expect(workflowBridgeMock.listSubflowRevisions).toHaveBeenCalledWith("sf-1", { limit: 100 });
+      expect(workflowBridgeMock.listSubflowRevisions).toHaveBeenCalledWith("sf-1", { limit: 100, onlyBackups: true });
     });
   });
 });

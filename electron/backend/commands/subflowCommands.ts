@@ -85,7 +85,7 @@ export function createSubflowCommands(deps: CommandDeps) {
       return migrateWorkflowGraph(graph);
     },
 
-    saveSubflowGraph(subflowId: string, graph: WorkflowGraph) {
+    saveSubflowGraph(subflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
       const subflow = repository.getSubflow(subflowId);
       if (!subflow) throw commandError("Subflow not found", "subflowId");
       const migrated = migrateWorkflowGraph(graph);
@@ -94,7 +94,7 @@ export function createSubflowCommands(deps: CommandDeps) {
         throw commandError("Subflows cannot call subflows in the MVP", nestedCall.id);
       }
       assertNoUnsupportedGraphDiscriminants(migrated);
-      repository.saveSubflowGraph(subflowId, migrated);
+      repository.saveSubflowGraph(subflowId, migrated, options);
     },
 
     duplicateSubflow(subflowId: string, name: string): Subflow {
