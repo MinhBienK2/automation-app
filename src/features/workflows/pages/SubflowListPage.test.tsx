@@ -185,6 +185,7 @@ describe("Subflow list integration", () => {
             expect.objectContaining({ node_type: "merge" }),
           ]),
         }),
+        undefined,
       );
     });
 

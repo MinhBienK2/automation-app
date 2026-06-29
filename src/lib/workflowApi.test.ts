@@ -251,6 +251,7 @@ describe("workflow API phase ten commands", () => {
     expect(workflowBridgeMock.saveSubflowGraph).toHaveBeenCalledWith(
       "subflow-1",
       { version: 2, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      undefined,
     );
     expect(workflowBridgeMock.duplicateSubflow).toHaveBeenCalledWith(
       "subflow-1",
@@ -452,6 +453,7 @@ describe("workflow API graph commands", () => {
     expect(workflowBridgeMock.saveWorkflowGraph).toHaveBeenCalledWith(
       "workflow-1",
       graph,
+      undefined,
     );
     expect(workflowBridgeMock.validateWorkflowGraph).toHaveBeenCalledWith(graph);
     expect(workflowBridgeMock.compileWorkflowGraph).toHaveBeenCalledWith(graph);

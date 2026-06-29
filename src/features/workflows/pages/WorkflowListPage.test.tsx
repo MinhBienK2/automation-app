@@ -23,6 +23,17 @@ import type {
   RecordingWorkflowDraft,
   WorkflowPackage,
 } from "../../../types/workflow";
+vi.mock("../../../components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: any) => <>{children}</>,
+  DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
+  DropdownMenuContent: ({ children }: any) => <div data-testid="dropdown-content">{children}</div>,
+  DropdownMenuItem: ({ children, onSelect, disabled }: any) => (
+    <button onClick={onSelect} disabled={disabled} role="menuitem">
+      {children}
+    </button>
+  ),
+  DropdownMenuSeparator: () => <hr />,
+}));
 
 describe("Workflow list integration", () => {
   beforeEach(() => {
@@ -445,9 +456,9 @@ describe("Workflow list integration", () => {
     });
     await userEvent.click(moreActionsBtn);
 
-    expect(screen.getByRole("menuitem", { name: "Duplicate" })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("menuitem", { name: "Export" })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("menuitem", { name: "Delete" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: "Duplicate" })).toBeDisabled();
+    expect(screen.getByRole("menuitem", { name: "Export" })).toBeDisabled();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeDisabled();
 
     await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 

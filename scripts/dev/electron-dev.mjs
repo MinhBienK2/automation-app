@@ -1,5 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
+import fs from "node:fs";
+import path from "node:path";
 import electronPath from "electron";
 import { createElectronWatchOutputHandler } from "./electron-dev-utils.mjs";
 
@@ -7,9 +9,50 @@ const processes = [];
 let electronProcess = null;
 let restartingElectron = false;
 let restartTimeout = null;
+
+let distWatcher = null;
+let distWatcherStarted = false;
+let distWatcherTimeout = null;
+
+function startWatchingDist() {
+  if (distWatcherStarted) return;
+  distWatcherStarted = true;
+
+  if (distWatcherTimeout) {
+    clearTimeout(distWatcherTimeout);
+    distWatcherTimeout = null;
+  }
+
+  const distDir = path.join(process.cwd(), "dist-electron");
+  try {
+    distWatcher = fs.watch(distDir, { recursive: true }, (eventType, filename) => {
+      if (filename && (filename.endsWith(".js") || filename.endsWith(".cjs"))) {
+        if (electronProcess) {
+          lastRestartReason = `fs.watch file change: ${filename}`;
+          scheduleElectronRestart();
+        }
+      }
+    });
+  } catch (err) {
+    console.error("Failed to start fs.watch on dist-electron:", err);
+  }
+}
+
+function scheduleStartWatchingDist(delayMs = 1000) {
+  if (distWatcherTimeout) clearTimeout(distWatcherTimeout);
+  distWatcherTimeout = setTimeout(() => {
+    distWatcherTimeout = null;
+    startWatchingDist();
+  }, delayMs);
+}
+
 const electronWatchOutput = createElectronWatchOutputHandler({
+  onInitialReady: () => {
+    scheduleStartWatchingDist(1000);
+  },
   onSuccessfulRebuild: () => {
     if (electronProcess) {
+      lastRestartReason = "stdout successful watch rebuild";
       scheduleElectronRestart();
     }
   },
@@ -53,6 +96,15 @@ function stopAll() {
     clearTimeout(restartTimeout);
     restartTimeout = null;
   }
+  if (distWatcherTimeout) {
+    clearTimeout(distWatcherTimeout);
+    distWatcherTimeout = null;
+  }
+
+  if (distWatcher) {
+    distWatcher.close();
+    distWatcher = null;
+  }
   for (const child of processes) {
     if (!child.killed) child.kill();
   }
@@ -86,7 +138,12 @@ function restartElectron() {
   electronProcess.kill();
 }
 
+let lastRestartReason = "";
+
 function scheduleElectronRestart() {
+  const reason = lastRestartReason || "unknown";
+  console.log(`[dev-restart-trigger] Reason: ${reason}`);
+  lastRestartReason = "";
   if (restartTimeout) clearTimeout(restartTimeout);
   restartTimeout = setTimeout(() => {
     restartTimeout = null;

@@ -210,9 +210,9 @@ describe("App CSS", () => {
 
     expect(projectSettingsPanel).toContain("width: 100%");
     expect(projectSettingsPanel).toContain("max-width: none");
-    expect(projectNameControl).toContain("display: grid");
-    expect(projectNameControl).toContain("grid-template-columns: minmax(0, 1fr) auto");
-    expect(projectNameControl).toContain("align-items: end");
+    expect(projectNameControl).toContain("display: flex");
+    expect(projectNameControl).toContain("flex-direction: column");
+    expect(projectNameControl).toContain("gap: 6px");
   });
 
   test("uses a filled red treatment for destructive buttons", () => {
