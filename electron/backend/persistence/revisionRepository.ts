@@ -399,13 +399,26 @@ function assembleGraph(
     ...(row.group_id ? { group_id: row.group_id as string } : {}),
   }));
 
-  const graphEdges = edges.map((row) => ({
-    id: row.id as string,
-    source_node_id: row.source_node_id as string,
-    source_port: (row.source_handle as string) ?? "",
-    target_node_id: row.target_node_id as string,
-    target_port: (row.target_handle as string) ?? "",
-  }));
+  const graphEdges = edges.map((row) => {
+    let metadata: { label?: string | null; condition?: any; delay?: any } = {};
+    try {
+      if (row.metadata_json) {
+        metadata = JSON.parse(row.metadata_json as string);
+      }
+    } catch {
+      // ignore
+    }
+    return {
+      id: row.id as string,
+      source_node_id: row.source_node_id as string,
+      source_port: (row.source_handle as string) ?? "",
+      target_node_id: row.target_node_id as string,
+      target_port: (row.target_handle as string) ?? "",
+      label: metadata.label ?? null,
+      condition: metadata.condition ?? null,
+      delay: metadata.delay ?? null,
+    };
+  });
 
   return {
     version: meta.graph_version ?? 2,

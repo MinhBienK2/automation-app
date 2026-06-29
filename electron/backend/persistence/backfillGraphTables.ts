@@ -161,10 +161,15 @@ function decomposeAndInsert(
 
   const insertEdge = db.prepare(
     `INSERT INTO ${edgeTable} (id, ${ownerColumn}, source_node_id, source_handle, target_node_id, target_handle, edge_kind, metadata_json, ordinal)
-     VALUES (?, ?, ?, ?, ?, ?, 'flow', '{}', ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, 'flow', ?, ?)`,
   );
 
   graph.edges.forEach((edge, i) => {
+    const metadata = {
+      label: edge.label ?? null,
+      condition: edge.condition ?? null,
+      delay: edge.delay ?? null,
+    };
     insertEdge.run(
       edge.id,
       ownerId,
@@ -172,6 +177,7 @@ function decomposeAndInsert(
       edge.source_port,
       edge.target_node_id,
       edge.target_port,
+      JSON.stringify(metadata),
       i,
     );
   });

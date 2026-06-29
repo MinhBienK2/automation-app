@@ -109,4 +109,65 @@ describe("normalized graph tables", () => {
     db.close();
     fs.rmSync(root, { recursive: true, force: true });
   });
+
+  test("saveWorkflowGraph and assembleGraphFromTables preserve edge label, condition, and delay", () => {
+    const root = tempRoot();
+    const db = initializeDatabase(createAppPaths(root));
+    const repo = new WorkflowRepository(db);
+    
+    const edgeDelay = { type: "random" as const, min_ms: 500, max_ms: 1200 };
+    const edgeCondition = { kind: "variable_is_true" as const, name: "my_var" };
+    
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: null,
+          ports: [],
+        },
+        {
+          id: "end-1",
+          node_type: "end_success",
+          label: "End",
+          position: { x: 200, y: 100 },
+          config: null,
+          ports: [],
+        },
+      ],
+      edges: [
+        {
+          id: "edge-1",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "end-1",
+          target_port: "in",
+          label: "my-label",
+          condition: edgeCondition,
+          delay: edgeDelay,
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      migration_notes: [],
+    };
+
+    const project = repo.listProjects()[0] ?? repo.createProject("Main");
+    const wf = repo.createWorkflow("Test Edge Props", graph, new Date(), { projectId: project.id });
+
+    const fromTables = assembleGraphFromTables(db, wf.id);
+    expect(fromTables).not.toBeNull();
+    expect(fromTables!.edges).toHaveLength(1);
+    
+    const edge = fromTables!.edges[0];
+    expect(edge.label).toBe("my-label");
+    expect(edge.condition).toEqual(edgeCondition);
+    expect(edge.delay).toEqual(edgeDelay);
+
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
 });
+

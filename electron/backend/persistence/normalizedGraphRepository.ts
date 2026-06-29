@@ -1,10 +1,13 @@
 import type { DatabaseSync } from "node:sqlite";
 import type {
   GraphEdge,
+  GraphEdgeDelay,
   GraphNode,
   GraphPort,
+  WorkflowCondition,
   WorkflowGraph,
 } from "../../../src/types/workflow.js";
+
 
 type NodeRow = {
   id: string;
@@ -99,13 +102,26 @@ function assembleGraph(
     ...(row.group_id ? { group_id: row.group_id } : {}),
   }));
 
-  const edges: GraphEdge[] = edgeRows.map((row) => ({
-    id: row.id,
-    source_node_id: row.source_node_id,
-    source_port: row.source_handle ?? "",
-    target_node_id: row.target_node_id,
-    target_port: row.target_handle ?? "",
-  }));
+  const edges: GraphEdge[] = edgeRows.map((row) => {
+    let metadata: { label?: string | null; condition?: WorkflowCondition | null; delay?: GraphEdgeDelay | null } = {};
+    try {
+      if (row.metadata_json) {
+        metadata = JSON.parse(row.metadata_json);
+      }
+    } catch {
+      // ignore
+    }
+    return {
+      id: row.id,
+      source_node_id: row.source_node_id,
+      source_port: row.source_handle ?? "",
+      target_node_id: row.target_node_id,
+      target_port: row.target_handle ?? "",
+      label: metadata.label ?? null,
+      condition: metadata.condition ?? null,
+      delay: metadata.delay ?? null,
+    };
+  });
 
   const version = meta.graph_version ?? 2;
   const viewport = meta.viewport_json
