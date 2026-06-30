@@ -230,20 +230,20 @@ export function WorkflowListPage({
                             </IconButton>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
-                            <DropdownMenuItem onSelect={() => onOpenEditWorkflow(workflow)}>
+                            <DropdownMenuItem onSelect={() => setTimeout(() => onOpenEditWorkflow(workflow), 0)}>
                               <Pencil aria-hidden="true" size={16} />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               disabled={hasActiveRun}
-                              onSelect={() => onDuplicateWorkflow(workflow)}
+                              onSelect={() => setTimeout(() => onDuplicateWorkflow(workflow), 0)}
                             >
                               <Copy aria-hidden="true" size={16} />
                               Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               disabled={hasActiveRun}
-                              onSelect={() => onOpenExportWorkflow(workflow)}
+                              onSelect={() => setTimeout(() => onOpenExportWorkflow(workflow), 0)}
                             >
                               <Download aria-hidden="true" size={16} />
                               Export
@@ -252,7 +252,7 @@ export function WorkflowListPage({
                             <DropdownMenuItem
                               variant="destructive"
                               disabled={hasActiveRun}
-                              onSelect={() => onDeleteWorkflow(workflow.id)}
+                              onSelect={() => setTimeout(() => onDeleteWorkflow(workflow.id), 0)}
                             >
                               <Trash2 aria-hidden="true" size={16} />
                               Delete
@@ -275,59 +275,61 @@ export function WorkflowListPage({
           if (!open) onCloseWorkflowDialog();
         }}
       >
-        {workflowDialogMode ? (
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Workflow</p>
-              <DialogTitle>{workflowDialogTitle}</DialogTitle>
-              <DialogDescription>{workflowDialogDescription}</DialogDescription>
-            </DialogHeader>
+        <DialogContent className="workflow-dialog">
+          {workflowDialogMode ? (
+            <>
+              <DialogHeader>
+                <p className="eyebrow">Workflow</p>
+                <DialogTitle>{workflowDialogTitle}</DialogTitle>
+                <DialogDescription>{workflowDialogDescription}</DialogDescription>
+              </DialogHeader>
 
-            <form className="workflow-dialog-form" onSubmit={onSubmitWorkflowDialog}>
-              <Label htmlFor="workflow-name">
-                {workflowNameLabel}
-              </Label>
-              <Input
-                autoFocus
-                id="workflow-name"
-                value={workflowNameDraft}
-                onChange={(event) =>
-                  onWorkflowNameDraftChange(event.currentTarget.value)
-                }
-                placeholder="Login flow"
-              />
-              {workflowDialogMode === "create" ? (
-                <>
-                  <Label htmlFor="workflow-profile">
-                    Browser Profile
-                  </Label>
-                  <Select
-                    id="workflow-profile"
-                    value={selectedProfileIdDraft ?? ""}
-                    onChange={(event) =>
-                      onSelectedProfileIdDraftChange(event.currentTarget.value || null)
-                    }
-                  >
-                    {browserProfiles.map((profile) => (
-                      <option key={profile.id} value={profile.id}>
-                        {profile.name}
-                      </option>
-                    ))}
-                  </Select>
-                </>
-              ) : null}
-              {appError ? <p className="field-error">{appError}</p> : null}
-              <DialogFooter className="form-actions">
-                <Button shape="pill" type="submit">
-                  {workflowDialogMode === "create" ? "Create" : "Save Changes"}
-                </Button>
-                <Button variant="secondary" type="button" onClick={onCloseWorkflowDialog}>
-                  Cancel
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        ) : null}
+              <form className="workflow-dialog-form" onSubmit={onSubmitWorkflowDialog}>
+                <Label htmlFor="workflow-name">
+                  {workflowNameLabel}
+                </Label>
+                <Input
+                  autoFocus
+                  id="workflow-name"
+                  value={workflowNameDraft}
+                  onChange={(event) =>
+                    onWorkflowNameDraftChange(event.currentTarget.value)
+                  }
+                  placeholder="Login flow"
+                />
+                {workflowDialogMode === "create" ? (
+                  <>
+                    <Label htmlFor="workflow-profile">
+                      Browser Profile
+                    </Label>
+                    <Select
+                      id="workflow-profile"
+                      value={selectedProfileIdDraft ?? ""}
+                      onChange={(event) =>
+                        onSelectedProfileIdDraftChange(event.currentTarget.value || null)
+                      }
+                    >
+                      {browserProfiles.map((profile) => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </>
+                ) : null}
+                {appError ? <p className="field-error">{appError}</p> : null}
+                <DialogFooter className="form-actions">
+                  <Button shape="pill" type="submit">
+                    {workflowDialogMode === "create" ? "Create" : "Save Changes"}
+                  </Button>
+                  <Button variant="secondary" type="button" onClick={onCloseWorkflowDialog}>
+                    Cancel
+                  </Button>
+                </DialogFooter>
+              </form>
+            </>
+          ) : null}
+        </DialogContent>
       </Dialog>
     </div>
   );

@@ -57,7 +57,6 @@ export function RevisionHistoryDrawer({
   onClose,
   onRestore,
   onSaveBackup,
-  currentGraph,
 }: RevisionHistoryDrawerProps) {
   const [revisions, setRevisions] = useState<RevisionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);

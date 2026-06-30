@@ -79,209 +79,204 @@ export function AppPackageDialogs({
           if (!open) onCloseExportPackageDialog();
         }}
       >
-        {exportPackageWorkflow ? (
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Package</p>
-              <DialogTitle>Export Workflow</DialogTitle>
-              <DialogDescription>
-                Choose the workflow parts to include in the JSON package.
-              </DialogDescription>
-            </DialogHeader>
-            <form className="workflow-dialog-form" onSubmit={onSubmitExportPackage}>
-              <PackageFlowCheckbox
-                checked={exportPackageIncludeFlow}
-                label="Flow"
-                onChange={onExportPackageIncludeFlowChange}
-              />
-              <PackageSectionPicker
-                availableSections={workflowPackageSections}
-                selectedSections={exportPackageSections}
-                onSelectedSectionsChange={onExportPackageSectionsChange}
-              />
-              {appError ? <p className="field-error">{appError}</p> : null}
-              <DialogFooter className="form-actions">
-                <Button shape="pill" type="submit">
-                  Export
-                </Button>
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={onCloseExportPackageDialog}
-                >
-                  Cancel
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        ) : null}
+        <DialogContent className="workflow-dialog">
+          <DialogHeader>
+            <p className="eyebrow">Package</p>
+            <DialogTitle>Export Workflow</DialogTitle>
+            <DialogDescription>
+              Choose the workflow parts to include in the JSON package.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="workflow-dialog-form" onSubmit={onSubmitExportPackage}>
+            <PackageFlowCheckbox
+              checked={exportPackageIncludeFlow}
+              label="Flow"
+              onChange={onExportPackageIncludeFlowChange}
+            />
+            <PackageSectionPicker
+              availableSections={workflowPackageSections}
+              selectedSections={exportPackageSections}
+              onSelectedSectionsChange={onExportPackageSectionsChange}
+            />
+            {appError ? <p className="field-error">{appError}</p> : null}
+            <DialogFooter className="form-actions">
+              <Button shape="pill" type="submit">
+                Export
+              </Button>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={onCloseExportPackageDialog}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
+
       <Dialog
         open={Boolean(importPackagePreview)}
         onOpenChange={(open) => {
           if (!open) onCloseImportPackageDialog();
         }}
       >
-        {importPackagePreview ? (
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Package</p>
-              <DialogTitle>Import Workflow</DialogTitle>
-              <DialogDescription>
-                Import creates a new workflow and never overwrites an existing one.
-              </DialogDescription>
-            </DialogHeader>
-            <form className="workflow-dialog-form" onSubmit={onSubmitImportPackage}>
-              <dl className="package-preview-list">
-                <div>
-                  <dt>Name</dt>
-                  <dd>{importPackagePreview.workflow_name}</dd>
-                </div>
-                <div>
-                  <dt>Included</dt>
-                  <dd>
-                    {[
-                      importPackagePreview.includes_flow ? "Flow" : null,
-                      ...importPackagePreview.settings_sections.map(sectionLabel),
-                    ]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </dd>
-                </div>
-              </dl>
-              <PackageFlowCheckbox
-                checked={importPackageIncludeFlow}
-                disabled={!importPackagePreview.includes_flow}
-                label="Flow"
-                onChange={onImportPackageIncludeFlowChange}
-              />
-              <PackageSectionPicker
-                availableSections={importPackagePreview.settings_sections}
-                selectedSections={importPackageSections}
-                onSelectedSectionsChange={onImportPackageSectionsChange}
-              />
-              {importPackagePreview.omitted_fields.length > 0 ? (
-                <p className="muted">
-                  Sanitized fields: {importPackagePreview.omitted_fields.join(", ")}
-                </p>
-              ) : null}
-              {appError ? <p className="field-error">{appError}</p> : null}
-              <DialogFooter className="form-actions">
-                <Button shape="pill" type="submit">
-                  Import
-                </Button>
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={onCloseImportPackageDialog}
-                >
-                  Cancel
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        ) : null}
+        <DialogContent className="workflow-dialog">
+          <DialogHeader>
+            <p className="eyebrow">Package</p>
+            <DialogTitle>Import Workflow</DialogTitle>
+            <DialogDescription>
+              Import creates a new workflow and never overwrites an existing one.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="workflow-dialog-form" onSubmit={onSubmitImportPackage}>
+            <dl className="package-preview-list">
+              <div>
+                <dt>Name</dt>
+                <dd>{importPackagePreview?.workflow_name || ""}</dd>
+              </div>
+              <div>
+                <dt>Included</dt>
+                <dd>
+                  {[
+                    importPackagePreview?.includes_flow ? "Flow" : null,
+                    ...(importPackagePreview?.settings_sections ?? []).map(sectionLabel),
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </dd>
+              </div>
+            </dl>
+            <PackageFlowCheckbox
+              checked={importPackageIncludeFlow}
+              disabled={!importPackagePreview?.includes_flow}
+              label="Flow"
+              onChange={onImportPackageIncludeFlowChange}
+            />
+            <PackageSectionPicker
+              availableSections={importPackagePreview?.settings_sections ?? []}
+              selectedSections={importPackageSections}
+              onSelectedSectionsChange={onImportPackageSectionsChange}
+            />
+            {importPackagePreview && importPackagePreview.omitted_fields.length > 0 ? (
+              <p className="muted">
+                Sanitized fields: {importPackagePreview.omitted_fields.join(", ")}
+              </p>
+            ) : null}
+            {appError ? <p className="field-error">{appError}</p> : null}
+            <DialogFooter className="form-actions">
+              <Button shape="pill" type="submit">
+                Import
+              </Button>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={onCloseImportPackageDialog}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
+
       <Dialog
         open={isImportProjectPackageOpen}
         onOpenChange={(open) => {
           if (!open) onCloseImportProjectPackageDialog();
         }}
       >
-        {importProjectPackagePreview ? (
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Package</p>
-              <DialogTitle>Import Project</DialogTitle>
-              <DialogDescription>
-                Import creates a new project and never overwrites an existing one.
-              </DialogDescription>
-            </DialogHeader>
-            <form className="workflow-dialog-form" onSubmit={onSubmitImportProjectPackage}>
-              <dl className="package-preview-list">
-                <div>
-                  <dt>Name</dt>
-                  <dd>{importProjectPackagePreview.project_name}</dd>
-                </div>
-                <div>
-                  <dt>Workflows</dt>
-                  <dd>
-                    {importProjectPackagePreview.workflows.length > 0
-                      ? importProjectPackagePreview.workflows
-                          .map((workflow) => workflow.name)
-                          .join(", ")
-                      : "None"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Subflows</dt>
-                  <dd>{importProjectPackagePreview.subflows.length}</dd>
-                </div>
-                <div>
-                  <dt>Sessions</dt>
-                  <dd>
-                    {(importProjectPackagePreview.browser_profiles ?? []).length}
-                  </dd>
-                </div>
-              </dl>
-              {importProjectPackagePreview.omitted_fields.length > 0 ? (
-                <p className="muted">
-                  Sanitized fields: {importProjectPackagePreview.omitted_fields.join(", ")}
-                </p>
-              ) : null}
-              {appError ? <p className="field-error">{appError}</p> : null}
-              <DialogFooter className="form-actions">
-                <Button shape="pill" type="submit">
-                  Import
-                </Button>
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={onCloseImportProjectPackageDialog}
-                >
-                  Cancel
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        ) : null}
+        <DialogContent className="workflow-dialog">
+          <DialogHeader>
+            <p className="eyebrow">Package</p>
+            <DialogTitle>Import Project</DialogTitle>
+            <DialogDescription>
+              Import creates a new project and never overwrites an existing one.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="workflow-dialog-form" onSubmit={onSubmitImportProjectPackage}>
+            <dl className="package-preview-list">
+              <div>
+                <dt>Name</dt>
+                <dd>{importProjectPackagePreview?.project_name || ""}</dd>
+              </div>
+              <div>
+                <dt>Workflows</dt>
+                <dd>
+                  {importProjectPackagePreview && importProjectPackagePreview.workflows.length > 0
+                    ? importProjectPackagePreview.workflows
+                        .map((workflow) => workflow.name)
+                        .join(", ")
+                    : "None"}
+                </dd>
+              </div>
+              <div>
+                <dt>Subflows</dt>
+                <dd>{importProjectPackagePreview?.subflows.length ?? 0}</dd>
+              </div>
+              <div>
+                <dt>Sessions</dt>
+                <dd>
+                  {(importProjectPackagePreview?.browser_profiles ?? []).length}
+                </dd>
+              </div>
+            </dl>
+            {importProjectPackagePreview && importProjectPackagePreview.omitted_fields.length > 0 ? (
+              <p className="muted">
+                Sanitized fields: {importProjectPackagePreview.omitted_fields.join(", ")}
+              </p>
+            ) : null}
+            {appError ? <p className="field-error">{appError}</p> : null}
+            <DialogFooter className="form-actions">
+              <Button shape="pill" type="submit">
+                Import
+              </Button>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={onCloseImportProjectPackageDialog}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
+
       <Dialog
         open={Boolean(deleteWorkflowCandidate)}
         onOpenChange={(open) => {
           if (!open) onCancelDeleteWorkflow();
         }}
       >
-        {deleteWorkflowCandidate ? (
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Workflow</p>
-              <DialogTitle>Delete Workflow</DialogTitle>
-              <DialogDescription>
-                This removes {deleteWorkflowCandidate.name} from the app. This
-                action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
+        <DialogContent className="workflow-dialog">
+          <DialogHeader>
+            <p className="eyebrow">Workflow</p>
+            <DialogTitle>Delete Workflow</DialogTitle>
+            <DialogDescription>
+              This removes {deleteWorkflowCandidate?.name || ""} from the app. This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
 
-            {appError ? <p className="field-error">{appError}</p> : null}
-            <DialogFooter className="form-actions">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={onConfirmDeleteWorkflow}
-              >
-                Delete Workflow
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onCancelDeleteWorkflow}
-              >
-                Cancel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        ) : null}
+          {appError ? <p className="field-error">{appError}</p> : null}
+          <DialogFooter className="form-actions">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={onConfirmDeleteWorkflow}
+            >
+              Delete Workflow
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCancelDeleteWorkflow}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </>
   );
