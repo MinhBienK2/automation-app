@@ -247,7 +247,8 @@ describe("Workflow detail integration", () => {
       .not.toBeInTheDocument();
     const timeline = within(monitor).getByRole("region", { name: "Run timeline" });
     expect(within(timeline).getByText("3 events")).toBeInTheDocument();
-    const timelineButtons = within(timeline).getAllByRole("button");
+    const timelineButtons = within(timeline).getAllByRole("button")
+      .filter((button) => button.classList.contains("run-monitor-step"));
     expect(timelineButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
       "Event 1 completed: Step 1 Wait for page",
       "Event 2 completed: Step 1 Wait for page",

@@ -914,7 +914,7 @@ describe("Workflow list integration", () => {
 
     expect(await screen.findByText("Run failed at step 1: Wait for page"))
       .toBeInTheDocument();
-    expect(screen.getByText("XPath not found")).toBeInTheDocument();
+    expect(screen.getAllByText("XPath not found").length).toBeGreaterThan(0);
 
     await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
     await userEvent.click(await screen.findByRole("button", { name: "Create Workflow" }));

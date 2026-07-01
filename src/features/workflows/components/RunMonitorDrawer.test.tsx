@@ -333,5 +333,50 @@ describe("RunMonitorDrawer", () => {
 
     expect(screen.getByText("Subflow: Login Flow · Logic: Click button")).toBeInTheDocument();
   });
+
+  test("correctly maps timeline items to traces when completed_step_ids is filtered during loops (no offset/shift)", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    const runStateWithFilteredSteps: RunState = {
+      ...baseRunState,
+      completed_step_ids: ["step-2"], // step-1 was filtered out during loop
+      status: "success",
+      outputs: {
+        __action_traces: [
+          {
+            node_id: "step-1",
+            output_summary: { added_keys: ["var1"], changed_keys: [], removed_keys: [] },
+            output_values: { var1: "value1" },
+          },
+          {
+            node_id: "step-2",
+            output_summary: { added_keys: ["var2"], changed_keys: [], removed_keys: [] },
+            output_values: { var2: "value2" },
+          },
+        ],
+      },
+    };
+
+    render(
+      <RunMonitorDrawer
+        graph={graph}
+        runState={runStateWithFilteredSteps}
+        onClose={vi.fn()}
+        onFocusNode={vi.fn()}
+      />,
+    );
+
+    // Timeline should show 2 events because they are present in traces
+    const timeline = screen.getByRole("region", { name: "Run timeline" });
+    expect(within(timeline).getByText("2 events")).toBeInTheDocument();
+
+    const event2Button = screen.getByRole("button", {
+      name: /Event 2 completed: Step 2 Click button/i,
+    });
+    await user.click(within(event2Button).getByRole("button", { name: /Expand event details/i }));
+
+    expect(screen.getByText("var2")).toBeInTheDocument();
+    expect(screen.getByText("value2")).toBeInTheDocument();
+    expect(screen.queryByText("var1")).not.toBeInTheDocument();
+  });
 });
 

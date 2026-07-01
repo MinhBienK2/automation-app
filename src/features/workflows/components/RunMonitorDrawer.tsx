@@ -76,11 +76,29 @@ function stepNumberForNode(
   return nodeOrder.get(nodeId) ?? 0;
 }
 
+function resolveMainGraphNodeId(
+  nodeId: string | null | undefined,
+  graphNodeIds: Set<string>,
+): string | null {
+  if (!nodeId) return null;
+  if (graphNodeIds.has(nodeId)) return nodeId;
+  const subflowCallerNodeId = nodeId.split("::", 1)[0];
+  if (subflowCallerNodeId && graphNodeIds.has(subflowCallerNodeId)) {
+    return subflowCallerNodeId;
+  }
+  return nodeId;
+}
+
 function buildTimeline(graph: WorkflowGraph, runState: RunState) {
   const nodes = executableNodes(graph);
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
   const nodeOrder = new Map(nodes.map((node, index) => [node.id, index + 1]));
+  const graphNodeIds = new Set(graph.nodes.map((node) => node.id));
   const timeline: RunMonitorTimelineItem[] = [];
+
+  const resolveNodeId = (id: string | null | undefined) => {
+    return resolveMainGraphNodeId(id, graphNodeIds);
+  };
 
   const appendNodeEvent = (
     nodeId: string | null | undefined,
@@ -88,11 +106,13 @@ function buildTimeline(graph: WorkflowGraph, runState: RunState) {
     traceIndex: number,
   ) => {
     if (!nodeId) return;
-    const node = nodeById.get(nodeId);
+    const resolvedId = resolveNodeId(nodeId);
+    if (!resolvedId) return;
+    const node = nodeById.get(resolvedId);
     if (!node) return;
     const eventNumber = timeline.length + 1;
     timeline.push({
-      id: `${nodeId}:${eventNumber}`,
+      id: `${resolvedId}:${eventNumber}`,
       eventNumber,
       status,
       nodeId: node.id,
@@ -102,17 +122,38 @@ function buildTimeline(graph: WorkflowGraph, runState: RunState) {
     });
   };
 
-  runState.completed_step_ids.forEach((nodeId, index) => {
-    appendNodeEvent(nodeId, "completed", index);
+  const rawTraces = Array.isArray(runState.outputs?.__action_traces)
+    ? (runState.outputs.__action_traces as any[])
+    : [];
+
+  const traces = [...rawTraces];
+  while (traces.length < runState.completed_step_ids.length) {
+    traces.push({
+      node_id: runState.completed_step_ids[traces.length],
+      status: "success",
+      output_summary: { added_keys: [], changed_keys: [], removed_keys: [] },
+      output_values: {},
+    });
+  }
+
+  traces.forEach((trace, index) => {
+    const status: RunMonitorTimelineEventStatus =
+      trace.status === "failed" || trace.status === "stopped" ? "failed" : "completed";
+    const nodeId = trace.node_id ?? runState.completed_step_ids[index];
+    appendNodeEvent(nodeId, status, index);
   });
 
   if (runState.status === "running") {
-    appendNodeEvent(runState.current_step_id, "running", runState.completed_step_ids.length);
+    appendNodeEvent(runState.current_step_id, "running", traces.length);
   }
 
   if (runState.status === "failed") {
     const failedNodeId = runState.error?.step_id ?? runState.current_step_id;
-    appendNodeEvent(failedNodeId, "failed", runState.completed_step_ids.length);
+    const resolvedFailedNodeId = resolveNodeId(failedNodeId);
+    const lastEvent = timeline[timeline.length - 1];
+    if (resolvedFailedNodeId && lastEvent?.nodeId !== resolvedFailedNodeId) {
+      appendNodeEvent(failedNodeId, "failed", traces.length);
+    }
   }
 
   return timeline;
