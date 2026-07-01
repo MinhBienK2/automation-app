@@ -1,7 +1,7 @@
 .run-monitor-drawer {
   position: fixed;
   top: 152px;
-  right: 16px;
+  left: 16px;
   bottom: 24px;
   z-index: 46;
   display: grid;
@@ -14,7 +14,7 @@
   border: 1px solid #314758;
   border-radius: 8px;
   background: #121c26;
-  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.36);
+  box-shadow: 18px 0 36px rgba(0, 0, 0, 0.36);
   animation: run-monitor-slide-in 160ms ease-out;
 }
 
@@ -435,7 +435,7 @@
 @keyframes run-monitor-slide-in {
   from {
     opacity: 0;
-    transform: translateX(18px);
+    transform: translateX(-18px);
   }
 
   to {

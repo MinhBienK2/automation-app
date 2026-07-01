@@ -189,11 +189,11 @@ describe("RunMonitorDrawer", () => {
     // The environment panel should not be visible initially
     expect(screen.queryByText("Environment changes")).not.toBeInTheDocument();
 
-    // Click first event to expand it
+    // Click expand chevron on first event to expand it
     const event1Button = screen.getByRole("button", {
       name: /Event 1 completed: Step 1 Open page/i,
     });
-    await user.click(event1Button);
+    await user.click(within(event1Button).getByRole("button", { name: /Expand event details/i }));
 
     // Now first event environment changes should be visible
     expect(screen.getByText("Environment changes")).toBeInTheDocument();
@@ -218,7 +218,7 @@ describe("RunMonitorDrawer", () => {
     const event2Button = screen.getByRole("button", {
       name: /Event 2 completed: Step 2 Click button/i,
     });
-    await user.click(event2Button);
+    await user.click(within(event2Button).getByRole("button", { name: /Expand event details/i }));
 
     // Second event environment changes should show added and changed
     const addedBadges = screen.getAllByText("added");
@@ -276,11 +276,11 @@ describe("RunMonitorDrawer", () => {
     const timeline = screen.getByRole("region", { name: "Run timeline" });
     expect(within(timeline).getByText("2 events")).toBeInTheDocument();
 
-    // Click Event 1 (step-1) to expand it
+    // Click expand chevron on Event 1 (step-1) to expand it
     const event1Button = screen.getByRole("button", {
       name: /Event 1 completed: Step 1 Open page/i,
     });
-    await user.click(event1Button);
+    await user.click(within(event1Button).getByRole("button", { name: /Expand event details/i }));
 
     // Event 1 should show var1 = value1 (trace index 1)
     // If it was offset, it would show initVar = initVal (trace index 0)
@@ -288,14 +288,14 @@ describe("RunMonitorDrawer", () => {
     expect(screen.getByText("value1")).toBeInTheDocument();
     expect(screen.queryByText("initVar")).not.toBeInTheDocument();
 
-    // Click Event 1 again to close it
-    await user.click(event1Button);
+    // Click Event 1 expand chevron again to close it
+    await user.click(within(event1Button).getByRole("button", { name: /Collapse event details/i }));
 
-    // Click Event 2 (step-2) to expand it
+    // Click expand chevron on Event 2 (step-2) to expand it
     const event2Button = screen.getByRole("button", {
       name: /Event 2 completed: Step 2 Click button/i,
     });
-    await user.click(event2Button);
+    await user.click(within(event2Button).getByRole("button", { name: /Expand event details/i }));
 
     // Event 2 should show var2 = value2 (trace index 3)
     // If it was offset, it would show var1 = value1 (trace index 1)

@@ -332,15 +332,17 @@ export function WorkflowDetailPage({
 
       {workflowGraph ? (
         <>
-          {liveRunEnabled && monitorOpen ? (
-            <RunMonitorDrawer
-              graph={workflowGraph}
-              runState={graphRunState}
-              initialVariables={initialVariables}
-              onFocusNode={requestNodeSelection}
-              onClose={closeMonitor}
-            />
-          ) : null}
+          {liveRunEnabled && (
+            <div style={{ display: monitorOpen ? "" : "none" }}>
+              <RunMonitorDrawer
+                graph={workflowGraph}
+                runState={graphRunState}
+                initialVariables={initialVariables}
+                onFocusNode={requestNodeSelection}
+                onClose={closeMonitor}
+              />
+            </div>
+          )}
           <WorkflowGraphEditor
             graph={workflowGraph}
             runState={graphRunState}

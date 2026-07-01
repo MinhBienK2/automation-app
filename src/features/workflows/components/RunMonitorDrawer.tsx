@@ -168,11 +168,13 @@ export function RunMonitorDrawer({
   const errorSubflowContext = runState.error ? subflowContextLine(runState.error) : null;
   const errorActionSummary = runState.error?.diagnostics?.action_summary?.trim() || null;
 
+  const isRunning = runState.status === "running";
+
   useEffect(() => {
-    if (typeof timelineEndRef.current?.scrollIntoView === "function") {
+    if (isRunning && typeof timelineEndRef.current?.scrollIntoView === "function") {
       timelineEndRef.current.scrollIntoView({ block: "end" });
     }
-  }, [timeline.length]);
+  }, [timeline.length, isRunning]);
 
   return (
     <aside className="run-monitor-drawer" aria-label="Run Monitor">
@@ -257,17 +259,34 @@ export function RunMonitorDrawer({
                       type="button"
                       className="run-monitor-step"
                       data-status={item.status}
-                      data-expanded={isExpanded}
                       aria-label={timelineItemLabel(item)}
                       onClick={() => {
                         onFocusNode(item.nodeId);
-                        setExpandedEventNumbers((prev) => ({
-                          ...prev,
-                          [item.eventNumber]: !isExpanded,
-                        }));
                       }}
                     >
-                      <span className="run-monitor-step-expand-icon">
+                      <span
+                        className="run-monitor-step-expand-icon"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={isExpanded ? "Collapse event details" : "Expand event details"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedEventNumbers((prev) => ({
+                            ...prev,
+                            [item.eventNumber]: !isExpanded,
+                          }));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setExpandedEventNumbers((prev) => ({
+                              ...prev,
+                              [item.eventNumber]: !isExpanded,
+                            }));
+                          }
+                        }}
+                      >
                         {isExpanded ? (
                           <ChevronDown className="h-4 w-4" aria-hidden="true" />
                         ) : (
