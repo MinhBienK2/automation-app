@@ -378,5 +378,62 @@ describe("RunMonitorDrawer", () => {
     expect(screen.getByText("value2")).toBeInTheDocument();
     expect(screen.queryByText("var1")).not.toBeInTheDocument();
   });
+
+  test("renders action badges, variable mutation previews, and expanded details including config, duration, mode, and evidence", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    const runStateWithRichMetadata: RunState = {
+      ...baseRunState,
+      completed_step_ids: ["step-1"],
+      status: "success",
+      outputs: {
+        __action_traces: [
+          {
+            node_id: "step-1",
+            action_type: "wait",
+            action_summary: "duration: 1000ms",
+            started_at: "2026-07-01T15:00:00.000Z",
+            finished_at: "2026-07-01T15:00:01.500Z", // 1500ms
+            mode: "assisted_browser",
+            status: "success",
+            output_summary: { added_keys: ["counter"], changed_keys: [], removed_keys: [] },
+            output_values: { counter: 42 },
+            evidence_summary: [
+              { artifact_kind: "screenshot", path: "/tmp/step-1.png" }
+            ]
+          },
+        ],
+      },
+    };
+
+    render(
+      <RunMonitorDrawer
+        graph={graph}
+        runState={runStateWithRichMetadata}
+        onClose={vi.fn()}
+        onFocusNode={vi.fn()}
+      />,
+    );
+
+    // Collapsed row check: Action Badge [WAIT], Mutation Preview (counter = 42), and duration "1.5s" should be visible
+    expect(screen.getByText("[WAIT]")).toBeInTheDocument();
+    expect(screen.getByText("(counter = 42)")).toBeInTheDocument();
+    expect(screen.getByText("1.5s")).toBeInTheDocument();
+
+    const event1Button = screen.getByRole("button", {
+      name: /Event 1 completed: Step 1 Open page/i,
+    });
+    await user.click(within(event1Button).getByRole("button", { name: /Expand event details/i }));
+
+    // Expanded details check: action config details, mode, duration, evidence
+    expect(screen.getByText("Action Type:")).toBeInTheDocument();
+    expect(screen.getAllByText("wait").length).toBeGreaterThan(0);
+    expect(screen.getByText("Execution Mode:")).toBeInTheDocument();
+    expect(screen.getByText("assisted_browser")).toBeInTheDocument();
+    expect(screen.getAllByText("1.5s").length).toBeGreaterThan(0);
+    expect(screen.getByText("Summary:")).toBeInTheDocument();
+    expect(screen.getByText("duration: 1000ms")).toBeInTheDocument();
+    expect(screen.getByText(/Screenshot/)).toBeInTheDocument();
+    expect(screen.getByText("/tmp/step-1.png")).toBeInTheDocument();
+  });
 });
 

@@ -1,12 +1,12 @@
 .run-monitor-drawer {
   position: fixed;
-  top: 152px;
+  top: 16px;
   left: 16px;
-  bottom: 24px;
+  bottom: 16px;
   z-index: 46;
   display: grid;
   align-content: start;
-  width: min(440px, calc(100vw - 32px));
+  width: min(540px, calc(100vw - 32px));
   min-width: 0;
   overflow-y: auto;
   gap: 14px;
@@ -1160,4 +1160,137 @@
 .math-token-highlight {
   color: var(--app-warning) !important; /* Attention amber */
   font-weight: 500;
+}
+
+/* Run Monitor UX Improvements */
+.run-monitor-step-meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  background: #0b1118;
+  border: 1px solid #233240;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #9aaebd;
+}
+
+.run-monitor-step-meta div {
+  overflow-wrap: anywhere;
+}
+
+.run-monitor-step-meta strong {
+  color: #e7eef5;
+}
+
+.run-monitor-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 8px;
+}
+
+.run-monitor-badge-wait {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.run-monitor-badge-click {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.run-monitor-badge-input {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.run-monitor-badge-variable {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.run-monitor-badge-js {
+  background: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.run-monitor-badge-neutral {
+  background: rgba(154, 174, 189, 0.1);
+  color: #9aaebd;
+  border: 1px solid rgba(154, 174, 189, 0.2);
+}
+
+.run-monitor-step-duration {
+  font-size: 12px;
+  color: #9aaebd;
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+.run-monitor-step-mutation {
+  font-size: 12px;
+  color: #32d3e6;
+  font-weight: 500;
+  margin-left: 6px;
+  overflow-wrap: anywhere;
+}
+
+.env-value-old {
+  color: #f06467;
+  text-decoration: line-through;
+  background: rgba(240, 100, 103, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-right: 4px;
+}
+
+.env-value-new {
+  color: #32d3e6;
+  background: rgba(50, 211, 230, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+
+.env-arrow {
+  color: #9aaebd;
+  margin: 0 4px;
+}
+
+.run-monitor-evidence-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(50, 211, 230, 0.05);
+  border: 1px dashed rgba(50, 211, 230, 0.2);
+  border-radius: 6px;
+}
+
+.run-monitor-evidence-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #e7eef5;
+}
+
+.run-monitor-evidence-item code {
+  color: #32d3e6;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  word-break: break-all;
 }

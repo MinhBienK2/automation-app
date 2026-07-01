@@ -279,8 +279,7 @@ describe("App CSS", () => {
   test("keeps the run monitor drawer below workflow run controls", () => {
     const drawer = cssRule(".run-monitor-drawer");
 
-    expect(drawer).toContain("top: 152px");
-    expect(drawer).not.toContain("top: 96px");
+    expect(drawer).toContain("top: 16px");
   });
 
   test("keeps run error surfaces dense and text-contained", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ClipboardCopy, LocateFixed, X, ChevronDown, ChevronRight } from "lucide-react";
 import type { GraphNode, RunState, WorkflowGraph } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
@@ -179,6 +179,65 @@ function copyRunError(message: string) {
   void navigator.clipboard?.writeText(message);
 }
 
+function formatDuration(
+  startedAt: string | null | undefined,
+  finishedAt: string | null | undefined,
+): string | null {
+  if (!startedAt || !finishedAt) return null;
+  const ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
+  if (isNaN(ms) || ms < 0) return null;
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function actionTypeBadge(actionType: string | null | undefined): React.ReactNode {
+  if (!actionType) return null;
+  const typeLower = actionType.toLowerCase().trim();
+  let badgeClass = "run-monitor-badge-neutral";
+  let label = typeLower.toUpperCase();
+
+  if (typeLower === "wait") {
+    badgeClass = "run-monitor-badge-wait";
+    label = "WAIT";
+  } else if (typeLower === "click") {
+    badgeClass = "run-monitor-badge-click";
+    label = "CLICK";
+  } else if (typeLower === "input_text" || typeLower === "fill_field" || typeLower === "fill") {
+    badgeClass = "run-monitor-badge-input";
+    label = "INPUT";
+  } else if (typeLower === "set_variable" || typeLower === "assign_variable" || typeLower === "assign") {
+    badgeClass = "run-monitor-badge-variable";
+    label = "VAR";
+  } else if (typeLower === "execute_js" || typeLower === "js" || typeLower === "evaluate") {
+    badgeClass = "run-monitor-badge-js";
+    label = "JS";
+  }
+
+  return <span className={`run-monitor-badge ${badgeClass}`}>[{label}]</span>;
+}
+
+function variableMutationPreview(trace: any): string | null {
+  if (!trace || !trace.output_summary) return null;
+  const mutatedKeys = [
+    ...(trace.output_summary.added_keys || []),
+    ...(trace.output_summary.changed_keys || []),
+  ];
+  if (mutatedKeys.length === 0) return null;
+
+  const parts = mutatedKeys.map((key) => {
+    const val = trace.output_values?.[key];
+    if (val === undefined) return key;
+    if (val === null) return `${key} = null`;
+    if (typeof val === "object") {
+      return `${key} = ${Array.isArray(val) ? "[...]" : "{...}"}`;
+    }
+    const strVal = String(val);
+    return `${key} = ${strVal.length > 20 ? strVal.slice(0, 17) + "..." : strVal}`;
+  });
+
+  return `(${parts.join(", ")})`;
+}
+
 export function RunMonitorDrawer({
   graph,
   runState,
@@ -294,6 +353,10 @@ export function RunMonitorDrawer({
                   return parts.length > 0 ? parts.join(" · ") : null;
                 })();
 
+                const durationText = trace ? formatDuration(trace.started_at, trace.finished_at) : null;
+                const badgeEl = trace ? actionTypeBadge(trace.action_type) : null;
+                const mutationPreview = trace ? variableMutationPreview(trace) : null;
+
                 return (
                   <li key={item.id} className="run-monitor-timeline-item">
                     <button
@@ -336,8 +399,19 @@ export function RunMonitorDrawer({
                       </span>
                       <span className="run-monitor-step-marker" aria-hidden="true" />
                       <span className="run-monitor-step-copy">
-                        <span>Event {item.eventNumber} · {timelineEventTitle(item.status)}</span>
-                        <strong>Step {item.stepNumber} · {item.label}</strong>
+                        <span style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                          <span>Event {item.eventNumber} · {timelineEventTitle(item.status)}</span>
+                          {durationText && <span className="run-monitor-step-duration">{durationText}</span>}
+                        </span>
+                        <strong style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "4px" }}>
+                          {badgeEl}
+                          <span>Step {item.stepNumber} · {item.label}</span>
+                          {mutationPreview && (
+                            <span className="run-monitor-step-mutation">
+                              {mutationPreview}
+                            </span>
+                          )}
+                        </strong>
                         {contextText && (
                           <span className="run-monitor-step-parent">
                             {contextText}
@@ -349,20 +423,58 @@ export function RunMonitorDrawer({
                       </span>
                     </button>
                     {isExpanded && (
-                      <RunMonitorEnvironmentPanel
-                        initialVariables={initialVariables}
-                        traces={traces}
-                        stepIndex={item.traceIndex}
-                        trace={trace}
-                        showAll={isShowAll}
-                        onToggleShowAll={(e) => {
-                          e.stopPropagation();
-                          setShowAllVars((prev) => ({
-                            ...prev,
-                            [item.eventNumber]: !isShowAll,
-                          }));
-                        }}
-                      />
+                      <div style={{ padding: "0 12px 12px 12px" }}>
+                        {trace && (
+                          <div className="run-monitor-step-meta">
+                            <div><strong>Action Type:</strong></div>
+                            <div>{trace.action_type || "N/A"}</div>
+                            <div><strong>Execution Mode:</strong></div>
+                            <div>{trace.mode || "N/A"}</div>
+                            {durationText && (
+                              <>
+                                <div><strong>Duration:</strong></div>
+                                <div>{durationText}</div>
+                              </>
+                            )}
+                            {trace.action_summary && (
+                              <>
+                                <div><strong>Summary:</strong></div>
+                                <div>{trace.action_summary}</div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        {trace && trace.evidence_summary && trace.evidence_summary.length > 0 && (
+                          <div className="run-monitor-evidence-list">
+                            <div style={{ fontSize: "12px", fontWeight: "600", color: "#32d3e6" }}>Evidence Saved</div>
+                            {trace.evidence_summary.map((ev: any, idx: number) => (
+                              <div key={idx} className="run-monitor-evidence-item">
+                                <span>{ev.artifact_kind === "screenshot" ? "📸 Screenshot" : "📥 Download"}:</span>
+                                <code>{ev.path}</code>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {trace && (trace.status === "failed" || trace.status === "stopped") && trace.reason && (
+                          <div style={{ color: "#f06467", padding: "10px", border: "1px solid #f06467", borderRadius: "6px", background: "rgba(240, 100, 103, 0.1)", fontSize: "13px", marginTop: "10px", marginBottom: "10px", overflowWrap: "anywhere" }}>
+                            <strong>Error:</strong> {trace.reason}
+                          </div>
+                        )}
+                        <RunMonitorEnvironmentPanel
+                          initialVariables={initialVariables}
+                          traces={traces}
+                          stepIndex={item.traceIndex}
+                          trace={trace}
+                          showAll={isShowAll}
+                          onToggleShowAll={(e) => {
+                            e.stopPropagation();
+                            setShowAllVars((prev) => ({
+                              ...prev,
+                              [item.eventNumber]: !isShowAll,
+                            }));
+                          }}
+                        />
+                      </div>
                     )}
                   </li>
                 );
