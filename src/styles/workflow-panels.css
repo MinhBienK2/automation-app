@@ -19,11 +19,15 @@
 }
 
 .run-monitor-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #121c26;
+  padding-bottom: 10px;
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 10px;
   border-bottom: 1px solid #233240;
 }
 
