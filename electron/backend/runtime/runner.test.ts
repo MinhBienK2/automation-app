@@ -1963,12 +1963,10 @@ describe("BrowserWorkflowRunner", () => {
 
     expect(result.status).toBe("success");
     expect(result.outputs).toMatchObject({
-      "user.name": "Ada",
-      "user.roles": ["qa"],
-      "feature.enabled": true,
+      user: { name: "Ada", roles: ["qa"] },
+      feature: { enabled: true },
       items: [{ name: "A" }, { name: "B" }],
       item: { name: "B" },
-      "item.name": "B",
       last_item: "B",
     });
   });

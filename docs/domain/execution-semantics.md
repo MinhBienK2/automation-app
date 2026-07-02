@@ -37,7 +37,7 @@
 
 ## Key Action Behaviors
 
-- `set_variable`: template render → type parse (evaluating simple math expressions for number fields) → write to output store. Objects flatten to dotted paths. `set_json_variables` also recursively evaluates math expressions inside string properties.
+- `set_variable`: template render → type parse (evaluating simple math expressions for number fields) → write to output store. Objects are stored natively without flattening; expressions and condition checking resolve nested properties dynamically at runtime using deep path lookups (`getDeepValue`). `set_json_variables` also recursively evaluates math expressions inside string properties.
 - `repeat_for_each`: manual items or `array_variable`. Missing/non-array → fail before loop.
 - `execute_js`: requires Run Policy `execute_js_enabled`. Returns value to `output_name`.
 - `domain_allowlist`: promoted to run-scope policy. Enforced after template render, before navigation.

@@ -1,6 +1,6 @@
 import { locatorFor, locatorForRuntimeElementRef } from "./targetResolver.js";
 import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
-import { resolveObjectTemplates } from "./variables.js";
+import { resolveObjectTemplates, getDeepValue } from "./variables.js";
 
 export async function conditionMatches(runtime: RunnerActionRuntime, condition: unknown) {
   if (!condition || typeof condition !== "object" || !("kind" in condition)) {
@@ -19,7 +19,7 @@ export async function conditionMatches(runtime: RunnerActionRuntime, condition: 
     target_ref?: string | null;
   };
   if (typed.kind === "variable_is_true") {
-    const val = runtime.outputs[typed.name ?? ""];
+    const val = getDeepValue(runtime.outputs, typed.name ?? "");
     return val === true || val === "true" || val === 1 || val === "1";
   }
   if (typed.kind === "url_contains") {

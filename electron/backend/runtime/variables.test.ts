@@ -9,22 +9,51 @@ import {
   writeVariableValue,
   findReferencedVariables,
   resolveDynamicOutputs,
+  getDeepValue,
 } from "./variables";
 
 describe("runner variable helpers", () => {
-  test("renders template tokens from output keys", () => {
-    expect(renderTemplate("Hello {{ user.name }}", { "user.name": "Ada" }))
-      .toBe("Hello Ada");
+  test("getDeepValue resolves nested paths", () => {
+    const outputs = {
+      user: {
+        name: "Ada",
+        details: {
+          age: 30,
+          hobbies: ["coding"],
+        },
+      },
+      "flat.key": "flat value",
+    };
+
+    expect(getDeepValue(outputs, "user.name")).toBe("Ada");
+    expect(getDeepValue(outputs, "user.details.age")).toBe(30);
+    expect(getDeepValue(outputs, "user.details.hobbies")).toEqual(["coding"]);
+    expect(getDeepValue(outputs, "flat.key")).toBe("flat value");
+    expect(getDeepValue(outputs, "user.details.invalid")).toBeUndefined();
+    expect(getDeepValue(outputs, "invalid.path")).toBeUndefined();
   });
 
-  test("writes object values as both root and dotted outputs", () => {
+  test("renders template tokens with deep path resolution", () => {
+    const outputs = {
+      user: {
+        name: "Ada",
+        details: {
+          age: 30,
+        },
+      },
+    };
+    expect(renderTemplate("Hello {{ user.name }} ({{ user.details.age }})", outputs))
+      .toBe("Hello Ada (30)");
+  });
+
+  test("writes object values as root outputs without flattening", () => {
     const outputs: Record<string, unknown> = {};
 
     writeVariableValue(outputs, "user", { email: "ada@example.test", flags: ["qa"] });
 
     expect(outputs.user).toEqual({ email: "ada@example.test", flags: ["qa"] });
-    expect(outputs["user.email"]).toBe("ada@example.test");
-    expect(outputs["user.flags"]).toEqual(["qa"]);
+    expect(outputs["user.email"]).toBeUndefined();
+    expect(outputs["user.flags"]).toBeUndefined();
   });
 
   test("sets typed variable rows with template rendering", () => {
@@ -44,7 +73,7 @@ describe("runner variable helpers", () => {
     expect(outputs.count).toBe(4);
     expect(outputs.enabled).toBe(true);
     expect(outputs.payload).toEqual({ ok: true });
-    expect(outputs["payload.ok"]).toBe(true);
+    expect(outputs["payload.ok"]).toBeUndefined();
   });
 
   test("evaluates simple math expressions for number type variables", () => {

@@ -77,6 +77,6 @@ Preserve these unless the task explicitly changes them.
 - Drag and Drop: separate Drag source and Drop setup groups with distinct labels.
 - Scroll: Page Scroll, Scroll To Element, Scroll Until Element Visible labels.
 - Set Variables: tabular row editor, must fit narrow inspectors, duplicate paths allowed, later rows overwrite.
-- Set JSON Variables: object root required, nested objects flatten to dot-paths, arrays preserved.
+- Set JSON Variables: object root required, objects and arrays are preserved natively and resolved dynamically at runtime using deep path lookups.
 - Template tokens `{{name}}` are manually editable, insertable via picker, visually highlighted.
 - Repeat For Each: manual list keeps literal order; variable-array mode fails clearly when missing/non-array.

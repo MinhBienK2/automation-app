@@ -1,5 +1,4 @@
 import type { ActionConfig } from "../../../src/types/workflow.js";
-import { isPlainRecord } from "../shared/records.js";
 
 export function setVariables(
   outputs: Record<string, unknown>,
@@ -86,15 +85,19 @@ export function evaluateMathInObject(val: any): any {
   return val;
 }
 
-export function flattenObject(outputs: Record<string, unknown>, prefix: string, value: unknown) {
-  if (!isPlainRecord(value)) {
-    if (prefix) outputs[prefix] = value;
-    return;
+export function getDeepValue(obj: Record<string, unknown>, path: string): unknown {
+  if (path in obj) return obj[path];
+  const parts = path.split(".");
+  let current: any = obj;
+  for (const part of parts) {
+    if (current === null || current === undefined || typeof current !== "object") {
+      return undefined;
+    }
+    current = current[part];
   }
-  for (const [key, child] of Object.entries(value)) {
-    flattenObject(outputs, prefix ? `${prefix}.${key}` : key, child);
-  }
+  return current;
 }
+
 
 export function writeVariableValue(
   outputs: Record<string, unknown>,
@@ -106,14 +109,11 @@ export function writeVariableValue(
   if (resolvers && resolvers.has(name)) {
     resolvers.delete(name);
   }
-  if (isPlainRecord(value)) {
-    flattenObject(outputs, name, value);
-  }
 }
 
 export function renderTemplate(value: string, outputs: Record<string, unknown>) {
   return value.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, name: string) =>
-    String(outputs[name] ?? ""),
+    String(getDeepValue(outputs, name.trim()) ?? ""),
   );
 }
 
@@ -240,9 +240,6 @@ export async function ensureResolved(
 
   const val = await entry.resolve();
   outputs[name] = val;
-  if (isPlainRecord(val)) {
-    flattenObject(outputs, name, val);
-  }
 }
 
 export async function resolveDynamicOutputs(

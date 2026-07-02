@@ -24,7 +24,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Selected-node plans can reuse a retained browser session (Run Policy scope determines selected node only or downstream main path).
 - `RunManager` orchestrates active runs: same-workflow/profile/batch conflict checks, max-duration timeouts, SQLite persistence, and batch status.
 - Graph-internal control actions (loops, branches, routers, retries, variables, allowlists) execute above the browser dispatch layer.
-- `set_variable` accepts typed rows, renders templates (supporting simple math evaluations for number variables), and flattens objects. `set_json_variables` parses JSON (evaluating math expressions inside JSON string values recursively).
+- `set_variable` accepts typed rows, renders templates (supporting simple math evaluations for number variables), and stores objects natively. Variables are resolved dynamically at runtime using deep path lookups (`getDeepValue`) without flattening objects into duplicate keys. `set_json_variables` parses JSON (evaluating math expressions inside JSON string values recursively).
 - `repeat_for_each` iterates list items or variable arrays. Loop outputs are retained for downstream steps.
 - Action failures yield failed outcomes with screenshots. Errors carry step label details.
 - Browser sessions are retained unless Workflow Settings or terminal node closes them. Output `window.__wamOutputs` values are copied.

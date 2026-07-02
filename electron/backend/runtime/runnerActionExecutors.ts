@@ -32,7 +32,6 @@ import {
 } from "./interactionActions.js";
 import {
   evaluateMathInObject,
-  flattenObject,
   parseVariableValue,
   renderTemplate,
   setVariables,
@@ -529,7 +528,9 @@ export function createRunnerActionExecutors(
       const parsed = JSON.parse(renderTemplate(action.config.json, runtime.outputs));
       if (!isPlainRecord(parsed)) throw new Error("JSON variables must be an object");
       const evaluated = evaluateMathInObject(parsed);
-      flattenObject(runtime.outputs, "", evaluated);
+      for (const [key, val] of Object.entries(evaluated)) {
+        writeVariableValue(runtime.outputs, key, val);
+      }
     },
     update_number_variable: async (action) => {
       const { name, operation, value } = action.config;
@@ -1167,7 +1168,6 @@ export function createRunnerActionExecutors(
         runtime.outputs.system = {};
       }
       (runtime.outputs.system as Record<string, unknown>).current_url = urlData;
-      flattenObject(runtime.outputs, "system.current_url", urlData);
     },
     quarantined: async () => {
       // No-op: quarantined nodes are skipped at compile time.

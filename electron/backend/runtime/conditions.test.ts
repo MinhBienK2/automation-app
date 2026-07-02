@@ -27,4 +27,30 @@ describe("conditions", () => {
       name: "wrong",
     })).resolves.toBe(false);
   });
+
+  test("matches check variable nested boolean conditions", async () => {
+    const runtime = {
+      outputs: {
+        user: {
+          profile: {
+            verified: true,
+            active: "true",
+          },
+        },
+      },
+    } as RunnerActionRuntime;
+
+    await expect(conditionMatches(runtime, {
+      kind: "variable_is_true",
+      name: "user.profile.verified",
+    })).resolves.toBe(true);
+    await expect(conditionMatches(runtime, {
+      kind: "variable_is_true",
+      name: "user.profile.active",
+    })).resolves.toBe(true);
+    await expect(conditionMatches(runtime, {
+      kind: "variable_is_true",
+      name: "user.profile.invalid",
+    })).resolves.toBe(false);
+  });
 });
