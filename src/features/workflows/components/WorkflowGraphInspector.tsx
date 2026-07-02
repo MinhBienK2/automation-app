@@ -123,7 +123,12 @@ export function WorkflowGraphInspector({
               Create subflow
             </Button>
           ) : null}
-          <Button type="button" variant="destructive" onClick={onDeleteSelection}>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onDeleteSelection}
+            disabled={runState.status === "running"}
+          >
             Delete selection
           </Button>
         </section>
@@ -135,11 +140,14 @@ export function WorkflowGraphInspector({
             {" -> "}
             {nodeLabels.get(selectedEdge.target_node_id) ?? selectedEdge.target_node_id}
           </p>
-          <LinkWaitFields edge={selectedEdge} onChange={onUpdateEdge} />
+          <fieldset disabled={runState.status === "running"} className="contents">
+            <LinkWaitFields edge={selectedEdge} onChange={onUpdateEdge} />
+          </fieldset>
           <Button
             type="button"
             variant="destructive"
             onClick={onDeleteSelectedEdge}
+            disabled={runState.status === "running"}
           >
             Delete selected link
           </Button>
@@ -161,72 +169,74 @@ export function WorkflowGraphInspector({
               ?
             </Button>
           </div>
-          {selectedNode.node_type !== "start" ? (
-            <label className="field">
-              <span>Node name</span>
-              <Input
-                value={selectedNode.label}
-                onChange={(event) =>
-                  onUpdateNode({
-                    ...selectedNode,
-                    label: event.currentTarget.value,
-                  })
-                }
-              />
-            </label>
-          ) : null}
-          {issueGroups.get(selectedNode.id)?.length ? (
-            <div className="graph-node-issues" aria-label="Selected node issues">
-              {issueGroups.get(selectedNode.id)?.map((issue) => (
-                <p key={`${issue.level}-${issue.message}`}>
-                  {issue.level}: {issue.message}
+          <fieldset disabled={runState.status === "running"} className="contents">
+            {selectedNode.node_type !== "start" ? (
+              <label className="field">
+                <span>Node name</span>
+                <Input
+                  value={selectedNode.label}
+                  onChange={(event) =>
+                    onUpdateNode({
+                      ...selectedNode,
+                      label: event.currentTarget.value,
+                    })
+                  }
+                />
+              </label>
+            ) : null}
+            {issueGroups.get(selectedNode.id)?.length ? (
+              <div className="graph-node-issues" aria-label="Selected node issues">
+                {issueGroups.get(selectedNode.id)?.map((issue) => (
+                  <p key={`${issue.level}-${issue.message}`}>
+                    {issue.level}: {issue.message}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+            {selectedRunError ? (
+              <section className="graph-last-run-error" aria-label="Last run error">
+                <div className="graph-error-card-header">
+                  <Badge variant="destructive">Runtime failure</Badge>
+                  <h3>Last run error</h3>
+                </div>
+                <p className="graph-error-context">
+                  Step {selectedRunError.step_number}:{" "}
+                  {selectedRunError.step_name ?? selectedNode.label}
                 </p>
-              ))}
-            </div>
-          ) : null}
-          {selectedRunError ? (
-            <section className="graph-last-run-error" aria-label="Last run error">
-              <div className="graph-error-card-header">
-                <Badge variant="destructive">Runtime failure</Badge>
-                <h3>Last run error</h3>
-              </div>
-              <p className="graph-error-context">
-                Step {selectedRunError.step_number}:{" "}
-                {selectedRunError.step_name ?? selectedNode.label}
-              </p>
-              <p className="graph-error-summary">
-                {summarizeRunError(selectedRunError.reason)}
-              </p>
-              <div className="graph-error-actions">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setRunErrorDetailsVisible((current) => !current)}
-                >
-                  {runErrorDetailsVisible ? "Hide details" : "View details"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => copyRunError(selectedRunError.reason)}
-                >
-                  <ClipboardCopy aria-hidden="true" />
-                  Copy details
-                </Button>
-              </div>
-              {runErrorDetailsVisible ? (
-                <pre className="graph-error-details">{selectedRunError.reason}</pre>
-              ) : null}
-            </section>
-          ) : null}
-          <NodeConfigFields
-            node={selectedNode}
-            onChange={onUpdateNode}
-            subflowOptions={subflowOptions}
-            variableOptions={variableOptions}
-          />
+                <p className="graph-error-summary">
+                  {summarizeRunError(selectedRunError.reason)}
+                </p>
+                <div className="graph-error-actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setRunErrorDetailsVisible((current) => !current)}
+                  >
+                    {runErrorDetailsVisible ? "Hide details" : "View details"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => copyRunError(selectedRunError.reason)}
+                  >
+                    <ClipboardCopy aria-hidden="true" />
+                    Copy details
+                  </Button>
+                </div>
+                {runErrorDetailsVisible ? (
+                  <pre className="graph-error-details">{selectedRunError.reason}</pre>
+                ) : null}
+              </section>
+            ) : null}
+            <NodeConfigFields
+              node={selectedNode}
+              onChange={onUpdateNode}
+              subflowOptions={subflowOptions}
+              variableOptions={variableOptions}
+            />
+          </fieldset>
           <div className="graph-inspector-actions" aria-label="Selected node actions">
             {selectedSubflowId && onOpenSubflowDetail ? (
               <Button
@@ -246,7 +256,7 @@ export function WorkflowGraphInspector({
               type="button"
               variant="destructive"
               onClick={onDeleteSelectedNode}
-              disabled={selectedNode.node_type === "start"}
+              disabled={runState.status === "running" || selectedNode.node_type === "start"}
             >
               Delete Node
             </Button>

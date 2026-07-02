@@ -607,6 +607,10 @@ export function WorkflowGraphEditor({
   }
 
   function handleNodesChange(changes: NodeChange<WorkflowFlowNode>[]) {
+    if (runState.status === "running") {
+      changes = changes.filter((change) => change.type === "select" || change.type === "dimensions");
+      if (changes.length === 0) return;
+    }
     const hasSelectionChange = changes.some((change) => change.type === "select");
     const shouldPersist = changes.some((change) =>
       ["add", "remove", "replace"].includes(change.type),
@@ -630,6 +634,10 @@ export function WorkflowGraphEditor({
   }
 
   function handleEdgesChange(changes: EdgeChange<WorkflowFlowEdge>[]) {
+    if (runState.status === "running") {
+      changes = changes.filter((change) => change.type === "select");
+      if (changes.length === 0) return;
+    }
     const hasSelectionChange = changes.some((change) => change.type === "select");
     const shouldPersist = changes.some((change) =>
       ["add", "remove", "replace"].includes(change.type),
@@ -657,6 +665,7 @@ export function WorkflowGraphEditor({
   }
 
   function handleConnect(connection: Connection) {
+    if (runState.status === "running") return;
     if (!connection.source || !connection.target || !connection.sourceHandle) return;
     if (!connection.targetHandle) return;
     const nextEdge: WorkflowFlowEdge = {
@@ -815,6 +824,7 @@ export function WorkflowGraphEditor({
         graphKind={graphKind}
         isArranging={isArrangingGraph}
         isPanMode={isToolbarPanMode}
+        isReadOnly={runState.status === "running"}
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
         onAddSubflow={() => setIsSubflowPaletteOpen(true)}
@@ -852,7 +862,8 @@ export function WorkflowGraphEditor({
               connectionDragThreshold={0}
               connectionRadius={32}
               nodes={reactFlowNodes}
-              nodesConnectable
+              nodesConnectable={runState.status !== "running"}
+              nodesDraggable={runState.status !== "running"}
               nodeTypes={workflowNodeTypes}
               onlyRenderVisibleElements={graph.nodes.length > graphMiniMapNodeLimit}
               onConnect={handleConnect}

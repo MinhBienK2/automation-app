@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { workflowCommandCallMock, mockWorkflowBridgeCommands, resetWorkflowBridge } from "../../../tests/mocks/electron";
-import { sleepStep } from "../../../tests/mocks/workflowFixtures";
+import { sleepStep, workflow } from "../../../tests/mocks/workflowFixtures";
 import { workflowDetailScenario } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
 import type {
@@ -2470,4 +2470,56 @@ describe("Workflow graph editor integration", () => {
     window.dispatchEvent(graphCopy);
     expect(graphCopy.defaultPrevented).toBe(true);
   });
+
+  test("locks down graph editor and inspector when workflow is running", async () => {
+    const runningRunState = {
+      status: "running",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: "new-node",
+      current_step_number: 1,
+      completed_step_ids: ["start"],
+      outputs: {},
+      error: null,
+    };
+
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      get_run_state: runningRunState,
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: workflow.id,
+          workflow_name: workflow.name,
+          source: "manual",
+          started_at: "2026-05-27T09:00:00.000Z",
+          state: runningRunState,
+          ...runningRunState,
+        },
+      ],
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    // Verify toolbar buttons are disabled
+    expect(within(editor).getByRole("button", { name: "Undo" })).toBeDisabled();
+    expect(within(editor).getByRole("button", { name: "Redo" })).toBeDisabled();
+    expect(within(editor).getByRole("button", { name: "New node" })).toBeDisabled();
+    expect(within(editor).getByRole("button", { name: "Add Action" })).toBeDisabled();
+    expect(within(editor).getByRole("button", { name: "Add Logic" })).toBeDisabled();
+    expect(within(editor).getByRole("button", { name: "Add Variable" })).toBeDisabled();
+    expect(within(editor).getByRole("button", { name: "Add End" })).toBeDisabled();
+
+    // Select the node to open inspector
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node new-node" }));
+
+    // Verify inspector inputs and delete button are disabled
+    expect(within(editor).getByLabelText("Node name")).toBeDisabled();
+    expect(within(editor).getByRole("button", { name: "Delete Node" })).toBeDisabled();
+  });
 });
+

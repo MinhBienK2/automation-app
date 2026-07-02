@@ -28,6 +28,7 @@ type WorkflowGraphToolbarProps = {
   graphKind?: "workflow" | "subflow";
   isArranging: boolean;
   isPanMode: boolean;
+  isReadOnly?: boolean;
   onAddAction: () => void;
   onAddNewNode: () => void;
   onAddSubflow: () => void;
@@ -54,6 +55,7 @@ export function WorkflowGraphToolbar({
   graphKind = "workflow",
   isArranging,
   isPanMode,
+  isReadOnly = false,
   onAddAction,
   onAddNewNode,
   onAddSubflow,
@@ -87,6 +89,7 @@ export function WorkflowGraphToolbar({
           label="Undo"
           type="button"
           variant="ghost"
+          disabled={isReadOnly}
           onClick={onUndo}
         >
           <Undo2 aria-hidden="true" />
@@ -95,6 +98,7 @@ export function WorkflowGraphToolbar({
           label="Redo"
           type="button"
           variant="ghost"
+          disabled={isReadOnly}
           onClick={onRedo}
         >
           <Redo2 aria-hidden="true" />
@@ -127,7 +131,7 @@ export function WorkflowGraphToolbar({
         </IconButton>
         <IconButton
           label="Auto arrange graph"
-          disabled={isArranging}
+          disabled={isArranging || isReadOnly}
           type="button"
           variant="ghost"
           onClick={onAutoArrange}
@@ -141,6 +145,7 @@ export function WorkflowGraphToolbar({
           label="New node"
           type="button"
           variant="ghost"
+          disabled={isReadOnly}
           onClick={onAddNewNode}
         >
           <Plus aria-hidden="true" />
@@ -149,6 +154,7 @@ export function WorkflowGraphToolbar({
           label="Add Action"
           type="button"
           variant="ghost"
+          disabled={isReadOnly}
           onClick={onAddAction}
         >
           <Zap aria-hidden="true" />
@@ -158,6 +164,7 @@ export function WorkflowGraphToolbar({
             label="Add Subflow"
             type="button"
             variant="ghost"
+            disabled={isReadOnly}
             onClick={onAddSubflow}
           >
             <Blocks aria-hidden="true" />
@@ -167,6 +174,7 @@ export function WorkflowGraphToolbar({
           label="Add Logic"
           type="button"
           variant="ghost"
+          disabled={isReadOnly}
           onClick={() =>
             onOpenNodePalette(
               "Choose a logic node",
@@ -182,6 +190,7 @@ export function WorkflowGraphToolbar({
           label="Add Variable"
           type="button"
           variant="ghost"
+          disabled={isReadOnly}
           onClick={() =>
             onOpenNodePalette(
               "Choose a variable node",
@@ -197,6 +206,7 @@ export function WorkflowGraphToolbar({
           label="Add End"
           type="button"
           variant="ghost"
+          disabled={isReadOnly}
           onClick={() =>
             onOpenNodePalette(
               "Choose an end node",
@@ -216,6 +226,7 @@ export function WorkflowGraphToolbar({
             label="Revision history"
             type="button"
             variant="ghost"
+            disabled={isReadOnly}
             onClick={onOpenHistory}
           >
             <History aria-hidden="true" />
