@@ -10,6 +10,7 @@ type RunMonitorDrawerProps = {
   onFocusNode: (nodeId: string) => void;
   onClose: () => void;
   initialVariables?: Array<{ name: string; value: string }> | null;
+  profileVariables?: Array<{ name: string; value: string }> | null;
 };
 
 type RunMonitorTimelineEventStatus = "running" | "completed" | "failed";
@@ -244,6 +245,7 @@ export function RunMonitorDrawer({
   onFocusNode,
   onClose,
   initialVariables,
+  profileVariables,
 }: RunMonitorDrawerProps) {
   const [expandedEventNumbers, setExpandedEventNumbers] = useState<Record<number, boolean>>({});
   const [showAllVars, setShowAllVars] = useState<Record<number, boolean>>({});
@@ -462,6 +464,7 @@ export function RunMonitorDrawer({
                         )}
                         <RunMonitorEnvironmentPanel
                           initialVariables={initialVariables}
+                          profileVariables={profileVariables}
                           traces={traces}
                           stepIndex={item.traceIndex}
                           trace={trace}

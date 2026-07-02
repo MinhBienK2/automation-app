@@ -10,7 +10,7 @@ describe("RunVariablesDrawer", () => {
         onClose={vi.fn()}
       />,
     );
-    expect(screen.getByText("Run Variables")).toBeInTheDocument();
+    expect(screen.getByText("Variables")).toBeInTheDocument();
     expect(screen.getByText("username")).toBeInTheDocument();
     expect(screen.getByText("alice")).toBeInTheDocument();
     expect(screen.getByText("role")).toBeInTheDocument();

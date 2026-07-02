@@ -34,10 +34,10 @@ export function RunVariablesDrawer({
   }, [variables, searchQuery]);
 
   return (
-    <aside className="run-variables-drawer" aria-label="Run Variables">
+    <aside className="run-variables-drawer" aria-label="Variables">
       <header className="run-variables-header">
         <div>
-          <h2>Run Variables</h2>
+          <h2>Variables</h2>
           <div className="run-variables-status" data-mode={isSnapshot ? "snapshot" : "live"}>
             {isSnapshot ? (
               <>

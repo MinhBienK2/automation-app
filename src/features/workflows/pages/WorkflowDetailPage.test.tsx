@@ -1427,16 +1427,293 @@ describe("Workflow detail integration", () => {
 
     // Drawer should automatically open on run
     const variablesDrawer = await screen.findByRole("complementary", {
-      name: "Run Variables",
+      name: "Variables",
     });
     expect(variablesDrawer).toBeInTheDocument();
 
     // Click close button on drawer
     await userEvent.click(within(variablesDrawer).getByRole("button", { name: "Close variables" }));
-    expect(screen.queryByRole("complementary", { name: "Run Variables" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "Variables" })).not.toBeInTheDocument();
 
     // Toggle open again via header button
     await userEvent.click(variablesBtn);
-    expect(await screen.findByRole("complementary", { name: "Run Variables" })).toBeInTheDocument();
+    expect(await screen.findByRole("complementary", { name: "Variables" })).toBeInTheDocument();
+  });
+
+  test("displays combined initial and profile variables in variables drawer before run starts", async () => {
+    const selectedWorkflow = {
+      ...workflow,
+      browser_profile_id: "environment-qa",
+    };
+    const scenario = workflowDetailScenario([sleepStep]);
+    scenario.get_workflow_settings.environment.initial_variables = [
+      { name: "settings_var", value_type: "text", value: "settings_val" },
+      { name: "override_var", value_type: "text", value: "settings_override" },
+    ];
+
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      list_workflows: () => [selectedWorkflow],
+      get_workflow: () => ({
+        workflow: selectedWorkflow,
+        steps: [sleepStep],
+      }),
+      list_browser_profiles: () => [
+        {
+          id: "environment-qa",
+          project_id: "project-1",
+          name: "QA profile",
+          description: "",
+          is_default: true,
+          environment: {
+            variables: [
+              { name: "profile_var", value_type: "text", value: "profile_val", persist: false },
+              { name: "override_var", value_type: "text", value: "profile_override", persist: false },
+            ],
+          },
+          browser_launch: {
+            session_mode: "persistent_profile",
+            profile_dir: "qa-profile",
+          },
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      get_run_state: idleRunState,
+      list_run_states: [],
+    });
+
+    renderApp();
+    await openWorkflowDetails();
+
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+
+    // Variables button should be in header
+    const variablesBtn = within(controlsRow).getByRole("button", { name: "Variables" });
+    
+    // Toggle open variables drawer via header button
+    await userEvent.click(variablesBtn);
+
+    // Should display Variables drawer (renamed to "Variables")
+    const variablesDrawer = await screen.findByRole("complementary", {
+      name: "Variables",
+    });
+    expect(variablesDrawer).toBeInTheDocument();
+
+    // Verify initial values are populated
+    expect(within(variablesDrawer).getByText("settings_var")).toBeInTheDocument();
+    expect(within(variablesDrawer).getByText("settings_val")).toBeInTheDocument();
+    
+    expect(within(variablesDrawer).getByText("profile_var")).toBeInTheDocument();
+    expect(within(variablesDrawer).getByText("profile_val")).toBeInTheDocument();
+
+    expect(within(variablesDrawer).getByText("override_var")).toBeInTheDocument();
+    expect(within(variablesDrawer).getByText("settings_override")).toBeInTheDocument();
+    expect(within(variablesDrawer).queryByText("profile_override")).not.toBeInTheDocument();
+  });
+
+  test("resets finished run state and variables when exiting and reopening the workflow", async () => {
+    const selectedWorkflow = {
+      ...workflow,
+      browser_profile_id: "environment-qa",
+    };
+    const scenario = workflowDetailScenario([sleepStep]);
+    scenario.get_workflow_settings.environment.initial_variables = [
+      { name: "settings_var", value_type: "text", value: "settings_val" },
+    ];
+
+    const runningState = {
+      ...idleRunState,
+      status: "running" as const,
+      mode: "run_workflow" as const,
+      current_step_id: "step-1",
+      current_step_number: 1,
+      completed_step_ids: [],
+      outputs: {
+        __action_traces: [],
+      },
+    };
+
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      list_workflows: () => [selectedWorkflow],
+      get_workflow: () => ({
+        workflow: selectedWorkflow,
+        steps: [sleepStep],
+      }),
+      list_browser_profiles: () => [
+        {
+          id: "environment-qa",
+          project_id: "project-1",
+          name: "QA profile",
+          description: "",
+          is_default: true,
+          environment: {
+            variables: [
+              { name: "profile_var", value_type: "text", value: "profile_val", persist: false },
+            ],
+          },
+          browser_launch: {
+            session_mode: "persistent_profile",
+            profile_dir: "qa-profile",
+          },
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      get_run_state: runningState,
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: selectedWorkflow.id,
+          workflow_name: selectedWorkflow.name,
+          source: "manual",
+          started_at: "2026-05-27T09:00:00.000Z",
+          state: runningState,
+        },
+      ],
+    });
+
+    renderApp();
+    await openWorkflowDetails();
+
+    // Now trigger a finished run snapshot
+    const finishedState = {
+      ...idleRunState,
+      status: "success" as const,
+      mode: "run_workflow" as const,
+      current_step_id: "step-1",
+      current_step_number: 1,
+      completed_step_ids: ["step-1"],
+      outputs: {
+        __action_traces: [
+          {
+            node_id: "step-1",
+            status: "success",
+            output_summary: { added_keys: ["new_var"], changed_keys: [], removed_keys: [] },
+            output_values: { new_var: "run_val" },
+          },
+        ],
+      },
+    };
+
+    // Simulate updating bridge commands to return this finished state
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      list_workflows: () => [selectedWorkflow],
+      get_workflow: () => ({
+        workflow: selectedWorkflow,
+        steps: [sleepStep],
+      }),
+      list_browser_profiles: () => [
+        {
+          id: "environment-qa",
+          project_id: "project-1",
+          name: "QA profile",
+          description: "",
+          is_default: true,
+          environment: {
+            variables: [
+              { name: "profile_var", value_type: "text", value: "profile_val", persist: false },
+            ],
+          },
+          browser_launch: {
+            session_mode: "persistent_profile",
+            profile_dir: "qa-profile",
+          },
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      get_run_state: finishedState,
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: selectedWorkflow.id,
+          workflow_name: selectedWorkflow.name,
+          source: "manual",
+          started_at: "2026-05-27T09:00:00.000Z",
+          state: finishedState,
+        },
+      ],
+    });
+
+    // Drawer automatically opens when status is running. Check that it displays "new_var" -> "run_val"
+    const variablesDrawer = await screen.findByRole("complementary", {
+      name: "Variables",
+    });
+    expect(variablesDrawer).toBeInTheDocument();
+    
+    // Wait for the drawer to show the completed run variable due to polling
+    await waitFor(() => {
+      expect(within(variablesDrawer).getByText("new_var")).toBeInTheDocument();
+    });
+    expect(within(variablesDrawer).getByText("run_val")).toBeInTheDocument();
+
+    // Close variables drawer
+    await userEvent.click(within(variablesDrawer).getByRole("button", { name: "Close variables" }));
+
+    // Reset bridge mock to return idle when reopening
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      list_workflows: () => [selectedWorkflow],
+      get_workflow: () => ({
+        workflow: selectedWorkflow,
+        steps: [sleepStep],
+      }),
+      list_browser_profiles: () => [
+        {
+          id: "environment-qa",
+          project_id: "project-1",
+          name: "QA profile",
+          description: "",
+          is_default: true,
+          environment: {
+            variables: [
+              { name: "profile_var", value_type: "text", value: "profile_val", persist: false },
+            ],
+          },
+          browser_launch: {
+            session_mode: "persistent_profile",
+            profile_dir: "qa-profile",
+          },
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      get_run_state: idleRunState,
+      list_run_states: [],
+    });
+
+    // Exit workflow details
+    await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
+
+    // Reopen workflow details
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    // Toggle variables drawer again
+    const newHeader = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const newControlsRow = within(newHeader).getByRole("group", {
+      name: "Workflow controls row",
+    });
+    const newVariablesBtn = within(newControlsRow).getByRole("button", { name: "Variables" });
+    await userEvent.click(newVariablesBtn);
+
+    const newVariablesDrawer = await screen.findByRole("complementary", {
+      name: "Variables",
+    });
+
+    // Check that completed run variables are gone and only initial/profile variables are shown
+    expect(within(newVariablesDrawer).queryByText("new_var")).not.toBeInTheDocument();
+    expect(within(newVariablesDrawer).queryByText("run_val")).not.toBeInTheDocument();
+    expect(within(newVariablesDrawer).getByText("settings_var")).toBeInTheDocument();
+    expect(within(newVariablesDrawer).getByText("profile_var")).toBeInTheDocument();
   });
 });

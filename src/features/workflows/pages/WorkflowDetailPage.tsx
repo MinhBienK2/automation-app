@@ -231,7 +231,7 @@ export function WorkflowDetailPage({
       : [];
 
     const getVars = (stepIdx: number) => {
-      return getVariablesStateAtStep(initialVariables, traces, stepIdx);
+      return getVariablesStateAtStep(initialVariables, traces, stepIdx, profileVariables);
     };
 
     if (localSelectedNodeId && workflowGraph) {
@@ -278,7 +278,7 @@ export function WorkflowDetailPage({
       snapshotNodeName: null,
       highlightedKeys: highlighted,
     };
-  }, [runState, workflowGraph, localSelectedNodeId, initialVariables]);
+  }, [runState, workflowGraph, localSelectedNodeId, initialVariables, profileVariables]);
 
   return (
     <section className="app-screen workflow-detail-screen">
@@ -444,6 +444,7 @@ export function WorkflowDetailPage({
                   graph={workflowGraph}
                   runState={graphRunState}
                   initialVariables={initialVariables}
+                  profileVariables={profileVariables}
                   onFocusNode={requestNodeSelection}
                   onClose={closeMonitor}
                 />

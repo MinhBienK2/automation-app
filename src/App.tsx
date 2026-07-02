@@ -481,6 +481,19 @@ function App() {
     return () => window.clearInterval(intervalId);
   }, [runSnapshots]);
 
+  // --- Reset finished run state when exiting the workflow details page ---
+  const prevScreenRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prevScreen = prevScreenRef.current;
+    prevScreenRef.current = nav.screen;
+
+    if (prevScreen === "detail" && nav.screen !== "detail" && nav.screen !== "subflow-detail") {
+      setRunSnapshots((current) =>
+        current.filter((snapshot) => snapshot.state.status === "running"),
+      );
+    }
+  }, [nav.screen, setRunSnapshots]);
+
   // --- Navigation Helpers ---
   const openIdentityTarget = useCallback((target: IdentityLabTarget) => {
     setIdentityLabTarget(target);

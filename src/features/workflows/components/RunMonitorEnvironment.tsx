@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 type RunMonitorEnvironmentProps = {
   initialVariables?: Array<{ name: string; value: string }> | null;
+  profileVariables?: Array<{ name: string; value: string }> | null;
   traces: any[];
   stepIndex: number;
   trace?: any;
@@ -304,8 +305,16 @@ export function getVariablesStateAtStep(
   initialVariables: Array<{ name: string; value: string }> | null | undefined,
   traces: any[],
   stepIndex: number,
+  profileVariables?: Array<{ name: string; value: string }> | null | undefined,
 ): Record<string, unknown> {
   const state: Record<string, unknown> = {};
+  if (profileVariables) {
+    for (const v of profileVariables) {
+      if (v.name.trim()) {
+        state[v.name] = v.value;
+      }
+    }
+  }
   if (initialVariables) {
     for (const v of initialVariables) {
       if (v.name.trim()) {
@@ -550,6 +559,7 @@ function TreeNodeView({
 
 export function RunMonitorEnvironmentPanel({
   initialVariables,
+  profileVariables,
   traces,
   stepIndex,
   trace,
@@ -579,7 +589,7 @@ export function RunMonitorEnvironmentPanel({
   const removed: string[] = summary?.removed_keys ?? [];
 
   const hasChanges = added.length > 0 || changed.length > 0 || removed.length > 0;
-  const prevVars = getVariablesStateAtStep(initialVariables, traces, stepIndex - 1);
+  const prevVars = getVariablesStateAtStep(initialVariables, traces, stepIndex - 1, profileVariables);
   const addedSet = new Set(added);
   const changedSet = new Set(changed);
 
@@ -623,6 +633,7 @@ export function RunMonitorEnvironmentPanel({
               initialVariables,
               traces,
               stepIndex,
+              profileVariables,
             );
             const tree = buildVariableTree(currentVars);
             if (tree.length === 0) {
