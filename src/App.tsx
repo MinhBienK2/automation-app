@@ -489,7 +489,11 @@ function App() {
 
     if (prevScreen === "detail" && nav.screen !== "detail" && nav.screen !== "subflow-detail") {
       setRunSnapshots((current) =>
-        current.filter((snapshot) => snapshot.state.status === "running"),
+        current.filter(
+          (snapshot) =>
+            snapshot.state.status === "running" ||
+            snapshot.state.retained_session?.available === true,
+        ),
       );
     }
   }, [nav.screen, setRunSnapshots]);

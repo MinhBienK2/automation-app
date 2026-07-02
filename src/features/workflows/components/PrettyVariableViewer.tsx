@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Copy, Check } from "lucide-react";
 
 type PrettyVariableViewerProps = {
   variables: Record<string, unknown>;
@@ -33,6 +33,14 @@ type NodeProps = {
 function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 }: NodeProps) {
   const [expanded, setExpanded] = useState<boolean>(false);
   const [showAll, setShowAll] = useState<boolean>(false);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const handleCopy = () => {
+    const textToCopy = typeof value === "object" ? JSON.stringify(value) : String(value);
+    void navigator.clipboard?.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   // Formatting helper
   const renderPrimitive = (val: unknown) => {
     if (val === null || val === undefined) {
@@ -81,18 +89,29 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
   if (Array.isArray(value)) {
     return (
       <div className="pretty-var-node" style={{ paddingLeft: depth > 0 ? "0px" : "0" }}>
-        <button
-          type="button"
-          className="pretty-var-toggle"
-          onClick={() => setExpanded((prev) => !prev)}
-          aria-expanded={expanded}
-        >
-          <span className="pretty-var-toggle-icon">
-            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </span>
-          <span className="pretty-var-key">{name}</span>
-          <span className="pretty-var-meta">Mảng · {value.length} phần tử</span>
-        </button>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center", position: "relative" }} className="pretty-var-toggle-wrapper">
+          <button
+            type="button"
+            className="pretty-var-toggle"
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-expanded={expanded}
+            style={{ flex: 1, paddingRight: "32px" }}
+          >
+            <span className="pretty-var-toggle-icon">
+              {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </span>
+            <span className="pretty-var-key">{name}</span>
+            <span className="pretty-var-meta">Mảng · {value.length} phần tử</span>
+          </button>
+          <button
+            type="button"
+            className="pretty-var-copy-btn"
+            onClick={handleCopy}
+            title="Copy giá trị"
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          </button>
+        </div>
         {expanded && (
           <div className="pretty-var-children">
             {value.map((item, index) => (
@@ -140,18 +159,29 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
 
     return (
       <div className="pretty-var-node" style={{ paddingLeft: depth > 0 ? "0px" : "0" }}>
-        <button
-          type="button"
-          className="pretty-var-toggle"
-          onClick={() => setExpanded((prev) => !prev)}
-          aria-expanded={expanded}
-        >
-          <span className="pretty-var-toggle-icon">
-            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </span>
-          <span className="pretty-var-key">{name}</span>
-          <span className="pretty-var-meta">Đối tượng · {entries.length} thuộc tính</span>
-        </button>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center", position: "relative" }} className="pretty-var-toggle-wrapper">
+          <button
+            type="button"
+            className="pretty-var-toggle"
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-expanded={expanded}
+            style={{ flex: 1, paddingRight: "32px" }}
+          >
+            <span className="pretty-var-toggle-icon">
+              {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </span>
+            <span className="pretty-var-key">{name}</span>
+            <span className="pretty-var-meta">Đối tượng · {entries.length} thuộc tính</span>
+          </button>
+          <button
+            type="button"
+            className="pretty-var-copy-btn"
+            onClick={handleCopy}
+            title="Copy giá trị"
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          </button>
+        </div>
         {expanded && (
           <div className="pretty-var-children">
             {entries.map(([childKey, childVal]) => (
@@ -185,6 +215,16 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
         </>
       )}
       {renderPrimitive(value)}
+      {value !== null && value !== undefined && (
+        <button
+          type="button"
+          className="pretty-var-copy-btn"
+          onClick={handleCopy}
+          title="Copy giá trị"
+        >
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
+      )}
     </div>
   );
 }
