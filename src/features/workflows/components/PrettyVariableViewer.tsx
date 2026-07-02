@@ -5,7 +5,6 @@ type PrettyVariableViewerProps = {
   variables: Record<string, unknown>;
   highlightedKeys?: Set<string>;
 };
-
 export function PrettyVariableViewer({ variables, highlightedKeys = new Set() }: PrettyVariableViewerProps) {
   return (
     <div className="pretty-var-viewer" aria-label="Pretty Variable Viewer">
@@ -22,6 +21,7 @@ export function PrettyVariableViewer({ variables, highlightedKeys = new Set() }:
   );
 }
 
+
 type NodeProps = {
   name: string;
   value: unknown;
@@ -31,9 +31,8 @@ type NodeProps = {
 };
 
 function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 }: NodeProps) {
-  const [expanded, setExpanded] = useState<boolean>(true);
+  const [expanded, setExpanded] = useState<boolean>(false);
   const [showAll, setShowAll] = useState<boolean>(false);
-
   // Formatting helper
   const renderPrimitive = (val: unknown) => {
     if (val === null || val === undefined) {
