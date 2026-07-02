@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivitySquare, CheckCircle2, Save, Settings } from "lucide-react";
+import { ActivitySquare, CheckCircle2, Save, Settings, Sliders } from "lucide-react";
 import type {
   GraphValidationIssue,
   GraphEdgeDelay,
@@ -15,6 +15,8 @@ import { buildRunIssues } from "../../../lib/workflowUi";
 import { RunMonitorDrawer } from "../components/RunMonitorDrawer";
 import { RunIssuePanel } from "../components/RunIssuePanel";
 import { RunStatusBar } from "../components/RunStatusBar";
+import { getVariablesStateAtStep } from "../components/RunMonitorEnvironment";
+import { RunVariablesDrawer } from "../components/RunVariablesDrawer";
 import {
   WorkflowGraphEditor,
   type GraphSelectionRequest,
@@ -116,8 +118,13 @@ export function WorkflowDetailPage({
   }, [isRunning, detail.workflow.id]);
   const [followCurrentNode, setFollowCurrentNode] = useState(liveRunFollowCurrent);
   const [monitorOpen, setMonitorOpen] = useState(false);
+  const [variablesOpen, setVariablesOpen] = useState(false);
+  const [localSelectedNodeId, setLocalSelectedNodeId] = useState<string | null>(null);
+  
   const selectionRequestIdRef = useRef(0);
   const monitorManuallyClosedRef = useRef(false);
+  const variablesManuallyClosedRef = useRef(false);
+
   const graphRunState = useMemo(
     () => mapRunStateToMainGraph(runState, workflowGraph),
     [runState, workflowGraph],
@@ -134,7 +141,7 @@ export function WorkflowDetailPage({
   );
   const totalBlockingIssues = graphIssues.filter((issue) => issue.level === "error").length;
   const hasBlockingIssues = totalBlockingIssues > 0;
-  const requestNodeSelection = useCallback((nodeId: string) => {
+  const requestNodeSelection = useCallback((nodeId: string | null) => {
     selectionRequestIdRef.current += 1;
     setSelectionRequest({
       requestId: selectionRequestIdRef.current,
@@ -160,14 +167,21 @@ export function WorkflowDetailPage({
   useEffect(() => {
     setFollowCurrentNode(liveRunFollowCurrent);
     setMonitorOpen(false);
+    setVariablesOpen(false);
     monitorManuallyClosedRef.current = false;
+    variablesManuallyClosedRef.current = false;
   }, [detail.workflow.id, liveRunFollowCurrent]);
 
   useEffect(() => {
-    if (!liveRunEnabled || runState.status !== "running" || monitorManuallyClosedRef.current) {
+    if (!liveRunEnabled || runState.status !== "running") {
       return;
     }
-    setMonitorOpen(true);
+    if (!monitorManuallyClosedRef.current) {
+      setMonitorOpen(true);
+    }
+    if (!variablesManuallyClosedRef.current) {
+      setVariablesOpen(true);
+    }
   }, [liveRunEnabled, runState.status]);
 
   useEffect(() => {
@@ -187,6 +201,84 @@ export function WorkflowDetailPage({
     monitorManuallyClosedRef.current = true;
     setMonitorOpen(false);
   };
+
+  const toggleVariables = () => {
+    setVariablesOpen((current) => {
+      const next = !current;
+      variablesManuallyClosedRef.current = !next;
+      return next;
+    });
+  };
+
+  const closeVariables = () => {
+    variablesManuallyClosedRef.current = true;
+    setVariablesOpen(false);
+  };
+
+  const handleSelectedNodeChange = useCallback((nodeId: string | null) => {
+    setLocalSelectedNodeId(nodeId);
+    onSelectedGraphNodeChange(nodeId);
+  }, [onSelectedGraphNodeChange]);
+
+  const handleBackToLive = () => {
+    requestNodeSelection(null);
+    handleSelectedNodeChange(null);
+  };
+
+  const resolvedVariablesInfo = useMemo(() => {
+    const traces = Array.isArray(runState.outputs?.__action_traces)
+      ? (runState.outputs.__action_traces as any[])
+      : [];
+
+    const getVars = (stepIdx: number) => {
+      return getVariablesStateAtStep(initialVariables, traces, stepIdx);
+    };
+
+    if (localSelectedNodeId && workflowGraph) {
+      const graphNodeIds = new Set(workflowGraph.nodes.map((node) => node.id));
+      const resolvedId = resolveMainGraphNodeId(localSelectedNodeId, graphNodeIds);
+
+      let matchedTraceIndex = -1;
+      for (let i = traces.length - 1; i >= 0; i--) {
+        const traceNodeId = resolveMainGraphNodeId(traces[i].node_id, graphNodeIds);
+        if (traceNodeId === resolvedId) {
+          matchedTraceIndex = i;
+          break;
+        }
+      }
+
+      if (matchedTraceIndex !== -1) {
+        const trace = traces[matchedTraceIndex];
+        const highlighted = new Set([
+          ...(trace.output_summary?.added_keys || []),
+          ...(trace.output_summary?.changed_keys || []),
+        ]);
+        const node = workflowGraph.nodes.find((n) => n.id === resolvedId);
+        return {
+          variables: getVars(matchedTraceIndex),
+          isSnapshot: true,
+          snapshotNodeName: node?.label || resolvedId,
+          highlightedKeys: highlighted,
+        };
+      }
+    }
+
+    const latestTraceIndex = traces.length - 1;
+    let highlighted = new Set<string>();
+    if (latestTraceIndex >= 0) {
+      const trace = traces[latestTraceIndex];
+      highlighted = new Set([
+        ...(trace.output_summary?.added_keys || []),
+        ...(trace.output_summary?.changed_keys || []),
+      ]);
+    }
+    return {
+      variables: getVars(latestTraceIndex),
+      isSnapshot: false,
+      snapshotNodeName: null,
+      highlightedKeys: highlighted,
+    };
+  }, [runState, workflowGraph, localSelectedNodeId, initialVariables]);
 
   return (
     <section className="app-screen workflow-detail-screen">
@@ -238,17 +330,30 @@ export function WorkflowDetailPage({
               <Save aria-hidden="true" />
             </IconButton>
             {liveRunEnabled ? (
-              <Button
-                className="workflow-command-monitor"
-                variant="secondary"
-                size="sm"
-                type="button"
-                onClick={toggleMonitor}
-                aria-pressed={monitorOpen}
-              >
-                <ActivitySquare aria-hidden="true" />
-                Monitor
-              </Button>
+              <>
+                <Button
+                  className="workflow-command-monitor"
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  onClick={toggleMonitor}
+                  aria-pressed={monitorOpen}
+                >
+                  <ActivitySquare aria-hidden="true" />
+                  Monitor
+                </Button>
+                <Button
+                  className="workflow-command-variables"
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  onClick={toggleVariables}
+                  aria-pressed={variablesOpen}
+                >
+                  <Sliders className="h-4 w-4" aria-hidden="true" />
+                  Variables
+                </Button>
+              </>
             ) : null}
             {showRunGraphFromSelected ? (
               <div ref={dropdownRef} className="run-from-selected-container">
@@ -333,15 +438,27 @@ export function WorkflowDetailPage({
       {workflowGraph ? (
         <>
           {liveRunEnabled && (
-            <div style={{ display: monitorOpen ? "" : "none" }}>
-              <RunMonitorDrawer
-                graph={workflowGraph}
-                runState={graphRunState}
-                initialVariables={initialVariables}
-                onFocusNode={requestNodeSelection}
-                onClose={closeMonitor}
-              />
-            </div>
+            <>
+              <div style={{ display: monitorOpen ? "" : "none" }}>
+                <RunMonitorDrawer
+                  graph={workflowGraph}
+                  runState={graphRunState}
+                  initialVariables={initialVariables}
+                  onFocusNode={requestNodeSelection}
+                  onClose={closeMonitor}
+                />
+              </div>
+              <div style={{ display: variablesOpen ? "" : "none" }}>
+                <RunVariablesDrawer
+                  variables={resolvedVariablesInfo.variables}
+                  isSnapshot={resolvedVariablesInfo.isSnapshot}
+                  snapshotNodeName={resolvedVariablesInfo.snapshotNodeName}
+                  onBackToLive={handleBackToLive}
+                  highlightedKeys={resolvedVariablesInfo.highlightedKeys}
+                  onClose={closeVariables}
+                />
+              </div>
+            </>
           )}
           <WorkflowGraphEditor
             graph={workflowGraph}
@@ -356,7 +473,7 @@ export function WorkflowDetailPage({
             onChange={onGraphChange}
             onOpenSubflowDetail={onOpenSubflowDetail}
             onRunGraph={onRunGraph}
-            onSelectedNodeChange={onSelectedGraphNodeChange}
+            onSelectedNodeChange={handleSelectedNodeChange}
             onSaveGraph={onSaveGraph}
             onValidateGraph={onValidateGraph}
             onRestoreRevision={onRestoreRevision}

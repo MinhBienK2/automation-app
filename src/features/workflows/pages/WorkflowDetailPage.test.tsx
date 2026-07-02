@@ -1391,4 +1391,52 @@ describe("Workflow detail integration", () => {
     await userEvent.click(within(inspectorError).getByRole("button", { name: "View details" }));
     expect(within(inspectorError).getByText(/waiting until load/)).toHaveClass("graph-error-details");
   });
+
+  test("shows run variables drawer, displays variables, and toggles visibility", async () => {
+    const runningState = {
+      ...idleRunState,
+      status: "running" as const,
+      mode: "run_workflow" as const,
+      current_step_id: "step-1",
+      current_step_number: 1,
+      completed_step_ids: [],
+      outputs: {
+        __action_traces: [],
+      },
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      list_run_states: [runSnapshot(runningState)],
+      get_run_state: runningState,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+    
+    // Variables button should be in header
+    const variablesBtn = within(controlsRow).getByRole("button", { name: "Variables" });
+    expect(variablesBtn).toBeInTheDocument();
+
+    // Drawer should automatically open on run
+    const variablesDrawer = await screen.findByRole("complementary", {
+      name: "Run Variables",
+    });
+    expect(variablesDrawer).toBeInTheDocument();
+
+    // Click close button on drawer
+    await userEvent.click(within(variablesDrawer).getByRole("button", { name: "Close variables" }));
+    expect(screen.queryByRole("complementary", { name: "Run Variables" })).not.toBeInTheDocument();
+
+    // Toggle open again via header button
+    await userEvent.click(variablesBtn);
+    expect(await screen.findByRole("complementary", { name: "Run Variables" })).toBeInTheDocument();
+  });
 });
