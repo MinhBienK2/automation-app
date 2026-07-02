@@ -114,7 +114,7 @@ describe("runner variable helpers", () => {
     expect(result.array).toEqual([2, "hello"]);
   });
 
-  test("resolves template tokens in evaluate_logic script config", () => {
+  test("resolves template tokens in check_conditions script config", () => {
     const config = {
       output_name: "is_valid",
       mode: "script",

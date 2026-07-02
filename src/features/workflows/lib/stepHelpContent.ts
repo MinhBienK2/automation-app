@@ -17,8 +17,8 @@ const graphInternalActionTypes = [
   "transform_variable",
   "assert_output",
   "domain_allowlist",
-  "evaluate_logic",
-  "evaluate_expression",
+  "check_conditions",
+  "calculate_value",
 ] as const satisfies readonly ActionType[];
 type GraphInternalActionType = (typeof graphInternalActionTypes)[number];
 type PhaseOneActionType =

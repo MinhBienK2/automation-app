@@ -316,8 +316,8 @@ export function updateActionConfigField(
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
-    case "evaluate_logic":
-    case "evaluate_expression":
+    case "check_conditions":
+    case "calculate_value":
     case "get_current_url":
     case "quarantined":
       return config;

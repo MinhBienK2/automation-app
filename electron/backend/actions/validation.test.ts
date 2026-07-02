@@ -393,32 +393,53 @@ describe("backend action validation registry", () => {
         config: { name: "my_obj", operation: "set_key", property_key: "", property_value: "val", property_value_type: "text" },
       } as never),
     ).toEqual({ field: "property_key", message: "Property key is required" });
-
-    // evaluate_expression
+    // check_conditions
     expect(
       validateActionConfig({
-        type: "evaluate_expression",
+        type: "check_conditions",
+        config: { output_name: "", mode: "visual" },
+      } as any),
+    ).toEqual({ field: "output_name", message: "Output variable name is required" });
+
+    expect(
+      validateActionConfig({
+        type: "check_conditions",
+        config: { output_name: "is_valid", mode: "script", script: "" },
+      } as any),
+    ).toEqual({ field: "script", message: "JavaScript script is required in script mode" });
+
+    expect(
+      validateActionConfig({
+        type: "check_conditions",
+        config: { output_name: "is_valid", mode: "visual", rules_group: {} },
+      } as any),
+    ).toEqual({ field: "rules_group", message: "Invalid visual rules configuration" });
+
+    // calculate_value
+    expect(
+      validateActionConfig({
+        type: "calculate_value",
         config: { output_name: "", expression: "1 + 1" },
       } as any),
     ).toEqual({ field: "output_name", message: "Output variable name is required" });
 
     expect(
       validateActionConfig({
-        type: "evaluate_expression",
+        type: "calculate_value",
         config: { output_name: "result", expression: "" },
       } as any),
     ).toEqual({ field: "expression", message: "Expression is required" });
 
     expect(
       validateActionConfig({
-        type: "evaluate_expression",
+        type: "calculate_value",
         config: { output_name: "result", expression: "1 + 1", evaluation_type: "invalid" as any },
       } as any),
     ).toEqual({ field: "evaluation_type", message: "Evaluation type must be static or dynamic" });
 
     expect(
       validateActionConfig({
-        type: "evaluate_expression",
+        type: "calculate_value",
         config: { output_name: "result", expression: "1 + 1", evaluation_type: "dynamic" },
       } as any),
     ).toBeNull();

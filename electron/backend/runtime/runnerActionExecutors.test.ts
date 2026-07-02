@@ -273,7 +273,7 @@ describe("runnerActionExecutors", () => {
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
     await executeRegisteredAction(executors, {
-      type: "evaluate_logic",
+      type: "check_conditions",
       config: {
         output_name: "result",
         mode: "script",
@@ -299,7 +299,7 @@ describe("runnerActionExecutors", () => {
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
     await executeRegisteredAction(executors, {
-      type: "evaluate_logic",
+      type: "check_conditions",
       config: {
         output_name: "result",
         mode: "script",
@@ -315,7 +315,7 @@ describe("runnerActionExecutors", () => {
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
     await executeRegisteredAction(executors, {
-      type: "evaluate_logic",
+      type: "check_conditions",
       config: {
         output_name: "result",
         mode: "visual",
@@ -342,7 +342,7 @@ describe("runnerActionExecutors", () => {
     expect(runtime.outputs.result).toBe(true);
   });
 
-  test("registers dynamic evaluate_logic resolver and evaluates lazily when referenced", async () => {
+  test("registers dynamic check_conditions resolver and evaluates lazily when referenced", async () => {
     let scriptCallCount = 0;
     const page = {
       evaluate: async (fn: any, args: any) => {
@@ -364,7 +364,7 @@ describe("runnerActionExecutors", () => {
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
     await executeRegisteredAction(executors, {
-      type: "evaluate_logic",
+      type: "check_conditions",
       config: {
         output_name: "result",
         mode: "script",
@@ -400,7 +400,7 @@ describe("runnerActionExecutors", () => {
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
     await executeRegisteredAction(executors, {
-      type: "evaluate_logic",
+      type: "check_conditions",
       config: {
         output_name: "result",
         mode: "visual",
@@ -414,7 +414,7 @@ describe("runnerActionExecutors", () => {
     expect(resolvers.has("result")).toBe(true);
 
     await executeRegisteredAction(executors, {
-      type: "evaluate_logic",
+      type: "check_conditions",
       config: {
         output_name: "result",
         mode: "visual",
@@ -440,7 +440,7 @@ describe("runnerActionExecutors", () => {
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
     await executeRegisteredAction(executors, {
-      type: "evaluate_expression",
+      type: "calculate_value",
       config: {
         output_name: "result",
         expression: "outputs.A + outputs.B",
@@ -451,7 +451,7 @@ describe("runnerActionExecutors", () => {
     expect(runtime.outputs.result).toBe(15);
   });
 
-  test("registers dynamic evaluate_expression resolver and evaluates raw values lazily", async () => {
+  test("registers dynamic calculate_value resolver and evaluates raw values lazily", async () => {
     let scriptCallCount = 0;
     const page = {
       evaluate: async (fn: any, args: any) => {
@@ -473,7 +473,7 @@ describe("runnerActionExecutors", () => {
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
     await executeRegisteredAction(executors, {
-      type: "evaluate_expression",
+      type: "calculate_value",
       config: {
         output_name: "result",
         expression: "outputs.A + outputs.B",

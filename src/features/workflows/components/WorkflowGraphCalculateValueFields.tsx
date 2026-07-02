@@ -6,24 +6,24 @@ import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { TemplateTextareaField } from "./TemplateTextField";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { objectConfig } from "../lib/configUtils";
-import type { EvaluateExpressionConfig } from "../../../types/workflowCore";
+import type { CalculateValueConfig } from "../../../types/workflowCore";
 
-type EvaluateExpressionFieldsProps = {
+type CalculateValueFieldsProps = {
   node: GraphNode;
   onChange: (node: GraphNode) => void;
   variableOptions?: VariableOption[];
 };
 
-export function WorkflowGraphEvaluateExpressionFields({
+export function WorkflowGraphCalculateValueFields({
   node,
   onChange,
   variableOptions = [],
-}: EvaluateExpressionFieldsProps) {
-  const config = objectConfig(node.config) as EvaluateExpressionConfig;
+}: CalculateValueFieldsProps) {
+  const config = objectConfig(node.config) as CalculateValueConfig;
   const outputName = config.output_name ?? "";
   const expression = config.expression ?? "";
 
-  const updateConfig = (nextConfig: Partial<EvaluateExpressionConfig>) => {
+  const updateConfig = (nextConfig: Partial<CalculateValueConfig>) => {
     onChange({
       ...node,
       config: {

@@ -1047,7 +1047,7 @@ export function createRunnerActionExecutors(
       await setWebStorage(runtime.page, "session", action.config.key, action.config.value);
       runtime.outputs[action.config.key] = action.config.value;
     },
-    evaluate_logic: async (action) => {
+    check_conditions: async (action) => {
       const { output_name, mode, script, rules_group, evaluation_type } = action.config;
       const resolvers = (runtime.outputs as any).__dynamicResolvers;
       if (evaluation_type === "dynamic" && resolvers) {
@@ -1102,7 +1102,7 @@ export function createRunnerActionExecutors(
         }
       }
     },
-    evaluate_expression: async (action) => {
+    calculate_value: async (action) => {
       const { output_name, expression, evaluation_type } = action.config;
       const resolvers = (runtime.outputs as any).__dynamicResolvers;
       if (evaluation_type === "dynamic" && resolvers) {

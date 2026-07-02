@@ -382,9 +382,9 @@ function compilePath(
       }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
-    case "evaluate_logic":
+    case "check_conditions":
       steps.push(step(node, {
-        type: "evaluate_logic",
+        type: "check_conditions",
         config: {
           output_name: requiredString(node.config, "output_name", "Output variable name is required"),
           mode: stringField(node.config, "mode") === "script" ? "script" : "visual",
@@ -395,9 +395,9 @@ function compilePath(
       }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
-    case "evaluate_expression":
+    case "calculate_value":
       steps.push(step(node, {
-        type: "evaluate_expression",
+        type: "calculate_value",
         config: {
           output_name: requiredString(node.config, "output_name", "Output variable name is required"),
           expression: requiredString(node.config, "expression", "Expression is required"),
@@ -849,8 +849,8 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
-    case "evaluate_logic":
-    case "evaluate_expression":
+    case "check_conditions":
+    case "calculate_value":
     case "call_subflow":
     case "merge":
       return "out";

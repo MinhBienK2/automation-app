@@ -129,8 +129,8 @@ export const hiddenActionCoverage = {
   update_flag_variable: backendGuard("hidden graph-internal action; backend runner tests cover variable updates"),
   update_list_variable: backendGuard("hidden graph-internal action; backend runner tests cover variable updates"),
   update_object_variable: backendGuard("hidden graph-internal action; backend runner tests cover variable updates"),
-  evaluate_logic: backendGuard("hidden graph-internal action; backend runner tests cover logic evaluation"),
-  evaluate_expression: backendGuard("hidden graph-internal action; backend runner tests cover expression evaluation"),
+  check_conditions: backendGuard("hidden graph-internal action; backend runner tests cover logic evaluation"),
+  calculate_value: backendGuard("hidden graph-internal action; backend runner tests cover expression evaluation"),
 } satisfies Partial<Record<ActionType, CoverageEntry>>;
 
 export const graphNodeCoverage = {

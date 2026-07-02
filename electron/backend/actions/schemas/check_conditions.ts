@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const evaluateLogicSchema = z.object({
-  type: z.literal("evaluate_logic"),
+export const checkConditionsSchema = z.object({
+  type: z.literal("check_conditions"),
   config: z.object({
     output_name: z.string(),
     mode: z.enum(["visual", "script"]),

@@ -377,7 +377,7 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("JSON variables", "The JSON root must be an object.", ["Nested objects flatten into dot paths; arrays stay whole."]),
     ], "en"),
   },
-  evaluate_logic: {
+  check_conditions: {
     vi: nodeWithFields("Kiểm tra điều kiện", "Đánh giá các quy tắc logic trực quan hoặc mã JS và lưu kết quả dạng True/False.", [
       field("Result Output Variable Name", "Tên biến lưu kết quả.", ["Kết quả lưu dưới dạng boolean true hoặc false."]),
       field("Evaluation Mode", "Chọn chế độ visual rules hoặc viết mã JS.", ["Mã JS chạy trên ngữ cảnh browser và nhận outputs.", "Dùng {{name}} để chèn biến, hoặc outputs.name để truy cập trực tiếp."]),
@@ -387,7 +387,7 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("Evaluation Mode", "Choose between visual rules builder or JS script.", ["JS script evaluates in the browser context with outputs available.", "Use {{name}} to insert variables (resolved before execution), or outputs.name for direct access."]),
     ], "en"),
   },
-  evaluate_expression: {
+  calculate_value: {
     vi: nodeWithFields("Tính toán giá trị", "Đánh giá một biểu thức JavaScript/Toán học và lưu kết quả thực tế (số, chuỗi, v.v.).", [
       field("Result Output Variable Name", "Tên biến lưu kết quả.", ["Kết quả lưu dưới dạng giá trị thực tế sau tính toán."]),
       field("JavaScript / Math Expression", "Biểu thức cần tính toán.", ["Biểu thức chạy trên ngữ cảnh browser và nhận outputs.", "Dùng {{name}} hoặc outputs.name để tham chiếu biến."]),

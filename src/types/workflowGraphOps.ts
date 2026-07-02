@@ -58,8 +58,8 @@ export type GraphNodeType =
   | "transform_variable"
   | "assert_output"
   | "domain_allowlist"
-  | "evaluate_logic"
-  | "evaluate_expression"
+  | "check_conditions"
+  | "calculate_value"
   | "get_current_url"
   | "quarantined";
 

@@ -149,12 +149,12 @@ describe("WorkflowGraphInspectorFields", () => {
       .toBeInTheDocument();
   });
 
-  test("evaluate_logic script mode uses template textarea with variable picker for script field", () => {
+  test("check_conditions script mode uses template textarea with variable picker for script field", () => {
     const onChange = vi.fn();
     render(
       <NodeConfigFields
         node={graphNode({
-          node_type: "evaluate_logic",
+          node_type: "check_conditions",
           config: {
             output_name: "is_valid",
             mode: "script",
@@ -177,12 +177,12 @@ describe("WorkflowGraphInspectorFields", () => {
       .toBeInTheDocument();
   });
 
-  test("evaluate_expression uses template textarea with variable picker for expression field", () => {
+  test("calculate_value uses template textarea with variable picker for expression field", () => {
     const onChange = vi.fn();
     render(
       <NodeConfigFields
         node={graphNode({
-          node_type: "evaluate_expression",
+          node_type: "calculate_value",
           config: {
             output_name: "result",
             expression: "outputs.counter + 10",

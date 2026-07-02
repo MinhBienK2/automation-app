@@ -23,7 +23,7 @@ function tempRoot() {
 
 function sampleGraph(): WorkflowGraph {
   return {
-    version: 2,
+    version: 3,
     nodes: [
       { id: "start", node_type: "start", label: "Start", position: { x: 0, y: 0 }, config: null, ports: [] },
       { id: "end", node_type: "end_success", label: "End", position: { x: 100, y: 0 }, config: null, ports: [] },

@@ -632,7 +632,7 @@ const actionValidators = createActionValidatorMap({
   set_session_storage: (config) =>
     requiredActionString(config.config.key, "key", "Storage key is required"),
   get_current_url: () => null,
-  evaluate_logic: (config) => {
+  check_conditions: (config) => {
     const { output_name, mode, script, rules_group, evaluation_type } = config.config;
     if (!output_name || !output_name.trim()) {
       return validationError("output_name", "Output variable name is required");
@@ -653,7 +653,7 @@ const actionValidators = createActionValidatorMap({
     }
     return null;
   },
-  evaluate_expression: (config) => {
+  calculate_value: (config) => {
     const { output_name, expression, evaluation_type } = config.config;
     if (!output_name || !output_name.trim()) {
       return validationError("output_name", "Output variable name is required");

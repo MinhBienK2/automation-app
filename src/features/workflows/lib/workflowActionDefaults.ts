@@ -200,7 +200,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       };
     case "set_json_variables":
       return { type: actionType, config: { json: "{\n  \"name\": \"value\"\n}" } };
-    case "evaluate_logic":
+    case "check_conditions":
       return {
         type: actionType,
         config: {
@@ -214,7 +214,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
           evaluation_type: "static",
         },
       };
-    case "evaluate_expression":
+    case "calculate_value":
       return {
         type: actionType,
         config: {

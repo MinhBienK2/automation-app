@@ -2077,7 +2077,7 @@ describe("BrowserWorkflowRunner", () => {
               items: ["skip", "stop", "later"],
               steps: [
                 {
-                  type: "evaluate_logic",
+                  type: "check_conditions",
                   config: {
                     output_name: "should_skip",
                     mode: "visual",
@@ -2111,7 +2111,7 @@ describe("BrowserWorkflowRunner", () => {
                   },
                 },
                 {
-                  type: "evaluate_logic",
+                  type: "check_conditions",
                   config: {
                     output_name: "should_stop",
                     mode: "visual",
@@ -5123,7 +5123,7 @@ function isScrollIntoViewArg(
   );
 }
 
-describe("BrowserWorkflowRunner dynamic evaluate_logic", () => {
+describe("BrowserWorkflowRunner dynamic check_conditions", () => {
   test("evaluates logic dynamically when referenced by later steps", async () => {
     const context = new FakeContext();
     const driver = createFakeDriver(context);
@@ -5153,7 +5153,7 @@ describe("BrowserWorkflowRunner dynamic evaluate_logic", () => {
           node_id: "eval_C",
           label: "Evaluate Logic",
           config: {
-            type: "evaluate_logic",
+            type: "check_conditions",
             config: {
               output_name: "C",
               evaluation_type: "dynamic",
@@ -5238,7 +5238,7 @@ describe("BrowserWorkflowRunner dynamic evaluate_logic", () => {
           node_id: "eval_C",
           label: "Evaluate Expression",
           config: {
-            type: "evaluate_expression",
+            type: "calculate_value",
             config: {
               output_name: "C",
               evaluation_type: "dynamic",

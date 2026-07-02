@@ -412,7 +412,7 @@ export class BrowserWorkflowRunner {
     const resolvedAction = structuredClone(action);
     const { resolveDynamicOutputs } = await import("./variables.js");
     await resolveDynamicOutputs(runtime.outputs, resolvedAction.config);
-    if (resolvedAction.type === "evaluate_logic") {
+    if (resolvedAction.type === "check_conditions") {
       const config = resolvedAction.config as any;
       if (config.evaluation_type === "dynamic") {
         const { output_name, evaluation_type, mode } = config;
@@ -426,7 +426,7 @@ export class BrowserWorkflowRunner {
       } else {
         resolvedAction.config = resolveObjectTemplates(resolvedAction.config, runtime.outputs);
       }
-    } else if (resolvedAction.type === "evaluate_expression") {
+    } else if (resolvedAction.type === "calculate_value") {
       const config = resolvedAction.config as any;
       if (config.evaluation_type === "dynamic") {
         const { output_name, evaluation_type } = config;

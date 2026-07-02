@@ -12,6 +12,7 @@ type PageHeaderProps = {
   status?: ReactNode;
   actions?: ReactNode;
   onBack?: () => void;
+  projectName?: string | null;
 };
 
 export function PageHeader({
@@ -24,7 +25,12 @@ export function PageHeader({
   status,
   actions,
   onBack,
+  projectName = null,
 }: PageHeaderProps) {
+  const isSubflow = eyebrow === "Subflow";
+  const baseLabel = isSubflow ? "Subflows" : "Workflows";
+  const displayLabel = breadcrumbLabel !== baseLabel ? breadcrumbLabel : null;
+
   return (
     <header aria-label={ariaLabel} className="page-detail-header" role="region">
       <div aria-label="Workflow title row" className="page-detail-title-row" role="group">
@@ -41,17 +47,54 @@ export function PageHeader({
             </Button>
           ) : null}
           <nav aria-label="Workflow breadcrumb" className="page-breadcrumb">
-            <Button
-              className="page-breadcrumb-link"
-              variant="ghost"
-              type="button"
-              onClick={onBack}
-            >
-              {breadcrumbLabel}
-            </Button>
-            <span aria-hidden="true" className="page-breadcrumb-separator">
-              /
-            </span>
+            {projectName ? (
+              <>
+                <Button
+                  className="page-breadcrumb-link"
+                  variant="ghost"
+                  type="button"
+                  onClick={onBack}
+                >
+                  {projectName}
+                </Button>
+                <span aria-hidden="true" className="page-breadcrumb-separator">
+                  /
+                </span>
+                <span>{baseLabel}</span>
+                <span aria-hidden="true" className="page-breadcrumb-separator">
+                  /
+                </span>
+              </>
+            ) : (
+              <>
+                <Button
+                  className="page-breadcrumb-link"
+                  variant="ghost"
+                  type="button"
+                  onClick={onBack}
+                >
+                  {baseLabel}
+                </Button>
+                <span aria-hidden="true" className="page-breadcrumb-separator">
+                  /
+                </span>
+              </>
+            )}
+            {displayLabel ? (
+              <Button
+                className="page-breadcrumb-link"
+                variant="ghost"
+                type="button"
+                onClick={onBack}
+              >
+                {displayLabel}
+              </Button>
+            ) : null}
+            {displayLabel ? (
+              <span aria-hidden="true" className="page-breadcrumb-separator">
+                /
+              </span>
+            ) : null}
             <span aria-current="page" className="page-breadcrumb-current">
               {title}
             </span>

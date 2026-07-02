@@ -43,7 +43,7 @@ function baselineV1Graph(): WorkflowGraph {
 }
 
 describe("lazy migrate on read", () => {
-  test("getWorkflowGraph migrates v1 to v2 and persists back", () => {
+  test("getWorkflowGraph migrates v1 to v3 and persists back", () => {
     const root = tempRoot();
     const paths = createAppPaths(root);
     const db = initializeDatabase(paths);
@@ -57,18 +57,18 @@ describe("lazy migrate on read", () => {
     // First read: should migrate and persist
     const graph = repo.getWorkflowGraph(workflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(2);
+    expect(graph!.version).toBe(3);
     expect(graph!.migration_notes).toEqual([]);
 
-    // Second read: should be a no-op (already v2)
+    // Second read: should be a no-op (already v3)
     const graph2 = repo.getWorkflowGraph(workflow.id);
-    expect(graph2!.version).toBe(2);
+    expect(graph2!.version).toBe(3);
 
     db.close();
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("getSubflowGraph migrates v1 to v2 and persists back", () => {
+  test("getSubflowGraph migrates v1 to v3 and persists back", () => {
     const root = tempRoot();
     const paths = createAppPaths(root);
     const db = initializeDatabase(paths);
@@ -79,7 +79,7 @@ describe("lazy migrate on read", () => {
 
     const graph = repo.getSubflowGraph(subflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(2);
+    expect(graph!.version).toBe(3);
 
     db.close();
     fs.rmSync(root, { recursive: true, force: true });

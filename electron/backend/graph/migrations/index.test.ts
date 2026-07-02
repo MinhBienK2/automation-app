@@ -111,12 +111,55 @@ describe("migration runner", () => {
     expect(result2.applied).toEqual([]);
   });
 
-  test("baseline migration (real registry) upgrades v1 to v2 with migration_notes", () => {
+  test("baseline migration (real registry) upgrades v1 to v3 with migration_notes", () => {
     const result = runMigrations(baselineGraph(1));
-    expect(result.graph.version).toBe(2);
+    expect(result.graph.version).toBe(3);
     expect(result.graph.migration_notes).toEqual([]);
-    expect(result.applied).toHaveLength(1);
+    expect(result.applied).toHaveLength(2);
     expect(result.failed).toBeNull();
+  });
+
+  test("migration 002 renames evaluate_logic and evaluate_expression nodes to check_conditions and calculate_value", () => {
+    const legacyGraph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "node1",
+          node_type: "evaluate_logic",
+          label: "Logic",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { output_name: "test_logic", mode: "visual" },
+        },
+        {
+          id: "node2",
+          node_type: "evaluate_expression",
+          label: "Expression",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { output_name: "test_expr", expression: "1 + 1" },
+        },
+        {
+          id: "node3",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: null,
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      migration_notes: [],
+    };
+
+    const result = runMigrations(legacyGraph);
+    expect(result.graph.version).toBe(3);
+    expect(result.graph.nodes[0].node_type).toBe("check_conditions");
+    expect(result.graph.nodes[1].node_type).toBe("calculate_value");
+    expect(result.graph.nodes[2].node_type).toBe("start");
+    expect(result.applied).toHaveLength(1);
+    expect(result.applied[0].version).toBe(3);
   });
 
   test("real registry is monotonic", () => {

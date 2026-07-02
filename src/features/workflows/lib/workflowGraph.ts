@@ -441,8 +441,8 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "merge":
     case "set_variable":
     case "set_json_variables":
-    case "evaluate_logic":
-    case "evaluate_expression":
+    case "check_conditions":
+    case "calculate_value":
     case "update_number_variable":
     case "update_text_variable":
     case "update_flag_variable":
@@ -859,8 +859,8 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
   if (nodeType === "set_json_variables") return "Set JSON Variables";
   if (nodeType === "random_choice") return "Random Choice";
   if (nodeType === "call_subflow") return "Call Subflow";
-  if (nodeType === "evaluate_logic") return "Check Conditions";
-  if (nodeType === "evaluate_expression") return "Calculate Value";
+  if (nodeType === "check_conditions") return "Check Conditions";
+  if (nodeType === "calculate_value") return "Calculate Value";
   if (nodeType === "update_flag_variable") return "Update Flag Variable (Yes/No)";
   if (nodeType === "update_object_variable") return "Update Object Variable (JSON)";
   if (nodeType === "get_current_url") return "Get Current URL";
@@ -897,8 +897,8 @@ function graphCanvasNodeMetaLabel(node: GraphNode) {
     case "while":
     case "repeat_until":
       return conditionMetaLabel(config.condition);
-    case "evaluate_logic":
-    case "evaluate_expression":
+    case "check_conditions":
+    case "calculate_value":
       return typeof config.output_name === "string" && config.output_name.trim()
         ? `-> ${config.output_name.trim()}`
         : null;

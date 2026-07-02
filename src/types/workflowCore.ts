@@ -54,8 +54,8 @@ export type ActionType =
   | "update_object_variable"
   | "assert_element"
   | "assert_text"
-  | "evaluate_logic"
-  | "evaluate_expression"
+  | "check_conditions"
+  | "calculate_value"
   | "graph_noop"
   | "if_condition"
   | "router_condition"
@@ -964,12 +964,12 @@ export type ActionConfig =
       config: Record<string, never>;
     }
   | {
-      type: "evaluate_logic";
-      config: EvaluateLogicConfig;
+      type: "check_conditions";
+      config: CheckConditionsConfig;
     }
   | {
-      type: "evaluate_expression";
-      config: EvaluateExpressionConfig;
+      type: "calculate_value";
+      config: CalculateValueConfig;
     }
   | {
       type: "quarantined";
@@ -1067,7 +1067,7 @@ type DataCaptureElementConfig = {
   join_separator?: string | null;
 };
 
-export type EvaluateLogicConfig = {
+export type CheckConditionsConfig = {
   output_name: string;
   mode: "visual" | "script";
   script?: string;
@@ -1075,7 +1075,7 @@ export type EvaluateLogicConfig = {
   evaluation_type?: "static" | "dynamic";
 };
 
-export type EvaluateExpressionConfig = {
+export type CalculateValueConfig = {
   output_name: string;
   expression: string;
   evaluation_type?: "static" | "dynamic";

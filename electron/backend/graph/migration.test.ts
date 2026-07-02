@@ -31,8 +31,70 @@ describe("workflow graph migration", () => {
 
     expect(migrateWorkflowGraph(graph)).toEqual({
       ...graph,
-      version: 2,
+      version: 3,
       migration_notes: [],
+    });
+  });
+
+  test("migrates evaluate_logic and evaluate_expression nodes to check_conditions and calculate_value", () => {
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "node-logic",
+          node_type: "evaluate_logic",
+          label: "Check Conditions",
+          position: { x: 0, y: 0 },
+          config: {
+            output_name: "is_valid",
+            mode: "visual",
+          },
+          ports: [],
+        },
+        {
+          id: "node-expr",
+          node_type: "evaluate_expression",
+          label: "Calculate Value",
+          position: { x: 0, y: 0 },
+          config: {
+            output_name: "result",
+            expression: "outputs.A + 10",
+          },
+          ports: [],
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    expect(migrateWorkflowGraph(graph)).toEqual({
+      version: 3,
+      nodes: [
+        {
+          id: "node-logic",
+          node_type: "check_conditions",
+          label: "Check Conditions",
+          position: { x: 0, y: 0 },
+          config: {
+            output_name: "is_valid",
+            mode: "visual",
+          },
+          ports: [],
+        },
+        {
+          id: "node-expr",
+          node_type: "calculate_value",
+          label: "Calculate Value",
+          position: { x: 0, y: 0 },
+          config: {
+            output_name: "result",
+            expression: "outputs.A + 10",
+          },
+          ports: [],
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
     });
   });
 });

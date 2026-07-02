@@ -1566,11 +1566,11 @@ describe("TypeScript graph compiler parity", () => {
     });
   });
 
-  test("compiles evaluate_logic graph nodes", async () => {
+  test("compiles check_conditions graph nodes", async () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
-        graphNode("eval-logic", "evaluate_logic", {
+        graphNode("eval-logic", "check_conditions", {
           config: {
             output_name: "is_valid",
             mode: "visual",
@@ -1600,7 +1600,7 @@ describe("TypeScript graph compiler parity", () => {
     expect(plan.steps[0]).toEqual(
       expect.objectContaining({
         config: expect.objectContaining({
-          type: "evaluate_logic",
+          type: "check_conditions",
           config: expect.objectContaining({
             output_name: "is_valid",
             mode: "visual",
@@ -1621,11 +1621,11 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
-  test("compiles evaluate_expression graph nodes", async () => {
+  test("compiles calculate_value graph nodes", async () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
-        graphNode("eval-expr", "evaluate_expression", {
+        graphNode("eval-expr", "calculate_value", {
           config: {
             output_name: "result",
             expression: "outputs.A + outputs.B",
@@ -1645,7 +1645,7 @@ describe("TypeScript graph compiler parity", () => {
     expect(plan.steps[0]).toEqual(
       expect.objectContaining({
         config: expect.objectContaining({
-          type: "evaluate_expression",
+          type: "calculate_value",
           config: expect.objectContaining({
             output_name: "result",
             expression: "outputs.A + outputs.B",

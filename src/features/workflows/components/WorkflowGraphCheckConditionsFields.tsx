@@ -9,27 +9,27 @@ import { TemplateTextField, TemplateTextareaField } from "./TemplateTextField";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { Trash2, Plus } from "lucide-react";
 import { objectConfig } from "../lib/configUtils";
-import type { EvaluateLogicConfig, LogicRuleGroup, LogicRule } from "../../../types/workflowCore";
+import type { CheckConditionsConfig, LogicRuleGroup, LogicRule } from "../../../types/workflowCore";
 
-type EvaluateLogicFieldsProps = {
+type CheckConditionsFieldsProps = {
   node: GraphNode;
   onChange: (node: GraphNode) => void;
   variableOptions?: VariableOption[];
 };
 
-export function WorkflowGraphEvaluateLogicFields({
+export function WorkflowGraphCheckConditionsFields({
   node,
   onChange,
   variableOptions = [],
-}: EvaluateLogicFieldsProps) {
-  const config = objectConfig(node.config) as EvaluateLogicConfig;
+}: CheckConditionsFieldsProps) {
+  const config = objectConfig(node.config) as CheckConditionsConfig;
   const outputName = config.output_name ?? "";
   const mode = config.mode ?? "visual";
   const script = config.script ?? "";
   const rulesGroup: LogicRuleGroup = config.rules_group ?? { operator: "and", rules: [] };
   const rules = rulesGroup.rules as LogicRule[];
 
-  const updateConfig = (nextConfig: Partial<EvaluateLogicConfig>) => {
+  const updateConfig = (nextConfig: Partial<CheckConditionsConfig>) => {
     onChange({
       ...node,
       config: {

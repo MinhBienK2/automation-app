@@ -94,8 +94,8 @@ import { updateObjectVariableSchema } from "./update_object_variable.js";
 import { assertOutputSchema } from "./assert_output.js";
 import { domainAllowlistSchema } from "./domain_allowlist.js";
 import { setJsonVariablesSchema } from "./set_json_variables.js";
-import { evaluateLogicSchema } from "./evaluate_logic.js";
-import { evaluateExpressionSchema } from "./evaluate_expression.js";
+import { checkConditionsSchema } from "./check_conditions.js";
+import { calculateValueSchema } from "./calculate_value.js";
 
 type ActionType = ActionConfig["type"];
 
@@ -148,8 +148,8 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   wait_for_download: waitForDownloadSchema,
   set_variable: setVariableSchema,
   set_json_variables: setJsonVariablesSchema,
-  evaluate_logic: evaluateLogicSchema,
-  evaluate_expression: evaluateExpressionSchema,
+  check_conditions: checkConditionsSchema,
+  calculate_value: calculateValueSchema,
   assert_element: assertElementSchema,
   assert_text: assertTextSchema,
   graph_noop: graphNoopSchema,

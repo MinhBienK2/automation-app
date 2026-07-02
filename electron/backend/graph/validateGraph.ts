@@ -57,8 +57,8 @@ const supportedGraphNodeTypes = new Set<string>([
   "stop_workflow",
   "set_variable",
   "set_json_variables",
-  "evaluate_logic",
-  "evaluate_expression",
+  "check_conditions",
+  "calculate_value",
   "update_number_variable",
   "update_text_variable",
   "update_flag_variable",
@@ -76,11 +76,11 @@ export function validateWorkflowGraph(
 ): GraphValidationIssue[] {
   const normalizedGraph = migrateWorkflowGraph(graph);
   const issues: GraphValidationIssue[] = [];
-  if (normalizedGraph.version !== 1 && normalizedGraph.version !== 2) {
+  if (normalizedGraph.version !== 1 && normalizedGraph.version !== 2 && normalizedGraph.version !== 3) {
     issues.push(error(null, null, "Unsupported graph version"));
   }
 
-  const graphToValidate = normalizedGraph.version > 2 ? graph : normalizedGraph;
+  const graphToValidate = normalizedGraph.version > 3 ? graph : normalizedGraph;
   const startCount = graphToValidate.nodes.filter((node) => node.node_type === "start").length;
   if (startCount !== 1) {
     issues.push(error(null, null, "Graph must contain exactly one start node"));
@@ -347,13 +347,13 @@ function pushNodeSemanticIssues(
       }
       break;
     }
-    case "evaluate_logic": {
+    case "check_conditions": {
       const output_name = stringField(node.config, "output_name");
       if (!output_name) {
         issues.push(error(node.id, null, "Output variable name is required"));
       } else {
         const validation = validateActionConfig({
-          type: "evaluate_logic",
+          type: "check_conditions",
           config: {
             output_name,
             mode: stringField(node.config, "mode") === "script" ? "script" : "visual",
@@ -365,13 +365,13 @@ function pushNodeSemanticIssues(
       }
       break;
     }
-    case "evaluate_expression": {
+    case "calculate_value": {
       const output_name = stringField(node.config, "output_name");
       if (!output_name) {
         issues.push(error(node.id, null, "Output variable name is required"));
       } else {
         const validation = validateActionConfig({
-          type: "evaluate_expression",
+          type: "calculate_value",
           config: {
             output_name,
             expression: stringField(node.config, "expression"),
