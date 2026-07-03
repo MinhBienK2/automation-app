@@ -144,8 +144,8 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background:
-    linear-gradient(rgba(50, 211, 230, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(50, 211, 230, 0.06) 1px, transparent 1px),
+    linear-gradient(var(--accent-bg) 1px, transparent 1px),
+    linear-gradient(90deg, var(--accent-bg) 1px, transparent 1px),
     var(--surface);
   background-size: 32px 32px;
 }
@@ -169,7 +169,7 @@
 
 .graph-canvas .react-flow__selection {
   border: 1px solid rgba(50, 211, 230, 0.72);
-  background: rgba(50, 211, 230, 0.12);
+  background: var(--border);
 }
 
 .graph-canvas .react-flow__connectionline {
@@ -355,7 +355,7 @@
 
 .graph-node-action {
   --graph-node-accent: var(--accent);
-  --graph-node-accent-bg: rgba(50, 211, 230, 0.12);
+  --graph-node-accent-bg: var(--border);
 
   border-color: rgba(50, 211, 230, 0.38);
   background:
@@ -367,7 +367,7 @@
   --graph-node-accent: var(--attention);
   --graph-node-accent-bg: rgba(244, 183, 64, 0.12);
 
-  border-color: rgba(244, 183, 64, 0.42);
+  border-color: var(--attention);
   background:
     linear-gradient(90deg, var(--graph-node-accent-bg), transparent 34%),
     var(--bg);
@@ -509,7 +509,7 @@
 }
 
 .graph-node-completed {
-  border-color: rgba(50, 211, 230, 0.44);
+  border-color: var(--accent-border);
 }
 
 .graph-node-failed {
@@ -720,16 +720,16 @@
 }
 
 .subflow-mode-card-active {
-  box-shadow: inset 0 0 0 1px rgba(50, 211, 230, 0.18);
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
 }
 
 .subflow-mode-icon,
 .subflow-picker-result-icon {
   display: inline-grid;
   place-items: center;
-  border: 1px solid rgba(50, 211, 230, 0.28);
+  border: 1px solid var(--accent-border);
   border-radius: 8px;
-  background: rgba(50, 211, 230, 0.08);
+  background: var(--accent-bg);
   color: var(--accent);
 }
 
@@ -932,7 +932,7 @@
 
 .graph-selected-edge {
   padding: 8px;
-  border: 1px solid rgba(50, 211, 230, 0.48);
+  border: 1px solid var(--accent-border);
   border-radius: 8px;
   background: #121212;
   color: var(--fg-primary);

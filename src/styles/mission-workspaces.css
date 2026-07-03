@@ -13,7 +13,7 @@
 }
 
 .metric-card {
-  background: linear-gradient(180deg, rgba(23, 36, 49, 0.92), rgba(18, 28, 38, 0.94));
+  background: linear-gradient(180deg, var(--surface-elevated) 0%, var(--surface) 100%);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
   min-height: 112px;
@@ -37,15 +37,15 @@
 }
 
 .metric-card-active {
-  border-color: rgba(50, 211, 230, 0.45);
+  border-color: var(--accent-border);
 }
 
 .metric-card-success {
-  border-color: rgba(57, 217, 138, 0.45);
+  border-color: var(--success);
 }
 
 .metric-card-attention {
-  border-color: rgba(244, 183, 64, 0.48);
+  border-color: var(--attention);
 }
 
 .overview-grid {
@@ -86,7 +86,7 @@
 
 .overview-row {
   align-items: center;
-  background: rgba(11, 16, 22, 0.36);
+  background: var(--surface);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
   color: var(--app-text);
@@ -131,7 +131,7 @@
 }
 
 .activity-bar {
-  background: rgba(35, 50, 64, 0.74);
+  background: var(--border);
   border-radius: var(--app-radius-sm);
   display: flex;
   height: 10px;
@@ -159,25 +159,25 @@
 }
 
 .status-pill-danger {
-  border-color: rgba(240, 100, 103, 0.5);
+  border-color: var(--failure);
   color: var(--failure);
 }
 
 .overview-error {
-  border-color: rgba(240, 100, 103, 0.52);
+  border-color: var(--failure);
 }
 
 .overview-focus-note {
   margin-bottom: 10px;
   padding: 8px 10px;
-  border: 1px solid rgba(244, 183, 64, 0.42);
+  border: 1px solid var(--attention);
   border-radius: var(--app-radius-sm);
   color: var(--app-warning);
   font-size: 13px;
 }
 
 .focused-run-detail {
-  background: rgba(23, 36, 49, 0.78);
+  background: var(--surface-elevated);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
   margin-bottom: 16px;
@@ -197,7 +197,7 @@
 }
 
 .focused-run-missing {
-  border-color: rgba(244, 183, 64, 0.42);
+  border-color: var(--attention);
 }
 
 .detail-list {
@@ -279,7 +279,7 @@
 
 .evidence-result {
   align-items: stretch;
-  background: rgba(11, 16, 22, 0.36);
+  background: var(--surface);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
   display: grid;
@@ -289,7 +289,7 @@
 }
 
 .evidence-result-active {
-  border-color: rgba(50, 211, 230, 0.62);
+  border-color: var(--accent-border-strong);
 }
 
 .evidence-result button {
@@ -452,14 +452,14 @@
   padding: 11px 12px;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
-  background: rgba(11, 16, 22, 0.36);
+  background: var(--surface);
   color: var(--app-text);
   text-align: left;
 }
 
 .identity-row:hover,
 .identity-row-active {
-  border-color: rgba(50, 211, 230, 0.62);
+  border-color: var(--accent-border-strong);
 }
 
 .identity-row strong,
@@ -558,7 +558,7 @@
   padding: 10px;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
-  background: rgba(11, 16, 22, 0.36);
+  background: var(--surface);
   color: var(--app-text);
   text-align: left;
 }

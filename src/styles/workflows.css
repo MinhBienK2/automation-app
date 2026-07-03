@@ -39,7 +39,7 @@
 
 .action-category-active,
 .action-category:hover {
-  border-color: rgba(50, 211, 230, 0.48);
+  border-color: var(--accent-border);
   color: var(--accent);
 }
 
@@ -73,7 +73,7 @@
 }
 
 .action-result:hover {
-  border-color: rgba(50, 211, 230, 0.48);
+  border-color: var(--accent-border);
 }
 
 .workflow-library {
@@ -270,7 +270,7 @@
   bottom: 24px;
   z-index: 70;
   padding: 10px 12px;
-  border: 1px solid rgba(50, 211, 230, 0.48);
+  border: 1px solid var(--accent-border);
   border-radius: 8px;
   background: var(--surface);
   color: var(--accent);

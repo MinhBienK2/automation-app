@@ -256,7 +256,7 @@ describe("App CSS", () => {
 
     expect(projectCollectionTabs).toContain("position: sticky");
     expect(projectCollectionTabs).toContain("display: flex");
-    expect(projectCollectionTabs).toContain("background: rgba(14, 21, 29, 0.98)");
+    expect(projectCollectionTabs).toContain("background: var(--sidebar-bg)");
     expect(projectCollectionItem).toContain("position: relative");
     expect(projectCollectionItem).toContain("border-radius: 8px");
     expect(projectCollectionItem).toContain("overflow: hidden");
@@ -264,8 +264,8 @@ describe("App CSS", () => {
     expect(projectCollectionItemActive).toContain("background: linear-gradient");
     expect(projectCollectionItemActive).toContain("color: var(--fg-primary)");
     expect(projectCollectionItemActiveRail).toContain("background: var(--accent)");
-    expect(projectCollectionItemHover).toContain("background: rgba(23, 36, 49, 0.46)");
-    expect(projectCollectionItemFocus).toContain("box-shadow: 0 0 0 2px rgba(50, 211, 230, 0.18)");
+    expect(projectCollectionItemHover).toContain("background: var(--surface-elevated)");
+    expect(projectCollectionItemFocus).toContain("box-shadow: 0 0 0 2px var(--focus-ring)");
   });
 
   test("keeps workflow detail command actions on one desktop row", () => {

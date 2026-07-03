@@ -262,7 +262,7 @@
 }
 
 .graph-issue-error {
-  border-color: rgba(240, 100, 103, 0.52);
+  border-color: var(--failure);
   color: #fca5a5;
 }
 

@@ -49,7 +49,7 @@
 }
 
 .schedule-row-focused td {
-  background: rgba(50, 211, 230, 0.06);
+  background: var(--accent-bg);
 }
 
 .status-pill {
