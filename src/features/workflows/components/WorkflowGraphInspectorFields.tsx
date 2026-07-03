@@ -1,10 +1,8 @@
 import type {
   ActionType,
   GraphNode,
-  RouterGraphConfig,
   SubflowSummary,
 } from "../../../types/workflow";
-import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
@@ -19,10 +17,7 @@ import {
   actionTypeFromConfig,
   isActionConfig,
 } from "./WorkflowGraphActionTypeDropdown";
-import {
-  ConditionFields,
-  conditionFromConfig,
-} from "./WorkflowGraphConditionFields";
+import { ConditionFields, conditionFromConfig } from "./WorkflowGraphConditionFields";
 import { WorkflowGraphCheckConditionsFields } from "./WorkflowGraphCheckConditionsFields";
 import { WorkflowGraphCalculateValueFields } from "./WorkflowGraphCalculateValueFields";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
@@ -35,17 +30,12 @@ import {
   objectConfig,
   stringConfig,
 } from "../lib/configUtils";
-import {
-  defaultCondition,
-  nextRandomChoiceId,
-  nextRouterCaseId,
-  randomChoiceConfig,
-  randomChoicePortsForChoices,
-  routerConfig,
-  routerPortsForCases,
-  switchPortsForCases,
-  type RandomChoiceGraphConfig,
-} from "../lib/graphNodeConfig";
+import { switchPortsForCases } from "../lib/graphNodeConfig";
+
+// Import modular field editors
+import { RouterNodeFields } from "./inspector/RouterNodeFields";
+import { RandomChoiceNodeFields } from "./inspector/RandomChoiceNodeFields";
+import { LoopNodeFields } from "./inspector/LoopNodeFields";
 
 type NodeConfigFieldsProps = {
   node: GraphNode;
@@ -84,47 +74,15 @@ export function NodeConfigFields({
           </ActionConfigFieldGroup>
         </div>
       );
-    case "repeat_until":
+    case "repeat_times":
+    case "repeat_for_each":
     case "while":
+    case "repeat_until":
       return (
-        <div className="graph-config-fields">
-          <ActionConfigFieldGroup title="Condition">
-            <ConditionFields
-              condition={conditionFromConfig(node.config)}
-              onChange={(condition) => updateConfig({ ...objectConfig(node.config), condition })}
-            />
-          </ActionConfigFieldGroup>
-          <ActionConfigFieldGroup title="Loop guard">
-            <Label>
-              Loop max attempts
-              <Input
-                min="1"
-                type="number"
-                value={numberConfig(node.config, "max_attempts", 10)}
-                onChange={(event) =>
-                  updateConfig({
-                    ...objectConfig(node.config),
-                    max_attempts: Number(event.currentTarget.value) || 1,
-                  })
-                }
-              />
-            </Label>
-            <Label>
-              Loop timeout ms
-              <Input
-                min="0"
-                type="number"
-                value={numberConfig(node.config, "timeout_ms", 0)}
-                onChange={(event) =>
-                  updateConfig({
-                    ...objectConfig(node.config),
-                    timeout_ms: Number(event.currentTarget.value) || null,
-                  })
-                }
-              />
-            </Label>
-          </ActionConfigFieldGroup>
-        </div>
+        <LoopNodeFields
+          node={node}
+          onChange={onChange}
+        />
       );
     case "switch": {
       const cases = arrayConfig(node.config, "cases");
@@ -167,348 +125,20 @@ export function NodeConfigFields({
         </div>
       );
     }
-    case "router": {
-      const routerConfigValue = routerConfig(node.config);
-      const cases = routerConfigValue.cases;
-      function updateRouterConfig(nextConfig: RouterGraphConfig) {
-        onChange({
-          ...node,
-          config: nextConfig,
-          ports: routerPortsForCases(nextConfig.cases, nextConfig.default_label ?? "Default"),
-        });
-      }
+    case "router":
       return (
-        <div className="graph-config-fields">
-          <ActionConfigFieldGroup title="Router cases">
-            <div className="router-case-table" role="group" aria-label="Router decision table">
-              {cases.map((caseValue, index) => (
-                <div className="router-case-row" key={caseValue.id}>
-                  <div className="router-case-header">
-                    <span className="eyebrow">Priority {index + 1}</span>
-                    <div className="router-case-actions">
-                      <Button
-                        aria-label={`Move router case ${caseValue.label || index + 1} up`}
-                        disabled={index === 0}
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          const nextCases = [...cases];
-                          [nextCases[index - 1], nextCases[index]] = [
-                            nextCases[index],
-                            nextCases[index - 1],
-                          ];
-                          updateRouterConfig({ ...routerConfigValue, cases: nextCases });
-                        }}
-                      >
-                        Up
-                      </Button>
-                      <Button
-                        aria-label={`Move router case ${caseValue.label || index + 1} down`}
-                        disabled={index === cases.length - 1}
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          const nextCases = [...cases];
-                          [nextCases[index], nextCases[index + 1]] = [
-                            nextCases[index + 1],
-                            nextCases[index],
-                          ];
-                          updateRouterConfig({ ...routerConfigValue, cases: nextCases });
-                        }}
-                      >
-                        Down
-                      </Button>
-                      <Button
-                        aria-label={`Remove router case ${caseValue.label || index + 1}`}
-                        disabled={cases.length <= 1}
-                        type="button"
-                        variant="ghost"
-                        onClick={() =>
-                          updateRouterConfig({
-                            ...routerConfigValue,
-                            cases: cases.filter((item) => item.id !== caseValue.id),
-                          })
-                        }
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                  <Label>
-                    Router case label
-                    <Input
-                      value={caseValue.label}
-                      onChange={(event) =>
-                        updateRouterConfig({
-                          ...routerConfigValue,
-                          cases: cases.map((item) =>
-                            item.id === caseValue.id
-                              ? { ...item, label: event.currentTarget.value }
-                              : item,
-                          ),
-                        })
-                      }
-                    />
-                  </Label>
-                  <ConditionFields
-                    condition={caseValue.condition}
-                    onChange={(condition) =>
-                      updateRouterConfig({
-                        ...routerConfigValue,
-                        cases: cases.map((item) =>
-                          item.id === caseValue.id ? { ...item, condition } : item,
-                        ),
-                      })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-            <Button
-              aria-label="Add router case"
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                const nextId = nextRouterCaseId(cases);
-                updateRouterConfig({
-                  ...routerConfigValue,
-                  cases: [
-                    ...cases,
-                    {
-                      id: nextId,
-                      label: `Case ${cases.length + 1}`,
-                      condition: defaultCondition(),
-                    },
-                  ],
-                });
-              }}
-            >
-              Add case
-            </Button>
-          </ActionConfigFieldGroup>
-          <ActionConfigFieldGroup title="Default route">
-            <Label>
-              Default label
-              <Input
-                value={routerConfigValue.default_label ?? "Default"}
-                onChange={(event) =>
-                  updateRouterConfig({
-                    ...routerConfigValue,
-                    default_label: event.currentTarget.value,
-                  })
-                }
-              />
-            </Label>
-          </ActionConfigFieldGroup>
-        </div>
+        <RouterNodeFields
+          node={node}
+          onChange={onChange}
+        />
       );
-    }
-    case "random_choice": {
-      const randomChoiceConfigValue = randomChoiceConfig(node.config);
-      const choices = randomChoiceConfigValue.choices;
-      function updateRandomChoiceConfig(nextConfig: RandomChoiceGraphConfig) {
-        onChange({
-          ...node,
-          config: nextConfig,
-          ports: randomChoicePortsForChoices(nextConfig.choices),
-        });
-      }
+    case "random_choice":
       return (
-        <div className="graph-config-fields">
-          <ActionConfigFieldGroup title="Choice output">
-            <Label>
-              Output name
-              <Input
-                value={randomChoiceConfigValue.output_name ?? ""}
-                onChange={(event) =>
-                  updateRandomChoiceConfig({
-                    ...randomChoiceConfigValue,
-                    output_name: event.currentTarget.value,
-                  })
-                }
-              />
-            </Label>
-          </ActionConfigFieldGroup>
-          <ActionConfigFieldGroup title="Weighted choices">
-            <div className="router-case-table" role="group" aria-label="Random choice table">
-              {choices.map((choice, index) => (
-                <div className="router-case-row" key={choice.id}>
-                  <div className="router-case-header">
-                    <span className="eyebrow">Choice {index + 1}</span>
-                    <div className="router-case-actions">
-                      <Button
-                        aria-label={`Remove random choice ${choice.label || index + 1}`}
-                        disabled={choices.length <= 1}
-                        type="button"
-                        variant="ghost"
-                        onClick={() =>
-                          updateRandomChoiceConfig({
-                            ...randomChoiceConfigValue,
-                            choices: choices.filter((item) => item.id !== choice.id),
-                          })
-                        }
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                  <Label>
-                    Choice label
-                    <Input
-                      value={choice.label}
-                      onChange={(event) =>
-                        updateRandomChoiceConfig({
-                          ...randomChoiceConfigValue,
-                          choices: choices.map((item) =>
-                            item.id === choice.id
-                              ? { ...item, label: event.currentTarget.value }
-                              : item,
-                          ),
-                        })
-                      }
-                    />
-                  </Label>
-                  <Label>
-                    Choice weight
-                    <Input
-                      min="1"
-                      type="number"
-                      value={choice.weight}
-                      onChange={(event) =>
-                        updateRandomChoiceConfig({
-                          ...randomChoiceConfigValue,
-                          choices: choices.map((item) =>
-                            item.id === choice.id
-                              ? { ...item, weight: Number(event.currentTarget.value) || 1 }
-                              : item,
-                          ),
-                        })
-                      }
-                    />
-                  </Label>
-                </div>
-              ))}
-            </div>
-            <Button
-              aria-label="Add random choice"
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                const nextId = nextRandomChoiceId(choices);
-                updateRandomChoiceConfig({
-                  ...randomChoiceConfigValue,
-                  choices: [
-                    ...choices,
-                    { id: nextId, label: `Choice ${choices.length + 1}`, weight: 1 },
-                  ],
-                });
-              }}
-            >
-              Add choice
-            </Button>
-          </ActionConfigFieldGroup>
-        </div>
+        <RandomChoiceNodeFields
+          node={node}
+          onChange={onChange}
+        />
       );
-    }
-    case "repeat_times":
-      return (
-        <div className="graph-config-fields">
-          <ActionConfigFieldGroup title="Repeat count">
-            <Label>
-              Times
-              <Input
-                min="1"
-                type="number"
-                value={numberConfig(node.config, "times", 1)}
-                onChange={(event) =>
-                  updateConfig({
-                    ...objectConfig(node.config),
-                    times: Number(event.currentTarget.value),
-                  })
-                }
-              />
-            </Label>
-          </ActionConfigFieldGroup>
-        </div>
-      );
-    case "repeat_for_each":
-      {
-        const source = stringConfig(node.config, "array_variable", "")
-          ? "variable_array"
-          : "manual";
-        return (
-          <div className="graph-config-fields">
-            <ActionConfigFieldGroup title="Iteration source">
-              <Label>
-                Items source
-                <Select
-                  value={source}
-                  onChange={(event) => {
-                    const nextSource = event.currentTarget.value;
-                    updateConfig({
-                      ...objectConfig(node.config),
-                      array_variable: nextSource === "variable_array" ? "items" : null,
-                      items:
-                        nextSource === "manual"
-                          ? arrayConfig(node.config, "items").length
-                            ? arrayConfig(node.config, "items")
-                            : ["item"]
-                          : [],
-                    });
-                  }}
-                >
-                  <option value="manual">Manual list</option>
-                  <option value="variable_array">Variable array</option>
-                </Select>
-              </Label>
-              <Label>
-                Item name
-                <Input
-                  value={stringConfig(node.config, "item_name", "item")}
-                  onChange={(event) =>
-                    updateConfig({
-                      ...objectConfig(node.config),
-                      item_name: event.currentTarget.value,
-                    })
-                  }
-                />
-              </Label>
-              {source === "variable_array" ? (
-                <Label>
-                  Array variable
-                  <Input
-                    value={stringConfig(node.config, "array_variable", "items")}
-                    onChange={(event) =>
-                      updateConfig({
-                        ...objectConfig(node.config),
-                        array_variable: event.currentTarget.value,
-                        items: [],
-                      })
-                    }
-                  />
-                </Label>
-              ) : (
-                <Label>
-                  Items
-                  <Textarea
-                    value={arrayConfig(node.config, "items").join("\n")}
-                    onChange={(event) =>
-                      updateConfig({
-                        ...objectConfig(node.config),
-                        array_variable: null,
-                        items: event.currentTarget.value
-                          .split("\n")
-                          .map((item) => item.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                </Label>
-              )}
-            </ActionConfigFieldGroup>
-          </div>
-        );
-      }
     case "retry":
       return (
         <div className="graph-config-fields">
