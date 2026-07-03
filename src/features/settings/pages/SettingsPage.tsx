@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../../components/ui/button";
+import { Select } from "../../../components/ui/select";
+import { Input } from "../../../components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +11,7 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { SwitchField } from "../../../components/ui/switch";
+import type { AppConfig } from "../../../types/electron";
 
 type SettingsPageProps = {
   graphAutosaveEnabled: boolean;
@@ -16,6 +19,8 @@ type SettingsPageProps = {
   onGraphAutosaveEnabledChange: (enabled: boolean) => void;
   onInstallBinary: () => void | Promise<void>;
   onCleanupProfiles: () => void | Promise<void>;
+  appConfig: AppConfig;
+  onSaveAppConfig: (config: AppConfig) => Promise<{ success: boolean; error?: string }>;
 };
 
 export function SettingsPage({
@@ -24,9 +29,37 @@ export function SettingsPage({
   onGraphAutosaveEnabledChange,
   onInstallBinary,
   onCleanupProfiles,
+  appConfig,
+  onSaveAppConfig,
 }: SettingsPageProps) {
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [cleanupPending, setCleanupPending] = useState(false);
+
+  const [dbMode, setDbMode] = useState<"private" | "publish">(appConfig.dbMode);
+  const [postgresUrl, setPostgresUrl] = useState(appConfig.postgresUrl);
+  const [savePending, setSavePending] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    setDbMode(appConfig.dbMode);
+    setPostgresUrl(appConfig.postgresUrl);
+  }, [appConfig]);
+
+  async function handleSaveConfig() {
+    setSavePending(true);
+    setSaveError("");
+    try {
+      const res = await onSaveAppConfig({ dbMode, postgresUrl });
+      if (!res.success && res.error) {
+        setSaveError(res.error);
+      }
+    } catch (err: any) {
+      setSaveError(err.message || "Failed to save configuration.");
+    } finally {
+      setSavePending(false);
+    }
+  }
+
 
   async function confirmCleanupProfiles() {
     setCleanupPending(true);
@@ -64,8 +97,71 @@ export function SettingsPage({
         />
       </section>
 
+      <section className="panel settings-panel" aria-label="Database settings">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Database</p>
+            <h2>Database storage mode</h2>
+          </div>
+        </div>
+
+        <div className="settings-field-group" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px 0' }}>
+          <div>
+            <label className="text-sm font-medium text-[var(--app-text)]" htmlFor="db-mode-select">
+              Storage Mode
+            </label>
+            <div style={{ marginTop: '8px' }}>
+              <Select
+                id="db-mode-select"
+                value={dbMode}
+                onChange={(e) => setDbMode(e.target.value as "private" | "publish")}
+              >
+                <option value="private">Private (Local SQLite)</option>
+                <option value="publish">Publish (PostgreSQL Remote)</option>
+              </Select>
+            </div>
+          </div>
+
+          {dbMode === "publish" && (
+            <div>
+              <label className="text-sm font-medium text-[var(--app-text)]" htmlFor="postgres-url-input">
+                PostgreSQL Connection URL
+              </label>
+              <div style={{ marginTop: '8px' }}>
+                <Input
+                  id="postgres-url-input"
+                  type="text"
+                  placeholder="postgresql://username:password@host:port/database"
+                  value={postgresUrl}
+                  onChange={(e) => setPostgresUrl(e.target.value)}
+                />
+              </div>
+              <p className="muted text-xs" style={{ marginTop: '4px', opacity: 0.7 }}>
+                Enter a valid PostgreSQL connection URL.
+              </p>
+            </div>
+          )}
+
+          {saveError && (
+            <p className="text-sm text-destructive" style={{ color: 'red' }}>
+              {saveError}
+            </p>
+          )}
+
+          <div style={{ marginTop: '8px' }}>
+            <Button
+              type="button"
+              disabled={savePending}
+              onClick={handleSaveConfig}
+            >
+              {savePending ? "Saving..." : "Save Database Settings"}
+            </Button>
+          </div>
+        </div>
+      </section>
 
       <section className="panel settings-panel" aria-label="Maintenance">
+
         <div className="panel-heading">
           <div>
             <p className="eyebrow">Runtime</p>

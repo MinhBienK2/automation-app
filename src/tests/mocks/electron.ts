@@ -102,7 +102,10 @@ const methodNames: BridgeMethodName[] = [
   "restoreSubflowRevision",
   "tagSubflowRevision",
   "untagSubflowRevision",
+  "getAppConfig",
+  "saveAppConfig",
 ];
+
 
 export const workflowBridgeMock = Object.fromEntries(
   methodNames.map((name) => [name, vi.fn()]),

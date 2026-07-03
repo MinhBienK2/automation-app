@@ -466,3 +466,12 @@ export function tagSubflowRevision(revisionId: string, tag: string) {
 export function untagSubflowRevision(revisionId: string) {
   return bridge().untagSubflowRevision(revisionId);
 }
+
+export function getAppConfig() {
+  return bridge().getAppConfig();
+}
+
+export function saveAppConfig(config: any) {
+  return bridge().saveAppConfig(config);
+}
+

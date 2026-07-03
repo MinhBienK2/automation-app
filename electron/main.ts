@@ -9,6 +9,9 @@ import {
 } from "./backend/commands.js";
 import { createAppPaths, initializeDatabase, dropGraphJsonColumn } from "./backend/persistence/database.js";
 import { migrateAllGraphs } from "./backend/persistence/migrateAllGraphs.js";
+import { readAppConfig } from "./backend/persistence/config.js";
+import { PostgresSyncService, createSyncInterceptor } from "./backend/persistence/postgresSync.js";
+
 import { backfillGraphTables } from "./backend/persistence/backfillGraphTables.js";
 import { pruneRevisions } from "./backend/persistence/revisionRepository.js";
 import {
@@ -97,9 +100,27 @@ function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const appPaths = createAppPaths(app.getPath("appData"));
-  const database = initializeDatabase(appPaths);
+  let database = initializeDatabase(appPaths);
+
+  const appConfig = readAppConfig(appPaths);
+  const syncService = new PostgresSyncService(appConfig);
+  if (syncService.isEnabled()) {
+    try {
+      console.log("[startup] Connecting to Postgres database...");
+      await syncService.connect();
+      console.log("[startup] Syncing from Postgres remote to local SQLite cache...");
+      await syncService.syncToLocal(database);
+      console.log("[startup] Pushing local SQLite cache changes to Postgres remote...");
+      await syncService.syncFromLocal(database);
+      console.log("[startup] Active Postgres sync enabled.");
+      database = createSyncInterceptor(database, syncService);
+    } catch (err) {
+      console.error("[startup] Failed to enable Postgres sync, falling back to local SQLite:", err);
+    }
+  }
+
   const backfillReport = backfillGraphTables(database);
   console.log("[startup] graph backfill report:", backfillReport);
   const migrationReport = migrateAllGraphs(database);
@@ -111,6 +132,7 @@ app.whenReady().then(() => {
   const handlers = createWorkflowCommandHandlers({
     appPaths,
     database,
+
     async saveWorkflowPackageFile(packageValue) {
       const { canceled, filePath } = await dialog.showSaveDialog({
         defaultPath: path.join(

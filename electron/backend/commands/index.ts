@@ -26,6 +26,10 @@ import {
   resolveDefaultFingerprintFontsDir,
 } from "../diagnostics/cloakBrowserDiagnostics.js";
 import { commandError, createDraftGraph } from "../commandHelpers.js";
+import { readAppConfig, writeAppConfig } from "../persistence/config.js";
+import type { AppConfig } from "../persistence/config.js";
+import pg from "pg";
+
 
 import type { CommandContext, CommandDeps } from "./types.js";
 import type {
@@ -576,5 +580,24 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       schedulerConflictReason,
       startWorkflowRun: workflowCommands._startWorkflowRun,
     }),
+
+    async getAppConfig(): Promise<AppConfig> {
+      return readAppConfig(context.appPaths);
+    },
+
+    async saveAppConfig(config: AppConfig): Promise<{ success: boolean; error?: string }> {
+      if (config.dbMode === "publish" && config.postgresUrl) {
+        const client = new pg.Client({ connectionString: config.postgresUrl });
+        try {
+          await client.connect();
+          await client.end();
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+      writeAppConfig(context.appPaths, config);
+      return { success: true };
+    },
   };
+
 }

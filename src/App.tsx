@@ -26,7 +26,11 @@ import {
   saveWorkflowGraph,
   createSubflow,
   saveSubflowGraph,
+  getAppConfig,
+  saveAppConfig,
 } from "./lib/workflowApi";
+import type { AppConfig } from "./types/electron";
+
 import {
   commandMessage,
   initialRunState,
@@ -99,7 +103,9 @@ function App() {
   const [workflowSettingsActiveSection, setWorkflowSettingsActiveSection] = useState<WorkflowSettingsSectionId>("general");
   const [workflowSettingsSaveStatuses, setWorkflowSettingsSaveStatuses] = useState<Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>>(settingsSaveStatuses("saved"));
   const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(readGraphAutosaveEnabled);
+  const [appConfig, setAppConfig] = useState<AppConfig>({ dbMode: "private", postgresUrl: "" });
   const [graphSaveStatus, setGraphSaveStatus] = useState<GraphSaveStatus>(graphAutosaveEnabled ? "saved" : "off");
+
   const [graphRevision, setGraphRevision] = useState(0);
   const [savedGraphRevision, setSavedGraphRevision] = useState(0);
   const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
@@ -461,7 +467,9 @@ function App() {
     void runWorkspace.refreshRunStates();
     void loadOperationsOverview();
     void loadSettingsDiagnostics();
+    void getAppConfig().then(setAppConfig).catch(console.error);
   }, []);
+
 
   // --- Load Identity Lab Overview on project or tab change ---
   useEffect(() => {
@@ -526,6 +534,18 @@ function App() {
       graphRevisionRef.current === savedGraphRevisionRef.current ? "saved" : "unsaved",
     );
   }, []);
+
+  const handleSaveAppConfig = useCallback(async (config: AppConfig) => {
+    const res = await saveAppConfig(config);
+    if (res.success) {
+      setAppConfig(config);
+      showToast("App settings saved successfully. Restart required for Postgres sync.");
+      return { success: true };
+    } else {
+      return { success: false, error: res.error };
+    }
+  }, [showToast]);
+
 
   const openDetailWorkflowSettings = useCallback((section: WorkflowSettingsSectionId) => {
     if (workflowsWorkspace.detail) {
@@ -668,7 +688,10 @@ function App() {
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
           onInstallBinary={installSettingsBrowserBinary}
           onCleanupProfiles={cleanupSettingsBrowserProfiles}
+          appConfig={appConfig}
+          onSaveAppConfig={handleSaveAppConfig}
         />
+
       ) : nav.screen === "settings-help" ? (
         <SettingsHelpPage />
       ) : nav.screen === "schedules" ? (

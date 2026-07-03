@@ -216,6 +216,10 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("tagSubflowRevision", revisionId, tag),
   untagSubflowRevision: (revisionId) =>
     invokeWorkflow("untagSubflowRevision", revisionId),
+
+  getAppConfig: () => invokeWorkflow("getAppConfig"),
+  saveAppConfig: (config) => invokeWorkflow("saveAppConfig", config),
 };
+
 
 contextBridge.exposeInMainWorld("workflowApi", workflowApi);

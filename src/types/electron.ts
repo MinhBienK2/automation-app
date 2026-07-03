@@ -236,7 +236,16 @@ export type WorkflowElectronBridge = {
   ): Promise<RestoreResult>;
   tagSubflowRevision(revisionId: string, tag: string): Promise<void>;
   untagSubflowRevision(revisionId: string): Promise<void>;
+
+  getAppConfig(): Promise<AppConfig>;
+  saveAppConfig(config: AppConfig): Promise<{ success: boolean; error?: string }>;
 };
+
+export type AppConfig = {
+  dbMode: "private" | "publish";
+  postgresUrl: string;
+};
+
 
 declare global {
   interface Window {

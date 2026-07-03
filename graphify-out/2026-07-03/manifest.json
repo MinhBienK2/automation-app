@@ -305,13 +305,13 @@
     "semantic_hash": "b46af1c7c2110a517ae5f68f3ee83a31"
   },
   "electron/backend/runtime/conditions.test.ts": {
-    "mtime": 1782587946.4040961,
-    "ast_hash": "dde8337da3c53748b2176051c58d6ece",
+    "mtime": 1783017000.716224,
+    "ast_hash": "b168a49dc39efac31da59cb723e3dd54",
     "semantic_hash": ""
   },
   "electron/backend/runtime/conditions.ts": {
-    "mtime": 1782587946.405096,
-    "ast_hash": "2565b344718b610ed6b790042b611ba5",
+    "mtime": 1783017008.1712027,
+    "ast_hash": "701ab35cca4aa40dcc1836292b813765",
     "semantic_hash": ""
   },
   "electron/backend/runtime/domainPolicy.test.ts": {
@@ -360,8 +360,8 @@
     "semantic_hash": "8aab383ee0634b7d4f77aa8478e30770"
   },
   "electron/backend/runtime/runner.test.ts": {
-    "mtime": 1782997173.5270097,
-    "ast_hash": "15a933040d82d0ec12e7f116d901950d",
+    "mtime": 1783017033.7561386,
+    "ast_hash": "15e8237fed495462fb642b164e046a3f",
     "semantic_hash": ""
   },
   "electron/backend/runtime/runner.ts": {
@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "electron/backend/runtime/runnerActionExecutors.ts": {
-    "mtime": 1782996935.6497445,
-    "ast_hash": "e6c74d465c1a9054fd943d809c5b4d0b",
+    "mtime": 1783017067.7420754,
+    "ast_hash": "38ea31e5aee6508df60b8b4af076c4ae",
     "semantic_hash": ""
   },
   "electron/backend/runtime/runnerEvidence.test.ts": {
@@ -410,13 +410,13 @@
     "semantic_hash": "000b3112650eaa6ad8b11935359487af"
   },
   "electron/backend/runtime/variables.test.ts": {
-    "mtime": 1782997206.9588528,
-    "ast_hash": "347e681e52b1d16738c197214011c633",
+    "mtime": 1783016970.4703245,
+    "ast_hash": "9620d725a296e68fbf37fc9aca782d2b",
     "semantic_hash": ""
   },
   "electron/backend/runtime/variables.ts": {
-    "mtime": 1782587946.4060962,
-    "ast_hash": "756af1c69edcf60ca0d5c57e05f1a1ea",
+    "mtime": 1783017152.2920177,
+    "ast_hash": "400b5d4f13ee6d63a09071f6dc40b887",
     "semantic_hash": ""
   },
   "electron/backend/scheduling/scheduleCommands.test.ts": {
@@ -1590,9 +1590,9 @@
     "semantic_hash": ""
   },
   "docs/architecture/runner.md": {
-    "mtime": 1782490583.443516,
-    "ast_hash": "f3f60b8f101aa13ba0f21a9493d5ce89",
-    "semantic_hash": "f3f60b8f101aa13ba0f21a9493d5ce89"
+    "mtime": 1783017206.4610472,
+    "ast_hash": "4dc7060bf7ea4c6fc6eb47013a128d47",
+    "semantic_hash": ""
   },
   "docs/architecture/testing.md": {
     "mtime": 1782490583.443516,
@@ -1630,14 +1630,14 @@
     "semantic_hash": "7d8cfdfdae2b59f463bfde18aa919b40"
   },
   "docs/domain/execution-semantics.md": {
-    "mtime": 1782490583.444516,
-    "ast_hash": "c5f5c2c50d61c7af2b497566991b7700",
-    "semantic_hash": "c5f5c2c50d61c7af2b497566991b7700"
+    "mtime": 1783017210.3400512,
+    "ast_hash": "c85335ff552510114d1f766810a3ba39",
+    "semantic_hash": ""
   },
   "docs/domain/invariants/graph-editor.md": {
-    "mtime": 1782490583.444516,
-    "ast_hash": "801122b77c77f1fdf7866a0488e49b44",
-    "semantic_hash": "801122b77c77f1fdf7866a0488e49b44"
+    "mtime": 1783017215.006056,
+    "ast_hash": "e4f95e5705c8f682180f65f7289e31ed",
+    "semantic_hash": ""
   },
   "docs/domain/invariants/projects.md": {
     "mtime": 1782490583.444516,
@@ -2305,7 +2305,7 @@
     "semantic_hash": ""
   },
   "src/features/workflows/components/RunMonitorEnvironment.test.tsx": {
-    "mtime": 1782587946.4440954,
+    "mtime": 1783016468.5756161,
     "ast_hash": "b4b131d86da580b963d8e661a84f90e3",
     "semantic_hash": ""
   },
