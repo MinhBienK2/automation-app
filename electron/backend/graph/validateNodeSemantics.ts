@@ -10,6 +10,8 @@ import type {
   VariableAssignment,
   WorkflowCondition,
   WorkflowGraph,
+  SwitchGraphCase,
+  SwitchGraphConfig,
 } from "../../../src/types/workflow.js";
 import { validateActionConfig } from "../actions/validation.js";
 import { validateWorkflowGraph, type WorkflowGraphValidationOptions } from "./validateGraph.js";
@@ -102,17 +104,19 @@ export function pushNodeSemanticIssues(
       warnMissingBranch(graph, node, "false", "If false branch is unconnected and will no-op", issues);
       warnMissingContinuation(graph, node, "done", "If done continuation is unconnected; workflow ends successfully here", issues);
       break;
-    case "switch":
-      if (!stringField(node.config, "expression")) {
+    case "switch": {
+      const switchNodeConfig = switchGraphConfig(node);
+      if (!switchNodeConfig.expression.trim()) {
         issues.push(error(node.id, null, "Switch expression is required"));
       }
-      if (!arrayField(node.config, "cases").some((item) => typeof item === "string" && item.trim())) {
+      if (switchNodeConfig.cases.length === 0 || !switchNodeConfig.cases.some((c) => c.value.trim())) {
         issues.push(error(node.id, null, "Switch cases are required"));
       }
       pushStaleSwitchCaseIssues(graph, node, issues);
       warnMissingBranch(graph, node, "default", "Switch default branch is unconnected and will no-op", issues);
       warnMissingContinuation(graph, node, "done", "Switch done continuation is unconnected; workflow ends successfully here", issues);
       break;
+    }
     case "merge":
       warnMissingContinuation(graph, node, "out", "Merge out is unconnected; workflow path ends successfully here", issues);
       break;
@@ -355,8 +359,8 @@ function branchContinuationSemantics(node: GraphNode): {
     case "if":
       return { branchPorts: ["true", "false"], continuationPorts: ["done"] };
     case "switch": {
-      const casePorts = arrayField(node.config, "cases")
-        .map((_caseValue, index) => `case_${index + 1}`);
+      const switchNodeConfig = switchGraphConfigOrNull(node);
+      const casePorts = switchNodeConfig?.cases.map((c) => `case_${c.id}`) ?? [];
       return { branchPorts: [...casePorts, "default"], continuationPorts: ["done"] };
     }
     case "router": {
@@ -502,14 +506,19 @@ export function expectedPorts(node: GraphNode): GraphPort[] {
     case "if":
       return [inputPort("in", "In"), outputPort("true", "True"), outputPort("false", "False"), outputPort("done", "Done")];
     case "switch": {
-      const caseCount = Math.max(
-        stringArrayOrNull(node.config, "cases")?.length ?? 0,
-        node.ports.filter((port) => port.direction === "output" && port.id.startsWith("case_")).length,
-        1,
-      );
+      const switchNodeConfig = switchGraphConfigOrNull(node);
+      const cases = switchNodeConfig?.cases ?? [];
+      const ports = cases.map((c) => outputPort(`case_${c.id}`, c.value || `Case ${c.id}`));
+      const existingPorts = node.ports
+        .filter((port) => port.direction === "output" && port.id.startsWith("case_"))
+        .map((port) => outputPort(port.id, port.label));
+      const mergedPortsMap = new Map<string, GraphPort>();
+      for (const p of [...ports, ...existingPorts]) {
+        mergedPortsMap.set(p.id, p);
+      }
       return [
         inputPort("in", "In"),
-        ...Array.from({ length: caseCount }, (_, index) => outputPort(`case_${index + 1}`, `Case ${index + 1}`)),
+        ...Array.from(mergedPortsMap.values()),
         outputPort("default", "Default"),
         outputPort("done", "Done"),
       ];
@@ -549,13 +558,13 @@ function pushStaleSwitchCaseIssues(
   node: GraphNode,
   issues: GraphValidationIssue[],
 ) {
-  const caseValues = arrayField(node.config, "cases");
+  const switchNodeConfig = switchGraphConfig(node);
+  const caseIds = new Set(switchNodeConfig.cases.map(c => c.id));
   for (const edgeValue of graph.edges.filter((edgeItem) => edgeItem.source_node_id === node.id)) {
-    const match = /^case_(\d+)$/.exec(edgeValue.source_port);
+    const match = /^case_(.+)$/.exec(edgeValue.source_port);
     if (!match) continue;
-    const caseIndex = Number(match[1]) - 1;
-    const caseValue = caseValues[caseIndex];
-    if (typeof caseValue === "string" && caseValue.trim()) continue;
+    const caseId = match[1];
+    if (caseIds.has(caseId)) continue;
     issues.push(error(
       node.id,
       edgeValue.id,
@@ -646,6 +655,36 @@ function pushRandomChoiceSemanticIssues(
     );
   }
   warnMissingContinuation(graph, node, "done", "Random Choice done continuation is unconnected; workflow ends successfully here", issues);
+}
+
+function switchGraphConfig(node: GraphNode): SwitchGraphConfig {
+  const switchConfigValue = switchGraphConfigOrNull(node);
+  if (!switchConfigValue || switchConfigValue.cases.length === 0) {
+    throw validationError("cases", "Switch cases are required");
+  }
+  return switchConfigValue;
+}
+
+function switchGraphConfigOrNull(node: GraphNode): SwitchGraphConfig | null {
+  const record = asRecord(node.config);
+  const rawCases = Array.isArray(record.cases) ? record.cases : [];
+  const cases = rawCases.map((item, index): SwitchGraphCase => {
+    if (typeof item === "string") {
+      return {
+        id: String(index + 1),
+        value: item,
+      };
+    }
+    const caseRecord = asRecord(item);
+    return {
+      id: stringField(caseRecord, "id") ?? String(index + 1),
+      value: stringField(caseRecord, "value") ?? "",
+    };
+  });
+  return {
+    expression: stringField(record, "expression") ?? "",
+    cases,
+  };
 }
 
 function routerGraphConfigOrNull(node: GraphNode): RouterGraphConfig | null {

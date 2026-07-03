@@ -26,16 +26,16 @@ import { TemplateTextField, TemplateTextareaField, type VariableOption } from ".
 import {
   arrayConfig,
   booleanConfig,
-  numberConfig,
   objectConfig,
   stringConfig,
 } from "../lib/configUtils";
-import { switchPortsForCases } from "../lib/graphNodeConfig";
+import { VariableNumericInput } from "./VariableNumericInput";
 
 // Import modular field editors
 import { RouterNodeFields } from "./inspector/RouterNodeFields";
 import { RandomChoiceNodeFields } from "./inspector/RandomChoiceNodeFields";
 import { LoopNodeFields } from "./inspector/LoopNodeFields";
+import { SwitchNodeFields } from "./inspector/SwitchNodeFields";
 
 type NodeConfigFieldsProps = {
   node: GraphNode;
@@ -84,47 +84,13 @@ export function NodeConfigFields({
           onChange={onChange}
         />
       );
-    case "switch": {
-      const cases = arrayConfig(node.config, "cases");
+    case "switch":
       return (
-        <div className="graph-config-fields">
-          <ActionConfigFieldGroup title="Switch routes">
-            <Label>
-              Switch expression
-              <Input
-                value={stringConfig(node.config, "expression", "")}
-                onChange={(event) =>
-                  updateConfig({
-                    ...objectConfig(node.config),
-                    expression: event.currentTarget.value,
-                  })
-                }
-              />
-            </Label>
-            <Label>
-              Switch cases
-              <Textarea
-                value={cases.join("\n")}
-                onChange={(event) => {
-                  const nextCases = event.currentTarget.value
-                    .split("\n")
-                    .map((item) => item.trim())
-                    .filter(Boolean);
-                  onChange({
-                    ...node,
-                    config: {
-                      ...objectConfig(node.config),
-                      cases: nextCases,
-                    },
-                    ports: switchPortsForCases(nextCases),
-                  });
-                }}
-              />
-            </Label>
-          </ActionConfigFieldGroup>
-        </div>
+        <SwitchNodeFields
+          node={node}
+          onChange={onChange}
+        />
       );
-    }
     case "router":
       return (
         <RouterNodeFields
@@ -143,34 +109,38 @@ export function NodeConfigFields({
       return (
         <div className="graph-config-fields">
           <ActionConfigFieldGroup title="Retry policy">
-            <Label>
-              Max attempts
-              <Input
-                min="1"
-                type="number"
-                value={numberConfig(node.config, "max_attempts", 3)}
-                onChange={(event) =>
-                  updateConfig({
-                    ...objectConfig(node.config),
-                    max_attempts: Number(event.currentTarget.value),
-                  })
-                }
-              />
-            </Label>
-            <Label>
-              Delay ms
-              <Input
-                min="0"
-                type="number"
-                value={numberConfig(node.config, "delay_ms", 100)}
-                onChange={(event) =>
-                  updateConfig({
-                    ...objectConfig(node.config),
-                    delay_ms: Number(event.currentTarget.value),
-                  })
-                }
-              />
-            </Label>
+            <VariableNumericInput
+              label="Max attempts"
+              min={1}
+              value={node.config && (node.config as any).max_attempts !== undefined ? (node.config as any).max_attempts : 3}
+              onChange={(nextVal) => {
+                const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                  ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                    ? nextVal
+                    : Number(nextVal)
+                  : null;
+                updateConfig({
+                  ...objectConfig(node.config),
+                  max_attempts: val,
+                });
+              }}
+            />
+            <VariableNumericInput
+              label="Delay ms"
+              min={0}
+              value={node.config && (node.config as any).delay_ms !== undefined ? (node.config as any).delay_ms : 100}
+              onChange={(nextVal) => {
+                const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                  ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                    ? nextVal
+                    : Number(nextVal)
+                  : null;
+                updateConfig({
+                  ...objectConfig(node.config),
+                  delay_ms: val,
+                });
+              }}
+            />
           </ActionConfigFieldGroup>
         </div>
       );

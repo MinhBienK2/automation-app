@@ -2022,10 +2022,15 @@ describe("Workflow graph editor integration", () => {
     );
     expect(within(editor).getByRole("heading", { name: "Switch" })).toBeInTheDocument();
     await userEvent.type(within(editor).getByLabelText("Switch expression"), "login_state");
-    fireEvent.change(within(editor).getByLabelText("Switch cases"), {
-      target: { value: "logged_in\nlocked" },
+    fireEvent.change(within(editor).getAllByLabelText("Case value")[0], {
+      target: { value: "logged_in" },
     });
-    expect(within(editor).getByLabelText("Switch Case 1 port")).toBeInTheDocument();
+    await userEvent.click(within(editor).getByRole("button", { name: "Add switch case" }));
+    fireEvent.change(within(editor).getAllByLabelText("Case value")[1], {
+      target: { value: "locked" },
+    });
+    expect(within(editor).getByLabelText("Switch logged_in port")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Switch locked port")).toBeInTheDocument();
     expect(within(editor).getByLabelText("Switch Done port")).toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add End" }));
@@ -2064,10 +2069,13 @@ describe("Workflow graph editor integration", () => {
               }),
               expect.objectContaining({
                 node_type: "switch",
-                config: {
+                config: expect.objectContaining({
                   expression: "login_state",
-                  cases: ["logged_in", "locked"],
-                },
+                  cases: [
+                    expect.objectContaining({ id: "1", value: "logged_in" }),
+                    expect.objectContaining({ id: "2", value: "locked" }),
+                  ],
+                }),
               }),
               expect.objectContaining({
                 node_type: "end_failure",

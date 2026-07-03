@@ -3,6 +3,8 @@ import type {
   RouterGraphCase,
   RouterGraphConfig,
   WorkflowCondition,
+  SwitchGraphCase,
+  SwitchGraphConfig,
 } from "../../../types/workflow";
 import { objectConfig } from "./configUtils";
 
@@ -17,18 +19,52 @@ export type RandomChoiceGraphConfig = {
   output_name?: string | null;
 };
 
-export function switchPortsForCases(cases: string[]): GraphPort[] {
+export function switchPortsForCases(cases: Array<string | SwitchGraphCase>): GraphPort[] {
   return [
     { id: "in", label: "In", direction: "input", shape: "circle" },
-    ...cases.map((_, index) => ({
-      id: `case_${index + 1}`,
-      label: `Case ${index + 1}`,
-      direction: "output" as const,
-      shape: "diamond" as const,
-    })),
+    ...cases.map((caseValue, index) => {
+      const id = typeof caseValue === "string" ? String(index + 1) : caseValue.id;
+      const label = typeof caseValue === "string" ? `Case ${index + 1}` : (caseValue.value.trim() || "Case");
+      return {
+        id: `case_${id}`,
+        label,
+        direction: "output" as const,
+        shape: "diamond" as const,
+      };
+    }),
     { id: "default", label: "Default", direction: "output", shape: "diamond" },
     { id: "done", label: "Done", direction: "output", shape: "square" },
   ];
+}
+
+export function switchConfig(config: unknown): SwitchGraphConfig {
+  const record = objectConfig(config);
+  const rawCases = Array.isArray(record.cases) ? record.cases : [];
+  const cases = rawCases.map((item, index): SwitchGraphCase => {
+    if (typeof item === "string") {
+      return {
+        id: String(index + 1),
+        value: item,
+      };
+    }
+    const caseRecord = objectConfig(item);
+    return {
+      id: stringValue(caseRecord.id) || String(index + 1),
+      value: stringValue(caseRecord.value),
+    };
+  });
+  return {
+    expression: stringValue(record.expression),
+    cases,
+  };
+}
+
+export function nextSwitchCaseId(cases: SwitchGraphCase[]) {
+  const numericIds = cases
+    .map((c) => Number(c.id))
+    .filter((value) => Number.isInteger(value) && value > 0);
+  if (numericIds.length > 0) return String(Math.max(...numericIds) + 1);
+  return `case_${Date.now()}`;
 }
 
 export function routerPortsForCases(

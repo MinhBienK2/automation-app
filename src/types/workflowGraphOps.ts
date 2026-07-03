@@ -94,6 +94,16 @@ export type CallSubflowGraphConfig = {
   output_prefix?: string | null;
 };
 
+export type SwitchGraphCase = {
+  id: string;
+  value: string;
+};
+
+export type SwitchGraphConfig = {
+  expression: string;
+  cases: SwitchGraphCase[];
+};
+
 export type GraphNode = {
   id: string;
   node_type: GraphNodeType;

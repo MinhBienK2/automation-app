@@ -1655,6 +1655,96 @@ describe("TypeScript graph compiler parity", () => {
       }),
     );
   });
+
+  test("compiles switch node with stable IDs and compiles legacy string[] cases correctly", async () => {
+    const { handlers } = await createTestHandlers();
+    
+    // 1. Test legacy string[] format
+    const legacyGraph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("switch-node", "switch", {
+          config: { expression: "{{status}}", cases: ["ready", "done"] },
+          ports: [
+            inputPort("in", "In"),
+            outputPort("case_1", "Ready"),
+            outputPort("case_2", "Done"),
+            outputPort("default", "Default"),
+            outputPort("done", "Done"),
+          ],
+        }),
+        graphNode("ready-action", "action", { config: waitAction(100) }),
+        graphNode("done-action", "action", { config: waitAction(200) }),
+      ],
+      [
+        edge("start", "out", "switch-node", "in"),
+        edge("switch-node", "case_1", "ready-action", "in"),
+        edge("switch-node", "case_2", "done-action", "in"),
+      ],
+    );
+
+    const legacyCompiled = handlers.compileWorkflowGraph(legacyGraph);
+    expect(legacyCompiled.steps[0]).toEqual(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          type: "switch_condition",
+          config: expect.objectContaining({
+            expression: "{{status}}",
+            cases: [
+              { value: "ready", steps: [expect.objectContaining(waitAction(100))] },
+              { value: "done", steps: [expect.objectContaining(waitAction(200))] },
+            ],
+          }),
+        }),
+      }),
+    );
+
+    // 2. Test new stable ID format
+    const stableGraph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("switch-node", "switch", {
+          config: {
+            expression: "{{status}}",
+            cases: [
+              { id: "id1", value: "ready" },
+              { id: "id2", value: "done" },
+            ],
+          },
+          ports: [
+            inputPort("in", "In"),
+            outputPort("case_id1", "Ready"),
+            outputPort("case_id2", "Done"),
+            outputPort("default", "Default"),
+            outputPort("done", "Done"),
+          ],
+        }),
+        graphNode("ready-action", "action", { config: waitAction(100) }),
+        graphNode("done-action", "action", { config: waitAction(200) }),
+      ],
+      [
+        edge("start", "out", "switch-node", "in"),
+        edge("switch-node", "case_id1", "ready-action", "in"),
+        edge("switch-node", "case_id2", "done-action", "in"),
+      ],
+    );
+
+    const stableCompiled = handlers.compileWorkflowGraph(stableGraph);
+    expect(stableCompiled.steps[0]).toEqual(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          type: "switch_condition",
+          config: expect.objectContaining({
+            expression: "{{status}}",
+            cases: [
+              { value: "ready", steps: [expect.objectContaining(waitAction(100))] },
+              { value: "done", steps: [expect.objectContaining(waitAction(200))] },
+            ],
+          }),
+        }),
+      }),
+    );
+  });
 });
 
 

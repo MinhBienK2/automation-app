@@ -15,6 +15,8 @@ import type {
   WorkflowRunFromSelectedMode,
   WorkflowSettings,
   LogicRuleGroup,
+  SwitchGraphCase,
+  SwitchGraphConfig,
 } from "../../../src/types/workflow.js";
 import {
   validateWorkflowGraph as validateWorkflowGraphModule,
@@ -248,15 +250,14 @@ function compilePath(
       break;
     }
     case "switch": {
-      const expression = requiredString(node.config, "expression", "Switch expression is required");
-      const caseValues = stringArray(node.config, "cases", "Switch cases are required");
+      const switchNodeConfig = switchGraphConfig(node);
       steps.push(step(node, {
         type: "switch_condition",
         config: {
-          expression,
-          cases: caseValues.map((value, index) => ({
-            value,
-            steps: compileNestedConfigs(graph, node.id, `case_${index + 1}`, visited, options),
+          expression: switchNodeConfig.expression,
+          cases: switchNodeConfig.cases.map((caseValue) => ({
+            value: caseValue.value,
+            steps: compileNestedConfigs(graph, node.id, `case_${caseValue.id}`, visited, options),
           })),
           default_steps: compileNestedConfigs(graph, node.id, "default", visited, options),
         },
@@ -995,6 +996,36 @@ function stringArrayOrNull(config: unknown, field: string): string[] | null {
 
 function closeBrowserConfig(config: unknown): boolean {
   return asRecord(config).close_browser === true;
+}
+
+function switchGraphConfig(node: GraphNode): SwitchGraphConfig {
+  const switchConfigValue = switchGraphConfigOrNull(node);
+  if (!switchConfigValue || switchConfigValue.cases.length === 0) {
+    throw validationError("cases", "Switch cases are required");
+  }
+  return switchConfigValue;
+}
+
+function switchGraphConfigOrNull(node: GraphNode): SwitchGraphConfig | null {
+  const record = asRecord(node.config);
+  const rawCases = Array.isArray(record.cases) ? record.cases : [];
+  const cases = rawCases.map((item, index): SwitchGraphCase => {
+    if (typeof item === "string") {
+      return {
+        id: String(index + 1),
+        value: item,
+      };
+    }
+    const caseRecord = asRecord(item);
+    return {
+      id: stringField(caseRecord, "id") ?? String(index + 1),
+      value: stringField(caseRecord, "value") ?? "",
+    };
+  });
+  return {
+    expression: stringField(record, "expression") ?? "",
+    cases,
+  };
 }
 
 function isActionConfig(value: unknown): value is ActionConfig {

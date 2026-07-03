@@ -7,10 +7,10 @@ import { ConditionFields, conditionFromConfig } from "../WorkflowGraphConditionF
 import type { GraphNode } from "../../../../types/workflow";
 import {
   arrayConfig,
-  numberConfig,
   objectConfig,
   stringConfig,
 } from "../../lib/configUtils";
+import { VariableNumericInput } from "../VariableNumericInput";
 
 type LoopNodeFieldsProps = {
   node: GraphNode;
@@ -26,20 +26,22 @@ export function LoopNodeFields({ node, onChange }: LoopNodeFieldsProps) {
     return (
       <div className="graph-config-fields">
         <ActionConfigFieldGroup title="Repeat count">
-          <Label>
-            Times
-            <Input
-              min="1"
-              type="number"
-              value={numberConfig(node.config, "times", 1)}
-              onChange={(event) =>
-                updateConfig({
-                  ...objectConfig(node.config),
-                  times: Number(event.currentTarget.value),
-                })
-              }
-            />
-          </Label>
+          <VariableNumericInput
+            label="Times"
+            min={1}
+            value={node.config && (node.config as any).times !== undefined ? (node.config as any).times : 1}
+            onChange={(nextVal) => {
+              const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+                ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                  ? nextVal
+                  : Number(nextVal)
+                : null;
+              updateConfig({
+                ...objectConfig(node.config),
+                times: val,
+              });
+            }}
+          />
         </ActionConfigFieldGroup>
       </div>
     );
@@ -133,34 +135,39 @@ export function LoopNodeFields({ node, onChange }: LoopNodeFieldsProps) {
         />
       </ActionConfigFieldGroup>
       <ActionConfigFieldGroup title="Loop guard">
-        <Label>
-          Loop max attempts
-          <Input
-            min="1"
-            type="number"
-            value={numberConfig(node.config, "max_attempts", 10)}
-            onChange={(event) =>
-              updateConfig({
-                ...objectConfig(node.config),
-                max_attempts: Number(event.currentTarget.value) || 1,
-              })
-            }
-          />
-        </Label>
-        <Label>
-          Loop timeout ms
-          <Input
-            min="0"
-            type="number"
-            value={numberConfig(node.config, "timeout_ms", 0)}
-            onChange={(event) =>
-              updateConfig({
-                ...objectConfig(node.config),
-                timeout_ms: Number(event.currentTarget.value) || null,
-              })
-            }
-          />
-        </Label>
+        <VariableNumericInput
+          label="Loop max attempts"
+          min={1}
+          value={node.config && (node.config as any).max_attempts !== undefined ? (node.config as any).max_attempts : 10}
+          onChange={(nextVal) => {
+            const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+              ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                ? nextVal
+                : Number(nextVal)
+              : null;
+            updateConfig({
+              ...objectConfig(node.config),
+              max_attempts: val,
+            });
+          }}
+        />
+        <VariableNumericInput
+          label="Loop timeout ms"
+          min={0}
+          value={node.config && (node.config as any).timeout_ms !== undefined ? (node.config as any).timeout_ms : 0}
+          onChange={(nextVal) => {
+            const val = nextVal !== "" && nextVal !== null && nextVal !== undefined
+              ? typeof nextVal === "string" && nextVal.startsWith("{{")
+                ? nextVal
+                : Number(nextVal)
+              : null;
+            updateConfig({
+              ...objectConfig(node.config),
+              timeout_ms: val,
+            });
+          }}
+          placeholder="No timeout"
+        />
       </ActionConfigFieldGroup>
     </div>
   );

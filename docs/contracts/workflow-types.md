@@ -65,7 +65,7 @@ Executable frontend/backend ports must agree:
 | `router` | `in` | `case_<id>`, `default`, `done` |
 | `random_choice` | `in` | `choice_<id>`, `done` |
 | `if` | `in` | `true`, `false`, `done` |
-| `switch` | `in` | `case_N`, `default`, `done` |
+| `switch` | `in` | `case_<id>`, `default`, `done` |
 | loops | `in` | `loop`, `done` (+`timeout` for `repeat_until`) |
 | `retry` | `in` | `try`, `success`, `failed` |
 | `try_catch` | `in` | `try`, `success`, `error`, `finally`, `done` |

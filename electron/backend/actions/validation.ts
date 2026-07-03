@@ -772,42 +772,49 @@ function requiredActionString(
     : validationError(field, message);
 }
 
-function positiveValue(value: number | null | undefined, field: string, message: string) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0
+function isTemplateVariable(value: unknown): boolean {
+  return typeof value === "string" && /^\{\{\s*[^}]+?\s*\}\}$/.test(value.trim());
+}
+
+function positiveValue(value: any, field: string, message: string) {
+  return isTemplateVariable(value) || (typeof value === "number" && Number.isFinite(value) && value > 0)
     ? null
     : validationError(field, message);
 }
 
-function optionalPositive(value: number | null | undefined, field: string, message: string) {
-  return value == null ? null : positiveValue(value, field, message);
+function optionalPositive(value: any, field: string, message: string) {
+  return value == null || isTemplateVariable(value) ? null : positiveValue(value, field, message);
 }
 
-function optionalNonNegative(value: number | null | undefined, field: string, message: string) {
-  return value == null || (typeof value === "number" && Number.isFinite(value) && value >= 0)
+function optionalNonNegative(value: any, field: string, message: string) {
+  return value == null || isTemplateVariable(value) || (typeof value === "number" && Number.isFinite(value) && value >= 0)
     ? null
     : validationError(field, message);
 }
 
-function finiteValue(value: unknown, field: string, message: string) {
-  return typeof value === "number" && Number.isFinite(value)
+function finiteValue(value: any, field: string, message: string) {
+  return isTemplateVariable(value) || (typeof value === "number" && Number.isFinite(value))
     ? null
     : validationError(field, message);
 }
 
-function percentValue(value: unknown, field: string, message: string) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100
+function percentValue(value: any, field: string, message: string) {
+  return isTemplateVariable(value) || (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100)
     ? null
     : validationError(field, message);
 }
 
-function zeroOrPositiveInteger(value: number | null | undefined, field: string, message: string) {
-  return typeof value === "number" &&
+function zeroOrPositiveInteger(value: any, field: string, message: string) {
+  return isTemplateVariable(value) || (
+    typeof value === "number" &&
     Number.isInteger(value) &&
     Number.isFinite(value) &&
     value >= 0
+  )
     ? null
     : validationError(field, message);
 }
+
 
 function validateElementTarget(
   config: unknown,
@@ -1198,8 +1205,8 @@ function hasStructuredElementTarget(target: unknown): boolean {
     });
 }
 
-function positive(value: number | null | undefined) {
-  return value != null && value > 0;
+function positive(value: any) {
+  return (value != null && value > 0) || isTemplateVariable(value);
 }
 
 function isActionConfig(value: unknown): value is ActionConfig {
