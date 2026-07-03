@@ -180,8 +180,8 @@
     "semantic_hash": "4d0c5fd7170e4efad4ad83be84695791"
   },
   "electron/backend/graph/validateGraph.ts": {
-    "mtime": 1782997151.0038211,
-    "ast_hash": "c29c30a18433fd0cbecba73775e3a3ad",
+    "mtime": 1783103538.2747843,
+    "ast_hash": "c4e204f0b90e1503a1636cb805368d20",
     "semantic_hash": ""
   },
   "electron/backend/identity/identityRepository.ts": {
@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/workflowRepository.ts": {
-    "mtime": 1782741031.5333583,
-    "ast_hash": "0f1f271b578035e46308bd47ca58bb6d",
+    "mtime": 1783103126.7522662,
+    "ast_hash": "485a62cc17356f92a880300d8615bb89",
     "semantic_hash": ""
   },
   "electron/backend/projects/projectCommandCascades.test.ts": {
@@ -2517,6 +2517,26 @@
   "src/features/workflows/lib/stepHelpContentHelpers.ts": {
     "mtime": 1783102300.379619,
     "ast_hash": "c2f68c0b74db7b8121a7dd6ffb10cd87",
+    "semantic_hash": ""
+  },
+  "electron/backend/graph/graphTopology.ts": {
+    "mtime": 1783103066.7601626,
+    "ast_hash": "6f512b11c900bc7809fe1d8f40f19c43",
+    "semantic_hash": ""
+  },
+  "electron/backend/graph/validateNodeSemantics.ts": {
+    "mtime": 1783103394.8334923,
+    "ast_hash": "eb124ff9a7fd1397f5c14082853d5db2",
+    "semantic_hash": ""
+  },
+  "electron/backend/persistence/projectRepository.ts": {
+    "mtime": 1783103115.0240507,
+    "ast_hash": "31286b02a1f1e0c93989dccffced2e7a",
+    "semantic_hash": ""
+  },
+  "electron/backend/persistence/subflowRepository.ts": {
+    "mtime": 1783103120.1901457,
+    "ast_hash": "2187577b4a580bcc82bc8a055d7f210c",
     "semantic_hash": ""
   }
 }

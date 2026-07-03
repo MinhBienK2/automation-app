@@ -141,6 +141,15 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("set_local_storage", "browser_context"),
   definition("set_session_storage", "browser_context"),
   definition("get_current_url", "capture"),
+  definition("read_text_file", "capture"),
+  definition("parse_csv_excel", "capture"),
+  definition("write_csv_excel", "capture"),
+  definition("file_operation", "capture"),
+  definition("http_request", "network"),
+  definition("date_time_operation", "variables"),
+  definition("crypto_operation", "variables"),
+  definition("switch_frame", "element_interaction"),
+  definition("switch_to_parent_frame", "element_interaction"),
 ];
 
 const definitionsByType = new Map(actionDefinitions.map((definition) => [definition.type, definition]));

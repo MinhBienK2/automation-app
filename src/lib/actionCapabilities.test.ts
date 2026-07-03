@@ -6,7 +6,6 @@ import type { ActionType } from "../types/workflow";
 describe("action capability registry", () => {
   const removedActions = [
     "set_checkbox",
-    "switch_frame",
     "set_download_directory",
     "use_profile",
     "save_session",

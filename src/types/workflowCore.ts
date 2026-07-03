@@ -87,7 +87,16 @@ export type ActionType =
   | "mock_response"
   | "set_local_storage"
   | "set_session_storage"
-  | "get_current_url";
+  | "get_current_url"
+  | "read_text_file"
+  | "parse_csv_excel"
+  | "write_csv_excel"
+  | "file_operation"
+  | "http_request"
+  | "date_time_operation"
+  | "crypto_operation"
+  | "switch_frame"
+  | "switch_to_parent_frame";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -970,6 +979,82 @@ export type ActionConfig =
   | {
       type: "calculate_value";
       config: CalculateValueConfig;
+    }
+  | {
+      type: "read_text_file";
+      config: {
+        path: string;
+        output_name: string;
+        encoding?: "utf-8" | "base64" | null;
+      };
+    }
+  | {
+      type: "parse_csv_excel";
+      config: {
+        path: string;
+        output_name: string;
+        has_headers: boolean;
+        delimiter?: string | null;
+      };
+    }
+  | {
+      type: "write_csv_excel";
+      config: {
+        path: string;
+        source_name: string;
+        mode: "overwrite" | "append";
+        has_headers: boolean;
+      };
+    }
+  | {
+      type: "file_operation";
+      config: {
+        operation: "exists" | "delete" | "rename" | "move";
+        path: string;
+        target_path?: string | null;
+        output_name?: string | null;
+      };
+    }
+  | {
+      type: "http_request";
+      config: {
+        method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+        url: string;
+        headers?: HeaderPair[] | null;
+        body?: string | null;
+        content_type?: string | null;
+        output_name: string;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "date_time_operation";
+      config: {
+        operation: "current_timestamp" | "format" | "add_subtract" | "diff";
+        value?: string | null;
+        format_pattern?: string | null;
+        offset_value?: number | null;
+        offset_unit?: "days" | "hours" | "minutes" | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "crypto_operation";
+      config: {
+        operation: "md5" | "sha256" | "base64_encode" | "base64_decode";
+        value: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "switch_frame";
+      config: {
+        iframe_xpath: string;
+      };
+    }
+  | {
+      type: "switch_to_parent_frame";
+      config: Record<string, never>;
     }
   | {
       type: "quarantined";

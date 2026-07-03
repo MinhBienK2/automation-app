@@ -405,5 +405,23 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return { type: actionType, config: { key: "key", value: "value" } } as ActionConfig;
     case "get_current_url":
       return { type: actionType, config: {} } as ActionConfig;
+    case "read_text_file":
+      return { type: actionType, config: { path: "", output_name: "file_content", encoding: "utf-8" } };
+    case "parse_csv_excel":
+      return { type: actionType, config: { path: "", output_name: "parsed_data", has_headers: true, delimiter: "," } };
+    case "write_csv_excel":
+      return { type: actionType, config: { path: "", source_name: "parsed_data", mode: "overwrite", has_headers: true } };
+    case "file_operation":
+      return { type: actionType, config: { operation: "exists", path: "", target_path: null, output_name: null } };
+    case "http_request":
+      return { type: actionType, config: { method: "GET", url: "", headers: null, body: null, content_type: null, timeout_ms: 30000, output_name: "http_response" } };
+    case "date_time_operation":
+      return { type: actionType, config: { operation: "current_timestamp", value: null, format_pattern: null, offset_value: null, offset_unit: null, output_name: "date_time_result" } };
+    case "crypto_operation":
+      return { type: actionType, config: { operation: "sha256", value: "", output_name: "crypto_result" } };
+    case "switch_frame":
+      return { type: actionType, config: { iframe_xpath: "" } };
+    case "switch_to_parent_frame":
+      return { type: actionType, config: {} } as ActionConfig;
   }
 }

@@ -666,6 +666,64 @@ const actionValidators = createActionValidatorMap({
     }
     return null;
   },
+  read_text_file: (config) =>
+    firstValidation(
+      requiredActionString(config.config.path, "path", "File path is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  parse_csv_excel: (config) =>
+    firstValidation(
+      requiredActionString(config.config.path, "path", "File path is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  write_csv_excel: (config) =>
+    firstValidation(
+      requiredActionString(config.config.path, "path", "File path is required"),
+      requiredActionString(config.config.source_name, "source_name", "Source variable name is required"),
+    ),
+  file_operation: (config) => {
+    if (!["exists", "delete", "rename", "move"].includes(config.config.operation)) {
+      return validationError("operation", "File operation is invalid");
+    }
+    if (!config.config.path || !config.config.path.trim()) {
+      return validationError("path", "File path is required");
+    }
+    if (["rename", "move"].includes(config.config.operation) && (!config.config.target_path || !config.config.target_path.trim())) {
+      return validationError("target_path", "Target path is required");
+    }
+    return null;
+  },
+  http_request: (config) =>
+    firstValidation(
+      requiredActionString(config.config.url, "url", "URL is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
+    ),
+  date_time_operation: (config) => {
+    if (!["current_timestamp", "format", "add_subtract", "diff"].includes(config.config.operation)) {
+      return validationError("operation", "Date-time operation is invalid");
+    }
+    if (!config.config.output_name || !config.config.output_name.trim()) {
+      return validationError("output_name", "Output variable name is required");
+    }
+    if (config.config.operation === "add_subtract") {
+      if (config.config.offset_value == null) {
+        return validationError("offset_value", "Offset value is required");
+      }
+      if (!config.config.offset_unit) {
+        return validationError("offset_unit", "Offset unit is required");
+      }
+    }
+    return null;
+  },
+  crypto_operation: (config) =>
+    firstValidation(
+      requiredActionString(config.config.value, "value", "Value to hash/decode is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  switch_frame: (config) =>
+    requiredActionString(config.config.iframe_xpath, "iframe_xpath", "Iframe XPath is required"),
+  switch_to_parent_frame: () => null,
 });
 
 export function validateActionConfig(config: ActionConfig): ActionValidationError | null {

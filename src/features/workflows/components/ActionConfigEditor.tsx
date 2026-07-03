@@ -7,6 +7,10 @@ import { CoreActionFields } from "./ActionConfigCoreFields";
 import { ElementActionFields } from "./ActionConfigElementFields";
 import { LogicActionFields } from "./ActionConfigLogicFields";
 import { OutputActionFields } from "./ActionConfigOutputFields";
+import { FileActionFields } from "./ActionConfigFileFields";
+import { HttpActionFields } from "./ActionConfigHttpFields";
+import { DateTimeActionFields } from "./ActionConfigDateTimeFields";
+import { FrameActionFields } from "./ActionConfigFrameFields";
 import type { VariableOption } from "./TemplateTextField";
 
 type ActionFieldsProps = {
@@ -25,6 +29,10 @@ const actionFieldRenderers: ActionFieldRenderer[] = [
   OutputActionFields,
   LogicActionFields,
   AdvancedActionFields,
+  FileActionFields,
+  HttpActionFields,
+  DateTimeActionFields,
+  FrameActionFields,
 ];
 
 export function ActionConfigEditor(props: ActionFieldsProps) {

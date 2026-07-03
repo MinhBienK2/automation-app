@@ -970,6 +970,15 @@ export const actionDescriptions: Record<ActionType, string> = {
   set_local_storage: "Set local storage",
   set_session_storage: "Set session storage",
   get_current_url: "Capture current page URL and components",
+  read_text_file: "Read a local text file",
+  parse_csv_excel: "Parse a CSV/Excel file",
+  write_csv_excel: "Write data to a CSV/Excel file",
+  file_operation: "Perform filesystem operations",
+  http_request: "Perform an HTTP request",
+  date_time_operation: "Manipulate dates and times",
+  crypto_operation: "Perform cryptography hashing or Base64",
+  switch_frame: "Switch context to an iframe",
+  switch_to_parent_frame: "Switch context back to parent document",
 };
 
 export function ActionNodePalette({

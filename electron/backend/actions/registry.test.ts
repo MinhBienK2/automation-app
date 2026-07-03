@@ -101,6 +101,15 @@ describe("backend action registry", () => {
       "set_local_storage",
       "set_session_storage",
       "get_current_url",
+      "read_text_file",
+      "parse_csv_excel",
+      "write_csv_excel",
+      "file_operation",
+      "http_request",
+      "date_time_operation",
+      "crypto_operation",
+      "switch_frame",
+      "switch_to_parent_frame",
     ]);
     expect(getActionDefinition("execute_js")).toMatchObject({
       type: "execute_js",

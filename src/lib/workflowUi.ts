@@ -97,6 +97,15 @@ export const actionLabels: Record<ActionType, string> = {
   set_local_storage: "Set Local Storage",
   set_session_storage: "Set Session Storage",
   get_current_url: "Get Current URL",
+  read_text_file: "Read Text File",
+  parse_csv_excel: "Parse CSV/Excel File",
+  write_csv_excel: "Write CSV/Excel File",
+  file_operation: "File Operation",
+  http_request: "HTTP API Request",
+  date_time_operation: "Date-Time Operation",
+  crypto_operation: "Crypto Hashing & Base64",
+  switch_frame: "Switch Frame Context",
+  switch_to_parent_frame: "Switch to Parent Frame",
 };
 
 const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
@@ -180,6 +189,8 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
       "set_viewport",
       "set_geolocation",
       "grant_permission",
+      "switch_frame",
+      "switch_to_parent_frame",
     ],
   },
   {
@@ -203,6 +214,28 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
       "wait_for_response",
       "block_request",
       "mock_response",
+    ],
+  },
+  {
+    label: "File Operations",
+    actions: [
+      "read_text_file",
+      "parse_csv_excel",
+      "write_csv_excel",
+      "file_operation",
+    ],
+  },
+  {
+    label: "Integrations",
+    actions: [
+      "http_request",
+    ],
+  },
+  {
+    label: "Advanced Utilities",
+    actions: [
+      "date_time_operation",
+      "crypto_operation",
     ],
   },
   {

@@ -101,6 +101,15 @@ describe("backend action execution registry", () => {
       get_current_url: async () => calls.push("get_current_url"),
       check_conditions: async () => calls.push("check_conditions"),
       calculate_value: async () => calls.push("calculate_value"),
+      read_text_file: async () => calls.push("read_text_file"),
+      parse_csv_excel: async () => calls.push("parse_csv_excel"),
+      write_csv_excel: async () => calls.push("write_csv_excel"),
+      file_operation: async () => calls.push("file_operation"),
+      http_request: async () => calls.push("http_request"),
+      date_time_operation: async () => calls.push("date_time_operation"),
+      crypto_operation: async () => calls.push("crypto_operation"),
+      switch_frame: async () => calls.push("switch_frame"),
+      switch_to_parent_frame: async () => calls.push("switch_to_parent_frame"),
       quarantined: async () => calls.push("quarantined"),
     });
 

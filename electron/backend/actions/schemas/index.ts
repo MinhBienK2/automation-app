@@ -96,6 +96,15 @@ import { domainAllowlistSchema } from "./domain_allowlist.js";
 import { setJsonVariablesSchema } from "./set_json_variables.js";
 import { checkConditionsSchema } from "./check_conditions.js";
 import { calculateValueSchema } from "./calculate_value.js";
+import { readTextFileSchema } from "./read_text_file.js";
+import { parseCsvExcelSchema } from "./parse_csv_excel.js";
+import { writeCsvExcelSchema } from "./write_csv_excel.js";
+import { fileOperationSchema } from "./file_operation.js";
+import { httpRequestSchema } from "./http_request.js";
+import { dateTimeOperationSchema } from "./date_time_operation.js";
+import { cryptoOperationSchema } from "./crypto_operation.js";
+import { switchFrameSchema } from "./switch_frame.js";
+import { switchToParentFrameSchema } from "./switch_to_parent_frame.js";
 
 type ActionType = ActionConfig["type"];
 
@@ -189,6 +198,15 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   set_local_storage: setLocalStorageSchema,
   set_session_storage: setSessionStorageSchema,
   get_current_url: getCurrentUrlSchema,
+  read_text_file: readTextFileSchema,
+  parse_csv_excel: parseCsvExcelSchema,
+  write_csv_excel: writeCsvExcelSchema,
+  file_operation: fileOperationSchema,
+  http_request: httpRequestSchema,
+  date_time_operation: dateTimeOperationSchema,
+  crypto_operation: cryptoOperationSchema,
+  switch_frame: switchFrameSchema,
+  switch_to_parent_frame: switchToParentFrameSchema,
 };
 
 export type ValidationResult<T> =

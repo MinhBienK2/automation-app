@@ -77,7 +77,15 @@ export type ActionConfigField =
   | "search_pattern"
   | "property_key"
   | "property_value"
-  | "property_value_type";
+  | "property_value_type"
+  | "encoding"
+  | "has_headers"
+  | "delimiter"
+  | "target_path"
+  | "method"
+  | "format_pattern"
+  | "offset_value"
+  | "offset_unit";
 
 const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
 
@@ -306,6 +314,54 @@ export function updateActionConfigField(
       return { type: "set_local_storage", config: { ...config.config, [field]: value } };
     case "set_session_storage":
       return { type: "set_session_storage", config: { ...config.config, [field]: value } };
+    case "read_text_file":
+      if (field === "encoding") {
+        return { type: "read_text_file", config: { ...config.config, encoding: value as any || null } };
+      }
+      return { type: "read_text_file", config: { ...config.config, [field]: value } };
+    case "parse_csv_excel":
+      if (field === "has_headers") {
+        return { type: "parse_csv_excel", config: { ...config.config, has_headers: value === "true" } };
+      }
+      if (field === "delimiter") {
+        return { type: "parse_csv_excel", config: { ...config.config, delimiter: value || null } };
+      }
+      return { type: "parse_csv_excel", config: { ...config.config, [field]: value } };
+    case "write_csv_excel":
+      if (field === "has_headers") {
+        return { type: "write_csv_excel", config: { ...config.config, has_headers: value === "true" } };
+      }
+      return { type: "write_csv_excel", config: { ...config.config, [field]: value } };
+    case "file_operation":
+      if (field === "target_path" || field === "output_name") {
+        return { type: "file_operation", config: { ...config.config, [field]: value || null } };
+      }
+      return { type: "file_operation", config: { ...config.config, [field]: value } };
+    case "http_request":
+      if (field === "timeout_ms") {
+        return { type: "http_request", config: { ...config.config, timeout_ms: value ? Number(value) : null } };
+      }
+      if (field === "headers") {
+        return { type: "http_request", config: { ...config.config, headers: parseHeaderPairs(value) } };
+      }
+      if (field === "body" || field === "content_type") {
+        return { type: "http_request", config: { ...config.config, [field]: value || null } };
+      }
+      return { type: "http_request", config: { ...config.config, [field]: value } };
+    case "date_time_operation":
+      if (field === "offset_value") {
+        return { type: "date_time_operation", config: { ...config.config, offset_value: value ? Number(value) : null } };
+      }
+      if (field === "offset_unit" || field === "format_pattern" || field === "value") {
+        return { type: "date_time_operation", config: { ...config.config, [field]: value || null } };
+      }
+      return { type: "date_time_operation", config: { ...config.config, [field]: value } };
+    case "crypto_operation":
+      return { type: "crypto_operation", config: { ...config.config, [field]: value } };
+    case "switch_frame":
+      return { type: "switch_frame", config: { iframe_xpath: value } };
+    case "switch_to_parent_frame":
+      return config;
     case "switch_condition":
     case "while_loop":
     case "repeat_until":

@@ -128,6 +128,7 @@ type Runtime = {
   currentStepMetadata: CompiledStepMetadata | null;
   liveState: RunState;
   onProgress?: (state: Partial<RunState>) => void;
+  activeFrameXpath?: string | null;
   signal?: AbortSignal;
   failedStepInfo?: {
     step_id: string;
@@ -776,7 +777,7 @@ export class BrowserWorkflowRunner {
         runtime.page,
         action.config.source_target,
         action.config.source_xpath,
-        action.config.iframe_xpath,
+        this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
       );
     }
 
@@ -784,7 +785,7 @@ export class BrowserWorkflowRunner {
       runtime.page,
       action.config.target_target,
       action.config.target_xpath,
-      action.config.iframe_xpath,
+      this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
     );
   }
 
@@ -808,7 +809,7 @@ export class BrowserWorkflowRunner {
       runtime.page,
       action.config.trigger_target,
       action.config.trigger_xpath,
-      action.config.iframe_xpath,
+      this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
     );
   }
 
@@ -891,7 +892,7 @@ export class BrowserWorkflowRunner {
       runtime.page,
       config.target,
       config.xpath ?? fallbackXpath,
-      config.iframe_xpath,
+      this.getEffectiveIframeXpath(runtime, config.iframe_xpath),
     );
     await this.waitForElementReadiness(
       locator,
@@ -900,6 +901,10 @@ export class BrowserWorkflowRunner {
       runtime.signal,
     );
     return locator;
+  }
+
+  private getEffectiveIframeXpath(runtime: Runtime, iframeXpath?: string | null): string | null {
+    return iframeXpath || runtime.activeFrameXpath || null;
   }
 
   private async executeFindElement(
@@ -947,13 +952,14 @@ export class BrowserWorkflowRunner {
   ) {
     const timeoutMs = config.timeout_ms ?? 0;
     const deadline = Date.now() + timeoutMs;
+    const effectiveIframe = this.getEffectiveIframeXpath(runtime, config.iframe_xpath);
     do {
       this.throwIfCancelled(runtime.signal);
       const candidates = await rankedCandidatesForTarget(
         runtime.page,
         config.target,
         config.xpath,
-        config.iframe_xpath,
+        effectiveIframe,
         Boolean(config.filter?.in_viewport),
       );
       if (candidates.length || timeoutMs <= 0) return candidates;
@@ -963,7 +969,7 @@ export class BrowserWorkflowRunner {
       runtime.page,
       config.target,
       config.xpath,
-      config.iframe_xpath,
+      effectiveIframe,
       Boolean(config.filter?.in_viewport),
     );
   }

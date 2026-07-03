@@ -399,6 +399,24 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Output name", "Mode", "Script", "Rules group"];
     case "calculate_value":
       return ["Output name", "Expression"];
+    case "read_text_file":
+      return ["Path", "Encoding", "Output name"];
+    case "parse_csv_excel":
+      return ["Path", "Delimiter", "Has headers", "Output name"];
+    case "write_csv_excel":
+      return ["Path", "Source name", "Mode", "Has headers"];
+    case "file_operation":
+      return ["Operation", "Path", "Target path", "Output name"];
+    case "http_request":
+      return ["Method", "URL", "Headers", "Body", "Content type", "Timeout ms", "Output name"];
+    case "date_time_operation":
+      return ["Operation", "Value", "Format pattern", "Offset value", "Offset unit", "Output name"];
+    case "crypto_operation":
+      return ["Operation", "Value", "Output name"];
+    case "switch_frame":
+      return ["Iframe XPath"];
+    case "switch_to_parent_frame":
+      return ["No fields"];
   }
 }
 

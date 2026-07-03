@@ -8,7 +8,6 @@ describe("workflow UI action taxonomy", () => {
     "sleep",
     "type_text",
     "set_checkbox",
-    "switch_frame",
     "set_download_directory",
     "use_profile",
     "save_session",
@@ -45,6 +44,9 @@ describe("workflow UI action taxonomy", () => {
       "Variables & Checks",
       "Session & Storage",
       "Network",
+      "File Operations",
+      "Integrations",
+      "Advanced Utilities",
       "Advanced",
     ]);
     expect(actionGroups.map((group) => group.label)).not.toContain("Core");

@@ -95,6 +95,15 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   set_local_storage: "implemented",
   set_session_storage: "implemented",
   get_current_url: "implemented",
+  read_text_file: "implemented",
+  parse_csv_excel: "implemented",
+  write_csv_excel: "implemented",
+  file_operation: "implemented",
+  http_request: "implemented",
+  date_time_operation: "implemented",
+  crypto_operation: "implemented",
+  switch_frame: "implemented",
+  switch_to_parent_frame: "implemented",
 };
 
 export const allActionTypes = Object.keys(actionCapabilities) as ActionType[];
