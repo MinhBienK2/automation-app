@@ -3,7 +3,7 @@
   grid-template-columns: 248px minmax(0, 1fr);
   height: 100vh;
   overflow: hidden;
-  background: #0b1016;
+  background: var(--bg);
 }
 
 .app-shell-collapsed {
@@ -180,7 +180,7 @@
   min-height: 40px;
   padding: 0;
   justify-self: center;
-  color: #9aaebd;
+  color: var(--fg-secondary);
   background: var(--app-surface-muted) !important;
   border: 1px solid var(--app-border) !important;
   border-radius: 6px !important;
@@ -377,14 +377,14 @@
   justify-content: space-between;
   gap: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #233240;
+  border-bottom: 1px solid var(--border);
 }
 
 .page-detail-header {
   display: grid;
   gap: 14px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #233240;
+  border-bottom: 1px solid var(--border);
 }
 
 .page-detail-title-row,
@@ -418,23 +418,23 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #667d8d;
+  color: var(--fg-muted);
   font-size: 15px;
 }
 
 .page-breadcrumb-link:hover:not(:disabled) {
   border-color: transparent;
-  color: #e7eef5;
+  color: var(--fg-primary);
 }
 
 .page-breadcrumb-separator {
-  color: #3e5668;
+  color: var(--border-hover);
   font-size: 15px;
 }
 
 .page-breadcrumb-current {
   overflow: hidden;
-  color: #e7eef5;
+  color: var(--fg-primary);
   font-size: 22px;
   font-weight: 400;
   line-height: 1.25;
@@ -445,7 +445,7 @@
 .page-kind-badge {
   margin: 0;
   padding: 7px 11px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
   white-space: nowrap;
 }
@@ -461,19 +461,19 @@
   gap: 6px;
   min-height: 34px;
   padding: 0 11px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #121c26;
-  color: #9aaebd;
+  background: var(--surface);
+  color: var(--fg-secondary);
 }
 
 .page-back-button svg {
-  color: #32d3e6;
+  color: var(--accent);
 }
 
 .page-back-button:hover:not(:disabled) {
   border-color: rgba(50, 211, 230, 0.48);
-  color: #e7eef5;
+  color: var(--fg-primary);
 }
 
 .page-header-meta {
@@ -490,9 +490,9 @@
   min-height: 30px;
   align-items: center;
   padding: 0 11px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #9aaebd;
+  color: var(--fg-secondary);
   font-size: 13px;
 }
 
@@ -508,7 +508,7 @@
 
 .eyebrow {
   margin-bottom: 8px;
-  color: #667d8d;
+  color: var(--fg-muted);
   font-family:
     "Source Code Pro", "Office Code Pro", Menlo, Consolas, monospace;
   font-size: 12px;
@@ -519,14 +519,14 @@
 }
 
 .muted {
-  color: #667d8d;
+  color: var(--fg-muted);
 }
 
 .panel,
 .workflow-card {
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #121c26;
+  background: var(--surface);
 }
 
 .header-stats {
@@ -548,9 +548,9 @@
   min-height: 32px;
   align-items: center;
   padding: 0 12px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #9aaebd;
+  color: var(--fg-secondary);
   font-size: 13px;
 }
 
@@ -602,13 +602,13 @@
 }
 
 .projects-list-summary span {
-  color: #e7eef5;
+  color: var(--fg-primary);
   font-size: 13px;
   font-weight: 600;
 }
 
 .projects-list-summary small {
-  color: #667d8d;
+  color: var(--fg-muted);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -624,7 +624,7 @@
   left: 11px;
   width: 15px;
   height: 15px;
-  color: #667d8d;
+  color: var(--fg-muted);
   transform: translateY(-50%);
   pointer-events: none;
 }
@@ -659,10 +659,10 @@
   width: 100%;
   min-height: 46px;
   padding: 9px 10px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #0b1016;
-  color: #e7eef5;
+  background: var(--bg);
+  color: var(--fg-primary);
   text-align: left;
   transition:
     background 140ms ease,
@@ -673,7 +673,7 @@
 .project-row svg {
   width: 18px;
   height: 18px;
-  color: #32d3e6;
+  color: var(--accent);
 }
 
 .project-row span {
@@ -695,7 +695,7 @@
 }
 
 .project-row small {
-  color: #667d8d;
+  color: var(--fg-muted);
   font-size: 12px;
 }
 
@@ -718,7 +718,7 @@
   min-width: 0;
   margin-bottom: 12px;
   padding: 10px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: rgba(14, 21, 29, 0.98);
   scrollbar-gutter: stable;
@@ -735,7 +735,7 @@
   border-color: transparent;
   border-radius: 8px;
   background: transparent;
-  color: #9aaebd;
+  color: var(--fg-secondary);
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -759,7 +759,7 @@
 .project-collection-item:hover:not([data-active="true"]) {
   border-color: rgba(49, 71, 88, 0.76);
   background: rgba(23, 36, 49, 0.46);
-  color: #e7eef5;
+  color: var(--fg-primary);
 }
 
 .project-collection-item:focus-visible {
@@ -770,11 +770,11 @@
 .project-collection-item[data-active="true"] {
   border-color: rgba(50, 211, 230, 0.44);
   background: linear-gradient(90deg, rgba(50, 211, 230, 0.15), rgba(23, 36, 49, 0.72));
-  color: #e7eef5;
+  color: var(--fg-primary);
 }
 
 .project-collection-item[data-active="true"]::before {
-  background: #32d3e6;
+  background: var(--accent);
 }
 
 .projects-detail-panel {
@@ -848,7 +848,7 @@
 .xpath-recipe {
   align-content: start;
   min-width: 0;
-  background: #0b1016;
+  background: var(--bg);
 }
 
 .xpath-recipe-title {
@@ -894,7 +894,7 @@
   padding: 8px 10px;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
-  background: #121c26;
+  background: var(--surface);
   color: var(--app-text);
   font-family:
     "Source Code Pro",
@@ -1066,12 +1066,12 @@
   padding: 12px;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
-  background: #0b1016;
+  background: var(--bg);
 }
 
 .settings-environment-row[data-active="true"] {
   border-color: var(--app-accent-border-strong);
-  background: #0e151d;
+  background: var(--sidebar-bg);
 }
 
 .settings-environment-row h3 {
@@ -1111,7 +1111,7 @@
   padding: 12px;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
-  background: #0b1016;
+  background: var(--bg);
 }
 
 .settings-readiness-item span {

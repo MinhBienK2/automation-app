@@ -2,7 +2,7 @@
   display: grid;
   gap: 8px;
   padding: 10px;
-  border: 1px solid #314758;
+  border: 1px solid var(--border-emphasized);
   border-radius: 8px;
   background: #121212;
 }
@@ -12,7 +12,7 @@
 }
 
 .graph-internal-action h3 {
-  color: #e7eef5;
+  color: var(--fg-primary);
   font-size: 14px;
   font-weight: 400;
 }
@@ -21,10 +21,10 @@
   max-height: 220px;
   overflow: auto;
   padding: 8px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #121c26;
-  color: #9aaebd;
+  background: var(--surface);
+  color: var(--fg-secondary);
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 11px;
   line-height: 1.5;
@@ -51,9 +51,9 @@
   width: min(320px, 100%);
   gap: 8px;
   padding: 8px;
-  border: 1px solid #314758;
+  border: 1px solid var(--border-emphasized);
   border-radius: 8px;
-  background: #121c26;
+  background: var(--surface);
 }
 
 .variable-picker-options {
@@ -70,27 +70,27 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: #e7eef5;
+  color: var(--fg-primary);
   text-align: left;
 }
 
 .variable-picker-options button:hover {
   border-color: rgba(50, 211, 230, 0.3);
-  background: #0b1016;
+  background: var(--bg);
 }
 
 .variable-picker-options small {
-  color: #667d8d;
+  color: var(--fg-muted);
   font-size: 11px;
 }
 
 .template-preview {
   min-height: 28px;
   padding: 6px 8px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: #121212;
-  color: #9aaebd;
+  color: var(--fg-secondary);
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 12px;
   line-height: 1.4;
@@ -98,7 +98,7 @@
 }
 
 .template-token-highlight {
-  color: #32d3e6;
+  color: var(--accent);
 }
 
 .variable-row-table {
@@ -128,7 +128,7 @@
 }
 
 .variable-row-heading {
-  color: #667d8d;
+  color: var(--fg-muted);
   font-size: 11px;
   text-transform: uppercase;
 }
@@ -173,9 +173,9 @@
   gap: 8px;
   overflow: auto;
   padding: 8px;
-  border: 1px solid #314758;
+  border: 1px solid var(--border-emphasized);
   border-radius: 8px;
-  background: #121c26;
+  background: var(--surface);
 }
 
 .action-type-group {
@@ -192,19 +192,19 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: #e7eef5;
+  color: var(--fg-primary);
   text-align: left;
 }
 
 .action-type-option small {
-  color: #667d8d;
+  color: var(--fg-muted);
   font-size: 12px;
 }
 
 .action-type-option:hover,
 .action-type-option[aria-selected="true"] {
   border-color: rgba(50, 211, 230, 0.3);
-  background: #0b1016;
+  background: var(--bg);
 }
 
 .graph-node-context-menu {
@@ -214,9 +214,9 @@
   min-width: 150px;
   gap: 4px;
   padding: 6px;
-  border: 1px solid #314758;
+  border: 1px solid var(--border-emphasized);
   border-radius: 8px;
-  background: #121c26;
+  background: var(--surface);
 }
 
 .graph-node-context-menu button {
@@ -225,13 +225,13 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #9aaebd;
+  color: var(--fg-secondary);
   text-align: left;
 }
 
 .graph-node-context-menu button:hover:not(:disabled) {
-  background: #0b1016;
-  color: #e7eef5;
+  background: var(--bg);
+  color: var(--fg-primary);
 }
 
 .graph-node-context-menu button:disabled {
@@ -253,9 +253,9 @@
   max-width: 100%;
   overflow: hidden;
   padding: 4px 7px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #9aaebd;
+  color: var(--fg-secondary);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -278,10 +278,10 @@
 }
 
 .variable-row-group-card {
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px;
-  background: #121c26;
+  background: var(--surface);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -324,8 +324,8 @@
   height: 28px !important;
   font-size: 12px;
   padding: 2px 8px !important;
-  background-color: #0e151d;
-  border-color: #233240;
+  background-color: var(--sidebar-bg);
+  border-color: var(--border);
   min-width: 96px;
 }
 

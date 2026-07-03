@@ -176,9 +176,9 @@
   width: min(280px, 100%);
   gap: 4px;
   padding: 4px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #121c26;
+  background: var(--surface);
 }
 
 .help-language-tabs-compact {
@@ -197,7 +197,7 @@
   border-color: transparent;
   border-radius: 8px;
   background: transparent;
-  color: #9aaebd;
+  color: var(--fg-secondary);
 }
 
 .help-language-switch-compact button {
@@ -218,9 +218,9 @@
   display: grid;
   gap: 10px;
   padding: 14px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #121c26;
+  background: var(--surface);
 }
 
 .help-disclosure-summary {
@@ -230,7 +230,7 @@
   align-items: center;
   cursor: pointer;
   list-style: none;
-  color: #e7eef5;
+  color: var(--fg-primary);
   font-size: 15px;
   font-weight: 500;
 }
@@ -242,7 +242,7 @@
 .help-disclosure-summary::before {
   content: ">";
   width: 16px;
-  color: #667d8d;
+  color: var(--fg-muted);
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 12px;
   line-height: 1;
@@ -250,7 +250,7 @@
 }
 
 .help-disclosure[open] > .help-disclosure-summary::before {
-  color: #32d3e6;
+  color: var(--accent);
   transform: rotate(90deg);
 }
 
@@ -268,7 +268,7 @@
   gap: 8px;
   margin: 0;
   padding-left: 18px;
-  color: #9aaebd;
+  color: var(--fg-secondary);
 }
 
 .help-section li {
@@ -306,7 +306,7 @@
 
 .help-field-group-summary::before {
   content: ">";
-  color: #667d8d;
+  color: var(--fg-muted);
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 10px;
   line-height: 1;
@@ -314,7 +314,7 @@
 }
 
 .help-field-group[open] > .help-field-group-summary::before {
-  color: #32d3e6;
+  color: var(--accent);
   transform: rotate(90deg);
 }
 
@@ -337,7 +337,7 @@
 .help-field-leaf {
   padding: 10px 0 0;
   border: 0;
-  border-top: 1px solid #233240;
+  border-top: 1px solid var(--border);
   border-radius: 0;
   background: transparent;
 }
@@ -350,7 +350,7 @@
 .help-field-leaf > .help-disclosure-summary {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 6px;
-  color: #e7eef5;
+  color: var(--fg-primary);
   font-size: 13px;
 }
 
@@ -371,7 +371,7 @@
 }
 
 .help-field-item strong {
-  color: #e7eef5;
+  color: var(--fg-primary);
   font-size: 13px;
   font-weight: 500;
 }
@@ -380,7 +380,7 @@
   border: 1px solid #303030;
   border-radius: 6px;
   padding: 2px 6px;
-  color: #9aaebd;
+  color: var(--fg-secondary);
   font-size: 11px;
   line-height: 1.2;
 }
@@ -395,7 +395,7 @@
   gap: 5px;
   margin: 0;
   padding-left: 18px;
-  color: #667d8d;
+  color: var(--fg-muted);
 }
 
 .help-field-details li {
@@ -405,7 +405,7 @@
 .help-field-reference {
   gap: 8px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #233240;
+  border-bottom: 1px solid var(--border);
 }
 
 .help-field-reference:last-child {
@@ -423,13 +423,13 @@
   display: grid;
   gap: 5px;
   padding: 10px;
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #0b1016;
+  background: var(--bg);
 }
 
 .help-option-disclosure {
-  border: 1px solid #233240;
+  border: 1px solid var(--border);
 }
 
 .help-option-summary {
@@ -444,7 +444,7 @@
 }
 
 .help-option-item strong span {
-  color: #667d8d;
+  color: var(--fg-muted);
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 11px;
   font-weight: 400;

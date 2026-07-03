@@ -143,24 +143,24 @@
 }
 
 .activity-success {
-  background: #39d98a;
+  background: var(--success);
 }
 
 .activity-failed {
-  background: #f06467;
+  background: var(--failure);
 }
 
 .activity-blocked {
-  background: #f4b740;
+  background: var(--attention);
 }
 
 .activity-schedule {
-  background: #32d3e6;
+  background: var(--accent);
 }
 
 .status-pill-danger {
   border-color: rgba(240, 100, 103, 0.5);
-  color: #f06467;
+  color: var(--failure);
 }
 
 .overview-error {
@@ -373,7 +373,7 @@
 }
 
 .evidence-preview {
-  background: #0b1016;
+  background: var(--bg);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
   max-height: 280px;

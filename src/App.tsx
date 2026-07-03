@@ -16,7 +16,6 @@ import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
 import { SubflowListPage } from "./features/workflows/pages/SubflowListPage";
 import { SubflowDetailPage } from "./features/workflows/pages/SubflowDetailPage";
 import { AppShell } from "./layouts/AppShell";
-import { TweaksPanel } from "./components/layout/TweaksPanel";
 import { useThemePreferences } from "./app/useThemePreferences";
 import {
   listProjects,
@@ -711,6 +710,12 @@ function App() {
           onInstallBinary={installSettingsBrowserBinary}
           onCleanupProfiles={cleanupSettingsBrowserProfiles}
           appMode={auth.mode === "team" ? "public" : "private"}
+          theme={themePreferences.theme}
+          accent={themePreferences.accent}
+          density={themePreferences.density}
+          onThemeChange={themePreferences.setTheme}
+          onAccentChange={themePreferences.setAccent}
+          onDensityChange={themePreferences.setDensity}
         />
       ) : nav.screen === "admin-users" ? (
         <AdminPanel />
@@ -1052,15 +1057,7 @@ function App() {
         }}
         onCancelDeleteWorkflow={workflowsWorkspace.cancelDeleteWorkflow}
       />
-    </AppShell>
-    <TweaksPanel
-      theme={themePreferences.theme}
-      accent={themePreferences.accent}
-      density={themePreferences.density}
-      onThemeChange={themePreferences.setTheme}
-      onAccentChange={themePreferences.setAccent}
-      onDensityChange={themePreferences.setDensity}
-    />
+     </AppShell>
     </>
   );
 }

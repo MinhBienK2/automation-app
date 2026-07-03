@@ -8,7 +8,7 @@
     position: static;
     min-height: auto;
     border-right: 0;
-    border-bottom: 1px solid #233240;
+    border-bottom: 1px solid var(--border);
   }
 
   .app-screen {
@@ -172,7 +172,7 @@
     padding-right: 0;
     padding-bottom: 8px;
     border-right: 0;
-    border-bottom: 1px solid #233240;
+    border-bottom: 1px solid var(--border);
   }
 
   .workflow-settings-tab {
