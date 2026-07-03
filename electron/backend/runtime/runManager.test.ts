@@ -26,7 +26,7 @@ describe("RunManager", () => {
   test("marks durable running rows from a previous app process as failed on startup", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
     tempRoots.push(tempRoot);
-    const database = initializeDatabase(createAppPaths(tempRoot));
+    const database = await initializeDatabase(createAppPaths(tempRoot));
     const workflow = workflowSummary("workflow-1", "Interrupted workflow");
     const graph = workflowGraph();
     const settings = workflowSettings(workflow.id, "profile-1");
@@ -93,7 +93,7 @@ describe("RunManager", () => {
   test("tracks active workflow/profile locks and releases them after final persistence", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
     tempRoots.push(tempRoot);
-    const database = initializeDatabase(createAppPaths(tempRoot));
+    const database = await initializeDatabase(createAppPaths(tempRoot));
     const workflow = workflowSummary("workflow-1", "Run manager workflow");
     const graph = workflowGraph();
     const settings = workflowSettings(workflow.id, "profile-1");
@@ -175,7 +175,7 @@ describe("RunManager", () => {
   test("preserves terminal retained-session snapshot after active run entry is removed", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
     tempRoots.push(tempRoot);
-    const database = initializeDatabase(createAppPaths(tempRoot));
+    const database = await initializeDatabase(createAppPaths(tempRoot));
     const workflow = workflowSummary("workflow-1", "Retained session workflow");
     const graph = workflowGraph();
     const settings = workflowSettings(workflow.id, "profile-1");
@@ -251,7 +251,7 @@ describe("RunManager", () => {
   test("keys retained sessions from normal runs by workflow profile", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
     tempRoots.push(tempRoot);
-    const database = initializeDatabase(createAppPaths(tempRoot));
+    const database = await initializeDatabase(createAppPaths(tempRoot));
     const workflow = workflowSummary("workflow-1", "Retained owner workflow");
     const graph = workflowGraph();
     const settings = workflowSettings(workflow.id, "profile-1");
@@ -298,7 +298,7 @@ describe("RunManager", () => {
   test("persists variables marked with persist: true back to browser profile environment after a run", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
     tempRoots.push(tempRoot);
-    const database = initializeDatabase(createAppPaths(tempRoot));
+    const database = await initializeDatabase(createAppPaths(tempRoot));
     const workflow = workflowSummary("workflow-1", "Run manager workflow");
     workflow.browser_profile_id = "profile-1";
     const graph = workflowGraph();

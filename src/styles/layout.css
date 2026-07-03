@@ -163,6 +163,112 @@
   color: #9aaebd;
 }
 
+
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: var(--space-md);
+  margin-top: auto;
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.sidebar-profile-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sidebar-profile-avatar-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(50, 211, 230, 0.08);
+  border: 1px solid rgba(50, 211, 230, 0.15);
+  flex-shrink: 0;
+}
+
+.sidebar-profile-avatar {
+  color: var(--app-accent);
+}
+
+.sidebar-profile-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-profile-email {
+  color: var(--fg-primary);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.sidebar-profile-role {
+  color: var(--app-text-muted);
+  font-size: 11px;
+  text-transform: capitalize;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+.sidebar-profile-logout {
+  color: #f43f5e !important;
+  opacity: 0.85;
+  transition: all 140ms ease;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.sidebar-profile-logout:hover {
+  opacity: 1;
+  background: rgba(244, 63, 94, 0.1) !important;
+}
+
+.sidebar-profile-logout-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.sidebar-toggle {
+  align-self: center;
+}
+
+.app-shell-collapsed .sidebar-profile {
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.app-shell-collapsed .sidebar-profile-details {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .app-shell-collapsed .sidebar-brand {
   justify-content: center;
   padding: 0;

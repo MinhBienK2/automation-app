@@ -52,9 +52,9 @@ function sampleGraph(): WorkflowGraph {
 }
 
 describe("normalized graph tables", () => {
-  test("tables exist with correct schema", () => {
+  test("tables exist with correct schema", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
 
     const tables = db
       .prepare("SELECT name FROM sqlite_master WHERE type='table'")
@@ -78,17 +78,17 @@ describe("normalized graph tables", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("assembleGraphFromTables returns null for non-existent workflow", () => {
+  test("assembleGraphFromTables returns null for non-existent workflow", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     expect(assembleGraphFromTables(db, "nonexistent")).toBeNull();
     db.close();
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("assembleGraphFromTables produces identical output to legacy reader when populated", () => {
+  test("assembleGraphFromTables produces identical output to legacy reader when populated", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -110,9 +110,9 @@ describe("normalized graph tables", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("saveWorkflowGraph and assembleGraphFromTables preserve edge label, condition, and delay", () => {
+  test("saveWorkflowGraph and assembleGraphFromTables preserve edge label, condition, and delay", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     
     const edgeDelay = { type: "random" as const, min_ms: 500, max_ms: 1200 };

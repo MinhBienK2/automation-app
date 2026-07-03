@@ -1662,7 +1662,7 @@ async function createTestHandlers() {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-app-"));
   tempRoots.push(tempRoot);
   const appPaths = createAppPaths(tempRoot);
-  const database = initializeDatabase(appPaths);
+  const database = await initializeDatabase(appPaths);
   return {
     handlers: createWorkflowCommandHandlers({ appPaths, database }),
   };

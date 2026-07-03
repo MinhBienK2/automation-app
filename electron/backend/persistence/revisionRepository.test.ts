@@ -35,9 +35,9 @@ function sampleGraph(): WorkflowGraph {
 }
 
 describe("revisionRepository — snapshot on save", () => {
-  test("5 saves produce 5 revisions with monotonic numbers", () => {
+  test("5 saves produce 5 revisions with monotonic numbers", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -71,9 +71,9 @@ describe("revisionRepository — snapshot on save", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("subflow saves also produce revisions", () => {
+  test("subflow saves also produce revisions", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -91,9 +91,9 @@ describe("revisionRepository — snapshot on save", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("getRevision returns full snapshot", () => {
+  test("getRevision returns full snapshot", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -111,9 +111,9 @@ describe("revisionRepository — snapshot on save", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("tagRevision and untagRevision", () => {
+  test("tagRevision and untagRevision", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -136,9 +136,9 @@ describe("revisionRepository — snapshot on save", () => {
 });
 
 describe("revisionRepository — pruning", () => {
-  test("prunes untagged revisions beyond 50, keeps tagged ones", () => {
+  test("prunes untagged revisions beyond 50, keeps tagged ones", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const graph = sampleGraph();
 
     const wfId = "wf-prune-test";
@@ -174,9 +174,9 @@ describe("revisionRepository — pruning", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("prunes correctly when untagged > 50", () => {
+  test("prunes correctly when untagged > 50", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const graph = sampleGraph();
 
     const wfId = "wf-prune-test2";
@@ -212,9 +212,9 @@ describe("revisionRepository — pruning", () => {
 });
 
 describe("revisionRepository — restore", () => {
-  test("restoreRevision restores the graph and captures pre-restore state", () => {
+  test("restoreRevision restores the graph and captures pre-restore state", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
 
     const project = repo.listProjects()[0] ?? repo.createProject("Main");
@@ -269,9 +269,9 @@ describe("revisionRepository — restore", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("restoreRevision throws for non-existent revision", () => {
+  test("restoreRevision throws for non-existent revision", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -287,9 +287,9 @@ describe("revisionRepository — restore", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("saveWorkflowGraph and saveSubflowGraph store comment and tag", () => {
+  test("saveWorkflowGraph and saveSubflowGraph store comment and tag", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -307,9 +307,9 @@ describe("revisionRepository — restore", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("listRevisions onlyBackups option filters correctly", () => {
+  test("listRevisions onlyBackups option filters correctly", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -334,9 +334,9 @@ describe("revisionRepository — restore", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("workflow backup bundles exclusive subflows and restore duplicates & remaps them", () => {
+  test("workflow backup bundles exclusive subflows and restore duplicates & remaps them", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 

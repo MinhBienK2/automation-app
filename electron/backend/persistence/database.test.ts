@@ -6,6 +6,8 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, test } from "vitest";
 import { createAppPaths, initializeDatabase, dropGraphJsonColumn } from "./database";
+import { SqliteDbConnection, runMigrations } from "./migrationRunner";
+import { migrations } from "./migrations";
 
 const tempRoots: string[] = [];
 
@@ -21,7 +23,8 @@ describe("Electron database initialization", () => {
     tempRoots.push(tempRoot);
     const paths = createAppPaths(tempRoot);
 
-    const database = initializeDatabase(paths);
+    const database = await initializeDatabase(paths);
+    
     const tables = database
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
       .all()
@@ -61,9 +64,9 @@ describe("Electron database initialization", () => {
     tempRoots.push(tempRoot);
     const paths = createAppPaths(tempRoot);
 
-    let database = initializeDatabase(paths);
+    let database = await initializeDatabase(paths);
     database.close();
-    database = initializeDatabase(paths);
+    database = await initializeDatabase(paths);
 
     expect(indexSql(database, "idx_runs_workflow_started_at")).toBe(
       "CREATE INDEX idx_runs_workflow_started_at ON runs(workflow_id, started_at DESC)",
@@ -152,7 +155,7 @@ describe("Electron database initialization", () => {
     `);
     legacy.close();
 
-    const database = initializeDatabase(paths);
+    const database = await initializeDatabase(paths);
     const columns = database
       .prepare("PRAGMA table_info(workflows)")
       .all()
@@ -250,7 +253,7 @@ describe("Electron database initialization", () => {
     `);
     legacy.close();
 
-    const database = initializeDatabase(paths);
+    const database = await initializeDatabase(paths);
     const sources = database
       .prepare("SELECT id, source FROM runs ORDER BY id")
       .all() as Array<{ id: string; source: string }>;
@@ -309,7 +312,7 @@ describe("Electron database initialization", () => {
     `);
     legacy.close();
 
-    const database = initializeDatabase(paths);
+    const database = await initializeDatabase(paths);
     const profiles = database
       .prepare("SELECT id, name FROM browser_profiles")
       .all() as Array<{ id: string; name: string }>;
@@ -357,7 +360,7 @@ describe("Electron database initialization", () => {
     `);
     legacy.close();
 
-    const database = initializeDatabase(paths);
+    const database = await initializeDatabase(paths);
     const columns = database
       .prepare("PRAGMA table_info(browser_profiles)")
       .all()

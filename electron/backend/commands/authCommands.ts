@@ -5,9 +5,12 @@ import {
   listUsers,
   createUser,
   deleteUser,
-  syncPullAll
+  syncPullAll,
+  getPgPool
 } from "../persistence/pgSync.js";
 import type { DatabaseSyncWrapper } from "../persistence/database.js";
+import { PostgresDbConnection, runMigrations } from "../persistence/migrationRunner.js";
+import { migrations } from "../persistence/migrations.js";
 
 export function createAuthCommands(database: any) {
   const dbWrapper = database as DatabaseSyncWrapper;
@@ -24,6 +27,13 @@ export function createAuthCommands(database: any) {
     
     // Set the owner ID on the database wrapper so that subsequent writes are replicated
     dbWrapper.ownerId = result.user.id;
+
+    // Run Postgres migrations on login
+    const pool = getPgPool();
+    if (pool) {
+      const conn = new PostgresDbConnection(pool);
+      await runMigrations(conn, migrations);
+    }
     
     // Pull all data for this user from PG to local SQLite
     await syncPullAll(dbWrapper, result.user.id);
@@ -56,6 +66,14 @@ export function createAuthCommands(database: any) {
     const user = await verifyToken(input.token);
     if (user) {
       dbWrapper.ownerId = user.id;
+
+      // Run Postgres migrations on validation
+      const pool = getPgPool();
+      if (pool) {
+        const conn = new PostgresDbConnection(pool);
+        await runMigrations(conn, migrations);
+      }
+      
       // Sync on app startup / validation
       await syncPullAll(dbWrapper, user.id);
       return user;

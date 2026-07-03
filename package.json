@@ -33,6 +33,9 @@
     "lint": "eslint src/ electron/ --max-warnings=0",
     "lint:fix": "eslint src/ electron/ --fix",
     "agent:validate-routes": "node scripts/agent/validate-routes.mjs",
+    "db:migrate": "npm run build:electron && node scripts/db-migrate.mjs",
+    "db:rollback": "npm run build:electron && node scripts/db-rollback.mjs",
+    "db:seed": "npm run build:electron && node scripts/db-seed.mjs",
     "preview": "vite preview"
   },
   "build": {
@@ -46,6 +49,7 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
+      "migrations/**/*",
       "package.json"
     ],
     "mac": {

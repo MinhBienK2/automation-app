@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "../components/ui/button";
-import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight, Users, LogOut } from "lucide-react";
+import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight, Users, LogOut, User } from "lucide-react";
 import type { AppScreen } from "../shared/types/workspaceContracts";
 
 type AppSidebarActiveItem = "overview" | "projects" | "schedules" | "settings" | "admin-users";
@@ -195,30 +195,45 @@ export function AppSidebar({
             <span>Users</span>
           </Button>
         )}
-        {currentUser && onLogout && (
-          <Button
-            className="sidebar-nav-item"
-            variant="ghost"
-            type="button"
-            onClick={onLogout}
-            style={{ color: "#ef4444" }}
-          >
-            <LogOut aria-hidden="true" className="sidebar-item-icon" />
-            <span>Sign Out</span>
-          </Button>
-        )}
       </nav>
-      <Button
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        aria-expanded={!collapsed}
-        className="sidebar-toggle"
-        variant="secondary"
-        size="icon"
-        type="button"
-        onClick={onToggle}
-      >
-        <SidebarToggleIcon collapsed={collapsed} />
-      </Button>
+      <div className="sidebar-footer">
+        {currentUser && (
+          <div className="sidebar-profile">
+            <div className="sidebar-profile-info">
+              <div className="sidebar-profile-avatar-container">
+                <User aria-hidden="true" className="sidebar-profile-avatar" size={16} />
+              </div>
+              <div className="sidebar-profile-details">
+                <span className="sidebar-profile-email">{currentUser.email}</span>
+                <span className="sidebar-profile-role">{currentUser.role}</span>
+              </div>
+            </div>
+            {onLogout && (
+              <Button
+                aria-label="Sign Out"
+                className="sidebar-profile-logout"
+                variant="ghost"
+                size="icon"
+                type="button"
+                onClick={onLogout}
+              >
+                <LogOut aria-hidden="true" className="sidebar-profile-logout-icon" size={15} />
+              </Button>
+            )}
+          </div>
+        )}
+        <Button
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
+          className="sidebar-toggle"
+          variant="secondary"
+          size="icon"
+          type="button"
+          onClick={onToggle}
+        >
+          <SidebarToggleIcon collapsed={collapsed} />
+        </Button>
+      </div>
     </aside>
   );
 }

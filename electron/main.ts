@@ -149,7 +149,7 @@ app.whenReady().then(async () => {
     }
   }
 
-  const database = initializeDatabase(appPaths);
+  const database = await initializeDatabase(appPaths);
   const backfillReport = backfillGraphTables(database);
   console.log("[startup] graph backfill report:", backfillReport);
   const migrationReport = migrateAllGraphs(database);

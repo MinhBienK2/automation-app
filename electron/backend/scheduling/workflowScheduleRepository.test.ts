@@ -91,7 +91,7 @@ describe("WorkflowScheduleRepository", () => {
 async function createRepositories() {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "schedule-repo-"));
   tempRoots.push(tempRoot);
-  const database = initializeDatabase(createAppPaths(tempRoot));
+  const database = await initializeDatabase(createAppPaths(tempRoot));
   return {
     workflowRepository: new WorkflowRepository(database),
     scheduleRepository: new WorkflowScheduleRepository(database),

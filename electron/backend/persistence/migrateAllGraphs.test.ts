@@ -43,10 +43,10 @@ function baselineV1Graph(): WorkflowGraph {
 }
 
 describe("lazy migrate on read", () => {
-  test("getWorkflowGraph migrates v1 to v3 and persists back", () => {
+  test("getWorkflowGraph migrates v1 to v3 and persists back", async () => {
     const root = tempRoot();
     const paths = createAppPaths(root);
-    const db = initializeDatabase(paths);
+    const db = await initializeDatabase(paths);
     const repo = new WorkflowRepository(db);
 
     const project = repo.listProjects()[0] ?? repo.createProject("Main");
@@ -68,10 +68,10 @@ describe("lazy migrate on read", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("getSubflowGraph migrates v1 to v3 and persists back", () => {
+  test("getSubflowGraph migrates v1 to v3 and persists back", async () => {
     const root = tempRoot();
     const paths = createAppPaths(root);
-    const db = initializeDatabase(paths);
+    const db = await initializeDatabase(paths);
     const repo = new WorkflowRepository(db);
 
     const project = repo.listProjects()[0] ?? repo.createProject("Main");
@@ -87,10 +87,10 @@ describe("lazy migrate on read", () => {
 });
 
 describe("migrateAllGraphs (eager startup)", () => {
-  test("migrates all workflows and subflows, logs to migration_log", () => {
+  test("migrates all workflows and subflows, logs to migration_log", async () => {
     const root = tempRoot();
     const paths = createAppPaths(root);
-    const db = initializeDatabase(paths);
+    const db = await initializeDatabase(paths);
     const repo = new WorkflowRepository(db);
 
     const project = repo.listProjects()[0] ?? repo.createProject("Main");
@@ -116,10 +116,10 @@ describe("migrateAllGraphs (eager startup)", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("second run is a no-op", () => {
+  test("second run is a no-op", async () => {
     const root = tempRoot();
     const paths = createAppPaths(root);
-    const db = initializeDatabase(paths);
+    const db = await initializeDatabase(paths);
     const repo = new WorkflowRepository(db);
 
     repo.createWorkflow("Test", baselineV1Graph());
@@ -135,10 +135,10 @@ describe("migrateAllGraphs (eager startup)", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("malformed graph is logged as failure, not crashed", () => {
+  test("malformed graph is logged as failure, not crashed", async () => {
     const root = tempRoot();
     const paths = createAppPaths(root);
-    const db = initializeDatabase(paths);
+    const db = await initializeDatabase(paths);
     const repo = new WorkflowRepository(db);
 
     const wf = repo.createWorkflow("Bad Workflow", baselineV1Graph());

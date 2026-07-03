@@ -68,11 +68,11 @@ function createLegacyDb(root: string, graph: WorkflowGraph) {
 }
 
 describe("backfillGraphTables", () => {
-  test("backfills workflows and subflows from legacy graph_json", () => {
+  test("backfills workflows and subflows from legacy graph_json", async () => {
     const root = tempRoot();
     const graph = sampleGraph();
     const paths = createLegacyDb(root, graph);
-    const db = initializeDatabase(paths);
+    const db = await initializeDatabase(paths);
 
     const report = backfillGraphTables(db);
     expect(report.scanned).toBe(2);
@@ -90,11 +90,11 @@ describe("backfillGraphTables", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("second run is a no-op (gated by app_meta)", () => {
+  test("second run is a no-op (gated by app_meta)", async () => {
     const root = tempRoot();
     const graph = sampleGraph();
     const paths = createLegacyDb(root, graph);
-    const db = initializeDatabase(paths);
+    const db = await initializeDatabase(paths);
 
     backfillGraphTables(db);
     const report2 = backfillGraphTables(db);
@@ -105,11 +105,11 @@ describe("backfillGraphTables", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("skips already-populated workflows (idempotent)", () => {
+  test("skips already-populated workflows (idempotent)", async () => {
     const root = tempRoot();
     const graph = sampleGraph();
     const paths = createLegacyDb(root, graph);
-    const db = initializeDatabase(paths);
+    const db = await initializeDatabase(paths);
 
     // Populate normalized tables manually before backfill
     writeGraphToNormalizedTables(db, graph, "workflow", "wf1", new Date().toISOString());
@@ -127,9 +127,9 @@ describe("backfillGraphTables", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("no-op on fresh DB without graph_json column", () => {
+  test("no-op on fresh DB without graph_json column", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     repo.createWorkflow("Test", sampleGraph(), new Date(), { projectId: repo.createProject("Main").id });
 
@@ -144,9 +144,9 @@ describe("backfillGraphTables", () => {
 });
 
 describe("save writes to normalized tables", () => {
-  test("saveWorkflowGraph writes to normalized tables", () => {
+  test("saveWorkflowGraph writes to normalized tables", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -167,9 +167,9 @@ describe("save writes to normalized tables", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("saveSubflowGraph writes to normalized tables", () => {
+  test("saveSubflowGraph writes to normalized tables", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
@@ -187,9 +187,9 @@ describe("save writes to normalized tables", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  test("getWorkflowGraph reads from normalized tables", () => {
+  test("getWorkflowGraph reads from normalized tables", async () => {
     const root = tempRoot();
-    const db = initializeDatabase(createAppPaths(root));
+    const db = await initializeDatabase(createAppPaths(root));
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
