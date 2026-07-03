@@ -500,8 +500,8 @@
     "semantic_hash": "1da15a27b8690ff60277c1d672802026"
   },
   "electron/main.ts": {
-    "mtime": 1783091237.081473,
-    "ast_hash": "c760fd408f792710dddac7f3e36fc0b8",
+    "mtime": 1783096528.6380754,
+    "ast_hash": "f01e4b2cdaacb5dc41d7087a46332d4c",
     "semantic_hash": ""
   },
   "eslint.config.js": {
@@ -515,8 +515,8 @@
     "semantic_hash": "84a83ac551718f11f7d396f4e9f8f5f3"
   },
   "package.json": {
-    "mtime": 1783091111.7735894,
-    "ast_hash": "c663f57ca4e22139f37a5335d7f46b99",
+    "mtime": 1783096519.4830332,
+    "ast_hash": "111e87ca7e3b4671af1d33ce5968dfcd",
     "semantic_hash": ""
   },
   "playwright.config.ts": {
@@ -595,8 +595,8 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1783085945.926994,
-    "ast_hash": "0503da8c8bf353b501f2760dfc50d1ec",
+    "mtime": 1783093899.232109,
+    "ast_hash": "48b800b953137d0b65ae4aaecd79fe20",
     "semantic_hash": ""
   },
   "src/AppCss.test.ts": {
@@ -1380,8 +1380,8 @@
     "semantic_hash": ""
   },
   "src/layouts/AppSidebar.tsx": {
-    "mtime": 1783092346.201948,
-    "ast_hash": "92b691e4e3cc21443d8535bc3c1fb816",
+    "mtime": 1783092857.3739321,
+    "ast_hash": "5ae77004fde3fb144d6688db7e75dc2a",
     "semantic_hash": ""
   },
   "src/lib/actionCapabilities.test.ts": {
@@ -1640,9 +1640,9 @@
     "semantic_hash": ""
   },
   "docs/domain/invariants/projects.md": {
-    "mtime": 1782490583.444516,
-    "ast_hash": "e0dbd89598f575f4882e34b1f066811a",
-    "semantic_hash": "e0dbd89598f575f4882e34b1f066811a"
+    "mtime": 1783092941.3427157,
+    "ast_hash": "5ca8a67c9a23bff2e5d7ebb372841e01",
+    "semantic_hash": ""
   },
   "docs/domain/invariants/recording.md": {
     "mtime": 1782490583.444516,
@@ -1660,9 +1660,9 @@
     "semantic_hash": ""
   },
   "docs/domain/product-model.md": {
-    "mtime": 1782490583.4455159,
-    "ast_hash": "dbd169c988fb87a189c2b3a83775fc06",
-    "semantic_hash": "dbd169c988fb87a189c2b3a83775fc06"
+    "mtime": 1783092937.1086764,
+    "ast_hash": "9e005d6462e661250bf5e8325494e280",
+    "semantic_hash": ""
   },
   "docs/domain/user-visible-invariants.md": {
     "mtime": 1782490583.4455159,
@@ -2350,8 +2350,8 @@
     "semantic_hash": ""
   },
   "electron/backend/commands/authCommands.ts": {
-    "mtime": 1783091103.6563869,
-    "ast_hash": "bb7c539b2400b8a00129bccc9693e408",
+    "mtime": 1783097824.7840786,
+    "ast_hash": "06b9b418810761552a81bbad91ef1cb8",
     "semantic_hash": ""
   },
   "electron/backend/persistence/appConfig.ts": {
@@ -2360,8 +2360,8 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/pgSync.ts": {
-    "mtime": 1783091079.5597734,
-    "ast_hash": "4d2314826579286ee32eceda41bd36eb",
+    "mtime": 1783097841.8737006,
+    "ast_hash": "423da10ca5eec55cab679e9ac7c65c7b",
     "semantic_hash": ""
   },
   "src/features/auth/pages/AdminPanel.tsx": {
@@ -2375,8 +2375,8 @@
     "semantic_hash": ""
   },
   "src/features/auth/state/useAuthState.ts": {
-    "mtime": 1783085984.0568986,
-    "ast_hash": "a8d2bb5def414a6aa6dc8be8fd983dec",
+    "mtime": 1783093896.6070046,
+    "ast_hash": "df7727af511b30d66558038b0cbd7591",
     "semantic_hash": ""
   },
   "src/features/auth/pages/LoginScreen.test.tsx": {
@@ -2430,8 +2430,18 @@
     "semantic_hash": ""
   },
   "src/layouts/AppSidebar.test.tsx": {
-    "mtime": 1783091225.3732214,
-    "ast_hash": "47f6b31a4c36c2ae7351ce24fee1ce19",
+    "mtime": 1783092859.602953,
+    "ast_hash": "c6afaa035c46623f16186b0e7d88a935",
+    "semantic_hash": ""
+  },
+  "electron/backend/commands/authCommands.test.ts": {
+    "mtime": 1783097817.6252403,
+    "ast_hash": "8f5ce6beb7cb480366cf5958e96501b1",
+    "semantic_hash": ""
+  },
+  "electron/backend/persistence/pgSync.test.ts": {
+    "mtime": 1783097835.371843,
+    "ast_hash": "e31f631bb19b4d66a9415cabe37a1b4a",
     "semantic_hash": ""
   }
 }

@@ -3,8 +3,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import { PostgresDbConnection, runMigrations } from "./migrationRunner.js";
-import { migrations } from "./migrations.js";
 
 const { Pool } = pg;
 
@@ -52,12 +50,6 @@ export async function initializePgPool(dbUrl: string): Promise<pg.Pool> {
 
   // Verify connection
   await pool.query("SELECT 1");
-
-  // Run migrations
-  console.log("[pgSync] Running PostgreSQL migrations...");
-  const conn = new PostgresDbConnection(pool);
-  await runMigrations(conn, migrations);
-  console.log("[pgSync] PostgreSQL migrations completed.");
 
   return pool;
 }

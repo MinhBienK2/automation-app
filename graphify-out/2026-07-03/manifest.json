@@ -195,8 +195,8 @@
     "semantic_hash": "9aedff6cb24c4d6012ed43438739a6ad"
   },
   "electron/backend/persistence/database.test.ts": {
-    "mtime": 1783091062.0033143,
-    "ast_hash": "1ee4e80eca2d83c9160205555881470f",
+    "mtime": 1783091389.4674685,
+    "ast_hash": "2bd23c54359fe31781403409f8c035b2",
     "semantic_hash": ""
   },
   "electron/backend/persistence/database.ts": {
@@ -590,7 +590,7 @@
     "semantic_hash": "d46b25e937853f741ca889dc1de31027"
   },
   "src/App.test.tsx": {
-    "mtime": 1782586827.2682948,
+    "mtime": 1783092001.6341965,
     "ast_hash": "49ffbb3fde57b69f73abdb7f18b17a15",
     "semantic_hash": ""
   },
@@ -1370,9 +1370,9 @@
     "semantic_hash": "f6988eb7c283c20541a905922484d810"
   },
   "src/layouts/AppShell.test.tsx": {
-    "mtime": 1782559108.6520252,
-    "ast_hash": "90c439dc1e11f00c1e64e8a173f2511f",
-    "semantic_hash": "90c439dc1e11f00c1e64e8a173f2511f"
+    "mtime": 1783092388.9733849,
+    "ast_hash": "76aa8e1cc4f5feaacfc2b9918b025c47",
+    "semantic_hash": ""
   },
   "src/layouts/AppShell.tsx": {
     "mtime": 1783081059.844348,
@@ -1380,8 +1380,8 @@
     "semantic_hash": ""
   },
   "src/layouts/AppSidebar.tsx": {
-    "mtime": 1783091233.0253863,
-    "ast_hash": "ed7b67407e3dbc4f727b099b1d6204ee",
+    "mtime": 1783092346.201948,
+    "ast_hash": "92b691e4e3cc21443d8535bc3c1fb816",
     "semantic_hash": ""
   },
   "src/lib/actionCapabilities.test.ts": {
@@ -2395,8 +2395,8 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/migrationRunner.ts": {
-    "mtime": 1783090967.8446615,
-    "ast_hash": "4ed9d800f767ceba0106b9724ad10918",
+    "mtime": 1783091510.9285464,
+    "ast_hash": "16d23ebb6114cebd502f041b356f0303",
     "semantic_hash": ""
   },
   "electron/backend/persistence/migrations.ts": {
