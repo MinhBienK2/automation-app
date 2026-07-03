@@ -153,14 +153,51 @@
   font-weight: 500 !important;
 }
 
-.sidebar-toggle {
+.sidebar-toggle-collapsed {
   display: inline-grid;
   place-items: center;
   width: 40px;
+  height: 40px;
   min-height: 40px;
   padding: 0;
   justify-self: center;
   color: #9aaebd;
+  background: var(--app-surface-muted) !important;
+  border: 1px solid var(--app-border) !important;
+  border-radius: 6px !important;
+  transition: all 140ms ease;
+}
+
+.sidebar-toggle-collapsed:hover {
+  background: var(--surface-elevated) !important;
+  color: var(--fg-primary);
+}
+
+.sidebar-toggle-expanded {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-start !important;
+  width: 100%;
+  min-height: 38px !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--app-border) !important;
+  border-radius: 6px !important;
+  background: var(--app-surface-muted) !important;
+  color: var(--app-text-secondary) !important;
+  font-weight: 500;
+  transition: all 140ms ease;
+}
+
+.sidebar-toggle-expanded:hover {
+  color: var(--app-text) !important;
+  background: var(--surface-elevated) !important;
+  border-color: var(--app-border-strong) !important;
+}
+
+.sidebar-toggle-expanded span {
+  font-size: 13px;
+  font-weight: 500;
 }
 
 
@@ -250,9 +287,7 @@
   height: 15px;
 }
 
-.sidebar-toggle {
-  align-self: center;
-}
+
 
 .app-shell-collapsed .sidebar-profile {
   flex-direction: column;

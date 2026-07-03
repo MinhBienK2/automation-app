@@ -39,9 +39,9 @@ describe("App shell", () => {
 
     expect(await screen.findByRole("complementary", { name: "Application sidebar" }))
       .toBeInTheDocument();
-    const logo = screen.getByRole("img", { name: "Mission Control logo" });
+    const logo = screen.getByRole("img", { name: "Tik Automation logo" });
     expect(logo.getAttribute("src")).toContain("app-logo.svg");
-    expect(screen.getByText("Mission Control")).toBeInTheDocument();
+    expect(screen.getByText("Tik Automation")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Projects" })).toHaveAttribute(
       "data-slot",
       "button",
@@ -61,9 +61,9 @@ describe("App shell", () => {
     expect(screen.queryByRole("button", { name: "Run Center" })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Application content" }))
       .toHaveClass("app-content");
-    expect(screen.queryByRole("banner", { name: "Mission Control command bar" }))
+    expect(screen.queryByRole("banner", { name: "Tik Automation command bar" }))
       .not.toBeInTheDocument();
-    expect(screen.queryByRole("searchbox", { name: "Search Mission Control" }))
+    expect(screen.queryByRole("searchbox", { name: "Search Tik Automation" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Alerts" })).not.toBeInTheDocument();
   });

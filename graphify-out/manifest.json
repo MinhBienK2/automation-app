@@ -590,7 +590,7 @@
     "semantic_hash": "d46b25e937853f741ca889dc1de31027"
   },
   "src/App.test.tsx": {
-    "mtime": 1782586827.2682948,
+    "mtime": 1783092001.6341965,
     "ast_hash": "49ffbb3fde57b69f73abdb7f18b17a15",
     "semantic_hash": ""
   },
@@ -1370,9 +1370,9 @@
     "semantic_hash": "f6988eb7c283c20541a905922484d810"
   },
   "src/layouts/AppShell.test.tsx": {
-    "mtime": 1782559108.6520252,
-    "ast_hash": "90c439dc1e11f00c1e64e8a173f2511f",
-    "semantic_hash": "90c439dc1e11f00c1e64e8a173f2511f"
+    "mtime": 1783092388.9733849,
+    "ast_hash": "76aa8e1cc4f5feaacfc2b9918b025c47",
+    "semantic_hash": ""
   },
   "src/layouts/AppShell.tsx": {
     "mtime": 1783081059.844348,
@@ -1380,8 +1380,8 @@
     "semantic_hash": ""
   },
   "src/layouts/AppSidebar.tsx": {
-    "mtime": 1783091695.6823156,
-    "ast_hash": "8dab8740096576a6db47d97d5254ba89",
+    "mtime": 1783092346.201948,
+    "ast_hash": "92b691e4e3cc21443d8535bc3c1fb816",
     "semantic_hash": ""
   },
   "src/lib/actionCapabilities.test.ts": {

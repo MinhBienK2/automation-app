@@ -79,8 +79,8 @@ export function AppSidebar({
   return (
     <aside aria-label="Application sidebar" className="app-sidebar">
       <div className="sidebar-brand">
-        <img className="sidebar-logo" src={appLogoSrc} alt="Mission Control logo" />
-        <span className="sidebar-title">Mission Control</span>
+        <img className="sidebar-logo" src={appLogoSrc} alt="Tik Automation logo" />
+        <span className="sidebar-title">Tik Automation</span>
       </div>
       <nav aria-label="Main navigation" className="sidebar-nav">
         <Button
@@ -225,13 +225,13 @@ export function AppSidebar({
         <Button
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-expanded={!collapsed}
-          className="sidebar-toggle"
+          className={collapsed ? "sidebar-toggle-collapsed" : "sidebar-toggle-expanded"}
           variant="secondary"
-          size="icon"
           type="button"
           onClick={onToggle}
         >
           <SidebarToggleIcon collapsed={collapsed} />
+          {!collapsed && <span>Collapse Sidebar</span>}
         </Button>
       </div>
     </aside>
