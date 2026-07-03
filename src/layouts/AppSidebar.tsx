@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "../components/ui/button";
-import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight, Users, LogOut, User } from "lucide-react";
+import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight, Users, LogOut, User, Shield, Sliders, HelpCircle } from "lucide-react";
 import type { AppScreen } from "../shared/types/workspaceContracts";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 
 type AppSidebarActiveItem = "overview" | "projects" | "schedules" | "settings" | "admin-users";
 
@@ -69,10 +70,15 @@ export function AppSidebar({
   screen,
 }: AppSidebarProps) {
   const [settingsExpanded, setSettingsExpanded] = useState(() => activeItem === "settings");
+  const [adminExpanded, setAdminExpanded] = useState(() => activeItem === "admin-users");
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   useEffect(() => {
     if (activeItem === "settings") {
       setSettingsExpanded(true);
+    }
+    if (activeItem === "admin-users") {
+      setAdminExpanded(true);
     }
   }, [activeItem]);
 
@@ -162,6 +168,7 @@ export function AppSidebar({
                 type="button"
                 onClick={onOpenSettings}
               >
+                <Sliders aria-hidden="true" className="sidebar-submenu-item-icon" size={14} />
                 <span>General</span>
               </Button>
               <Button
@@ -175,25 +182,55 @@ export function AppSidebar({
                 type="button"
                 onClick={onOpenSettingsHelp}
               >
+                <HelpCircle aria-hidden="true" className="sidebar-submenu-item-icon" size={14} />
                 <span>Help</span>
               </Button>
             </div>
           )}
         </div>
         {currentUser && currentUser.role === "admin" && onOpenAdminUsers && (
-          <Button
-            className={
-              activeItem === "admin-users"
-                ? "sidebar-nav-item sidebar-nav-item-active"
-                : "sidebar-nav-item"
-            }
-            variant="ghost"
-            type="button"
-            onClick={onOpenAdminUsers}
-          >
-            <Users aria-hidden="true" className="sidebar-item-icon" />
-            <span>Users</span>
-          </Button>
+          <div className="sidebar-collapsible-group">
+            <Button
+              className={
+                activeItem === "admin-users"
+                  ? "sidebar-nav-item sidebar-nav-item-active"
+                  : "sidebar-nav-item"
+              }
+              variant="ghost"
+              type="button"
+              onClick={() => {
+                setAdminExpanded(!adminExpanded);
+              }}
+            >
+              <Shield aria-hidden="true" className="sidebar-item-icon" />
+              <span style={{ flex: "1 1 auto", textAlign: "left" }}>Admin</span>
+              {!collapsed && (
+                adminExpanded ? (
+                  <ChevronDown className="sidebar-chevron-icon" size={16} />
+                ) : (
+                  <ChevronRight className="sidebar-chevron-icon" size={16} />
+                )
+              )}
+            </Button>
+            {!collapsed && adminExpanded && (
+              <div className="sidebar-submenu">
+                <Button
+                  className={
+                    activeItem === "admin-users"
+                      ? "sidebar-submenu-item sidebar-submenu-item-active"
+                      : "sidebar-submenu-item"
+                  }
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={onOpenAdminUsers}
+                >
+                  <Users aria-hidden="true" className="sidebar-submenu-item-icon" size={14} />
+                  <span>Users</span>
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </nav>
       <div className="sidebar-footer">
@@ -215,7 +252,7 @@ export function AppSidebar({
                 variant="ghost"
                 size="icon"
                 type="button"
-                onClick={onLogout}
+                onClick={() => setIsLogoutDialogOpen(true)}
               >
                 <LogOut aria-hidden="true" className="sidebar-profile-logout-icon" size={15} />
               </Button>
@@ -234,6 +271,37 @@ export function AppSidebar({
           {!collapsed && <span>Collapse Sidebar</span>}
         </Button>
       </div>
+      {onLogout && (
+        <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+          <DialogContent className="logout-confirmation-dialog">
+            <DialogHeader>
+              <DialogTitle>Confirm Sign Out</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to sign out of your account?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => setIsLogoutDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                type="button"
+                onClick={() => {
+                  setIsLogoutDialogOpen(false);
+                  onLogout();
+                }}
+              >
+                Sign Out
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </aside>
   );
 }

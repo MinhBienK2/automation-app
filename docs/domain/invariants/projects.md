@@ -56,13 +56,15 @@ Preserve these unless the task explicitly changes them.
 
 ## Navigation And App Shell
 
-- Sidebar order: Overview, Projects, Schedules, Setting.
+- Sidebar order: Overview, Projects, Schedules, Setting, Admin (for admins).
 - Overview is default first screen (includes System Health diagnostics widget).
 - No top command/search header or Alerts shortcut.
 - Sidebar and in-page links are cross-workspace navigation surfaces.
 - Setting: collapsible navigation group containing:
   - General: autosave prefs, maintenance commands.
   - Help: XPath cookbook, graph shortcuts.
+- Admin: collapsible navigation group containing:
+  - Users: user management and roles (visible to admins only).
 - No notification/theme systems.
 
 ## UI Primitives

@@ -133,11 +133,26 @@
   padding: 0 10px !important;
   font-size: 13px !important;
   font-weight: 400 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
   justify-content: flex-start !important;
   border: 1px solid transparent !important;
   background: transparent !important;
   color: var(--app-text-muted) !important;
   transition: all 140ms ease;
+}
+
+.sidebar-submenu-item-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--app-text-muted);
+  transition: color 140ms ease;
+}
+
+.sidebar-submenu-item:hover .sidebar-submenu-item-icon {
+  color: var(--app-text) !important;
 }
 
 .sidebar-submenu-item:hover {
@@ -151,6 +166,10 @@
   background: rgba(50, 211, 230, 0.06) !important;
   border-color: rgba(50, 211, 230, 0.15) !important;
   font-weight: 500 !important;
+}
+
+.sidebar-submenu-item-active .sidebar-submenu-item-icon {
+  color: var(--app-accent) !important;
 }
 
 .sidebar-toggle-collapsed {
