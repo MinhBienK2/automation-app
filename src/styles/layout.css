@@ -808,6 +808,10 @@
   align-content: start;
 }
 
+.settings-screen .settings-panel {
+  max-width: none;
+}
+
 .settings-panel {
   display: grid;
   gap: 18px;

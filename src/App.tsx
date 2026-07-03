@@ -711,9 +711,6 @@ function App() {
           onInstallBinary={installSettingsBrowserBinary}
           onCleanupProfiles={cleanupSettingsBrowserProfiles}
           appMode={auth.mode === "team" ? "public" : "private"}
-          publicDatabaseUrl={auth.publicDatabaseUrl}
-          switchToLogin={auth.switchToLoginMode}
-          pgAvailable={auth.pgAvailable}
         />
       ) : nav.screen === "admin-users" ? (
         <AdminPanel />
