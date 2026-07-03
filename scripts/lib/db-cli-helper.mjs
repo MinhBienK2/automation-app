@@ -32,11 +32,30 @@ export async function getDbConnection() {
   
   if (process.env.DATABASE_URL) {
     console.log("[db-cli] Connecting to PostgreSQL database...");
+    let connectionString = process.env.DATABASE_URL;
+    let ssl = { rejectUnauthorized: false };
+
+    try {
+      const parsed = new URL(process.env.DATABASE_URL);
+      const sslmode = parsed.searchParams.get("sslmode");
+      const sslParam = parsed.searchParams.get("ssl");
+
+      parsed.searchParams.delete("sslmode");
+      parsed.searchParams.delete("ssl");
+      connectionString = parsed.toString();
+
+      if (sslmode === "disable" || sslParam === "false") {
+        ssl = false;
+      }
+    } catch (e) {
+      if (process.env.DATABASE_URL.includes("sslmode=disable") || process.env.DATABASE_URL.includes("ssl=false")) {
+        ssl = false;
+      }
+    }
+
     const pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL.includes("sslmode=disable") || process.env.DATABASE_URL.includes("ssl=false")
-        ? false 
-        : { rejectUnauthorized: false }
+      connectionString,
+      ssl
     });
     await pool.query("SELECT 1");
     return {

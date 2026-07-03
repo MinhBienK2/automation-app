@@ -14,7 +14,8 @@ import { backfillGraphTables } from "./backend/persistence/backfillGraphTables.j
 import { pruneRevisions } from "./backend/persistence/revisionRepository.js";
 import { loadAppConfig } from "./backend/persistence/appConfig.js";
 import { initializePgPool } from "./backend/persistence/pgSync.js";
-import { autoUpdater } from "electron-updater";
+import pkg from "electron-updater";
+const { autoUpdater } = pkg;
 import {
   workflowIpcChannels,
   type WorkflowIpcChannelName,
