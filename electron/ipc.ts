@@ -93,6 +93,16 @@ export const workflowIpcChannels = {
   restoreSubflowRevision: "workflow:restoreSubflowRevision",
   tagSubflowRevision: "workflow:tagSubflowRevision",
   untagSubflowRevision: "workflow:untagSubflowRevision",
+
+  // Auth & Mode Config
+  login: "workflow:login",
+  logout: "workflow:logout",
+  me: "workflow:me",
+  listUsers: "workflow:listUsers",
+  createUser: "workflow:createUser",
+  deleteUser: "workflow:deleteUser",
+  getAppConfig: "workflow:getAppConfig",
+  saveAppConfig: "workflow:saveAppConfig",
 } as const;
 
 export type WorkflowIpcChannelName = keyof typeof workflowIpcChannels;

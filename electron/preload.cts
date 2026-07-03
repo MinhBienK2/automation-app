@@ -216,6 +216,16 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("tagSubflowRevision", revisionId, tag),
   untagSubflowRevision: (revisionId) =>
     invokeWorkflow("untagSubflowRevision", revisionId),
+
+  // Auth & Mode Config
+  login: (input) => invokeWorkflow("login", input),
+  logout: () => invokeWorkflow("logout"),
+  me: (input) => invokeWorkflow("me", input),
+  listUsers: () => invokeWorkflow("listUsers"),
+  createUser: (input) => invokeWorkflow("createUser", input),
+  deleteUser: (input) => invokeWorkflow("deleteUser", input),
+  getAppConfig: () => invokeWorkflow("getAppConfig"),
+  saveAppConfig: (config) => invokeWorkflow("saveAppConfig", config),
 };
 
 contextBridge.exposeInMainWorld("workflowApi", workflowApi);

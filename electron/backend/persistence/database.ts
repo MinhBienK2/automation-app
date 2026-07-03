@@ -1,6 +1,31 @@
 import fs from "node:fs";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, StatementSync } from "node:sqlite";
+import { syncPushWrite } from "./pgSync.js";
+
+export class DatabaseSyncWrapper extends DatabaseSync {
+  public ownerId: string | null = null;
+
+  prepare(sql: string): StatementSync {
+    const stmt = super.prepare(sql);
+    const self = this;
+    return new Proxy(stmt, {
+      get(target, prop, receiver) {
+        if (prop === "run") {
+          return function(this: any, ...args: any[]) {
+            const result = target.run(...args);
+            if (self.ownerId) {
+              void syncPushWrite(sql, args, self.ownerId);
+            }
+            return result;
+          };
+        }
+        const val = Reflect.get(target, prop, receiver);
+        return typeof val === "function" ? val.bind(target) : val;
+      }
+    }) as unknown as StatementSync;
+  }
+}
 
 export type AppPaths = {
   rootDir: string;
@@ -38,7 +63,7 @@ function ensureAppPaths(paths: AppPaths) {
 
 export function initializeDatabase(paths: AppPaths) {
   ensureAppPaths(paths);
-  const database = new DatabaseSync(paths.databasePath);
+  const database = new DatabaseSyncWrapper(paths.databasePath);
   database.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;

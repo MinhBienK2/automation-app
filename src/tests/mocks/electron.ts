@@ -102,6 +102,14 @@ const methodNames: BridgeMethodName[] = [
   "restoreSubflowRevision",
   "tagSubflowRevision",
   "untagSubflowRevision",
+  "login",
+  "logout",
+  "me",
+  "listUsers",
+  "createUser",
+  "deleteUser",
+  "getAppConfig",
+  "saveAppConfig",
 ];
 
 export const workflowBridgeMock = Object.fromEntries(
@@ -133,6 +141,9 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
     if (command === "get_identity_lab_overview") return defaultIdentityLabOverview();
     if (command === "get_identity_lab_detail") return null;
     if (command === "close_identity_retained_session") return null;
+    if (command === "get_app_config") return { mode: "private" };
+    if (command === "me") return null;
+    if (command === "list_users") return [];
     throw new Error(`Unexpected command: ${command}`);
   }
 
@@ -511,5 +522,29 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
     resolveCommand(commands, "save_subflow_package_file", {
       package: packageValue,
     }),
+  );
+  workflowBridgeMock.login.mockImplementation((input: unknown) =>
+    resolveCommand(commands, "login", input),
+  );
+  workflowBridgeMock.logout.mockImplementation(() =>
+    resolveCommand(commands, "logout", undefined),
+  );
+  workflowBridgeMock.me.mockImplementation((input: unknown) =>
+    resolveCommand(commands, "me", input),
+  );
+  workflowBridgeMock.listUsers.mockImplementation(() =>
+    resolveCommand(commands, "list_users", undefined),
+  );
+  workflowBridgeMock.createUser.mockImplementation((input: unknown) =>
+    resolveCommand(commands, "create_user", input),
+  );
+  workflowBridgeMock.deleteUser.mockImplementation((input: unknown) =>
+    resolveCommand(commands, "delete_user", input),
+  );
+  workflowBridgeMock.getAppConfig.mockImplementation(() =>
+    resolveCommand(commands, "get_app_config", undefined),
+  );
+  workflowBridgeMock.saveAppConfig.mockImplementation((config: unknown) =>
+    resolveCommand(commands, "save_app_config", { config }),
   );
 }

@@ -74,9 +74,15 @@ import { useRecordingWorkspace } from "./features/workflows/state/useRecordingWo
 import { useSubflowWorkspace } from "./features/subflows/state/useSubflowWorkspace";
 import { runFromSelectedState } from "./features/workflows/lib/runFromSelected";
 import { useGraphExitNavigation } from "./lib/useGraphExitNavigation";
+import { useAuthState } from "./features/auth/state/useAuthState";
+import { LoginScreen } from "./features/auth/pages/LoginScreen";
+import { AdminPanel } from "./features/auth/pages/AdminPanel";
 
 
 function App() {
+  // --- Auth State ---
+  const auth = useAuthState();
+
   // --- Appearance preferences (theme / accent / density) ---
   const themePreferences = useThemePreferences();
 
@@ -455,13 +461,16 @@ function App() {
 
   // --- Initial Data Load ---
   useEffect(() => {
+    if (auth.mode === "pending") return;
+    if (auth.mode === "team" && !auth.currentUser) return;
+
     void projectsWorkspace.loadProjectModel();
     void workflowsWorkspace.loadWorkflows();
     void loadSchedules();
     void runWorkspace.refreshRunStates();
     void loadOperationsOverview();
     void loadSettingsDiagnostics();
-  }, []);
+  }, [auth.mode, auth.currentUser]);
 
   // --- Load Identity Lab Overview on project or tab change ---
   useEffect(() => {
@@ -624,6 +633,26 @@ function App() {
   const activeProfile = selectedBrowserProfiles.find((profile) => profile.id === activeProfileId);
   const profileVariables = activeProfile?.environment?.variables ?? null;
 
+  if (auth.isLoading) {
+    return (
+      <div className="login-screen-container">
+        <p style={{ fontSize: "1.25rem" }}>Loading Application Configuration...</p>
+      </div>
+    );
+  }
+
+  if (auth.mode === "pending" || (auth.mode === "team" && !auth.currentUser)) {
+    return (
+      <LoginScreen
+        onLogin={auth.login}
+        authError={auth.authError}
+        isLoading={auth.isLoading}
+        onPrivate={auth.enterPrivateMode}
+        pgAvailable={auth.pgAvailable}
+      />
+    );
+  }
+
   return (
     <>
     <AppShell
@@ -636,7 +665,9 @@ function App() {
               ? "projects"
               : nav.screen === "overview"
                 ? "overview"
-                : "projects"
+                : nav.screen === "admin-users"
+                  ? "admin-users"
+                  : "projects"
       }
       sidebarCollapsed={nav.sidebarCollapsed}
       onOpenOverview={() => nav.openOverview()}
@@ -644,6 +675,9 @@ function App() {
       onOpenSchedules={nav.openSchedules}
       onOpenSettings={nav.openSettings}
       onOpenSettingsHelp={nav.openSettingsHelp}
+      onOpenAdminUsers={() => nav.setScreen("admin-users")}
+      onLogout={auth.logout}
+      currentUser={auth.currentUser}
       onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
       screen={nav.screen}
     >
@@ -668,7 +702,13 @@ function App() {
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
           onInstallBinary={installSettingsBrowserBinary}
           onCleanupProfiles={cleanupSettingsBrowserProfiles}
+          appMode={auth.mode === "team" ? "public" : "private"}
+          publicDatabaseUrl={auth.publicDatabaseUrl}
+          switchToLogin={auth.switchToLoginMode}
+          pgAvailable={auth.pgAvailable}
         />
+      ) : nav.screen === "admin-users" ? (
+        <AdminPanel />
       ) : nav.screen === "settings-help" ? (
         <SettingsHelpPage />
       ) : nav.screen === "schedules" ? (

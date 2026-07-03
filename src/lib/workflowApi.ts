@@ -466,3 +466,37 @@ export function tagSubflowRevision(revisionId: string, tag: string) {
 export function untagSubflowRevision(revisionId: string) {
   return bridge().untagSubflowRevision(revisionId);
 }
+
+// Auth & Mode Config
+export function login(input: { email: string; password: string }) {
+  return bridge().login(input);
+}
+
+export function logout() {
+  return bridge().logout();
+}
+
+export function me(input: { token: string }) {
+  return bridge().me(input);
+}
+
+export function listUsers() {
+  return bridge().listUsers();
+}
+
+export function createUser(input: { email: string; password: string; role: "admin" | "user" }) {
+  return bridge().createUser(input);
+}
+
+export function deleteUser(input: { id: string }) {
+  return bridge().deleteUser(input);
+}
+
+export function getAppConfig() {
+  return bridge().getAppConfig();
+}
+
+export function saveAppConfig(config: { mode: "private" | "public"; publicDatabaseUrl?: string }) {
+  return bridge().saveAppConfig(config);
+}
+

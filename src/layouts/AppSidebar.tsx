@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "../components/ui/button";
-import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight } from "lucide-react";
+import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight, Users, LogOut } from "lucide-react";
 import type { AppScreen } from "../shared/types/workspaceContracts";
 
-type AppSidebarActiveItem = "overview" | "projects" | "schedules" | "settings";
+type AppSidebarActiveItem = "overview" | "projects" | "schedules" | "settings" | "admin-users";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
@@ -13,6 +13,9 @@ type AppSidebarProps = {
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
   onOpenSettingsHelp: () => void;
+  onOpenAdminUsers?: () => void;
+  onLogout?: () => void;
+  currentUser?: { email: string; role: string } | null;
   onToggle: () => void;
   screen: AppScreen;
 };
@@ -59,6 +62,9 @@ export function AppSidebar({
   onOpenSchedules,
   onOpenSettings,
   onOpenSettingsHelp,
+  onOpenAdminUsers,
+  onLogout,
+  currentUser,
   onToggle,
   screen,
 }: AppSidebarProps) {
@@ -174,6 +180,33 @@ export function AppSidebar({
             </div>
           )}
         </div>
+        {currentUser && currentUser.role === "admin" && onOpenAdminUsers && (
+          <Button
+            className={
+              activeItem === "admin-users"
+                ? "sidebar-nav-item sidebar-nav-item-active"
+                : "sidebar-nav-item"
+            }
+            variant="ghost"
+            type="button"
+            onClick={onOpenAdminUsers}
+          >
+            <Users aria-hidden="true" className="sidebar-item-icon" />
+            <span>Users</span>
+          </Button>
+        )}
+        {currentUser && onLogout && (
+          <Button
+            className="sidebar-nav-item"
+            variant="ghost"
+            type="button"
+            onClick={onLogout}
+            style={{ color: "#ef4444" }}
+          >
+            <LogOut aria-hidden="true" className="sidebar-item-icon" />
+            <span>Sign Out</span>
+          </Button>
+        )}
       </nav>
       <Button
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}

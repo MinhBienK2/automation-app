@@ -432,3 +432,5 @@ small {
   border-color: var(--accent-border);
   color: var(--accent);
 }
+
+@import "./auth.css";

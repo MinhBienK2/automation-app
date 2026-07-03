@@ -15,6 +15,70 @@ type PageHeaderProps = {
   projectName?: string | null;
 };
 
+function Breadcrumbs({ projectName, baseLabel, displayLabel, title, onBack }: {
+  projectName: string | null;
+  baseLabel: string;
+  displayLabel: string | null;
+  title: string;
+  onBack?: () => void;
+}) {
+  return (
+    <nav aria-label="Workflow breadcrumb" className="page-breadcrumb">
+      {projectName ? (
+        <>
+          <Button
+            className="page-breadcrumb-link"
+            variant="ghost"
+            type="button"
+            onClick={onBack}
+          >
+            {projectName}
+          </Button>
+          <span aria-hidden="true" className="page-breadcrumb-separator">
+            /
+          </span>
+          <span>{baseLabel}</span>
+          <span aria-hidden="true" className="page-breadcrumb-separator">
+            /
+          </span>
+        </>
+      ) : (
+        <>
+          <Button
+            className="page-breadcrumb-link"
+            variant="ghost"
+            type="button"
+            onClick={onBack}
+          >
+            {baseLabel}
+          </Button>
+          <span aria-hidden="true" className="page-breadcrumb-separator">
+            /
+          </span>
+        </>
+      )}
+      {displayLabel ? (
+        <Button
+          className="page-breadcrumb-link"
+          variant="ghost"
+          type="button"
+          onClick={onBack}
+        >
+          {displayLabel}
+        </Button>
+      ) : null}
+      {displayLabel ? (
+        <span aria-hidden="true" className="page-breadcrumb-separator">
+          /
+        </span>
+      ) : null}
+      <span aria-current="page" className="page-breadcrumb-current">
+        {title}
+      </span>
+    </nav>
+  );
+}
+
 export function PageHeader({
   ariaLabel,
   eyebrow,
@@ -46,59 +110,13 @@ export function PageHeader({
               {backLabel}
             </Button>
           ) : null}
-          <nav aria-label="Workflow breadcrumb" className="page-breadcrumb">
-            {projectName ? (
-              <>
-                <Button
-                  className="page-breadcrumb-link"
-                  variant="ghost"
-                  type="button"
-                  onClick={onBack}
-                >
-                  {projectName}
-                </Button>
-                <span aria-hidden="true" className="page-breadcrumb-separator">
-                  /
-                </span>
-                <span>{baseLabel}</span>
-                <span aria-hidden="true" className="page-breadcrumb-separator">
-                  /
-                </span>
-              </>
-            ) : (
-              <>
-                <Button
-                  className="page-breadcrumb-link"
-                  variant="ghost"
-                  type="button"
-                  onClick={onBack}
-                >
-                  {baseLabel}
-                </Button>
-                <span aria-hidden="true" className="page-breadcrumb-separator">
-                  /
-                </span>
-              </>
-            )}
-            {displayLabel ? (
-              <Button
-                className="page-breadcrumb-link"
-                variant="ghost"
-                type="button"
-                onClick={onBack}
-              >
-                {displayLabel}
-              </Button>
-            ) : null}
-            {displayLabel ? (
-              <span aria-hidden="true" className="page-breadcrumb-separator">
-                /
-              </span>
-            ) : null}
-            <span aria-current="page" className="page-breadcrumb-current">
-              {title}
-            </span>
-          </nav>
+          <Breadcrumbs
+            projectName={projectName}
+            baseLabel={baseLabel}
+            displayLabel={displayLabel}
+            title={title}
+            onBack={onBack}
+          />
         </div>
         <p className="eyebrow page-kind-badge">{eyebrow}</p>
       </div>

@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import {
@@ -11,6 +12,8 @@ import { createAppPaths, initializeDatabase, dropGraphJsonColumn } from "./backe
 import { migrateAllGraphs } from "./backend/persistence/migrateAllGraphs.js";
 import { backfillGraphTables } from "./backend/persistence/backfillGraphTables.js";
 import { pruneRevisions } from "./backend/persistence/revisionRepository.js";
+import { loadAppConfig } from "./backend/persistence/appConfig.js";
+import { initializePgPool } from "./backend/persistence/pgSync.js";
 import {
   workflowIpcChannels,
   type WorkflowIpcChannelName,
@@ -97,8 +100,55 @@ function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
   }
 }
 
-app.whenReady().then(() => {
+function loadEnvFile(appPath: string) {
+  const possiblePaths = [
+    path.join(process.cwd(), ".env"),
+    path.join(appPath, ".env"),
+  ];
+  for (const envPath of possiblePaths) {
+    try {
+      if (existsSync(envPath)) {
+        const content = readFileSync(envPath, "utf8");
+        console.log(`[startup-env] Loading environment variables from ${envPath}`);
+        for (const line of content.split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#")) continue;
+          const match = trimmed.match(/^([^=]+)=(.*)$/);
+          if (match) {
+            const key = match[1].trim();
+            let val = match[2].trim();
+            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+              val = val.substring(1, val.length - 1);
+            }
+            if (process.env[key] === undefined) {
+              process.env[key] = val;
+            }
+          }
+        }
+        break;
+      }
+    } catch (e) {
+      console.error(`[startup-env] Failed to read env file at ${envPath}:`, e);
+    }
+  }
+}
+
+app.whenReady().then(async () => {
+  loadEnvFile(app.getAppPath());
   const appPaths = createAppPaths(app.getPath("appData"));
+  
+  // Load app config
+  const appConfig = loadAppConfig(appPaths.rootDir);
+  if (appConfig.mode === "public" && appConfig.publicDatabaseUrl) {
+    try {
+      console.log("[startup] Public mode enabled. Initializing PG Pool...");
+      await initializePgPool(appConfig.publicDatabaseUrl);
+      console.log("[startup] PG Pool initialized successfully.");
+    } catch (error) {
+      console.error("[startup] Failed to initialize PG Pool on startup:", error);
+    }
+  }
+
   const database = initializeDatabase(appPaths);
   const backfillReport = backfillGraphTables(database);
   console.log("[startup] graph backfill report:", backfillReport);

@@ -236,6 +236,16 @@ export type WorkflowElectronBridge = {
   ): Promise<RestoreResult>;
   tagSubflowRevision(revisionId: string, tag: string): Promise<void>;
   untagSubflowRevision(revisionId: string): Promise<void>;
+
+  // Auth & Mode Config
+  login(input: { email: string; password: string }): Promise<{ token: string; user: { id: string; email: string; role: "admin" | "user"; created_at: string } }>;
+  logout(): Promise<{ ok: boolean }>;
+  me(input: { token: string }): Promise<{ id: string; email: string; role: "admin" | "user"; created_at: string } | null>;
+  listUsers(): Promise<Array<{ id: string; email: string; role: "admin" | "user"; created_at: string }>>;
+  createUser(input: { email: string; password: string; role: "admin" | "user" }): Promise<{ id: string; email: string; role: "admin" | "user"; created_at: string }>;
+  deleteUser(input: { id: string }): Promise<{ ok: boolean }>;
+  getAppConfig(): Promise<{ mode: "private" | "public"; publicDatabaseUrl?: string }>;
+  saveAppConfig(config: { mode: "private" | "public"; publicDatabaseUrl?: string }): Promise<{ ok: boolean }>;
 };
 
 declare global {

@@ -16,7 +16,32 @@ type SettingsPageProps = {
   onGraphAutosaveEnabledChange: (enabled: boolean) => void;
   onInstallBinary: () => void | Promise<void>;
   onCleanupProfiles: () => void | Promise<void>;
+  appMode: "private" | "public";
+  publicDatabaseUrl: string;
+  switchToLogin?: () => void;
+  pgAvailable?: boolean;
 };
+
+function maskDatabaseUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.password) {
+      parsed.password = "******";
+    }
+    return parsed.toString();
+  } catch (e) {
+    const atIndex = url.indexOf("@");
+    if (atIndex !== -1) {
+      const prefix = url.substring(0, atIndex);
+      const suffix = url.substring(atIndex);
+      const colonIndex = prefix.indexOf(":", prefix.indexOf("://") + 3);
+      if (colonIndex !== -1) {
+        return prefix.substring(0, colonIndex) + ":******" + suffix;
+      }
+    }
+    return "postgresql://******";
+  }
+}
 
 export function SettingsPage({
   graphAutosaveEnabled,
@@ -24,6 +49,10 @@ export function SettingsPage({
   onGraphAutosaveEnabledChange,
   onInstallBinary,
   onCleanupProfiles,
+  appMode,
+  publicDatabaseUrl,
+  switchToLogin,
+  pgAvailable,
 }: SettingsPageProps) {
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [cleanupPending, setCleanupPending] = useState(false);
@@ -46,6 +75,65 @@ export function SettingsPage({
           <h1>Setting</h1>
         </div>
       </header>
+
+      <section className="panel settings-panel" aria-label="Database Mode">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Database</p>
+            <h2>Database Mode</h2>
+          </div>
+        </div>
+
+        <div className="settings-maintenance-actions" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
+            <span style={{ fontWeight: 600 }}>Active Mode:</span>
+            <span style={{
+              padding: "0.25rem 0.75rem",
+              borderRadius: "4px",
+              background: appMode === "public" ? "rgba(57, 217, 138, 0.2)" : "rgba(102, 125, 141, 0.2)",
+              color: appMode === "public" ? "#39D98A" : "#9AAEBD",
+              fontWeight: 600
+            }}>
+              {appMode === "public" ? "Public (Central Shared PostgreSQL)" : "Private (Local SQLite)"}
+            </span>
+          </div>
+
+          {appMode === "public" && publicDatabaseUrl && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <span style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#9AAEBD", fontWeight: 600 }}>
+                PostgreSQL Connection Details (Specified by Repository)
+              </span>
+              <div style={{
+                padding: "0.75rem 1rem",
+                borderRadius: "8px",
+                background: "rgba(2, 6, 17, 0.7)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                color: "#9AAEBD",
+                fontSize: "0.875rem",
+                fontFamily: "monospace",
+                wordBreak: "break-all"
+              }}>
+                {maskDatabaseUrl(publicDatabaseUrl)}
+              </div>
+            </div>
+          )}
+
+          {appMode === "private" && pgAvailable && switchToLogin && (
+            <div style={{ marginTop: "0.5rem" }}>
+              <Button
+                type="button"
+                onClick={switchToLogin}
+              >
+                Sign In to Team Database
+              </Button>
+            </div>
+          )}
+
+          <p className="muted">
+            The database configuration is specified by the repository environment. To change connection strings, update the repository environment variables.
+          </p>
+        </div>
+      </section>
 
       <section className="panel settings-panel" aria-label="Workflow editing settings">
         <div className="panel-heading">

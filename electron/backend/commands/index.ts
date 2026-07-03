@@ -44,6 +44,8 @@ import { createSubflowCommands } from "./subflowCommands.js";
 import { createPackageCommands } from "./packageCommands.js";
 import { createRecordingCommands } from "./recordingCommands.js";
 import { createSettingsCommands } from "./settingsCommands.js";
+import { createAuthCommands } from "./authCommands.js";
+import { loadAppConfig, saveAppConfig } from "../persistence/appConfig.js";
 
 export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
@@ -561,6 +563,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const packageCommands = createPackageCommands(deps);
   const recordingCommands = createRecordingCommands(deps);
   const settingsCommands = createSettingsCommands(deps);
+  const authCommands = createAuthCommands(context.database);
 
   return {
     ...projectCommands,
@@ -569,6 +572,14 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ...settingsCommands,
     ...packageCommands,
     ...recordingCommands,
+    ...authCommands,
+    getAppConfig() {
+      return loadAppConfig(context.appPaths.rootDir);
+    },
+    saveAppConfig(config: any) {
+      saveAppConfig(context.appPaths.rootDir, config);
+      return { ok: true };
+    },
     ...createScheduleCommandHandlers({
       scheduleRepository,
       requireWorkflow,
