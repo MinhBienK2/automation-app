@@ -14,6 +14,7 @@ import {
   untagRevision,
   pruneRevisions,
   restoreRevision,
+  deleteRevision,
 } from "./revisionRepository.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
 
@@ -129,6 +130,32 @@ describe("revisionRepository — snapshot on save", () => {
     untagRevision(db, "workflow", revisions[0].id);
     const untagged = getRevision(db, "workflow", revisions[0].id);
     expect(untagged!.tag).toBeNull();
+
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  test("deleteRevision deletes revision by id", async () => {
+    const root = tempRoot();
+    const db = await initializeDatabase(createAppPaths(root));
+    const repo = new WorkflowRepository(db);
+    const graph = sampleGraph();
+
+    const project = repo.listProjects()[0] ?? repo.createProject("Main");
+    const wf = repo.createWorkflow("Test", graph, new Date(), { projectId: project.id });
+    repo.saveWorkflowGraph(wf.id, graph);
+
+    let revisions = listRevisions(db, "workflow", wf.id);
+    expect(revisions).toHaveLength(1);
+    const revId = revisions[0].id;
+
+    deleteRevision(db, "workflow", revId);
+
+    revisions = listRevisions(db, "workflow", wf.id);
+    expect(revisions).toHaveLength(0);
+
+    const rev = getRevision(db, "workflow", revId);
+    expect(rev).toBeNull();
 
     db.close();
     fs.rmSync(root, { recursive: true, force: true });

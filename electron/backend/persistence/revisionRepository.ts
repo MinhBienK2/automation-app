@@ -238,6 +238,15 @@ export function untagRevision(
   db.prepare(`UPDATE ${table} SET tag = NULL WHERE id = ?`).run(revisionId);
 }
 
+export function deleteRevision(
+  db: DatabaseSync,
+  owner: RevisionOwner,
+  revisionId: string,
+): void {
+  const table = owner === "workflow" ? "workflow_revisions" : "subflow_revisions";
+  db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(revisionId);
+}
+
 /**
  * Prune untagged revisions beyond the retention limit.
  * Keeps all tagged revisions indefinitely.

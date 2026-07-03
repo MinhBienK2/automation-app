@@ -29,6 +29,7 @@ import {
   restoreRevision,
   tagRevision,
   untagRevision,
+  deleteRevision,
 } from "../persistence/revisionRepository.js";
 
 function isUnsupportedGraphDiscriminantMessage(message: string) {
@@ -376,6 +377,10 @@ export function createWorkflowCommands(deps: CommandDeps) {
       untagRevision(deps.context.database, "workflow", revisionId);
     },
 
+    deleteWorkflowRevision(revisionId: string) {
+      deleteRevision(deps.context.database, "workflow", revisionId);
+    },
+
     listSubflowRevisions(subflowId: string, options?: { limit?: number; offset?: number; onlyBackups?: boolean }) {
       if (!deps.context.database.prepare("SELECT id FROM subflows WHERE id = ?").get(subflowId)) {
         throw commandError("Subflow not found", "subflowId");
@@ -400,6 +405,10 @@ export function createWorkflowCommands(deps: CommandDeps) {
 
     untagSubflowRevision(revisionId: string) {
       untagRevision(deps.context.database, "subflow", revisionId);
+    },
+
+    deleteSubflowRevision(revisionId: string) {
+      deleteRevision(deps.context.database, "subflow", revisionId);
     },
     
     // We expose startWorkflowRun as a helper for other domains (e.g., schedules) if needed

@@ -206,6 +206,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("tagWorkflowRevision", revisionId, tag),
   untagWorkflowRevision: (revisionId) =>
     invokeWorkflow("untagWorkflowRevision", revisionId),
+  deleteWorkflowRevision: (revisionId) =>
+    invokeWorkflow("deleteWorkflowRevision", revisionId),
   listSubflowRevisions: (subflowId, options) =>
     invokeWorkflow("listSubflowRevisions", subflowId, options),
   getSubflowRevision: (revisionId) =>
@@ -216,6 +218,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("tagSubflowRevision", revisionId, tag),
   untagSubflowRevision: (revisionId) =>
     invokeWorkflow("untagSubflowRevision", revisionId),
+  deleteSubflowRevision: (revisionId) =>
+    invokeWorkflow("deleteSubflowRevision", revisionId),
 
   // Auth & Mode Config
   login: (input) => invokeWorkflow("login", input),

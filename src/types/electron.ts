@@ -224,6 +224,7 @@ export type WorkflowElectronBridge = {
   ): Promise<RestoreResult>;
   tagWorkflowRevision(revisionId: string, tag: string): Promise<void>;
   untagWorkflowRevision(revisionId: string): Promise<void>;
+  deleteWorkflowRevision(revisionId: string): Promise<void>;
   listSubflowRevisions(
     subflowId: string,
     options?: { limit?: number; offset?: number; onlyBackups?: boolean },
@@ -236,6 +237,7 @@ export type WorkflowElectronBridge = {
   ): Promise<RestoreResult>;
   tagSubflowRevision(revisionId: string, tag: string): Promise<void>;
   untagSubflowRevision(revisionId: string): Promise<void>;
+  deleteSubflowRevision(revisionId: string): Promise<void>;
 
   // Auth & Mode Config
   login(input: { email: string; password: string }): Promise<{ token: string; user: { id: string; email: string; role: "admin" | "user"; created_at: string } }>;

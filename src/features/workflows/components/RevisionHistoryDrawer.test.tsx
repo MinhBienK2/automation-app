@@ -17,6 +17,8 @@ vi.mock("../../../lib/workflowApi", () => ({
   tagSubflowRevision: (...args: unknown[]) => (workflowBridgeMock.tagSubflowRevision as (...a: unknown[]) => unknown)(...args),
   untagWorkflowRevision: (...args: unknown[]) => (workflowBridgeMock.untagWorkflowRevision as (...a: unknown[]) => unknown)(...args),
   untagSubflowRevision: (...args: unknown[]) => (workflowBridgeMock.untagSubflowRevision as (...a: unknown[]) => unknown)(...args),
+  deleteWorkflowRevision: (...args: unknown[]) => (workflowBridgeMock.deleteWorkflowRevision as (...a: unknown[]) => unknown)(...args),
+  deleteSubflowRevision: (...args: unknown[]) => (workflowBridgeMock.deleteSubflowRevision as (...a: unknown[]) => unknown)(...args),
   getWorkflowGraph: (...args: unknown[]) => (workflowBridgeMock.getWorkflowGraph as (...a: unknown[]) => unknown)(...args),
   getSubflowGraph: (...args: unknown[]) => (workflowBridgeMock.getSubflowGraph as (...a: unknown[]) => unknown)(...args),
 }));
@@ -78,6 +80,8 @@ describe("RevisionHistoryDrawer", () => {
     workflowBridgeMock.tagSubflowRevision.mockResolvedValue(undefined);
     workflowBridgeMock.untagWorkflowRevision.mockResolvedValue(undefined);
     workflowBridgeMock.untagSubflowRevision.mockResolvedValue(undefined);
+    workflowBridgeMock.deleteWorkflowRevision.mockResolvedValue(undefined);
+    workflowBridgeMock.deleteSubflowRevision.mockResolvedValue(undefined);
     workflowBridgeMock.getWorkflowGraph.mockResolvedValue(sampleGraph);
     workflowBridgeMock.getSubflowGraph.mockResolvedValue(sampleGraph);
   });
@@ -290,6 +294,39 @@ describe("RevisionHistoryDrawer", () => {
 
     await waitFor(() => {
       expect(workflowBridgeMock.listSubflowRevisions).toHaveBeenCalledWith("sf-1", { limit: 100, onlyBackups: true });
+    });
+  });
+
+  test("shows delete dialog and calls deleteWorkflowRevision on confirm", async () => {
+    const { container } = render(
+      <RevisionHistoryDrawer
+        open={true}
+        ownerId="wf-1"
+        ownerKind="workflow"
+        onClose={vi.fn()}
+        onRestore={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("#3")).toBeTruthy();
+    });
+
+    const deleteButtons = container.querySelectorAll(".revision-item button[aria-label^='Delete revision']");
+    expect(deleteButtons.length).toBe(3);
+
+    // Click the first delete button (for revision #3)
+    fireEvent.click(deleteButtons[0]);
+
+    // Verify confirmation dialog is visible
+    expect(screen.getByText("Xóa lịch sử sao lưu?")).toBeTruthy();
+
+    // Confirm deletion
+    const confirmButton = screen.getByRole("button", { name: "Xóa" });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.deleteWorkflowRevision).toHaveBeenCalledWith("rev-3");
     });
   });
 });

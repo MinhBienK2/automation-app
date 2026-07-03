@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { History, RotateCcw, Tag, X, Eye } from "lucide-react";
+import { History, RotateCcw, Tag, X, Eye, Trash2 } from "lucide-react";
 import { IconButton } from "../../../components/ui/icon-button";
 import { Button } from "../../../components/ui/button";
 import {
@@ -24,6 +24,8 @@ import {
   untagSubflowRevision,
   getWorkflowGraph,
   getSubflowGraph,
+  deleteWorkflowRevision,
+  deleteSubflowRevision,
 } from "../../../lib/workflowApi";
 
 type RevisionHistoryDrawerProps = {
@@ -73,6 +75,10 @@ export function RevisionHistoryDrawer({
   const [backupComment, setBackupComment] = useState("");
   const [backupTag, setBackupTag] = useState("");
   const [isSavingBackup, setIsSavingBackup] = useState(false);
+
+  // Deletion States
+  const [deleteCandidate, setDeleteCandidate] = useState<RevisionSummary | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadRevisions = useCallback(async () => {
     setIsLoading(true);
@@ -192,6 +198,25 @@ export function RevisionHistoryDrawer({
     }
   }, [ownerKind, loadRevisions]);
 
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteCandidate) return;
+    setIsDeleting(true);
+    setActionError(null);
+    try {
+      if (ownerKind === "workflow") {
+        await deleteWorkflowRevision(deleteCandidate.id);
+      } else {
+        await deleteSubflowRevision(deleteCandidate.id);
+      }
+      setDeleteCandidate(null);
+      await loadRevisions();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete revision");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteCandidate, ownerKind, loadRevisions]);
+
   if (!open) return null;
 
   return (
@@ -284,6 +309,18 @@ export function RevisionHistoryDrawer({
                 >
                   <RotateCcw aria-hidden="true" />
                   Restore
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setDeleteCandidate(revision)}
+                  disabled={isRestoring || isDeleting}
+                  aria-label={`Delete revision ${revision.revision_number}`}
+                  style={{ color: "var(--destructive, #ef4444)" }}
+                >
+                  <Trash2 aria-hidden="true" />
+                  Delete
                 </Button>
                 {revision.tag ? (
                   <Button
@@ -390,6 +427,36 @@ export function RevisionHistoryDrawer({
               disabled={isRestoring}
             >
               {isRestoring ? "Restoring..." : "Restore"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Delete Dialog */}
+      <Dialog open={!!deleteCandidate} onOpenChange={(o) => !o && setDeleteCandidate(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xóa lịch sử sao lưu?</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa bản sao lưu #{deleteCandidate?.revision_number} không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setDeleteCandidate(null)}
+              disabled={isDeleting}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void handleConfirmDelete()}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Đang xóa..." : "Xóa"}
             </Button>
           </DialogFooter>
         </DialogContent>

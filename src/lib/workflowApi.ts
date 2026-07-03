@@ -440,6 +440,10 @@ export function untagWorkflowRevision(revisionId: string) {
   return bridge().untagWorkflowRevision(revisionId);
 }
 
+export function deleteWorkflowRevision(revisionId: string) {
+  return bridge().deleteWorkflowRevision(revisionId);
+}
+
 export function listSubflowRevisions(
   subflowId: string,
   options?: { limit?: number; offset?: number; onlyBackups?: boolean },
@@ -465,6 +469,10 @@ export function tagSubflowRevision(revisionId: string, tag: string) {
 
 export function untagSubflowRevision(revisionId: string) {
   return bridge().untagSubflowRevision(revisionId);
+}
+
+export function deleteSubflowRevision(revisionId: string) {
+  return bridge().deleteSubflowRevision(revisionId);
 }
 
 // Auth & Mode Config

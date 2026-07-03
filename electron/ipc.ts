@@ -88,11 +88,13 @@ export const workflowIpcChannels = {
   restoreWorkflowRevision: "workflow:restoreWorkflowRevision",
   tagWorkflowRevision: "workflow:tagWorkflowRevision",
   untagWorkflowRevision: "workflow:untagWorkflowRevision",
+  deleteWorkflowRevision: "workflow:deleteWorkflowRevision",
   listSubflowRevisions: "workflow:listSubflowRevisions",
   getSubflowRevision: "workflow:getSubflowRevision",
   restoreSubflowRevision: "workflow:restoreSubflowRevision",
   tagSubflowRevision: "workflow:tagSubflowRevision",
   untagSubflowRevision: "workflow:untagSubflowRevision",
+  deleteSubflowRevision: "workflow:deleteSubflowRevision",
 
   // Auth & Mode Config
   login: "workflow:login",
