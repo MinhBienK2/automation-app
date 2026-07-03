@@ -14,6 +14,7 @@ import { backfillGraphTables } from "./backend/persistence/backfillGraphTables.j
 import { pruneRevisions } from "./backend/persistence/revisionRepository.js";
 import { loadAppConfig } from "./backend/persistence/appConfig.js";
 import { initializePgPool } from "./backend/persistence/pgSync.js";
+import { autoUpdater } from "electron-updater";
 import {
   workflowIpcChannels,
   type WorkflowIpcChannelName,
@@ -213,6 +214,7 @@ app.whenReady().then(async () => {
   }, 30_000);
   app.once("before-quit", () => clearInterval(schedulerInterval));
   createMainWindow();
+  setupAutoUpdater();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -220,6 +222,56 @@ app.whenReady().then(async () => {
     }
   });
 });
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) {
+    console.log("[updater] Running in development mode. Skipping auto-updater.");
+    return;
+  }
+
+  console.log("[updater] Initializing auto-updater...");
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("checking-for-update", () => {
+    console.log("[updater] Checking for update...");
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    console.log(`[updater] Update available: v${info.version}. Downloading in background...`);
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    console.log("[updater] Update not available. Running on latest version.");
+  });
+
+  autoUpdater.on("error", (err) => {
+    console.error("[updater] Error in auto-updater:", err);
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    console.log(`[updater] Update v${info.version} downloaded.`);
+
+    const response = dialog.showMessageBoxSync({
+      type: "info",
+      buttons: ["Restart and Update", "Later"],
+      defaultId: 0,
+      cancelId: 1,
+      title: "Update Available",
+      message: `A new version of the app (v${info.version}) has been downloaded.`,
+      detail: "The application needs to restart to apply the update now.",
+    });
+
+    if (response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+
+  void autoUpdater.checkForUpdates().catch((err) => {
+    console.error("[updater] Failed to check for updates:", err);
+  });
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

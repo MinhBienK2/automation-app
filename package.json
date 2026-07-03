@@ -41,6 +41,11 @@
   "build": {
     "appId": "internal.automation.workflow-manager",
     "productName": "Automation App",
+    "publish": {
+      "provider": "github",
+      "owner": "MinhBienK2",
+      "repo": "tik-automation"
+    },
     "icon": "public/app-logo.png",
     "directories": {
       "output": "release"
@@ -98,6 +103,7 @@
     "cloakbrowser": "0.4.3",
     "clsx": "^2.1.1",
     "electron-store": "^11.0.2",
+    "electron-updater": "^6.8.9",
     "elkjs": "^0.11.1",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.11.0",

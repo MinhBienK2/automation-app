@@ -636,7 +636,15 @@ function App() {
   if (auth.isLoading) {
     return (
       <div className="login-screen-container">
-        <p style={{ fontSize: "1.25rem" }}>Loading Application Configuration...</p>
+        <div className="loading-wrapper">
+          <div className="loading-logo">A</div>
+          <div className="loading-spinner-container">
+            <div className="loading-spinner"></div>
+            <div className="loading-spinner-inner"></div>
+          </div>
+          <p className="loading-text">Đang khởi tạo...</p>
+          <p className="loading-subtext">Đang kết nối hệ thống và tải cấu hình.</p>
+        </div>
       </div>
     );
   }
@@ -646,7 +654,7 @@ function App() {
       <LoginScreen
         onLogin={auth.login}
         authError={auth.authError}
-        isLoading={auth.isLoading}
+        isLoading={auth.isLoggingIn}
         onPrivate={auth.enterPrivateMode}
         pgAvailable={auth.pgAvailable}
       />

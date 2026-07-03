@@ -12,6 +12,8 @@ export function useAuthState() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [mode, setMode] = useState<"pending" | "private" | "team">("pending");
   const [pgAvailable, setPgAvailable] = useState(false);
@@ -62,7 +64,7 @@ export function useAuthState() {
   const login = useCallback(async (email: string, passwordPlain: string) => {
     try {
       setAuthError(null);
-      setIsLoading(true);
+      setIsLoggingIn(true);
       const response = await apiLogin({ email, password: passwordPlain });
       setCurrentUser(response.user);
       setToken(response.token);
@@ -74,13 +76,13 @@ export function useAuthState() {
       setAuthError(error.message || "Failed to log in");
       return false;
     } finally {
-      setIsLoading(false);
+      setIsLoggingIn(false);
     }
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      setIsLoading(true);
+      setIsLoggingOut(true);
       await apiLogout();
       setCurrentUser(null);
       setToken(null);
@@ -90,7 +92,7 @@ export function useAuthState() {
     } catch (error) {
       console.error("Failed to log out:", error);
     } finally {
-      setIsLoading(false);
+      setIsLoggingOut(false);
     }
   }, []);
 
@@ -108,6 +110,8 @@ export function useAuthState() {
     currentUser,
     token,
     isLoading,
+    isLoggingIn,
+    isLoggingOut,
     authError,
     mode,
     pgAvailable,
