@@ -1,16 +1,16 @@
 # Graph Report - automation_app  (2026-07-04)
 
 ## Corpus Check
-- 500 files · ~337,478 words
+- 504 files · ~338,098 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3654 nodes · 9057 edges · 183 communities (160 shown, 23 thin omitted)
+- 3688 nodes · 9185 edges · 184 communities (158 shown, 26 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.83)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f7f77d86`
+- Built from commit: `8674f1a2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -188,33 +188,33 @@
 - [[_COMMUNITY_Community 177|Community 177]]
 - [[_COMMUNITY_Community 178|Community 178]]
 - [[_COMMUNITY_Community 179|Community 179]]
-- [[_COMMUNITY_Community 180|Community 180]]
 - [[_COMMUNITY_Community 181|Community 181]]
 - [[_COMMUNITY_Community 182|Community 182]]
+- [[_COMMUNITY_Community 183|Community 183]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `bridge()` - 103 edges
-2. `WorkflowGraph` - 95 edges
+2. `WorkflowGraph` - 101 edges
 3. `WorkflowSettings` - 69 edges
-4. `ActionConfig` - 57 edges
-5. `WorkflowSummary` - 50 edges
+4. `ActionConfig` - 58 edges
+5. `WorkflowSummary` - 52 edges
 6. `RunState` - 49 edges
-7. `Button()` - 46 edges
-8. `WorkflowRepository` - 45 edges
-9. `validationError()` - 45 edges
+7. `WorkflowRepository` - 46 edges
+8. `validationError()` - 46 edges
+9. `Button()` - 46 edges
 10. `updateActionConfigField()` - 42 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `prepareScheduleInput()` --calls--> `validateWorkflowRun()`  [INFERRED]
   electron/backend/scheduling/scheduleCommands.ts → src/lib/workflowApi.ts
-- `main()` --calls--> `runMigrations()`  [EXTRACTED]
-  scripts/db-migrate.mjs → electron/backend/persistence/migrationRunner.ts
-- `main()` --calls--> `rollbackMigrations()`  [EXTRACTED]
-  scripts/db-rollback.mjs → electron/backend/persistence/migrationRunner.ts
 - `RecordingEventCollector` --references--> `RecordingEvent`  [EXTRACTED]
   electron/backend/recording/eventCollector.ts → src/types/workflowEvidenceRecording.ts
-- `normalizeBrowserPersona()` --calls--> `personaForId()`  [EXTRACTED]
-  electron/backend/services/workflowSettingsService.ts → src/lib/personaCatalog.ts
+- `FakeBatchWorkflowRunManager` --references--> `RunState`  [EXTRACTED]
+  electron/backend/runtime/batchWorkflowRun.test.ts → src/types/workflowEvidenceRecording.ts
+- `Mission Control` --references--> `Mission Control`  [EXTRACTED]
+  README.md → docs/architecture/overview.md
+- `createTempAppPaths()` --calls--> `createAppPaths()`  [EXTRACTED]
+  electron/backend/browser/sessionManager.test.ts → electron/backend/persistence/database.ts
 
 ## Import Cycles
 - None detected.
@@ -224,23 +224,23 @@
 - **Persistence Layer** — architecture_persistence_persistence_architecture, architecture_overview_sqlite, architecture_overview_workflow_repository, architecture_overview_operations_repository, architecture_overview_identity_repository, architecture_overview_schedule_repository [INFERRED 0.95]
 - **Runtime Execution** — architecture_runner_runner_architecture, architecture_overview_run_manager, architecture_overview_browser_session_manager, architecture_overview_cloakbrowser, architecture_overview_playwright [INFERRED 0.95]
 
-## Communities (183 total, 23 thin omitted)
+## Communities (184 total, 26 thin omitted)
 
 ### Community 0 - "Runtime & Workflow Execution"
-Cohesion: 0.05
-Nodes (30): BatchWorkflowRunManager, runBatchWorkflowRows(), FakeBatchWorkflowRunManager, run(), runState(), beginRun(), browserProfileKey(), CommandError (+22 more)
+Cohesion: 0.08
+Nodes (17): beginRun(), browserProfileKey(), CommandError, fallbackWorkflowSummary(), finishRun(), RunConflict, RunEntry, RunManager (+9 more)
 
 ### Community 1 - "Workflow API & Workspace"
-Cohesion: 0.07
-Nodes (72): RevisionHistoryDrawerProps, UseIdentityLabWorkspaceOptions, bridge(), closeIdentityRetainedSession(), compileWorkflowGraph(), createProject(), createSubflow(), createUser() (+64 more)
+Cohesion: 0.06
+Nodes (84): bridge(), closeIdentityRetainedSession(), compileWorkflowGraph(), createProject(), createSchedule(), createSubflow(), createUser(), deleteProject() (+76 more)
 
 ### Community 2 - "Backend Commands & Package Services"
-Cohesion: 0.09
-Nodes (40): asRecord(), commandError, createDraftGraph(), isCommandError(), prependBatchRowVariables(), summaryToWorkflow(), createWorkflowCommandHandlers(), createPackageCommands() (+32 more)
+Cohesion: 0.11
+Nodes (29): asRecord(), commandError, createDraftGraph(), isCommandError(), summaryToWorkflow(), createPackageCommands(), createProjectCommands(), createRecordingCommands() (+21 more)
 
 ### Community 3 - "Persistence & Workflow Repository"
-Cohesion: 0.06
-Nodes (23): ProjectProfilesPanel(), environments, project, workflows, assembleGraph(), assembleGraphFromTables(), assembleSubflowGraphFromTables(), BrowserProfileRow (+15 more)
+Cohesion: 0.08
+Nodes (9): parseJson(), rowToSubflowSummary(), SubflowRepository, SubflowRow, parseJson(), WorkflowRepository, Subflow, SubflowUsage (+1 more)
 
 ### Community 4 - "Browser Interaction & Primitives"
 Cohesion: 0.09
@@ -248,59 +248,59 @@ Nodes (50): assertInteractionEnumValue(), blurElementTarget(), cloakBrowserHuman
 
 ### Community 5 - "Workflow Core Types & Evidence Recording"
 Cohesion: 0.05
-Nodes (45): CalculateValueConfig, CheckConditionsConfig, DataCaptureElementConfig, ElementLocatorKind, ElementTargetActionConfig, ElementTargetConstraints, FindElementFilter, FindElementRank (+37 more)
+Nodes (41): CalculateValueConfig, CheckConditionsConfig, DataCaptureElementConfig, ElementLocatorKind, ElementTargetActionConfig, ElementTargetConstraints, FindElementFilter, HeaderPair (+33 more)
 
 ### Community 6 - "Action Configuration UI Components"
-Cohesion: 0.06
-Nodes (63): ActionFieldsProps, AdvancedActionFields(), advancedFieldRenderers, ActionFieldsProps, BrowserActionFields(), ActionFieldsProps, CaptureActionFields(), DataCaptureConfig (+55 more)
+Cohesion: 0.05
+Nodes (84): ActionFieldsProps, AdvancedActionFields(), advancedFieldRenderers, ActionFieldsProps, BrowserActionFields(), ActionFieldsProps, CaptureActionFields(), DataCaptureConfig (+76 more)
 
 ### Community 7 - "Workflow Graph Configuration & Logic"
 Cohesion: 0.09
-Nodes (43): ActionTypeDropdown(), actionTypeFromConfig(), GraphInternalActionConfigPanel(), isActionConfig(), matchesActionSearch(), WorkflowGraphCalculateValueFields(), WorkflowGraphCheckConditionsFields(), ConditionFields() (+35 more)
+Nodes (40): ActionTypeDropdown(), actionTypeFromConfig(), GraphInternalActionConfigPanel(), isActionConfig(), matchesActionSearch(), WorkflowGraphCalculateValueFields(), ConditionFields(), ConditionFieldsProps (+32 more)
 
 ### Community 8 - "Workflow Graph & React Flow Integration"
-Cohesion: 0.06
-Nodes (43): actionConfigOrNull(), actionMetaLabel(), applyReactFlowEdgeState(), applyReactFlowGraphState(), casePortIds(), compactDurationLabel(), compactText(), conditionMetaLabel() (+35 more)
+Cohesion: 0.10
+Nodes (28): actionConfigOrNull(), actionMetaLabel(), applyReactFlowEdgeState(), casePortIds(), compactDurationLabel(), compactText(), conditionMetaLabel(), edgeSourcePortKey() (+20 more)
 
 ### Community 9 - "Action Validation & Constraints"
-Cohesion: 0.09
-Nodes (44): ActionValidationError, ActionValidator, ActionValidatorMap, actionValidators, assertActionValidatorCoverage(), conditionKindLabel(), finiteValue(), firstValidation() (+36 more)
+Cohesion: 0.10
+Nodes (41): ActionValidationError, ActionValidator, ActionValidatorMap, actionValidators, assertActionValidatorCoverage(), conditionKindLabel(), finiteValue(), firstValidation() (+33 more)
 
 ### Community 10 - "Graph Layout & ELK Integration"
-Cohesion: 0.09
-Nodes (41): addBranchLaneConstraints(), addColumnConstraint(), addColumnConstraints(), addColumnGroupConstraints(), alignBranchLanePositions(), applyPortOrderToPositions(), branchLaneOutputPortIds(), branchLaneYByNodeId() (+33 more)
+Cohesion: 0.11
+Nodes (34): addBranchLaneConstraints(), addColumnConstraint(), addColumnConstraints(), addColumnGroupConstraints(), alignBranchLanePositions(), applyPortOrderToPositions(), branchLaneOutputPortIds(), branchLaneYByNodeId() (+26 more)
 
 ### Community 11 - "Graph Validation & Cycle Detection"
-Cohesion: 0.12
-Nodes (42): branchContinuationSemantics(), collectCycleNodes(), conditionKindLabel(), error(), expectedPorts(), graphHasExecutableSteps(), hasOutgoing(), hasPort() (+34 more)
+Cohesion: 0.20
+Nodes (15): collectCycleNodes(), graphHasExecutableSteps(), isLoopNode(), loopControlOutsideLoopNodeIds(), nodeProducesCompiledStep(), reachableNodeIds(), unsupportedCycleNodeIds(), migrateWorkflowGraph() (+7 more)
 
 ### Community 12 - "Graph Compilation & Run Planning"
-Cohesion: 0.10
-Nodes (32): asMutableRecord(), callSubflowInputMapping(), callSubflowLabelPrefix(), collectDomainAllowlist(), compileCallSubflow(), compileContinuation(), compileNestedConfigs(), CompileSubflowReference (+24 more)
+Cohesion: 0.09
+Nodes (51): validateNestedActionArray(), validateRandomChoiceCases(), validateRouterConditionCases(), validateSwitchCases(), asMutableRecord(), callSubflowInputMapping(), callSubflowLabelPrefix(), closeBrowserConfig() (+43 more)
 
 ### Community 13 - "App State & Navigation"
-Cohesion: 0.08
-Nodes (42): useAppNavigation(), useThemePreferences(), useIdentityLabWorkspace(), cloneWorkflowSettings(), formatMaintenanceBytes(), graphEditableContentKey(), graphSaveStatusLabel(), hasEditableGraphChange() (+34 more)
+Cohesion: 0.07
+Nodes (45): useAppNavigation(), useThemePreferences(), RecordingReviewDialog(), useIdentityLabWorkspace(), cloneWorkflowSettings(), formatMaintenanceBytes(), graphEditableContentKey(), GraphSaveStatus (+37 more)
 
 ### Community 14 - "Project/Profile UI & Dialogs"
-Cohesion: 0.07
-Nodes (50): ArrayEditorProps, ProfileEditDialog(), ProfileEditDialogProps, ProjectProfilesPanelProps, ProjectSettingsProps, actionLabel(), recordedValueSummary(), RecordingReviewDialog() (+42 more)
+Cohesion: 0.06
+Nodes (58): ProfileEditDialog(), ProfileEditDialogProps, ProjectProfilesPanelProps, ProjectSettingsProps, actionLabel(), recordedValueSummary(), RecordingReviewDialogProps, RecordingStepEditor() (+50 more)
 
 ### Community 15 - "Action Tracing & Runner Execution"
 Cohesion: 0.09
-Nodes (38): AppPaths, actionConfigSummary(), actionEvidenceModel(), actionSummaryTraceField(), ActionTrace, actionTraceMode(), compactSummary(), compiledStepParts() (+30 more)
+Nodes (39): AppPaths, actionConfigSummary(), actionEvidenceModel(), actionSummaryTraceField(), ActionTrace, actionTraceMode(), compactSummary(), compiledStepParts() (+31 more)
 
 ### Community 16 - "Browser Session & Identity Management"
-Cohesion: 0.08
-Nodes (37): localBrowserLocale(), localBrowserTimezone(), activeAdvancedFingerprintOverrides(), assertHeadedDisplayAvailable(), BrowserDialog, BrowserDownload, BrowserDriverFrameLocator, browserIdentityEvidence() (+29 more)
+Cohesion: 0.09
+Nodes (35): localBrowserLocale(), localBrowserTimezone(), activeAdvancedFingerprintOverrides(), BrowserDialog, BrowserDownload, browserIdentityEvidence(), BrowserLaunchOptions, browserPersonaEvidence() (+27 more)
 
 ### Community 17 - "Help Disclosure & XPath Cookbook"
-Cohesion: 0.06
-Nodes (38): ActivePortConnection, WorkflowGraphEditorProps, defaultProps, WorkflowGraphEditorDialogs(), ActionNodePalette(), ActionNodePaletteProps, actionTypeForNodeHelp(), commonActionTypes (+30 more)
+Cohesion: 0.08
+Nodes (27): ActivePortConnection, WorkflowGraphEditorProps, ActionNodePalette(), ActionNodePaletteProps, actionTypeForNodeHelp(), commonActionTypes, graphNodeDescriptions, GraphNodePalette() (+19 more)
 
 ### Community 18 - "Identity Repository & Electron Bridge"
-Cohesion: 0.14
-Nodes (21): configuredPosture(), evidenceItemCount(), IdentityRepository, isSafeEvidenceItem(), limitValue(), parseBrowserIdentityOutput(), parseJsonRecord(), recentFailures() (+13 more)
+Cohesion: 0.12
+Nodes (26): configuredPosture(), evidenceItemCount(), IdentityRepository, isSafeEvidenceItem(), limitValue(), parseBrowserIdentityOutput(), parseJsonRecord(), recentFailures() (+18 more)
 
 ### Community 19 - "Event Collection & Redaction"
 Cohesion: 0.10
@@ -312,87 +312,87 @@ Nodes (20): BrowserDriverLocator, currentPageHostname(), hostnameAllowed(), norm
 
 ### Community 21 - "Community 21"
 Cohesion: 0.13
-Nodes (25): cn(), Badge(), badgeVariants, Card(), CardContent(), CardHeader(), CardTitle(), DialogOverlay() (+17 more)
+Nodes (26): cn(), WorkflowListPageProps, Badge(), badgeVariants, Card(), CardContent(), CardHeader(), CardTitle() (+18 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.07
-Nodes (43): generateElementTarget(), LOCATOR_KIND_PRIORITY, locatorConfidence(), LocatorGenerationResult, orderedCandidates(), booleanValue(), canMergeDedupedEvent(), clipboardStepsFromEvent() (+35 more)
+Cohesion: 0.09
+Nodes (34): booleanValue(), canMergeDedupedEvent(), clipboardStepsFromEvent(), dedupedEventKey(), dedupedEventKind(), dedupedValueKey(), IGNORED_TEXT_COMPOSITION_KEYS, inputStep() (+26 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.11
-Nodes (32): ActionConfigField, actionSupportsTargetRef(), parseHeaderPairs(), parseLineList(), updateActionConfigField(), updateAssertElementConfigField(), updateAssertTextConfigField(), updateClickConfigField() (+24 more)
+Cohesion: 0.16
+Nodes (32): branchContinuationSemantics(), conditionKindLabel(), error(), expectedPorts(), hasOutgoing(), inputPort(), isTerminalBranchBoundary(), nodeCondition() (+24 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.17
 Nodes (20): createTestHandlers(), edgeForPackage(), makeTemporary(), ProjectWorkflow, ProjectWorkflowTestHandlers, runnableGraph(), startOnlyGraph(), startToEndSuccessGraph() (+12 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.10
-Nodes (11): CloakHumanScrollAdapter, centerPoint(), dragTargetPoint(), PointerBox, collectNestedNodeIds(), BrowserWorkflowRunner, isAbortError(), waitForLocatorState() (+3 more)
+Cohesion: 0.12
+Nodes (9): CloakHumanScrollAdapter, centerPoint(), dragTargetPoint(), PointerBox, collectNestedNodeIds(), BrowserWorkflowRunner, waitForLocatorState(), CompiledNestedAction (+1 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.11
 Nodes (27): arrangeWorkflowGraph(), casePortIds(), cloneEdge(), cloneGraphFragment(), cloneNode(), cloneValue(), copyGraphSelection(), defaultOffset (+19 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.14
-Nodes (20): SelectionSubflowMode, UseSelectionSubflowCreatorInput, buildSelectedSubflowPlan(), cloneGraphEdge(), cloneGraphEdgeDelay(), cloneGraphNode(), cloneStructuredValue(), firstInputPort() (+12 more)
+Cohesion: 0.11
+Nodes (25): SelectionSubflowMode, graph, Harness(), selection, useSelectionSubflowCreator(), UseSelectionSubflowCreatorInput, GraphSelection, buildSelectedSubflowPlan() (+17 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.09
-Nodes (22): buildPackageSettings(), callSubflowIds(), commandError(), packageSettingsSections(), sanitizeBrowserLaunchSettings(), sanitizeProxyServerCredentials(), validatePackageSubflows(), validateWorkflowPackage() (+14 more)
+Cohesion: 0.13
+Nodes (16): WorkflowGraphValidationOptions, buildPackageSettings(), callSubflowIds(), commandError(), packageSettingsSections(), sanitizeBrowserLaunchSettings(), sanitizeProxyServerCredentials(), validatePackageSubflows() (+8 more)
 
 ### Community 29 - "Community 29"
-Cohesion: 0.07
-Nodes (28): ArrayEditor(), duplicateVariableNames(), EditorVariable, EnvironmentVariablesEditor(), EnvironmentVariablesEditorProps, UIVariableType, ObjectEditor(), ObjectEditorProps (+20 more)
+Cohesion: 0.06
+Nodes (36): ArrayEditor(), ArrayEditorProps, duplicateVariableNames(), EditorVariable, EnvironmentVariablesEditor(), EnvironmentVariablesEditorProps, UIVariableType, ObjectEditor() (+28 more)
 
 ### Community 30 - "Community 30"
 Cohesion: 0.16
 Nodes (27): actionPortUsage(), fallbackPortUsage(), genericPortUsage(), graphNodeCategory(), graphNodeCategoryClass(), graphNodeCategoryLabel(), graphPortTooltip(), graphStatusClass() (+19 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.14
-Nodes (15): baseGraphNodeHelpContent, BilingualGraphNodeHelp, contentPorts(), englishGraphNodeHelpContent, enrichGraphNodeHelp(), graphNodeFieldOptions(), GraphNodeFieldReference, GraphNodeHelpContent (+7 more)
+Cohesion: 0.10
+Nodes (22): baseGraphNodeHelpContent, BilingualGraphNodeHelp, contentPorts(), englishGraphNodeHelpContent, enrichGraphNodeHelp(), graphNodeFieldOptions(), GraphNodeFieldReference, GraphNodeHelpContent (+14 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.06
 Nodes (31): scripts, agent:validate-routes, build, build:electron, build:renderer, cloakbrowser:fonts:setup, db:migrate, db:rollback (+23 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.15
-Nodes (22): evaluateRuleGroup(), evaluateSingleRule(), applyIndexConstraint(), boxIntersectsViewport(), browserViewport(), candidateIndexes(), cssAttributeValue(), frameRootForTarget() (+14 more)
+Cohesion: 0.13
+Nodes (24): BrowserDriverFrameLocator, evaluateRuleGroup(), evaluateSingleRule(), applyIndexConstraint(), boxIntersectsViewport(), browserViewport(), candidateIndexes(), cssAttributeValue() (+16 more)
 
 ### Community 34 - "Community 34"
-Cohesion: 0.10
-Nodes (18): appSource, callSubflowGraph(), graphNodeTypeCoverage, graphNodeTypes, randomChoiceGraph(), removedSelectionLayoutCallbackProp, removedSelectionLayoutDisabledProp, removedSelectionLayoutFunction (+10 more)
+Cohesion: 0.11
+Nodes (15): appSource, callSubflowGraph(), graphNodeTypeCoverage, graphNodeTypes, randomChoiceGraph(), removedSelectionLayoutCallbackProp, removedSelectionLayoutDisabledProp, removedSelectionLayoutFunction (+7 more)
 
 ### Community 35 - "Community 35"
 Cohesion: 0.03
 Nodes (44): acceptDialogSchema, assertOutputSchema, blockRequestSchema, breakLoopSchema, calculateValueSchema, checkConditionsSchema, clearCookiesSchema, closeTabSchema (+36 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.10
-Nodes (30): AppNavigationDeps, AppShell(), AppShellProps, GraphSaveStatus, createWorkflow(), deleteWorkflow(), duplicateWorkflow(), getWorkflow() (+22 more)
+Cohesion: 0.11
+Nodes (27): AppNavigationDeps, AppShell(), AppShellProps, WorkflowSettingsSaveStatus, createWorkflow(), getWorkflow(), listWorkflows(), renameWorkflow() (+19 more)
 
 ### Community 37 - "Community 37"
-Cohesion: 0.11
-Nodes (18): applyRecorderBrowserLaunchOverrides(), browserIdentitySnapshot(), clone(), normalizedOptionalText(), RecorderSessionInputError, RecorderSessionManager, RecorderSessionManagerDependencies, RecordingSessionRecord (+10 more)
+Cohesion: 0.15
+Nodes (13): applyRecorderBrowserLaunchOverrides(), browserIdentitySnapshot(), clone(), normalizedOptionalText(), RecorderSessionInputError, RecorderSessionManager, RecorderSessionManagerDependencies, RecordingSessionRecord (+5 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.12
-Nodes (20): isQuarantinedNode(), quarantineNode(), QuarantineOptions, QuarantineReason, migration001Baseline, migration002RenameEvalNodes, MIGRATIONS, runMigrations() (+12 more)
+Cohesion: 0.09
+Nodes (22): baseRunState, graph, isQuarantinedNode(), quarantineNode(), QuarantineOptions, QuarantineReason, migration001Baseline, migration002RenameEvalNodes (+14 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.12
-Nodes (16): graph, Harness(), selection, useSelectionSubflowCreator(), GraphContextMenuState, graph, Harness(), subflowOptions (+8 more)
+Cohesion: 0.11
+Nodes (20): GraphContextMenuState, graph, Harness(), subflowOptions, useWorkflowGraphDerivedState(), UseWorkflowGraphDerivedStateInput, summarizeRunError(), WorkflowGraphInspector() (+12 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.21
-Nodes (20): actualFieldNames(), addDecisionGuidance(), addFieldDetails(), addFieldReference(), addLanguageFieldDetails(), addLanguageFieldReference(), enrichStepHelpContent(), fieldCategory() (+12 more)
+Cohesion: 0.07
+Nodes (55): englishStepHelpContent, phaseOneEnglishStepHelpContent, GraphInternalActionType, graphInternalStepHelpContent, mergedStepHelpContent, phaseOneVietnameseStepHelpContent, vietnameseStepHelpContent, elementHelpEn() (+47 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.21
-Nodes (20): configToSettingsBrowserLaunch(), createDefaultBrowserIdentity(), createHighEntropyBrowserIdentityId(), createStableBrowserIdentityId(), defaultBrowserConfig(), defaultWorkflowSettings(), DefaultWorkflowSettingsOptions, normalizeBrowserPersona() (+12 more)
+Cohesion: 0.10
+Nodes (34): clonePersona(), isKnownPersonaId(), personaForId(), personaForSeed(), stableCatalogIndex(), browserLaunchSettings(), browserIdentityPreferences(), configToSettingsBrowserLaunch() (+26 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.09
@@ -403,20 +403,20 @@ Cohesion: 0.13
 Nodes (21): browserProfileDiagnostics(), buildCloakBrowserDiagnostics(), cloakBinaryInfo(), CloakBrowserDiagnosticsModule, cloakWrapperVersion(), directoryReadable(), directorySize(), DirectorySizeLimits (+13 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.13
-Nodes (12): renderPackageHook(), useAppPackageDialogs(), UseAppPackageDialogsOptions, workflowPackageSections, exportProjectPackage(), exportWorkflowPackage(), importProjectPackage(), importWorkflowPackage() (+4 more)
+Cohesion: 0.15
+Nodes (6): renderPackageHook(), useAppPackageDialogs(), UseAppPackageDialogsOptions, workflowPackageSections, saveWorkflowPackageFile(), ProjectPackage
 
 ### Community 47 - "Community 47"
-Cohesion: 0.42
-Nodes (5): getDbConnection(), loadEnv(), main(), main(), main()
+Cohesion: 0.09
+Nodes (11): prependBatchRowVariables(), BatchWorkflowRunManager, runBatchWorkflowRows(), FakeBatchWorkflowRunManager, run(), runState(), idleRunState, tempRoots (+3 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.17
-Nodes (18): englishStepHelpContent, phaseOneEnglishStepHelpContent, GraphInternalActionType, graphInternalStepHelpContent, mergedStepHelpContent, phaseOneVietnameseStepHelpContent, vietnameseStepHelpContent, elementHelpEn() (+10 more)
+Cohesion: 0.14
+Nodes (14): clone(), createRecordingDraftCommands(), RecordingDraftCommandDependencies, RecordingDraftDatabase, RecordingDraftSessionPort, requireRecordingResult(), recordingDraft(), recordingSession() (+6 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.11
-Nodes (14): buildTimeline(), executableNodes(), monitorStatusLabel(), nodeLabel(), RunMonitorDrawer(), RunMonitorDrawerProps, RunMonitorTimelineEventStatus, RunMonitorTimelineItem (+6 more)
+Cohesion: 0.13
+Nodes (12): buildTimeline(), executableNodes(), monitorStatusLabel(), nodeLabel(), RunMonitorDrawer(), RunMonitorDrawerProps, RunMonitorTimelineEventStatus, RunMonitorTimelineItem (+4 more)
 
 ### Community 50 - "Community 50"
 Cohesion: 0.09
@@ -431,8 +431,8 @@ Cohesion: 0.11
 Nodes (28): buildEnvironmentChangeTree(), buildVariableTree(), bumpSelfCount(), ChangeTreeNodeView(), ChangeTreeNodeViewProps, countAllChanges(), countLeaves(), createEntry() (+20 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.20
-Nodes (15): enLabels, viLabels, withWorkflowSettingsDefaults(), workflowSettingsHelp, WorkflowSettingsHelpContent, WorkflowSettingsHelpLanguage, WorkflowSettingsLocalizedHelp, WorkflowSettingsSection (+7 more)
+Cohesion: 0.08
+Nodes (32): browserProfiles, persona, WorkflowSettingsDialog(), enLabels, viLabels, withWorkflowSettingsDefaults(), workflowSettingsHelp, WorkflowSettingsHelpContent (+24 more)
 
 ### Community 54 - "Community 54"
 Cohesion: 0.15
@@ -443,32 +443,32 @@ Cohesion: 0.09
 Nodes (22): devDependencies, electron, electron-builder, eslint, js-yaml, jsdom, @playwright/test, tailwindcss (+14 more)
 
 ### Community 56 - "Community 56"
-Cohesion: 0.13
-Nodes (19): latestRunForWorkflow(), latestRunSnapshot(), legacyRunId(), getRunState(), listRunStates(), runWorkflow(), runWorkflowFromNode(), stopRun() (+11 more)
+Cohesion: 0.15
+Nodes (15): UseIdentityLabWorkspaceOptions, legacyRunId(), getRunState(), actionGroupCatalog, actionLabelForRunError(), buildRunIssues(), commandMessage(), normalizeRunSnapshot() (+7 more)
 
 ### Community 57 - "Community 57"
 Cohesion: 0.12
 Nodes (11): electronWatchOutput, findAvailablePort(), isPortAvailable(), processes, start(), startElectron(), currentDir, tscWatch (+3 more)
 
 ### Community 58 - "Community 58"
-Cohesion: 0.23
-Nodes (15): conditionMatches(), RunnerActionRuntime, ensureResolved(), evaluateMathInObject(), findReferencedVariables(), getDeepValue(), NESTED_STEP_KEYS, NUMERIC_KEYS (+7 more)
+Cohesion: 0.22
+Nodes (16): conditionMatches(), RunnerActionRuntime, ensureResolved(), evaluateMathInObject(), findReferencedVariables(), getDeepValue(), NESTED_STEP_KEYS, NUMERIC_KEYS (+8 more)
 
 ### Community 59 - "Community 59"
-Cohesion: 0.23
-Nodes (3): BrowserSessionManager, retainedProfileKey(), retainedSessionKey()
+Cohesion: 0.21
+Nodes (4): assertHeadedDisplayAvailable(), BrowserSessionManager, retainedProfileKey(), retainedSessionKey()
 
 ### Community 60 - "Community 60"
 Cohesion: 0.13
 Nodes (17): ActionExecutor, ActionExecutorMap, assertActionExecutorCoverage(), createActionExecutorMap(), executeRegisteredAction(), missingExecutorError(), ActionDefinition, actionDefinitions (+9 more)
 
 ### Community 61 - "Community 61"
-Cohesion: 0.10
-Nodes (12): createTestHandlers(), createLegacyDb(), createAppPaths(), DatabaseSyncWrapper, dropGraphJsonColumn(), ensureAppPaths(), initializeDatabase(), tempRoots (+4 more)
+Cohesion: 0.18
+Nodes (13): graphNode(), graphNode(), edgeKindForFlowSource(), edgePortsExist(), replacePortEdge(), flowNode(), graphNode(), WorkflowGraphEdgeKind (+5 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.16
-Nodes (12): WorkflowGraphValidationOptions, commandError(), ProjectPackageExportWorkflow, ProjectPackageServiceDependencies, sanitizeBrowserLaunchSettings(), sanitizeProxyServerCredentials(), sanitizeWorkflowSettings(), validatePackageBrowserProfiles() (+4 more)
+Cohesion: 0.10
+Nodes (20): commandError(), ProjectPackageExportWorkflow, ProjectPackageService, ProjectPackageServiceDependencies, sanitizeBrowserLaunchSettings(), sanitizeProxyServerCredentials(), sanitizeWorkflowSettings(), projectPackage() (+12 more)
 
 ### Community 63 - "Community 63"
 Cohesion: 0.27
@@ -479,8 +479,8 @@ Cohesion: 0.28
 Nodes (13): bold(), error(), findRouteForFile(), getGitStatusFiles(), info(), main(), parseRoutes(), printRoute() (+5 more)
 
 ### Community 65 - "Community 65"
-Cohesion: 0.12
-Nodes (15): serializeCommandError(), WorkflowCommandHandlers, WorkflowIpcChannelName, workflowIpcChannels, createMainWindow(), currentDir, filenameFromWorkflowName(), getAppIconPath() (+7 more)
+Cohesion: 0.11
+Nodes (18): serializeCommandError(), WorkflowCommandHandlers, WorkflowIpcChannelName, workflowIpcChannels, createMainWindow(), currentDir, filenameFromWorkflowName(), getAppIconPath() (+10 more)
 
 ### Community 66 - "Community 66"
 Cohesion: 0.12
@@ -491,8 +491,8 @@ Cohesion: 0.28
 Nodes (5): ProjectDropdownMenuProps, projects, useDismissOnOutside(), WorkspaceHeader(), WorkspaceHeaderProps
 
 ### Community 68 - "Community 68"
-Cohesion: 0.16
-Nodes (14): actionPortSemantics(), addLanguageDecisionGuidance(), decisionNotFor(), minimumFieldNames(), commonFieldDetails, commonFieldOptions, decisionAlternatives(), outputActionTypes (+6 more)
+Cohesion: 0.22
+Nodes (4): WorkflowWorkspaceDeps, BrowserProfile, BrowserProfileInput, ProjectWorkspaceAPI
 
 ### Community 69 - "Community 69"
 Cohesion: 0.12
@@ -503,16 +503,16 @@ Cohesion: 0.08
 Nodes (26): dependencies, bcryptjs, class-variance-authority, cloakbrowser, clsx, electron-store, electron-updater, elkjs (+18 more)
 
 ### Community 71 - "Community 71"
-Cohesion: 0.18
-Nodes (20): validateHeaderPairs(), closeBrowserConfig(), compilePath(), nodeCondition(), optionalPositiveInteger(), positiveInteger(), RandomChoiceGraphConfig, requiredString() (+12 more)
+Cohesion: 0.21
+Nodes (10): generateElementTarget(), LOCATOR_KIND_PRIORITY, locatorConfidence(), LocatorGenerationResult, orderedCandidates(), ElementLocator, ElementTarget, RecordingLocatorCandidate (+2 more)
 
 ### Community 72 - "Community 72"
 Cohesion: 0.13
 Nodes (3): FakeCollectorContext, FakeDialog, FakeDownload
 
 ### Community 73 - "Community 73"
-Cohesion: 0.12
-Nodes (8): createTempAppPaths(), FakeFrameLocator, isClipboardEvaluationArg(), isScrollEvaluationArg(), isStorageEvaluationArg(), makeSettings(), MissingTargetPage, tempRoots
+Cohesion: 0.13
+Nodes (7): createTempAppPaths(), FakeFrameLocator, isClipboardEvaluationArg(), isScrollEvaluationArg(), isStorageEvaluationArg(), MissingTargetPage, tempRoots
 
 ### Community 74 - "Community 74"
 Cohesion: 0.15
@@ -524,39 +524,35 @@ Nodes (15): compilerOptions, esModuleInterop, module, moduleResolution, noFallth
 
 ### Community 76 - "Community 76"
 Cohesion: 0.15
-Nodes (12): RunStatus, BoundedOperationsList, CallSubflowGraphConfig, CompiledNestedAction, GraphPortDirection, GraphPortShape, GraphValidationLevel, GraphViewport (+4 more)
+Nodes (12): RunStatus, WorkflowGraphMigrationNote, BoundedOperationsList, CallSubflowGraphConfig, CompiledNestedAction, GraphPortDirection, GraphPortShape, GraphValidationLevel (+4 more)
 
 ### Community 77 - "Community 77"
-Cohesion: 0.17
-Nodes (6): graphNode(), inputPort(), outputPort(), portsFor(), tempRoots, title()
+Cohesion: 0.07
+Nodes (25): createWorkflowCommandHandlers(), createWorkflowCommands(), createTestHandlers(), graphNode(), inputPort(), outputPort(), portsFor(), tempRoots (+17 more)
 
 ### Community 78 - "Community 78"
-Cohesion: 0.12
-Nodes (7): FakeRecordingDriver, BrowserDriver, BrowserDriverContext, createTempAppPaths(), FakeContext, makeSettings(), tempRoots
+Cohesion: 0.08
+Nodes (12): FakeRecordingDriver, BrowserDriver, BrowserDriverContext, createTempAppPaths(), FakeContext, makeSettings(), tempRoots, BrowserProbe (+4 more)
 
 ### Community 80 - "Community 80"
 Cohesion: 0.38
 Nodes (7): Browser Profile, Compiled Graph, Graph, Project, Run, Subflow, Workflow
 
 ### Community 81 - "Community 81"
-Cohesion: 0.11
-Nodes (11): GraphShortcutGroup, graphShortcutGroups, GraphShortcutGuide(), HelpDisclosure(), HelpDisclosureProps, StepHelpModal(), StepHelpModalProps, XPathCookbook() (+3 more)
+Cohesion: 0.10
+Nodes (13): GraphShortcutGroup, graphShortcutGroups, GraphShortcutGuide(), HelpDisclosure(), HelpDisclosureProps, StepHelpModal(), StepHelpModalProps, XPathCookbook() (+5 more)
 
 ### Community 82 - "Community 82"
 Cohesion: 0.35
 Nodes (11): assertCleanWorktree(), assertTagDoesNotExist(), buildReleasePlan(), bumpVersion(), getCurrentBranch(), main(), parseDeployArgs(), readPackageVersion() (+3 more)
 
 ### Community 83 - "Community 83"
-Cohesion: 0.26
-Nodes (9): createSchedule(), deleteSchedule(), disableSchedule(), enableSchedule(), listScheduleEvents(), listSchedules(), updateSchedule(), useSchedulesWorkspace() (+1 more)
-
-### Community 84 - "Community 84"
-Cohesion: 0.32
-Nodes (10): flattenVariablesObject(), isPlainObject(), setNestedValue(), variableRowsFromJsonText(), variableRowValue(), variablesJsonFromRows(), variableValueText(), variableValueType() (+2 more)
+Cohesion: 0.22
+Nodes (3): ProjectSettings(), project, Project
 
 ### Community 85 - "Community 85"
-Cohesion: 0.16
-Nodes (5): FakeRecordingContext, BrowserDriverPage, clone(), recorderCaptureScript(), RecordingEventCollector
+Cohesion: 0.13
+Nodes (5): FakeRecordingContext, BrowserDriverPage, FakePage, recorderCaptureScript(), RecordingEventCollector
 
 ### Community 86 - "Community 86"
 Cohesion: 0.09
@@ -571,8 +567,8 @@ Cohesion: 0.11
 Nodes (17): Mission Control, 1. Navigation & App Shell, 2. Identities & Sessions, 3. Projects & Subflows, 4. Graph Builder & Node Editing, 5. Action Nodes Execution, 6. Run Execution & Batching, CloakBrowser Setup & Config (+9 more)
 
 ### Community 89 - "Community 89"
-Cohesion: 0.39
-Nodes (7): projectPackage(), ProjectPackageServiceDependencies, runnableGraph(), startNode(), startOnlyGraph(), workflowGraphCallingSubflow(), workflowSettings()
+Cohesion: 0.32
+Nodes (6): fallbackNodeInsertionPosition(), getVisibleNodeInsertionPosition(), graphNodeDimensions, ScreenToFlowPosition, visibleNodeStagger, GraphPosition
 
 ### Community 90 - "Community 90"
 Cohesion: 0.17
@@ -587,20 +583,20 @@ Cohesion: 0.29
 Nodes (8): createBrowserProfile(), deleteBrowserProfile(), listBrowserProfiles(), resetBrowserProfileIdentity(), updateBrowserProfile(), browserLaunch(), profile(), UseBrowserProfileActionsOptions
 
 ### Community 94 - "Community 94"
-Cohesion: 0.15
-Nodes (14): actionCapabilities, ActionCapability, allActionTypes, isActionVisibleInPrimaryPalette(), stepHelpContent, stepHelpContentSource, stepHelpEnrichmentSource, stepHelpModalSource (+6 more)
+Cohesion: 0.17
+Nodes (12): actionCapabilities, ActionCapability, allActionTypes, isActionVisibleInPrimaryPalette(), defaultActionConfig(), actionGroups, actionLabels, actionOptions (+4 more)
 
 ### Community 95 - "Community 95"
-Cohesion: 0.39
-Nodes (5): mainContinuationPort(), mainPathNodeIds(), runFromSelectedState(), graph, workflowBrowserProfileKey()
+Cohesion: 0.40
+Nodes (3): mainContinuationPort(), mainPathNodeIds(), graph
 
 ### Community 96 - "Community 96"
 Cohesion: 0.20
 Nodes (4): BrowserExpressionPage, MissingHrefPage, RetryPage, SlowEvaluatePage
 
 ### Community 97 - "Community 97"
-Cohesion: 0.17
-Nodes (15): prepareScheduleInput(), calculateNextRunAt(), disableOneTime(), localCandidate(), parseTime(), processDueSchedules(), ProcessDueSchedulesOptions, recordEvent() (+7 more)
+Cohesion: 0.14
+Nodes (17): sanitizeSummary(), createScheduleCommandHandlers(), prepareScheduleInput(), calculateNextRunAt(), disableOneTime(), localCandidate(), parseTime(), processDueSchedules() (+9 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.15
@@ -623,20 +619,20 @@ Cohesion: 0.20
 Nodes (9): Playwright, Desktop E2E Tests, E2E Execution Lanes, E2E Test Suite Map (Run via `npm run test:e2e:full -- tests/e2e/<suite>.e2e.ts`), Frontend & Backend Unit Tests, Packaging and CI/CD Verification, Policy, Specialized Unit/Smoke Lanes (+1 more)
 
 ### Community 104 - "Community 104"
-Cohesion: 0.12
-Nodes (19): graphNodeHeightForPorts(), fallbackNodeInsertionPosition(), getVisibleNodeInsertionPosition(), graphNodeDimensions, ScreenToFlowPosition, visibleNodeStagger, displayPositionsForGraphNodes(), getPortYOffset() (+11 more)
+Cohesion: 0.38
+Nodes (7): graphNodeHeightForPorts(), displayPositionsForGraphNodes(), getPortYOffset(), getStepPathSegments(), nodeColumnsOverlap(), Segment, GraphEdge
 
 ### Community 105 - "Community 105"
-Cohesion: 0.10
-Nodes (29): backfillGraphTables(), backfillOwner(), BackfillResult, decomposeAndInsert(), hasColumn(), NodeMeta, writeGraphToNormalizedTables(), assembleGraph() (+21 more)
+Cohesion: 0.12
+Nodes (24): writeGraphToNormalizedTables(), assembleGraph(), captureCurrentState(), deleteRevision(), getRevision(), getSubflowSnapshotsForWorkflow(), GraphMetaRow, listRevisions() (+16 more)
 
 ### Community 106 - "Community 106"
 Cohesion: 0.25
 Nodes (7): author, description, main, name, private, type, version
 
 ### Community 107 - "Community 107"
-Cohesion: 0.21
-Nodes (11): collectVariableOptions(), flattenObjectKeys(), isActionConfig(), jsonVariableOptions(), outputNameForAction(), SelectionSummary, summarizeRunError(), variableNamesFromSerializedConfig() (+3 more)
+Cohesion: 0.24
+Nodes (8): collectVariableOptions(), flattenObjectKeys(), isActionConfig(), jsonVariableOptions(), outputNameForAction(), SelectionSummary, variableNamesFromSerializedConfig(), WorkflowGraphInspectorProps
 
 ### Community 108 - "Community 108"
 Cohesion: 0.20
@@ -655,8 +651,8 @@ Cohesion: 0.20
 Nodes (9): Browser Profiles, Call Subflow, Navigation And App Shell, Profiles Tab, Project And Subflow Invariants, Project Settings, Projects, Subflows (+1 more)
 
 ### Community 112 - "Community 112"
-Cohesion: 0.24
-Nodes (8): GraphSelectionRequest, PageHeader(), PageHeaderProps, mapRunStateToMainGraph(), resolveMainGraphNodeId(), runtimeDiagnosticsFromStepId(), WorkflowDetailPage(), WorkflowDetailPageProps
+Cohesion: 0.23
+Nodes (10): RunStatusBar(), RunStatusBarProps, GraphSelectionRequest, runStatusLabel(), mapRunStateToMainGraph(), resolveMainGraphNodeId(), runtimeDiagnosticsFromStepId(), WorkflowDetailPage() (+2 more)
 
 ### Community 113 - "Community 113"
 Cohesion: 0.29
@@ -668,7 +664,7 @@ Nodes (8): Browser Launch, Command Boundary, Evidence, Execution, Persistence, R
 
 ### Community 115 - "Community 115"
 Cohesion: 0.16
-Nodes (7): EventRow, scheduleFromRow(), ScheduleRow, WorkflowScheduleRepository, WorkflowSchedule, WorkflowScheduleEventFilter, WorkflowScheduleStatus
+Nodes (8): EventRow, scheduleFromRow(), ScheduleRow, WorkflowScheduleRepository, WorkflowSchedule, WorkflowScheduleEventFilter, WorkflowScheduleInput, WorkflowScheduleStatus
 
 ### Community 116 - "Community 116"
 Cohesion: 0.10
@@ -679,24 +675,20 @@ Cohesion: 0.29
 Nodes (7): mac, category, entitlements, entitlementsInherit, gatekeeperAssess, hardenedRuntime, target
 
 ### Community 118 - "Community 118"
-Cohesion: 0.24
-Nodes (4): bounded(), OperationsRepository, sanitizeSummary(), OverviewAttentionItem
+Cohesion: 0.29
+Nodes (3): bounded(), OperationsRepository, OverviewAttentionItem
 
 ### Community 119 - "Community 119"
 Cohesion: 0.29
 Nodes (5): appCss, buttonSource, css, cssFiles, dialogSource
 
 ### Community 120 - "Community 120"
-Cohesion: 0.25
-Nodes (7): formatTimestamp(), RevisionHistoryDrawer(), sampleGraph, sampleRevisionDetail, sampleRevisions, RevisionDetail, RevisionSummary
+Cohesion: 0.10
+Nodes (20): formatTimestamp(), RevisionHistoryDrawer(), RevisionHistoryDrawerProps, sampleGraph, sampleRevisionDetail, sampleRevisions, deleteSubflowRevision(), deleteWorkflowRevision() (+12 more)
 
 ### Community 121 - "Community 121"
 Cohesion: 0.25
 Nodes (7): Belongs Here, Change Checklist, Command Boundary, Does Not Belong Here, Key Files, Key Rules, Purpose
-
-### Community 122 - "Community 122"
-Cohesion: 0.38
-Nodes (3): getProjectCollections(), openProjectTab(), openWorkflows()
 
 ### Community 123 - "Community 123"
 Cohesion: 0.18
@@ -719,8 +711,8 @@ Cohesion: 0.50
 Nodes (3): generateReleaseSbom(), NPM_SBOM_ARGS, runNpmSbom()
 
 ### Community 128 - "Community 128"
-Cohesion: 0.21
-Nodes (10): browserProfiles, persona, WorkflowSettingsDialog(), clonePersona(), isKnownPersonaId(), personaForId(), personaForSeed(), stableCatalogIndex() (+2 more)
+Cohesion: 0.38
+Nodes (4): Harness(), useWorkflowGraphShortcuts(), UseWorkflowGraphShortcutsInput, WorkflowGraphEditor()
 
 ### Community 131 - "Community 131"
 Cohesion: 0.13
@@ -737,6 +729,10 @@ Nodes (8): After Changes, Agent Instructions, File Size Limits, graphify, Produc
 ### Community 145 - "Community 145"
 Cohesion: 0.25
 Nodes (7): Graph Autosave, Package Export/Import, Run from Selected, Run Status, Workflow Detail, Workflow List, Workflow UI Invariants
+
+### Community 146 - "Community 146"
+Cohesion: 0.33
+Nodes (4): PageHeader(), PageHeaderProps, SubflowDetailPage(), SubflowDetailPageProps
 
 ### Community 147 - "Community 147"
 Cohesion: 0.25
@@ -787,12 +783,12 @@ Cohesion: 0.27
 Nodes (5): NodeProps, PrettyVariableViewer(), PrettyVariableViewerProps, RunVariablesDrawer(), RunVariablesDrawerProps
 
 ### Community 168 - "Community 168"
-Cohesion: 0.21
-Nodes (6): browserIdentityPreferences(), settingsBrowserToConfig(), withDefaultFingerprintFontsDir(), WorkflowSettingsService, WorkflowBrowserConfig, WorkflowSettingsBrowserLaunch
+Cohesion: 0.38
+Nodes (7): classifyWorkflowGraphEdge(), classifyWorkflowGraphEdgeFromSource(), isBranchPort(), isContinuationPort(), isLoopPort(), isRecoveryPort(), linearLaneOutputEdges()
 
 ### Community 170 - "Community 170"
-Cohesion: 0.12
-Nodes (22): createAuthCommands(), tableExists(), tableInfo(), up(), DbConnection, Migration, PostgresDbConnection, rollbackMigrations() (+14 more)
+Cohesion: 0.09
+Nodes (31): createAuthCommands(), getDbConnection(), loadEnv(), tableExists(), tableInfo(), up(), DatabaseSyncWrapper, dropGraphJsonColumn() (+23 more)
 
 ### Community 171 - "Community 171"
 Cohesion: 0.19
@@ -803,60 +799,52 @@ Cohesion: 0.31
 Nodes (10): copyIssueDetails(), hasIssueDetails(), issueDetailsText(), issuePanelHeader(), issuePanelSummary(), issueSeverityLabel(), RunIssuePanel(), RunIssuePanelProps (+2 more)
 
 ### Community 173 - "Community 173"
-Cohesion: 0.36
-Nodes (6): edgesForNodes(), generateRecordingGraph(), GenerateRecordingGraphOptions, recordedDelayBeforeTarget(), recordingNodePosition(), timestampMs()
+Cohesion: 0.17
+Nodes (14): edgesForNodes(), generateRecordingGraph(), GenerateRecordingGraphOptions, recordedDelayBeforeTarget(), recordingNodePosition(), timestampMs(), actionConfigOrNull(), finiteReviewNumber() (+6 more)
 
 ### Community 174 - "Community 174"
-Cohesion: 0.40
-Nodes (4): ActionFieldOptionReference, ActionFieldReference, HelpFieldCategory, StepHelpLanguage
+Cohesion: 0.33
+Nodes (5): BrowserProfileRow, parseJson(), ProjectRow, rowToBrowserProfile(), WorkflowRow
 
 ### Community 175 - "Community 175"
 Cohesion: 0.25
 Nodes (5): ProjectsPage(), ProjectsPageProps, otherProject, project, stats
 
 ### Community 176 - "Community 176"
-Cohesion: 0.31
-Nodes (6): TemplateTextFieldRef, duplicateVariableNames(), SetVariableConfig, SetVariablesConfigFields(), SetVariablesConfigFieldsProps, variableRowsFromConfig()
-
-### Community 177 - "Community 177"
-Cohesion: 0.17
-Nodes (14): defaultForm(), formFromSchedule(), intervalDraft(), IntervalUnit, kindFromForm(), parseDatetimeLocal(), ScheduleDialogMode, ScheduleFormDialog() (+6 more)
+Cohesion: 0.27
+Nodes (7): TemplateTextFieldRef, duplicateVariableNames(), SetVariableConfig, SetVariablesConfigFields(), SetVariablesConfigFieldsProps, variableRowsFromConfig(), VariableValueType
 
 ### Community 179 - "Community 179"
-Cohesion: 0.15
-Nodes (10): RunStatusBar(), RunStatusBarProps, runStatusLabel(), workflow, workflowPackageSections, WorkflowListPage(), AppPackageDialogs(), defaultProps (+2 more)
-
-### Community 180 - "Community 180"
-Cohesion: 0.50
-Nodes (3): parseProxyServer(), validateGraphEdgeDelay(), validIpAddress()
+Cohesion: 0.40
+Nodes (3): openWorkflowDetails(), openWorkflows(), WorkflowStep
 
 ### Community 181 - "Community 181"
 Cohesion: 0.50
 Nodes (4): publish, owner, provider, repo
 
 ### Community 182 - "Community 182"
-Cohesion: 0.43
-Nodes (7): actionConfigOrNull(), finiteReviewNumber(), mergeReviewedRecordingAction(), reconcileReviewedRecordingSteps(), reviewedStepRecords(), stringArrayReviewValue(), stringReviewValue()
+Cohesion: 0.40
+Nodes (4): ProjectProfilesPanel(), environments, project, workflows
 
 ## Knowledge Gaps
-- **799 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `css` (+794 more)
+- **800 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `css` (+795 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `WorkflowGraph` connect `Backend Commands & Package Services` to `Runtime & Workflow Execution`, `Workflow API & Workspace`, `Persistence & Workflow Repository`, `Workflow Core Types & Evidence Recording`, `Workflow Graph & React Flow Integration`, `Graph Layout & ELK Integration`, `Graph Validation & Cycle Detection`, `Graph Compilation & Run Planning`, `App State & Navigation`, `Help Disclosure & XPath Cookbook`, `Community 24`, `Community 26`, `Community 27`, `Community 28`, `Community 34`, `Community 36`, `Community 37`, `Community 38`, `Community 39`, `Community 173`, `Community 49`, `Community 56`, `Community 61`, `Community 62`, `Community 63`, `Community 76`, `Community 77`, `Community 89`, `Community 95`, `Community 104`, `Community 105`, `Community 107`, `Community 112`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
-- **Why does `ActionConfig` connect `Action Configuration UI Components` to `Runtime & Workflow Execution`, `Workflow API & Workspace`, `Browser Interaction & Primitives`, `Workflow Core Types & Evidence Recording`, `Workflow Graph Configuration & Logic`, `Workflow Graph & React Flow Integration`, `Action Validation & Constraints`, `Graph Validation & Cycle Detection`, `Graph Compilation & Run Planning`, `Project/Profile UI & Dialogs`, `Action Tracing & Runner Execution`, `Domain Policy & Hostname Validation`, `Community 22`, `Community 23`, `Community 24`, `Community 25`, `Community 28`, `Community 33`, `Community 35`, `Community 182`, `Community 58`, `Community 60`, `Community 73`, `Community 76`, `Community 77`, `Community 94`, `Community 107`?**
-  _High betweenness centrality (0.044) - this node is a cross-community bridge._
-- **Why does `WorkflowSettings` connect `Runtime & Workflow Execution` to `Community 128`, `Workflow API & Workspace`, `Backend Commands & Package Services`, `Persistence & Workflow Repository`, `Workflow Core Types & Evidence Recording`, `Graph Compilation & Run Planning`, `App State & Navigation`, `Action Tracing & Runner Execution`, `Browser Session & Identity Management`, `Identity Repository & Electron Bridge`, `Domain Policy & Hostname Validation`, `Community 24`, `Community 25`, `Community 28`, `Community 29`, `Community 36`, `Community 37`, `Community 168`, `Community 42`, `Community 44`, `Community 180`, `Community 53`, `Community 59`, `Community 62`, `Community 73`, `Community 77`, `Community 78`, `Community 89`, `Community 95`, `Community 105`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Why does `WorkflowGraph` connect `Community 38` to `Runtime & Workflow Execution`, `Workflow API & Workspace`, `Backend Commands & Package Services`, `Persistence & Workflow Repository`, `Workflow Core Types & Evidence Recording`, `Workflow Graph & React Flow Integration`, `Graph Layout & ELK Integration`, `Graph Validation & Cycle Detection`, `Graph Compilation & Run Planning`, `App State & Navigation`, `Help Disclosure & XPath Cookbook`, `Community 146`, `Identity Repository & Electron Bridge`, `Community 23`, `Community 24`, `Community 26`, `Community 27`, `Community 28`, `Community 34`, `Community 36`, `Community 39`, `Community 173`, `Community 47`, `Community 48`, `Community 49`, `Community 179`, `Community 180`, `Community 56`, `Community 61`, `Community 62`, `Community 63`, `Community 65`, `Community 76`, `Community 77`, `Community 95`, `Community 105`, `Community 107`, `Community 112`, `Community 120`?**
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
+- **Why does `build` connect `Community 69` to `Community 106`, `Community 117`, `Community 181`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
+- **Why does `ActionConfig` connect `Action Configuration UI Components` to `Runtime & Workflow Execution`, `Workflow API & Workspace`, `Browser Interaction & Primitives`, `Workflow Core Types & Evidence Recording`, `Workflow Graph Configuration & Logic`, `Workflow Graph & React Flow Integration`, `Action Validation & Constraints`, `Graph Validation & Cycle Detection`, `Graph Compilation & Run Planning`, `Project/Profile UI & Dialogs`, `Action Tracing & Runner Execution`, `Identity Repository & Electron Bridge`, `Domain Policy & Hostname Validation`, `Community 22`, `Community 23`, `Community 24`, `Community 25`, `Community 33`, `Community 35`, `Community 173`, `Community 58`, `Community 60`, `Community 73`, `Community 76`, `Community 77`, `Community 94`, `Community 105`, `Community 107`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _799 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _800 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Runtime & Workflow Execution` be split into smaller, more focused modules?**
-  _Cohesion score 0.0519219736087206 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08200290275761973 - nodes in this community are weakly interconnected._
 - **Should `Workflow API & Workspace` be split into smaller, more focused modules?**
-  _Cohesion score 0.06758742286218043 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06181410974244121 - nodes in this community are weakly interconnected._
 - **Should `Backend Commands & Package Services` be split into smaller, more focused modules?**
-  _Cohesion score 0.08983050847457627 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10676532769556026 - nodes in this community are weakly interconnected._
