@@ -189,8 +189,25 @@ describe("ProjectsPage", () => {
     // Reopen menu
     fireEvent.click(actionsBtn);
 
-    // Test Delete callback
+    // Test Delete callback triggers confirmation dialog
     fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+    expect(props.onDeleteProject).not.toHaveBeenCalled();
+
+    // Confirm dialog is open
+    const confirmTitle = screen.getByRole("heading", { name: /delete project\?/i });
+    expect(confirmTitle).toBeInTheDocument();
+
+    // Clicking cancel should close the dialog and not trigger onDeleteProject
+    const cancelBtn = screen.getByRole("button", { name: /cancel/i });
+    fireEvent.click(cancelBtn);
+    expect(confirmTitle).not.toBeInTheDocument();
+    expect(props.onDeleteProject).not.toHaveBeenCalled();
+
+    // Reopen menu and click delete to confirm
+    fireEvent.click(actionsBtn);
+    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+    const confirmBtn = screen.getByRole("button", { name: /^delete$/i });
+    fireEvent.click(confirmBtn);
     expect(props.onDeleteProject).toHaveBeenCalledWith("project-1");
   });
 });

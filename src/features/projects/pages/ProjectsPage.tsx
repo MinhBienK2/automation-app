@@ -74,6 +74,7 @@ export function ProjectsPage({
     }
   }, [browseMode]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [deleteProjectCandidateId, setDeleteProjectCandidateId] = useState<string | null>(null);
   const [projectNameDraft, setProjectNameDraft] = useState("");
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState("");
   const [projectError, setProjectError] = useState("");
@@ -313,7 +314,7 @@ export function ProjectsPage({
                                     className="action-dropdown-item destructive"
                                     type="button"
                                     onClick={() => {
-                                      onDeleteProject(project.id);
+                                      setDeleteProjectCandidateId(project.id);
                                       setOpenActionMenuId(null);
                                     }}
                                   >
@@ -415,6 +416,45 @@ export function ProjectsPage({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteProjectCandidateId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteProjectCandidateId(null);
+        }}
+      >
+        <DialogContent className="workflow-dialog">
+          <DialogHeader>
+            <p className="eyebrow" style={{ color: "var(--app-danger)" }}>Danger Zone</p>
+            <DialogTitle>Delete Project?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the project and all workflows, subflows, and browser profiles inside it. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="form-actions">
+            <Button
+              shape="pill"
+              variant="destructive"
+              type="button"
+              onClick={() => {
+                if (deleteProjectCandidateId && onDeleteProject) {
+                  onDeleteProject(deleteProjectCandidateId);
+                }
+                setDeleteProjectCandidateId(null);
+              }}
+            >
+              Delete
+            </Button>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setDeleteProjectCandidateId(null)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </section>
