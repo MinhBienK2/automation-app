@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../../components/ui/button";
 import pkg from "../../../../package.json";
 import {
@@ -9,14 +9,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../../components/ui/dialog";
-import { SwitchField } from "../../../components/ui/switch";
+import { Switch, SwitchField } from "../../../components/ui/switch";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
+import { Input } from "../../../components/ui/input";
 import type { Accent, Density, Theme } from "../../../app/useThemePreferences";
 
 type SettingsPageProps = {
   graphAutosaveEnabled: boolean;
+  graphAutosaveDelayMs: number;
   maintenanceMessage: string;
   onGraphAutosaveEnabledChange: (enabled: boolean) => void;
+  onGraphAutosaveDelayMsChange: (delayMs: number) => void;
   onInstallBinary: () => void | Promise<void>;
   onCleanupProfiles: () => void | Promise<void>;
   theme: Theme;
@@ -29,8 +32,10 @@ type SettingsPageProps = {
 
 export function SettingsPage({
   graphAutosaveEnabled,
+  graphAutosaveDelayMs,
   maintenanceMessage,
   onGraphAutosaveEnabledChange,
+  onGraphAutosaveDelayMsChange,
   onInstallBinary,
   onCleanupProfiles,
   theme,
@@ -42,6 +47,11 @@ export function SettingsPage({
 }: SettingsPageProps) {
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [cleanupPending, setCleanupPending] = useState(false);
+  const [localDelaySec, setLocalDelaySec] = useState(() => (graphAutosaveDelayMs / 1000).toString());
+
+  useEffect(() => {
+    setLocalDelaySec((graphAutosaveDelayMs / 1000).toString());
+  }, [graphAutosaveDelayMs]);
 
   async function confirmCleanupProfiles() {
     setCleanupPending(true);
@@ -75,13 +85,70 @@ export function SettingsPage({
           </div>
         </div>
 
-        <SwitchField
-          id="graph-autosave-enabled"
-          label="Autosave graph changes"
-          description="Save graph edits after changes. Turn this off to use manual Save."
-          checked={graphAutosaveEnabled}
-          onCheckedChange={onGraphAutosaveEnabledChange}
-        />
+        <div
+          className="switch-field"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "24px",
+            padding: "var(--space-md)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)", flexGrow: 1, minWidth: 0 }}>
+            <Switch
+              id="graph-autosave-enabled"
+              aria-labelledby="graph-autosave-enabled-label"
+              checked={graphAutosaveEnabled}
+              onCheckedChange={onGraphAutosaveEnabledChange}
+            />
+            <span className="switch-field-copy" style={{ gap: "2px" }}>
+              <strong id="graph-autosave-enabled-label" style={{ fontSize: "13.5px" }}>Autosave graph changes</strong>
+              <small style={{ color: "var(--fg-muted)" }}>
+                Save graph edits after changes. Turn this off to use manual Save.
+              </small>
+            </span>
+          </div>
+
+          {graphAutosaveEnabled && (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+              <span
+                style={{
+                  fontWeight: 500,
+                  fontSize: "11px",
+                  color: "var(--fg-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Delay
+              </span>
+              <div style={{ width: "70px" }}>
+                <Input
+                  type="number"
+                  min={1}
+                  step="0.1"
+                  value={localDelaySec}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLocalDelaySec(val);
+                    const sec = Number(val);
+                    if (!isNaN(sec) && sec >= 1) {
+                      onGraphAutosaveDelayMsChange(sec * 1000);
+                    }
+                  }}
+                  onBlur={() => {
+                    const sec = Math.max(1, Number(localDelaySec) || 1);
+                    setLocalDelaySec(sec.toString());
+                    onGraphAutosaveDelayMsChange(sec * 1000);
+                  }}
+                  style={{ height: "34px", textAlign: "center" }}
+                />
+              </div>
+              <span style={{ fontSize: "13px", color: "var(--fg-secondary)" }}>s</span>
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="panel settings-panel" aria-label="Appearance settings">

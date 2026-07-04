@@ -28,10 +28,48 @@ export function readGraphAutosaveEnabled() {
 }
 
 export function writeGraphAutosaveEnabled(enabled: boolean) {
-  window.localStorage.setItem(
-    appSettingsStorageKey,
-    JSON.stringify({ graphAutosaveEnabled: enabled }),
-  );
+  try {
+    const stored = window.localStorage.getItem(appSettingsStorageKey);
+    const existing = stored ? (JSON.parse(stored) as Record<string, unknown>) : {};
+    window.localStorage.setItem(
+      appSettingsStorageKey,
+      JSON.stringify({ ...existing, graphAutosaveEnabled: enabled }),
+    );
+  } catch {
+    window.localStorage.setItem(
+      appSettingsStorageKey,
+      JSON.stringify({ graphAutosaveEnabled: enabled }),
+    );
+  }
+}
+
+export function readGraphAutosaveDelayMs(): number {
+  try {
+    const stored = window.localStorage.getItem(appSettingsStorageKey);
+    if (!stored) return 1000;
+    const parsed = JSON.parse(stored) as { graphAutosaveDelayMs?: unknown };
+    return typeof parsed.graphAutosaveDelayMs === "number"
+      ? parsed.graphAutosaveDelayMs
+      : 1000;
+  } catch {
+    return 1000;
+  }
+}
+
+export function writeGraphAutosaveDelayMs(delayMs: number) {
+  try {
+    const stored = window.localStorage.getItem(appSettingsStorageKey);
+    const existing = stored ? (JSON.parse(stored) as Record<string, unknown>) : {};
+    window.localStorage.setItem(
+      appSettingsStorageKey,
+      JSON.stringify({ ...existing, graphAutosaveDelayMs: delayMs }),
+    );
+  } catch {
+    window.localStorage.setItem(
+      appSettingsStorageKey,
+      JSON.stringify({ graphAutosaveDelayMs: delayMs }),
+    );
+  }
 }
 
 export function graphSaveStatusLabel(status: GraphSaveStatus) {

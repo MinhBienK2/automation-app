@@ -37,6 +37,8 @@ import {
   settingsSaveStatuses,
   readGraphAutosaveEnabled,
   writeGraphAutosaveEnabled,
+  readGraphAutosaveDelayMs,
+  writeGraphAutosaveDelayMs,
   cloneWorkflowSettings,
   operationsTargetToMissionTarget,
   type GraphSaveStatus,
@@ -129,6 +131,7 @@ function App() {
   const [workflowSettingsActiveSection, setWorkflowSettingsActiveSection] = useState<WorkflowSettingsSectionId>("general");
   const [workflowSettingsSaveStatuses, setWorkflowSettingsSaveStatuses] = useState<Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>>(settingsSaveStatuses("saved"));
   const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(readGraphAutosaveEnabled);
+  const [graphAutosaveDelayMs, setGraphAutosaveDelayMs] = useState(readGraphAutosaveDelayMs);
   const [graphSaveStatus, setGraphSaveStatus] = useState<GraphSaveStatus>(graphAutosaveEnabled ? "saved" : "off");
   const [graphRevision, setGraphRevision] = useState(0);
   const [savedGraphRevision, setSavedGraphRevision] = useState(0);
@@ -497,7 +500,7 @@ function App() {
       };
 
       void executeSave();
-    }, 1000);
+    }, graphAutosaveDelayMs);
 
     return () => window.clearTimeout(timeoutId);
   }, [
@@ -506,6 +509,7 @@ function App() {
     graphRevision,
     savedGraphRevision,
     workflowGraph,
+    graphAutosaveDelayMs,
   ]);
 
   // --- Initial Data Load ---
@@ -590,6 +594,11 @@ function App() {
     setGraphSaveStatus(
       graphRevisionRef.current === savedGraphRevisionRef.current ? "saved" : "unsaved",
     );
+  }, []);
+
+  const updateGraphAutosaveDelayMs = useCallback((delayMs: number) => {
+    setGraphAutosaveDelayMs(delayMs);
+    writeGraphAutosaveDelayMs(delayMs);
   }, []);
 
   const openDetailWorkflowSettings = useCallback((section: WorkflowSettingsSectionId) => {
@@ -763,8 +772,10 @@ function App() {
       ) : nav.screen === "settings" ? (
         <SettingsPage
           graphAutosaveEnabled={graphAutosaveEnabled}
+          graphAutosaveDelayMs={graphAutosaveDelayMs}
           maintenanceMessage={settingsMaintenanceMessage}
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
+          onGraphAutosaveDelayMsChange={updateGraphAutosaveDelayMs}
           onInstallBinary={installSettingsBrowserBinary}
           onCleanupProfiles={cleanupSettingsBrowserProfiles}
           theme={themePreferences.theme}

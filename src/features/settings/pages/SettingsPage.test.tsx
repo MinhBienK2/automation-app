@@ -6,8 +6,10 @@ import type { Accent, Density, Theme } from "../../../app/useThemePreferences";
 describe("SettingsPage Appearance Preferences", () => {
   const baseProps = {
     graphAutosaveEnabled: false,
+    graphAutosaveDelayMs: 1000,
     maintenanceMessage: "",
     onGraphAutosaveEnabledChange: vi.fn(),
+    onGraphAutosaveDelayMsChange: vi.fn(),
     onInstallBinary: vi.fn(),
     onCleanupProfiles: vi.fn(),
     theme: "dark" as Theme,
@@ -61,6 +63,19 @@ describe("SettingsPage Appearance Preferences", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^spacious$/i }));
     expect(baseProps.onDensityChange).toHaveBeenCalledWith("spacious");
+  });
+
+  test("renders autosave delay input and triggers callback on change", () => {
+    const { rerender } = render(<SettingsPage {...baseProps} graphAutosaveEnabled={false} />);
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+
+    rerender(<SettingsPage {...baseProps} graphAutosaveEnabled={true} graphAutosaveDelayMs={1000} />);
+    const input = screen.getByRole("spinbutton");
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveValue(1);
+
+    fireEvent.change(input, { target: { value: "2" } });
+    expect(baseProps.onGraphAutosaveDelayMsChange).toHaveBeenCalledWith(2000);
   });
 });
 
