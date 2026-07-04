@@ -141,4 +141,45 @@ describe("AppSidebar user profile and logout", () => {
     await userEvent.click(usersSubmenuBtn);
     expect(onOpenAdminUsers).toHaveBeenCalledTimes(1);
   });
+
+  test("renders Sign In to Workplace button when currentUser is null and PG is available", async () => {
+    const onSwitchToLoginMode = vi.fn();
+    render(
+      <AppSidebar
+        {...defaultProps}
+        currentUser={null}
+        pgAvailable={true}
+        onSwitchToLoginMode={onSwitchToLoginMode}
+      />
+    );
+
+    const switchBtn = screen.getByRole("button", { name: /sign in to workplace/i });
+    expect(switchBtn).toBeInTheDocument();
+
+    await userEvent.click(switchBtn);
+    expect(onSwitchToLoginMode).toHaveBeenCalledTimes(1);
+  });
+
+  test("does not render Sign In to Workplace button when pgAvailable is false or currentUser is present", () => {
+    const { rerender } = render(
+      <AppSidebar
+        {...defaultProps}
+        currentUser={null}
+        pgAvailable={false}
+        onSwitchToLoginMode={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("button", { name: /sign in to workplace/i })).not.toBeInTheDocument();
+
+    rerender(
+      <AppSidebar
+        {...defaultProps}
+        currentUser={{ email: "user@example.com", role: "user" }}
+        pgAvailable={true}
+        onSwitchToLoginMode={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("button", { name: /sign in to workplace/i })).not.toBeInTheDocument();
+  });
 });
+

@@ -687,6 +687,8 @@ function App() {
       currentUser={auth.currentUser}
       onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
       screen={nav.screen}
+      pgAvailable={auth.pgAvailable}
+      onSwitchToLoginMode={auth.switchToLoginMode}
     >
       {nav.screen === "overview" ? (
         <OperationsOverviewPage
@@ -716,8 +718,11 @@ function App() {
           onThemeChange={themePreferences.setTheme}
           onAccentChange={themePreferences.setAccent}
           onDensityChange={themePreferences.setDensity}
+          pgAvailable={auth.pgAvailable}
+          onSwitchToLoginMode={auth.switchToLoginMode}
         />
       ) : nav.screen === "admin-users" ? (
+
         <AdminPanel />
       ) : nav.screen === "settings-help" ? (
         <SettingsHelpPage />

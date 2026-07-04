@@ -26,6 +26,8 @@ type SettingsPageProps = {
   onThemeChange: (theme: Theme) => void;
   onAccentChange: (accent: Accent) => void;
   onDensityChange: (density: Density) => void;
+  pgAvailable?: boolean;
+  onSwitchToLoginMode?: () => void;
 };
 
 export function SettingsPage({
@@ -41,9 +43,12 @@ export function SettingsPage({
   onThemeChange,
   onAccentChange,
   onDensityChange,
+  pgAvailable,
+  onSwitchToLoginMode,
 }: SettingsPageProps) {
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [cleanupPending, setCleanupPending] = useState(false);
+
 
   async function confirmCleanupProfiles() {
     setCleanupPending(true);
@@ -89,7 +94,19 @@ export function SettingsPage({
               {appMode === "public" ? "Public (Central Shared PostgreSQL)" : "Private (Local SQLite)"}
             </span>
           </div>
+          {appMode === "private" && pgAvailable && onSwitchToLoginMode && (
+            <div style={{ display: "flex", marginTop: "0.5rem" }}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onSwitchToLoginMode}
+              >
+                Switch to Workplace Mode
+              </Button>
+            </div>
+          )}
         </div>
+
       </section>
 
       <section className="panel settings-panel" aria-label="Workflow editing settings">
