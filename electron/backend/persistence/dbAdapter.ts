@@ -34,7 +34,7 @@ export class PgDbAdapter implements DbAdapter {
   }
 
   async transaction<T>(fn: (db: DbAdapter) => Promise<T>): Promise<T> {
-    const isPool = "connect" in this.pool && typeof this.pool.connect === "function";
+    const isPool = "connect" in this.pool && typeof this.pool.connect === "function" && !("release" in this.pool);
     if (isPool) {
       const client = await (this.pool as pg.Pool).connect();
       try {
@@ -50,16 +50,7 @@ export class PgDbAdapter implements DbAdapter {
         client.release();
       }
     } else {
-      const client = this.pool as pg.Client | pg.PoolClient;
-      await client.query("BEGIN");
-      try {
-        const result = await fn(this);
-        await client.query("COMMIT");
-        return result;
-      } catch (err) {
-        await client.query("ROLLBACK");
-        throw err;
-      }
+      return await fn(this);
     }
   }
 }

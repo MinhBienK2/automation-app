@@ -477,6 +477,36 @@ describe("Projects, Environments, and Subflows integration", () => {
     expect(refetched?.environment).toEqual(nextEnv);
   });
 
+  test("ensureProjectModelReady does not create a default project if none exist", async () => {
+    const { createWorkflowCommandHandlers } = await import("./index.js");
+    const { createAppPaths } = await import("../persistence/database.js");
+    const { TestDbAdapter } = await import("../persistence/testDbAdapter.js");
+
+    const tempRoot = await fs.mkdtemp(path.join(tempRoots[0] ? path.dirname(tempRoots[0]) : "/tmp", "automation-app-"));
+    const appPaths = createAppPaths(tempRoot);
+    const database = await TestDbAdapter.create();
+    
+    await database.query(
+      `INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4)`,
+      ["test-owner-id", "test-owner@example.com", "hash", "user"]
+    );
+    database.ownerId = "test-owner-id";
+    await database.query("DELETE FROM projects");
+
+    const handlers = createWorkflowCommandHandlers({
+      appPaths,
+      database,
+      defaultFingerprintFontsDir: null,
+    });
+
+    await handlers.ensureProjectModelReady();
+
+    const projects = await handlers.listProjects();
+    expect(projects).toEqual([]);
+
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
 });
 
 

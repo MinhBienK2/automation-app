@@ -142,19 +142,22 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   async function ensureProjectModelReady() {
     if (!context.database.ownerId) return;
     await runManager.recoverInterruptedRuns();
-    const project = await ensureDefaultProject();
-    await ensureDefaultBrowserProfile(project);
-    const workflows = await repository.listWorkflows();
-    for (const workflow of workflows) {
-      const projectId = workflow.project_id ?? project.id;
-      if (!workflow.project_id) {
-        await repository.assignWorkflowProject(workflow.id, projectId);
-      }
-      const current = await repository.getWorkflowSummary(workflow.id);
-      if (!current?.browser_profile_id) {
-        const ownerProject = (await repository.getProject(projectId)) ?? project;
-        const browserProfile = await ensureDefaultBrowserProfile(ownerProject);
-        await repository.assignWorkflowBrowserProfile(workflow.id, browserProfile.id);
+    const list = await repository.listProjects();
+    const project = list[0];
+    if (project) {
+      await ensureDefaultBrowserProfile(project);
+      const workflows = await repository.listWorkflows();
+      for (const workflow of workflows) {
+        const projectId = workflow.project_id ?? project.id;
+        if (!workflow.project_id) {
+          await repository.assignWorkflowProject(workflow.id, projectId);
+        }
+        const current = await repository.getWorkflowSummary(workflow.id);
+        if (!current?.browser_profile_id) {
+          const ownerProject = (await repository.getProject(projectId)) ?? project;
+          const browserProfile = await ensureDefaultBrowserProfile(ownerProject);
+          await repository.assignWorkflowBrowserProfile(workflow.id, browserProfile.id);
+        }
       }
     }
   }
@@ -163,7 +166,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const list = await repository.listProjects();
     const existing = list[0];
     if (existing) return existing;
-    return await repository.createProject("Main");
+    throw commandError("No projects available. Please create a project first.", "projectId");
   }
 
   async function ensureDefaultBrowserProfile(project: Project): Promise<BrowserProfile> {
