@@ -410,6 +410,14 @@ function App() {
     savedGraphRevisionRef.current = savedGraphRevision;
   }, [savedGraphRevision]);
 
+  const isSavingRef = useRef(false);
+  const savePendingRef = useRef(false);
+  const workflowGraphRef = useRef(workflowGraph);
+
+  useEffect(() => {
+    workflowGraphRef.current = workflowGraph;
+  }, [workflowGraph]);
+
   const {
     graphExitDialogOpen,
     requestGraphExitNavigation,
@@ -452,14 +460,24 @@ function App() {
     }
 
     const workflowId = workflowsWorkspace.detail.workflow.id;
-    const graphToSave = workflowGraph;
     const revisionToSave = graphRevision;
 
     const timeoutId = window.setTimeout(() => {
-      void (async () => {
+      const executeSave = async () => {
+        if (isSavingRef.current) {
+          savePendingRef.current = true;
+          return;
+        }
+
+        isSavingRef.current = true;
+        savePendingRef.current = false;
         setGraphSaveStatus("saving");
+
         try {
-          await saveWorkflowGraph(workflowId, graphToSave);
+          const currentGraph = workflowGraphRef.current;
+          if (currentGraph) {
+            await saveWorkflowGraph(workflowId, currentGraph);
+          }
           setSavedGraphRevision((current) => Math.max(current, revisionToSave));
           if (graphRevisionRef.current === revisionToSave) {
             setGraphSaveStatus("saved");
@@ -470,9 +488,16 @@ function App() {
             setGraphSaveStatus("failed");
           }
           setAppError(commandMessage(error));
+        } finally {
+          isSavingRef.current = false;
+          if (savePendingRef.current) {
+            void executeSave();
+          }
         }
-      })();
-    }, 300);
+      };
+
+      void executeSave();
+    }, 1000);
 
     return () => window.clearTimeout(timeoutId);
   }, [

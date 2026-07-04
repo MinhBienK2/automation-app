@@ -97,6 +97,8 @@ async function decomposeAndInsert(
   }
 }
 
+const writeLocks = new Map<string, Promise<any>>();
+
 /**
  * Write a graph to the normalized tables (single source of truth after PR 2.3).
  * Deletes existing rows for this owner first, then inserts fresh.
@@ -109,44 +111,71 @@ export async function writeGraphToNormalizedTables(
   ownerId: string,
   now: string,
 ): Promise<void> {
-  const metaTable = tableKind === "workflow" ? "workflows" : "subflows";
-  const nodeTable = tableKind === "workflow" ? "workflow_nodes" : "subflow_nodes";
-  const edgeTable = tableKind === "workflow" ? "workflow_edges" : "subflow_edges";
-  const ownerColumn = tableKind === "workflow" ? "workflow_id" : "subflow_id";
-  const dbOwnerId = db.ownerId;
+  const lockKey = `${tableKind}:${ownerId}`;
+  const prevLock = writeLocks.get(lockKey) || Promise.resolve();
 
-  await db.transaction(async (tx) => {
-    if (dbOwnerId) {
-      await tx.execute(`DELETE FROM ${edgeTable} WHERE ${ownerColumn} = $1 AND owner_id = $2`, [ownerId, dbOwnerId]);
-      await tx.execute(`DELETE FROM ${nodeTable} WHERE ${ownerColumn} = $1 AND owner_id = $2`, [ownerId, dbOwnerId]);
-    } else {
-      await tx.execute(`DELETE FROM ${edgeTable} WHERE ${ownerColumn} = $1`, [ownerId]);
-      await tx.execute(`DELETE FROM ${nodeTable} WHERE ${ownerColumn} = $1`, [ownerId]);
+  const currentLock = (async () => {
+    // Wait for the previous write lock on this workflow/subflow to finish,
+    // ignoring errors in the previous operation.
+    try {
+      await prevLock;
+    } catch {
+      // ignore
     }
 
-    await decomposeAndInsert(tx, graph, nodeTable, edgeTable, ownerColumn, ownerId, now);
+    const metaTable = tableKind === "workflow" ? "workflows" : "subflows";
+    const nodeTable = tableKind === "workflow" ? "workflow_nodes" : "subflow_nodes";
+    const edgeTable = tableKind === "workflow" ? "workflow_edges" : "subflow_edges";
+    const ownerColumn = tableKind === "workflow" ? "workflow_id" : "subflow_id";
+    const dbOwnerId = db.ownerId;
 
-    if (dbOwnerId) {
-      await tx.execute(
-        `UPDATE ${metaTable} SET graph_version = $1, viewport_json = $2, migration_notes_json = $3 WHERE id = $4 AND owner_id = $5`,
-        [
-          graph.version,
-          JSON.stringify(graph.viewport),
-          JSON.stringify(graph.migration_notes ?? []),
-          ownerId,
-          dbOwnerId,
-        ],
-      );
-    } else {
-      await tx.execute(
-        `UPDATE ${metaTable} SET graph_version = $1, viewport_json = $2, migration_notes_json = $3 WHERE id = $4`,
-        [
-          graph.version,
-          JSON.stringify(graph.viewport),
-          JSON.stringify(graph.migration_notes ?? []),
-          ownerId,
-        ],
-      );
+    await db.transaction(async (tx) => {
+      if (dbOwnerId) {
+        await tx.execute(`DELETE FROM ${edgeTable} WHERE ${ownerColumn} = $1 AND owner_id = $2`, [ownerId, dbOwnerId]);
+        await tx.execute(`DELETE FROM ${nodeTable} WHERE ${ownerColumn} = $1 AND owner_id = $2`, [ownerId, dbOwnerId]);
+      } else {
+        await tx.execute(`DELETE FROM ${edgeTable} WHERE ${ownerColumn} = $1`, [ownerId]);
+        await tx.execute(`DELETE FROM ${nodeTable} WHERE ${ownerColumn} = $1`, [ownerId]);
+      }
+
+      await decomposeAndInsert(tx, graph, nodeTable, edgeTable, ownerColumn, ownerId, now);
+
+      if (dbOwnerId) {
+        await tx.execute(
+          `UPDATE ${metaTable} SET graph_version = $1, viewport_json = $2, migration_notes_json = $3 WHERE id = $4 AND owner_id = $5`,
+          [
+            graph.version,
+            JSON.stringify(graph.viewport),
+            JSON.stringify(graph.migration_notes ?? []),
+            ownerId,
+            dbOwnerId,
+          ],
+        );
+      } else {
+        await tx.execute(
+          `UPDATE ${metaTable} SET graph_version = $1, viewport_json = $2, migration_notes_json = $3 WHERE id = $4`,
+          [
+            graph.version,
+            JSON.stringify(graph.viewport),
+            JSON.stringify(graph.migration_notes ?? []),
+            ownerId,
+          ],
+        );
+      }
+    });
+  })();
+
+  // Put the lock in the map so subsequent writes wait for it.
+  writeLocks.set(lockKey, currentLock);
+
+  // Clean up the lock from the map after it is completed,
+  // but only if it's still the active one (hasn't been overwritten by a newer write).
+  const cleanUp = () => {
+    if (writeLocks.get(lockKey) === currentLock) {
+      writeLocks.delete(lockKey);
     }
-  });
+  };
+  currentLock.then(cleanUp, cleanUp);
+
+  return currentLock;
 }

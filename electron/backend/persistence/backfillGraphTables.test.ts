@@ -76,4 +76,44 @@ describe("save writes to normalized tables", () => {
     expect(loaded!.nodes).toHaveLength(3);
     expect(loaded!.nodes[1].config).toEqual(graph.nodes[1].config);
   });
+
+  test("saveWorkflowGraph concurrently preserves integrity and succeeds", async () => {
+    const db = await TestDbAdapter.create();
+    const repo = new WorkflowRepository(db);
+    const graph = sampleGraph();
+
+    const projects = await repo.listProjects();
+    const project = projects[0] ?? (await repo.createProject("Main"));
+    const wf = await repo.createWorkflow("Test", graph, new Date(), { projectId: project.id });
+
+    // Create two updated graph states to save concurrently
+    const updated1 = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        { id: "extra1", node_type: "action" as const, label: "Extra 1", position: { x: 0, y: 0 }, config: null, ports: [] }
+      ]
+    };
+    const updated2 = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        { id: "extra2", node_type: "action" as const, label: "Extra 2", position: { x: 0, y: 0 }, config: null, ports: [] }
+      ]
+    };
+
+    // Run saves concurrently
+    await expect(
+      Promise.all([
+        repo.saveWorkflowGraph(wf.id, updated1),
+        repo.saveWorkflowGraph(wf.id, updated2),
+      ])
+    ).resolves.not.toThrow();
+
+    // Verify it ends up in a consistent state (the last one saved, or either, but without duplicate key errors)
+    const fromTables = await assembleGraphFromTables(db, wf.id);
+    expect(fromTables).not.toBeNull();
+    // It should have exactly 4 nodes (start, nav, end, and either extra1 or extra2)
+    expect(fromTables!.nodes).toHaveLength(4);
+  });
 });
