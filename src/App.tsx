@@ -76,7 +76,35 @@ import { useGraphExitNavigation } from "./lib/useGraphExitNavigation";
 import { useAuthState } from "./features/auth/state/useAuthState";
 import { LoginScreen } from "./features/auth/pages/LoginScreen";
 import { AdminPanel } from "./features/auth/pages/AdminPanel";
+import type { AppScreen } from "./shared/types/workspaceContracts";
 
+const ROUTE_CONFIGS: Record<AppScreen, { allowedRoles?: ("admin" | "user")[]; allowPrivate?: boolean }> = {
+  overview: { allowPrivate: true, allowedRoles: ["admin", "user"] },
+  projects: { allowPrivate: true, allowedRoles: ["admin", "user"] },
+  detail: { allowPrivate: true, allowedRoles: ["admin", "user"] },
+  "subflow-detail": { allowPrivate: true, allowedRoles: ["admin", "user"] },
+  settings: { allowPrivate: true, allowedRoles: ["admin", "user"] },
+  schedules: { allowPrivate: true, allowedRoles: ["admin", "user"] },
+  "settings-help": { allowPrivate: true, allowedRoles: ["admin", "user"] },
+  "admin-users": { allowPrivate: false, allowedRoles: ["admin"] },
+};
+
+export function isRouteAllowed(
+  screen: AppScreen,
+  mode: "pending" | "private" | "team",
+  role?: "admin" | "user",
+): boolean {
+  const config = ROUTE_CONFIGS[screen];
+  if (!config) return true;
+  if (mode === "private") {
+    return config.allowPrivate !== false;
+  }
+  if (mode === "team") {
+    if (!role) return false;
+    return config.allowedRoles?.includes(role) ?? true;
+  }
+  return false;
+}
 
 function App() {
   // --- Auth State ---
@@ -506,6 +534,13 @@ function App() {
     }
   }, [nav.screen, setRunSnapshots]);
 
+  // --- Enforce route authorization ---
+  useEffect(() => {
+    if (auth.mode !== "pending" && !isRouteAllowed(nav.screen, auth.mode, auth.currentUser?.role)) {
+      nav.setScreen("overview");
+    }
+  }, [auth.mode, auth.currentUser?.role, nav.screen, nav.setScreen]);
+
   // --- Navigation Helpers ---
   const openIdentityTarget = useCallback((target: IdentityLabTarget) => {
     setIdentityLabTarget(target);
@@ -683,7 +718,10 @@ function App() {
       onOpenSettings={nav.openSettings}
       onOpenSettingsHelp={nav.openSettingsHelp}
       onOpenAdminUsers={() => nav.setScreen("admin-users")}
-      onLogout={auth.logout}
+      onLogout={() => {
+        void auth.logout();
+        nav.setScreen("overview");
+      }}
       currentUser={auth.currentUser}
       onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
       screen={nav.screen}
@@ -721,7 +759,7 @@ function App() {
           pgAvailable={auth.pgAvailable}
           onSwitchToLoginMode={auth.switchToLoginMode}
         />
-      ) : nav.screen === "admin-users" ? (
+      ) : nav.screen === "admin-users" && isRouteAllowed("admin-users", auth.mode, auth.currentUser?.role) ? (
 
         <AdminPanel />
       ) : nav.screen === "settings-help" ? (

@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { isRouteAllowed } from "./App";
 import {
   workflowBridgeMock,
   workflowCommandCallMock,
@@ -1484,5 +1485,95 @@ describe("App settings and graph autosave", () => {
     });
     expect(runSnapshotCalls).toBeGreaterThan(1);
     expect(runStateCalls).toBeGreaterThanOrEqual(1);
+  });
+
+  test("redirects user from admin page after logging out and logging in as regular user", async () => {
+    let currentUser: any = null;
+
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([]),
+      get_app_config: { mode: "public" },
+      me: () => currentUser,
+      login: ({ email }: { email: string }) => {
+        if (email === "admin@example.com") {
+          currentUser = { id: "1", email: "admin@example.com", role: "admin", created_at: "2026-05-27T00:00:00.000Z" };
+        } else {
+          currentUser = { id: "2", email: "user@example.com", role: "user", created_at: "2026-05-27T00:00:00.000Z" };
+        }
+        return { token: "token-value", user: currentUser };
+      },
+      logout: () => {
+        currentUser = null;
+        return null;
+      },
+      list_users: () => [
+        { id: "1", email: "admin@example.com", role: "admin", created_at: "2026-05-27" },
+        { id: "2", email: "user@example.com", role: "user", created_at: "2026-05-27" }
+      ],
+    });
+
+    renderApp();
+
+    // 1. We should be on the Login screen first
+    const emailInput = await screen.findByLabelText(/email address/i);
+    const passwordInput = screen.getByLabelText(/password/i);
+    const signInBtn = screen.getByRole("button", { name: /sign in/i });
+
+    // Login as admin
+    await userEvent.type(emailInput, "admin@example.com");
+    await userEvent.type(passwordInput, "adminpassword");
+    await userEvent.click(signInBtn);
+
+    // 2. We should land on the Overview page or main dashboard
+    // Verify Admin menu is visible in sidebar
+    const adminSidebarBtn = await screen.findByRole("button", { name: /admin/i });
+    expect(adminSidebarBtn).toBeInTheDocument();
+
+    // Go to Admin Users page
+    await userEvent.click(adminSidebarBtn);
+    const usersSubmenuBtn = await screen.findByRole("button", { name: /users/i });
+    await userEvent.click(usersSubmenuBtn);
+
+    // Verify User Management page is loaded
+    expect(await screen.findByRole("heading", { name: /user management/i })).toBeInTheDocument();
+
+    // 3. Logout
+    const logoutBtn = screen.getByRole("button", { name: /sign out/i });
+    await userEvent.click(logoutBtn);
+    const confirmSignOutBtn = await screen.findByRole("button", { name: "Sign Out" });
+    await userEvent.click(confirmSignOutBtn);
+
+    // We should be back at Login Screen
+    const newEmailInput = await screen.findByLabelText(/email address/i);
+    const newPasswordInput = screen.getByLabelText(/password/i);
+    const newSignInBtn = screen.getByRole("button", { name: /sign in/i });
+
+    // 4. Login as user
+    await userEvent.type(newEmailInput, "user@example.com");
+    await userEvent.type(newPasswordInput, "userpassword");
+    await userEvent.click(newSignInBtn);
+
+    // 5. Verify we are NOT on Admin User Management anymore and instead on Overview or main dashboard
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /user management/i })).not.toBeInTheDocument();
+  });
+
+  test("isRouteAllowed helper behaves correctly for different modes and roles", () => {
+    // 1. Private Mode
+    expect(isRouteAllowed("overview", "private")).toBe(true);
+    expect(isRouteAllowed("projects", "private")).toBe(true);
+    expect(isRouteAllowed("admin-users", "private")).toBe(false);
+
+    // 2. Team Mode / Admin
+    expect(isRouteAllowed("overview", "team", "admin")).toBe(true);
+    expect(isRouteAllowed("admin-users", "team", "admin")).toBe(true);
+
+    // 3. Team Mode / Regular User
+    expect(isRouteAllowed("overview", "team", "user")).toBe(true);
+    expect(isRouteAllowed("admin-users", "team", "user")).toBe(false);
+
+    // 4. Pending/unauthenticated
+    expect(isRouteAllowed("overview", "pending")).toBe(false);
+    expect(isRouteAllowed("admin-users", "pending")).toBe(false);
   });
 });
