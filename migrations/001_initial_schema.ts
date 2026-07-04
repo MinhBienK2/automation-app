@@ -10,10 +10,20 @@ async function tableExists(db: DbConnection, table: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-export async function up(db: DbConnection): Promise<void> {
-  if (db.type === "postgres") {
+export async function up(dbOrPgm: any): Promise<void> {
+  const isPgm = typeof dbOrPgm.sql === "function";
+
+  if (isPgm || dbOrPgm.type === "postgres") {
+    const runQuery = async (sql: string) => {
+      if (isPgm) {
+        dbOrPgm.sql(sql);
+      } else {
+        await dbOrPgm.query(sql);
+      }
+    };
+
     // Postgres schema (fresh installation is assumed, no legacy Postgres upgrades exist)
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -23,7 +33,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
     
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS projects (
         id VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
@@ -34,7 +44,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
     
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS browser_profiles (
         id VARCHAR(255) PRIMARY KEY,
         project_id VARCHAR(255) NOT NULL,
@@ -49,7 +59,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS workflows (
         id VARCHAR(255) PRIMARY KEY,
         project_id VARCHAR(255),
@@ -67,7 +77,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS subflows (
         id VARCHAR(255) PRIMARY KEY,
         project_id VARCHAR(255) NOT NULL,
@@ -83,7 +93,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS workflow_nodes (
         id VARCHAR(255) NOT NULL,
         workflow_id VARCHAR(255) NOT NULL,
@@ -105,7 +115,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS workflow_edges (
         id VARCHAR(255) NOT NULL,
         workflow_id VARCHAR(255) NOT NULL,
@@ -121,7 +131,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS subflow_nodes (
         id VARCHAR(255) NOT NULL,
         subflow_id VARCHAR(255) NOT NULL,
@@ -143,7 +153,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS subflow_edges (
         id VARCHAR(255) NOT NULL,
         subflow_id VARCHAR(255) NOT NULL,
@@ -159,7 +169,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS runs (
         id VARCHAR(255) PRIMARY KEY,
         workflow_id VARCHAR(255) NOT NULL,
@@ -175,7 +185,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS run_steps (
         id VARCHAR(255) PRIMARY KEY,
         run_id VARCHAR(255) NOT NULL,
@@ -191,7 +201,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS workflow_schedules (
         id VARCHAR(255) PRIMARY KEY,
         workflow_id VARCHAR(255) NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
@@ -208,7 +218,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS workflow_schedule_events (
         id VARCHAR(255) PRIMARY KEY,
         schedule_id VARCHAR(255) NOT NULL REFERENCES workflow_schedules(id) ON DELETE CASCADE,
@@ -223,7 +233,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS operational_attention_events (
         id VARCHAR(255) PRIMARY KEY,
         event_type VARCHAR(255) NOT NULL,
@@ -237,7 +247,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS workflow_revisions (
         id VARCHAR(255) PRIMARY KEY,
         workflow_id VARCHAR(255) NOT NULL,
@@ -253,7 +263,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS subflow_revisions (
         id VARCHAR(255) PRIMARY KEY,
         subflow_id VARCHAR(255) NOT NULL,
@@ -268,7 +278,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
 
-    await db.query(`
+    await runQuery(`
       CREATE TABLE IF NOT EXISTS migration_log (
         id VARCHAR(255) PRIMARY KEY,
         target_table VARCHAR(255) NOT NULL,
@@ -282,6 +292,7 @@ export async function up(db: DbConnection): Promise<void> {
       );
     `);
   } else {
+    const db = dbOrPgm;
     // SQLite schema
     await db.query(`
       CREATE TABLE IF NOT EXISTS projects (
@@ -640,7 +651,8 @@ export async function up(db: DbConnection): Promise<void> {
   }
 }
 
-export async function down(db: DbConnection): Promise<void> {
+export async function down(dbOrPgm: any): Promise<void> {
+  const isPgm = typeof dbOrPgm.sql === "function";
   const tables = [
     "subflow_revisions",
     "workflow_revisions",
@@ -663,10 +675,14 @@ export async function down(db: DbConnection): Promise<void> {
   ];
 
   for (const table of tables) {
-    if (db.type === "postgres") {
-      await db.query(`DROP TABLE IF EXISTS ${table} CASCADE`);
+    if (isPgm || dbOrPgm.type === "postgres") {
+      if (isPgm) {
+        dbOrPgm.sql(`DROP TABLE IF EXISTS ${table} CASCADE`);
+      } else {
+        await dbOrPgm.query(`DROP TABLE IF EXISTS ${table} CASCADE`);
+      }
     } else {
-      await db.query(`DROP TABLE IF EXISTS ${table}`);
+      await dbOrPgm.query(`DROP TABLE IF EXISTS ${table}`);
     }
   }
 }

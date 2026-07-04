@@ -165,3 +165,29 @@ export async function rollbackMigrations(db: DbConnection, migrations: Migration
   });
   console.log(`[migration] Rolled back migration: ${m.name}`);
 }
+
+export async function checkMigrationsPending(db: DbConnection, migrations: Migration[]): Promise<string[]> {
+  const checkTableSql = db.type === "sqlite"
+    ? "SELECT name FROM sqlite_master WHERE type='table' AND name='migration_history'"
+    : "SELECT tablename FROM pg_tables WHERE tablename='migration_history'";
+
+  const tableRows = await db.query(checkTableSql);
+  if (tableRows.length === 0) {
+    // If migration_history does not exist, all migrations are pending
+    return migrations.map(m => m.name);
+  }
+
+  // Get applied migrations
+  const rows = await db.query("SELECT name FROM migration_history ORDER BY id ASC");
+  const applied = new Set<string>(rows.map((row: any) => row.name));
+
+  // Determine pending migrations
+  const pending: string[] = [];
+  for (const m of migrations) {
+    if (!applied.has(m.name)) {
+      pending.push(m.name);
+    }
+  }
+
+  return pending;
+}

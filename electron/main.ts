@@ -12,7 +12,7 @@ import { createAppPaths } from "./backend/persistence/database.js";
 import { loadAppConfig } from "./backend/persistence/appConfig.js";
 import { initializePgPool } from "./backend/persistence/pgSync.js";
 import { PgDbAdapter } from "./backend/persistence/dbAdapter.js";
-import { PostgresDbConnection, runMigrations } from "./backend/persistence/migrationRunner.js";
+import { PostgresDbConnection, checkMigrationsPending } from "./backend/persistence/migrationRunner.js";
 import { migrations } from "./backend/persistence/migrations.js";
 import pkg from "electron-updater";
 const { autoUpdater } = pkg;
@@ -165,10 +165,19 @@ app.whenReady().then(async () => {
     pool = await initializePgPool(appConfig.publicDatabaseUrl);
     console.log("[startup] PG Pool initialized successfully.");
 
-    // Run schema migrations
+    // Check schema compatibility
     const conn = new PostgresDbConnection(pool);
-    await runMigrations(conn, migrations);
-    console.log("[startup] Schema migrations run successfully.");
+    const pending = await checkMigrationsPending(conn, migrations);
+    if (pending.length > 0) {
+      console.error(`[startup] Database schema is out of date. Pending migrations: ${pending.join(", ")}`);
+      dialog.showErrorBox(
+        "Database Schema Out of Date",
+        "Your database schema is outdated. Please run \"npm run db:migrate\" to update the database schema before launching the application."
+      );
+      app.quit();
+      return;
+    }
+    console.log("[startup] Database schema check completed. Schema is up to date.");
   } catch (error) {
     dialog.showErrorBox(
       "Database Connection Failed",
