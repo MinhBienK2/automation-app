@@ -143,8 +143,8 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
     if (command === "get_identity_lab_overview") return defaultIdentityLabOverview();
     if (command === "get_identity_lab_detail") return null;
     if (command === "close_identity_retained_session") return null;
-    if (command === "get_app_config") return { mode: "private" };
-    if (command === "me") return null;
+    if (command === "get_app_config") return { mode: "team" };
+    if (command === "me") return { id: "test-user-uuid", email: "test@example.com", role: "user", created_at: "2026-05-27T00:00:00.000Z" };
     if (command === "list_users") return [];
     throw new Error(`Unexpected command: ${command}`);
   }

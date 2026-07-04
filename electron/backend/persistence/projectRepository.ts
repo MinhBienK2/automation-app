@@ -40,11 +40,7 @@ type WorkflowRow = {
 };
 
 export class ProjectRepository {
-  constructor(private readonly database: DbAdapter) {
-    if (!this.database.ownerId) {
-      throw new Error("ProjectRepository requires a DbAdapter with a valid ownerId");
-    }
-  }
+  constructor(private readonly database: DbAdapter) {}
 
   async createProject(name: string, description = "", now = new Date()): Promise<Project> {
     const timestamp = now.toISOString();

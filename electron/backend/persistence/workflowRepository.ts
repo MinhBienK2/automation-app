@@ -37,9 +37,6 @@ export class WorkflowRepository {
   private readonly subflowRepo: SubflowRepository;
 
   constructor(private readonly database: DbAdapter) {
-    if (!this.database.ownerId) {
-      throw new Error("WorkflowRepository requires a DbAdapter with a valid ownerId");
-    }
     this.projectRepo = new ProjectRepository(this.database);
     this.subflowRepo = new SubflowRepository(this.database);
   }

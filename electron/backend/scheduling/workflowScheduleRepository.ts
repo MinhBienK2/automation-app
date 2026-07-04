@@ -36,11 +36,7 @@ type EventRow = {
 };
 
 export class WorkflowScheduleRepository {
-  constructor(private readonly database: DbAdapter) {
-    if (!this.database.ownerId) {
-      throw new Error("WorkflowScheduleRepository requires a DbAdapter with a valid ownerId");
-    }
-  }
+  constructor(private readonly database: DbAdapter) {}
 
   async listSchedules(): Promise<WorkflowSchedule[]> {
     const rows = await this.database.query(

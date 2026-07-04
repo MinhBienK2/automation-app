@@ -21,11 +21,7 @@ type SubflowRow = {
 };
 
 export class SubflowRepository {
-  constructor(private readonly database: DbAdapter) {
-    if (!this.database.ownerId) {
-      throw new Error("SubflowRepository requires a DbAdapter with a valid ownerId");
-    }
-  }
+  constructor(private readonly database: DbAdapter) {}
 
   async createSubflow(
     projectId: string,

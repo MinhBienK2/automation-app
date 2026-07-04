@@ -141,6 +141,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
   async function ensureProjectModelReady() {
     if (!context.database.ownerId) return;
+    await runManager.recoverInterruptedRuns();
     const project = await ensureDefaultProject();
     await ensureDefaultBrowserProfile(project);
     const workflows = await repository.listWorkflows();

@@ -71,11 +71,7 @@ const maxDashboardLimit = 50;
 const maxOverviewRangeMs = 48 * 60 * 60 * 1000;
 
 export class OperationsRepository {
-  constructor(private readonly database: DbAdapter) {
-    if (!this.database.ownerId) {
-      throw new Error("OperationsRepository requires a DbAdapter with a valid ownerId");
-    }
-  }
+  constructor(private readonly database: DbAdapter) {}
 
   async recordLaunchBlocked(input: {
     workflow: WorkflowSummary;

@@ -34,11 +34,7 @@ export class IdentityRepository {
       diagnostics: () => Promise<CloakBrowserDiagnostics>;
       runner: RunnerCommandPort;
     },
-  ) {
-    if (!this.options.database.ownerId) {
-      throw new Error("IdentityRepository requires a DbAdapter with a valid ownerId");
-    }
-  }
+  ) {}
 
   async getOverview(request: IdentityLabOverviewRequest = {}): Promise<IdentityLabOverview> {
     const diagnostics = await this.options.diagnostics();

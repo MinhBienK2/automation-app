@@ -91,12 +91,11 @@ export class RunManager {
       runner: RunnerCommandPort;
     },
   ) {
-    if (!this.options.database.ownerId) {
-      throw new Error("RunManager requires a DbAdapter with a valid ownerId");
+    if (this.options.database.ownerId) {
+      void this.recoverInterruptedRuns().catch((err) =>
+        console.error("Failed to recover interrupted runs:", err),
+      );
     }
-    void this.recoverInterruptedRuns().catch((err) =>
-      console.error("Failed to recover interrupted runs:", err),
-    );
   }
 
   activeRunConflict(workflowId: string, settings: WorkflowSettings): RunConflict | null {
