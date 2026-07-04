@@ -12,9 +12,9 @@ import type { RunState } from "../../../src/types/workflow";
 describe("Schedule commands integration", () => {
   test("creates disabled draft schedules and enables only runnable workflows", async () => {
     const { handlers } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Scheduled workflow");
+    const workflow  = await handlers.createWorkflow("Scheduled workflow");
 
-    const draft = handlers.createSchedule({
+    const draft = await handlers.createSchedule({
       workflow_id: workflow.id,
       name: "Hourly",
       enabled: false,
@@ -28,11 +28,11 @@ describe("Schedule commands integration", () => {
       enabled: false,
       next_run_at: null,
     });
-    expect(() => handlers.enableSchedule(draft.id)).toThrow(
+    await expect(handlers.enableSchedule(draft.id)).rejects.toThrow(
       "Choose an action type before running this node",
     );
 
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
     const enabled = await handlers.enableSchedule(draft.id);
 
     expect(enabled).toMatchObject({
@@ -40,7 +40,7 @@ describe("Schedule commands integration", () => {
       enabled: true,
       next_run_at: expect.any(String),
     });
-    expect(handlers.listSchedules()).toEqual([
+    expect(await handlers.listSchedules()).toEqual([
       expect.objectContaining({
         id: draft.id,
         enabled: true,
@@ -53,7 +53,7 @@ describe("Schedule commands integration", () => {
     const { handlers } = await createTestHandlers();
 
     expect(
-      handlers.validateSchedule({
+      await handlers.validateSchedule({
         workflow_id: "",
         name: "",
         enabled: true,
@@ -101,35 +101,35 @@ describe("Schedule commands integration", () => {
       },
     });
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const runningWorkflow = handlers.createWorkflow("Running workflow");
-    handlers.saveWorkflowGraph(runningWorkflow.id, runnableGraph());
-    const scheduledWorkflow = handlers.createWorkflow("Scheduled workflow");
-    handlers.saveWorkflowGraph(scheduledWorkflow.id, runnableGraph());
-    const isolatedWorkflow = handlers.createWorkflow("Isolated workflow");
-    handlers.saveWorkflowGraph(isolatedWorkflow.id, runnableGraph());
-    const schedule = handlers.createSchedule({
+    const runningWorkflow  = await handlers.createWorkflow("Running workflow");
+    await handlers.saveWorkflowGraph(runningWorkflow.id, runnableGraph());
+    const scheduledWorkflow  = await handlers.createWorkflow("Scheduled workflow");
+    await handlers.saveWorkflowGraph(scheduledWorkflow.id, runnableGraph());
+    const isolatedWorkflow  = await handlers.createWorkflow("Isolated workflow");
+    await handlers.saveWorkflowGraph(isolatedWorkflow.id, runnableGraph());
+    const schedule = await handlers.createSchedule({
       workflow_id: scheduledWorkflow.id,
       name: "Once",
       enabled: true,
       kind: { type: "once_at", timestamp: scheduledAt },
     });
-    const isolatedSchedule = handlers.createSchedule({
+    const isolatedSchedule = await handlers.createSchedule({
       workflow_id: isolatedWorkflow.id,
       name: "Isolated",
       enabled: true,
       kind: { type: "once_at", timestamp: scheduledAt },
     });
-    const isolatedProfile = projectHandlers.createBrowserProfile(
+    const isolatedProfile  = await projectHandlers.createBrowserProfile(
       isolatedWorkflow.project_id ?? "",
       { name: "Isolated scheduler profile" },
     );
-    projectHandlers.setWorkflowBrowserProfile(isolatedWorkflow.id, isolatedProfile.id);
+    await projectHandlers.setWorkflowBrowserProfile(isolatedWorkflow.id, isolatedProfile.id);
 
     const runPromise = handlers.runWorkflow(runningWorkflow.id);
     await waitFor(() => activeRunSignal !== null);
     await handlers.runSchedulerTick(new Date(scheduledAt));
 
-    expect(handlers.listScheduleEvents({ schedule_id: schedule.id })).toEqual(
+    expect(await handlers.listScheduleEvents({ schedule_id: schedule.id })).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           event_type: "skipped",
@@ -142,12 +142,12 @@ describe("Schedule commands integration", () => {
         }),
       ]),
     );
-    expect(handlers.getSchedule(schedule.id)).toMatchObject({
+    expect(await handlers.getSchedule(schedule.id)).toMatchObject({
       enabled: false,
       next_run_at: null,
       last_status: "disabled",
     });
-    expect(handlers.listScheduleEvents({ schedule_id: isolatedSchedule.id })).toEqual(
+    expect(await handlers.listScheduleEvents({ schedule_id: isolatedSchedule.id })).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           event_type: "started",
@@ -157,7 +157,7 @@ describe("Schedule commands integration", () => {
     );
     expect(startedRunSignals).toHaveLength(2);
 
-    for (const snapshot of handlers.listRunStates().filter((item) => item.state.status === "running")) {
+    for (const snapshot of (await handlers.listRunStates()).filter((item) => item.state.status === "running")) {
       await handlers.stopRun(snapshot.run_id);
     }
     await runPromise;

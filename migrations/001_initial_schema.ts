@@ -100,8 +100,8 @@ export async function up(db: DbConnection): Promise<void> {
         ordinal INTEGER NOT NULL,
         created_at VARCHAR(255) NOT NULL,
         updated_at VARCHAR(255) NOT NULL,
-        PRIMARY KEY (workflow_id, id),
-        owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+        owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        PRIMARY KEY (workflow_id, id)
       );
     `);
 
@@ -116,8 +116,8 @@ export async function up(db: DbConnection): Promise<void> {
         edge_kind VARCHAR(255) NOT NULL DEFAULT 'flow',
         metadata_json TEXT NOT NULL DEFAULT '{}',
         ordinal INTEGER NOT NULL,
-        PRIMARY KEY (workflow_id, id),
-        owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+        owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        PRIMARY KEY (workflow_id, id)
       );
     `);
 
@@ -138,8 +138,8 @@ export async function up(db: DbConnection): Promise<void> {
         ordinal INTEGER NOT NULL,
         created_at VARCHAR(255) NOT NULL,
         updated_at VARCHAR(255) NOT NULL,
-        PRIMARY KEY (subflow_id, id),
-        owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+        owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        PRIMARY KEY (subflow_id, id)
       );
     `);
 
@@ -154,8 +154,8 @@ export async function up(db: DbConnection): Promise<void> {
         edge_kind VARCHAR(255) NOT NULL DEFAULT 'flow',
         metadata_json TEXT NOT NULL DEFAULT '{}',
         ordinal INTEGER NOT NULL,
-        PRIMARY KEY (subflow_id, id),
-        owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+        owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        PRIMARY KEY (subflow_id, id)
       );
     `);
 
@@ -194,7 +194,7 @@ export async function up(db: DbConnection): Promise<void> {
     await db.query(`
       CREATE TABLE IF NOT EXISTS workflow_schedules (
         id VARCHAR(255) PRIMARY KEY,
-        workflow_id VARCHAR(255) NOT NULL,
+        workflow_id VARCHAR(255) NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         enabled INTEGER NOT NULL,
         kind_json TEXT NOT NULL,
@@ -211,8 +211,8 @@ export async function up(db: DbConnection): Promise<void> {
     await db.query(`
       CREATE TABLE IF NOT EXISTS workflow_schedule_events (
         id VARCHAR(255) PRIMARY KEY,
-        schedule_id VARCHAR(255) NOT NULL,
-        workflow_id VARCHAR(255) NOT NULL,
+        schedule_id VARCHAR(255) NOT NULL REFERENCES workflow_schedules(id) ON DELETE CASCADE,
+        workflow_id VARCHAR(255) NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
         event_type VARCHAR(255) NOT NULL,
         run_id VARCHAR(255),
         scheduled_for VARCHAR(255) NOT NULL,
@@ -265,6 +265,20 @@ export async function up(db: DbConnection): Promise<void> {
         tag VARCHAR(255),
         size_bytes INTEGER NOT NULL,
         owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS migration_log (
+        id VARCHAR(255) PRIMARY KEY,
+        target_table VARCHAR(255) NOT NULL,
+        target_id VARCHAR(255) NOT NULL,
+        started_at VARCHAR(255) NOT NULL,
+        finished_at VARCHAR(255),
+        from_version INTEGER,
+        to_version INTEGER,
+        applied_json TEXT,
+        failure_json TEXT
       );
     `);
   } else {

@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DbAdapter } from "./dbAdapter.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
 import { runMigrations } from "../graph/migrations/index.js";
 import { validateActionConfig } from "../actions/schemas/index.js";
@@ -17,75 +17,95 @@ type IdRow = { id: string };
 
 /**
  * Eagerly migrate every workflow and subflow graph on startup.
- * Reads from normalized tables (source of truth after PR 2.3)
- * and writes migrated graphs back to normalized tables.
- * Runs inside a single BEGIN IMMEDIATE / COMMIT transaction.
- * Per-row failures are logged to the migration_log table and skipped.
+ * Safe for both SQLite (legacy) and PostgreSQL (DbAdapter).
+ * If migration_log table doesn't exist, logs to console.
  */
-export function migrateAllGraphs(db: DatabaseSync): MigrationReport {
+export async function migrateAllGraphs(db: DbAdapter): Promise<MigrationReport> {
   const start = Date.now();
   let scanned = 0;
   let migrated = 0;
   let failed = 0;
 
-  const insertLog = db.prepare(
-    `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
-
-  db.exec("BEGIN IMMEDIATE");
+  // Check if migration_log table exists (only SQLite has it by default)
+  let hasMigrationLog = false;
   try {
-    const workflows = db.prepare("SELECT id FROM workflows").all() as IdRow[];
-    const subflows = db.prepare("SELECT id FROM subflows").all() as IdRow[];
+    if (db.ownerId) {
+      // In PG, check if migration_log exists
+      const tableCheck = await db.query(
+        "SELECT tablename FROM pg_tables WHERE tablename = 'migration_log'"
+      );
+      hasMigrationLog = tableCheck.length > 0;
+    } else {
+      // If we don't have user context yet, skip
+      return { scanned: 0, migrated: 0, failed: 0, durationMs: 0 };
+    }
+  } catch {
+    hasMigrationLog = false;
+  }
+
+  await db.transaction(async (tx) => {
+    const workflows = await tx.query("SELECT id FROM workflows WHERE owner_id = $1", [tx.ownerId]) as IdRow[];
+    const subflows = await tx.query("SELECT id FROM subflows WHERE owner_id = $1", [tx.ownerId]) as IdRow[];
 
     for (const row of workflows) {
       scanned++;
-      const result = migrateGraphRow(db, row.id, "workflow", assembleGraphFromTables);
+      const result = await migrateGraphRow(tx, row.id, "workflow", assembleGraphFromTables);
       if (result.migrated) migrated++;
       if (result.failed) failed++;
       if (result.migrated || result.failed) {
-        insertLog.run(
-          "workflows",
-          row.id,
-          result.startedAt,
-          result.finishedAt,
-          result.fromVersion,
-          result.toVersion,
-          JSON.stringify(result.applied),
-          result.failure ? JSON.stringify(result.failure) : null,
-        );
+        if (hasMigrationLog) {
+          await tx.execute(
+            `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              "workflows",
+              row.id,
+              result.startedAt,
+              result.finishedAt,
+              result.fromVersion,
+              result.toVersion,
+              JSON.stringify(result.applied),
+              result.failure ? JSON.stringify(result.failure) : null,
+            ]
+          );
+        } else {
+          console.log(`[migrateAllGraphs] Workflow ${row.id} migrated from version ${result.fromVersion} to ${result.toVersion}`);
+        }
       }
     }
 
     for (const row of subflows) {
       scanned++;
-      const result = migrateGraphRow(db, row.id, "subflow", assembleSubflowGraphFromTables);
+      const result = await migrateGraphRow(tx, row.id, "subflow", assembleSubflowGraphFromTables);
       if (result.migrated) migrated++;
       if (result.failed) failed++;
       if (result.migrated || result.failed) {
-        insertLog.run(
-          "subflows",
-          row.id,
-          result.startedAt,
-          result.finishedAt,
-          result.fromVersion,
-          result.toVersion,
-          JSON.stringify(result.applied),
-          result.failure ? JSON.stringify(result.failure) : null,
-        );
+        if (hasMigrationLog) {
+          await tx.execute(
+            `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              "subflows",
+              row.id,
+              result.startedAt,
+              result.finishedAt,
+              result.fromVersion,
+              result.toVersion,
+              JSON.stringify(result.applied),
+              result.failure ? JSON.stringify(result.failure) : null,
+            ]
+          );
+        } else {
+          console.log(`[migrateAllGraphs] Subflow ${row.id} migrated from version ${result.fromVersion} to ${result.toVersion}`);
+        }
       }
     }
-
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
+  });
 
   return { scanned, migrated, failed, durationMs: Date.now() - start };
 }
 
-type AssembleFn = (db: DatabaseSync, id: string) => WorkflowGraph | null;
+type AssembleFn = (db: DbAdapter, id: string) => Promise<WorkflowGraph | null>;
 
 type RowMigrationResult = {
   migrated: boolean;
@@ -98,15 +118,15 @@ type RowMigrationResult = {
   failure: { version: number; error: string } | null;
 };
 
-function migrateGraphRow(
-  db: DatabaseSync,
+async function migrateGraphRow(
+  db: DbAdapter,
   id: string,
   kind: "workflow" | "subflow",
   assemble: AssembleFn,
-): RowMigrationResult {
+): Promise<RowMigrationResult> {
   const startedAt = new Date().toISOString();
 
-  const graph = assemble(db, id);
+  const graph = await assemble(db, id);
   if (!graph) {
     return {
       migrated: false,
@@ -149,7 +169,7 @@ function migrateGraphRow(
 
   if (wasMigrated && !wasFailed) {
     const now = new Date().toISOString();
-    writeGraphToNormalizedTables(db, processed, kind, id, now);
+    await writeGraphToNormalizedTables(db, processed, kind, id, now);
   }
 
   return {

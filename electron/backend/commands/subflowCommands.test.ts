@@ -17,12 +17,12 @@ describe("Subflows integration", () => {
   test("persists subflows, reports workflow usage, duplicates safely, and blocks used deletion", async () => {
     const { handlers } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const workflow = handlers.createWorkflow("Checkout E2E") as ProjectWorkflow;
-    const subflow = projectHandlers.createSubflow(workflow.project_id, {
+    const workflow  = await handlers.createWorkflow("Checkout E2E") as ProjectWorkflow;
+    const subflow  = await projectHandlers.createSubflow(workflow.project_id, {
       name: "Login",
       description: "Reusable login fragment",
     });
-    const renamed = projectHandlers.updateSubflow(subflow.id, {
+    const renamed  = await projectHandlers.updateSubflow(subflow.id, {
       name: "Login v2",
     });
     expect(renamed).toMatchObject({
@@ -31,14 +31,14 @@ describe("Subflows integration", () => {
       name: "Login v2",
       description: "Reusable login fragment",
     });
-    expect(() => projectHandlers.updateSubflow(subflow.id, { name: "   " }))
-      .toThrow("Subflow name is required");
+    await expect(projectHandlers.updateSubflow(subflow.id, { name: "   " }))
+      .rejects.toThrow("Subflow name is required");
     const subflowGraph = subflowGraphWithAction("fill-username", "Fill username");
 
-    projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
-    handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
+    await projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
+    await handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
 
-    expect(projectHandlers.listSubflows(workflow.project_id)).toEqual([
+    expect(await projectHandlers.listSubflows(workflow.project_id)).toEqual([
       expect.objectContaining({
         id: subflow.id,
         project_id: workflow.project_id,
@@ -46,22 +46,22 @@ describe("Subflows integration", () => {
         used_by_count: 1,
       }),
     ]);
-    expect(projectHandlers.getSubflowUsage(subflow.id)).toEqual([
+    expect(await projectHandlers.getSubflowUsage(subflow.id)).toEqual([
       expect.objectContaining({
         workflow_id: workflow.id,
         workflow_name: "Checkout E2E",
       }),
     ]);
-    expect(() => projectHandlers.deleteSubflow(subflow.id)).toThrow(
+    await expect(projectHandlers.deleteSubflow(subflow.id)).rejects.toThrow(
       "Subflow is used by 1 workflow",
     );
 
-    const duplicated = projectHandlers.duplicateSubflow(subflow.id, "Login copy");
+    const duplicated  = await projectHandlers.duplicateSubflow(subflow.id, "Login copy");
     expect(duplicated).toMatchObject({
       project_id: workflow.project_id,
       name: "Login copy",
     });
-    expect(projectHandlers.getSubflowGraph(duplicated.id)).toEqual({
+    expect(await projectHandlers.getSubflowGraph(duplicated.id)).toEqual({
       ...subflowGraph,
       version: 3,
       migration_notes: [],
@@ -85,15 +85,15 @@ describe("Subflows integration", () => {
     };
     const { handlers } = await createTestHandlers({ runner });
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const workflow = handlers.createWorkflow("Checkout E2E") as ProjectWorkflow;
-    const subflow = projectHandlers.createSubflow(workflow.project_id, { name: "Login" });
-    projectHandlers.saveSubflowGraph(
+    const workflow  = await handlers.createWorkflow("Checkout E2E") as ProjectWorkflow;
+    const subflow  = await projectHandlers.createSubflow(workflow.project_id, { name: "Login" });
+    await projectHandlers.saveSubflowGraph(
       subflow.id,
       subflowGraphWithAction("fill-username", "Fill username"),
     );
-    handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
+    await handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
 
-    expect(handlers.validateWorkflowRun(workflow.id).filter((issue) => issue.level === "error"))
+    expect((await handlers.validateWorkflowRun(workflow.id)).filter((issue) => issue.level === "error"))
       .toEqual([]);
     await handlers.runWorkflow(workflow.id);
 
@@ -126,21 +126,21 @@ describe("Subflows integration", () => {
   test("blocks missing, cross-project, and invalid Call Subflow references before run", async () => {
     const { handlers } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const firstWorkflow = handlers.createWorkflow("First project workflow") as ProjectWorkflow;
-    const secondProject = projectHandlers.createProject({ name: "Second Project" });
-    const crossProjectSubflow = projectHandlers.createSubflow(secondProject.id, {
+    const firstWorkflow  = await handlers.createWorkflow("First project workflow") as ProjectWorkflow;
+    const secondProject  = await projectHandlers.createProject({ name: "Second Project" });
+    const crossProjectSubflow  = await projectHandlers.createSubflow(secondProject.id, {
       name: "Other Project Login",
     });
-    projectHandlers.saveSubflowGraph(
+    await projectHandlers.saveSubflowGraph(
       crossProjectSubflow.id,
       subflowGraphWithAction("other-step", "Other step"),
     );
 
-    handlers.saveWorkflowGraph(
+    await handlers.saveWorkflowGraph(
       firstWorkflow.id,
       workflowGraphCallingSubflow("missing-subflow"),
     );
-    expect(handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
+    expect(await handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
       expect.objectContaining({
         source: "graph",
         node_id: "call-login",
@@ -149,11 +149,11 @@ describe("Subflows integration", () => {
       }),
     );
 
-    handlers.saveWorkflowGraph(
+    await handlers.saveWorkflowGraph(
       firstWorkflow.id,
       workflowGraphCallingSubflow(crossProjectSubflow.id),
     );
-    expect(handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
+    expect(await handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
       expect.objectContaining({
         source: "graph",
         node_id: "call-login",
@@ -162,15 +162,15 @@ describe("Subflows integration", () => {
       }),
     );
 
-    const invalidSubflow = projectHandlers.createSubflow(firstWorkflow.project_id, {
+    const invalidSubflow  = await projectHandlers.createSubflow(firstWorkflow.project_id, {
       name: "Invalid Login",
     });
-    projectHandlers.saveSubflowGraph(invalidSubflow.id, startOnlyGraph());
-    handlers.saveWorkflowGraph(
+    await projectHandlers.saveSubflowGraph(invalidSubflow.id, startOnlyGraph());
+    await handlers.saveWorkflowGraph(
       firstWorkflow.id,
       workflowGraphCallingSubflow(invalidSubflow.id),
     );
-    expect(handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
+    expect(await handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
       expect.objectContaining({
         source: "graph",
         node_id: "call-login",
@@ -179,15 +179,15 @@ describe("Subflows integration", () => {
       }),
     );
 
-    const emptySubflow = projectHandlers.createSubflow(firstWorkflow.project_id, {
+    const emptySubflow  = await projectHandlers.createSubflow(firstWorkflow.project_id, {
       name: "Empty Login",
     });
-    projectHandlers.saveSubflowGraph(emptySubflow.id, startToEndSuccessGraph());
-    handlers.saveWorkflowGraph(
+    await projectHandlers.saveSubflowGraph(emptySubflow.id, startToEndSuccessGraph());
+    await handlers.saveWorkflowGraph(
       firstWorkflow.id,
       workflowGraphCallingSubflowThenAfter(emptySubflow.id),
     );
-    expect(handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
+    expect(await handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
       expect.objectContaining({
         source: "graph",
         node_id: "call-login",
@@ -201,16 +201,16 @@ describe("Subflows integration", () => {
     const { handlers } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
     
-    const firstWorkflow = handlers.createWorkflow("First Workflow") as ProjectWorkflow;
-    const subflow = projectHandlers.createSubflow(firstWorkflow.project_id, {
+    const firstWorkflow  = await handlers.createWorkflow("First Workflow") as ProjectWorkflow;
+    const subflow  = await projectHandlers.createSubflow(firstWorkflow.project_id, {
       name: "Common Auth",
       description: "Handles shared login sequence",
     });
     const subflowGraph = subflowGraphWithAction("login-step", "Login Step");
-    projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
+    await projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
 
     // @ts-ignore
-    const exported = handlers.exportSubflow(subflow.id);
+    const exported  = await handlers.exportSubflow(subflow.id);
     expect(exported).toEqual({
       version: 1,
       subflow: {
@@ -224,17 +224,17 @@ describe("Subflows integration", () => {
       }
     });
 
-    const secondProject = projectHandlers.createProject({ name: "Second Project" });
+    const secondProject  = await projectHandlers.createProject({ name: "Second Project" });
     
     // @ts-ignore
-    const imported = handlers.importSubflow(secondProject.id, exported);
+    const imported  = await handlers.importSubflow(secondProject.id, exported);
     expect(imported).toMatchObject({
       project_id: secondProject.id,
       name: "Common Auth",
       description: "Handles shared login sequence",
     });
 
-    const importedGraph = projectHandlers.getSubflowGraph(imported.id);
+    const importedGraph  = await projectHandlers.getSubflowGraph(imported.id);
     expect(importedGraph.nodes).toContainEqual(
       expect.objectContaining({ id: "login-step" })
     );

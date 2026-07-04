@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DbAdapter } from "../persistence/dbAdapter.js";
 import type {
   CloakBrowserDiagnostics,
   IdentityLabDetail,
@@ -28,24 +28,32 @@ type RunRow = {
 export class IdentityRepository {
   constructor(
     private readonly options: {
-      database: DatabaseSync;
-      workflows: () => WorkflowSummary[];
-      settingsForWorkflow: (workflowId: string) => WorkflowSettings;
+      database: DbAdapter;
+      workflows: () => Promise<WorkflowSummary[]>;
+      settingsForWorkflow: (workflowId: string) => Promise<WorkflowSettings>;
       diagnostics: () => Promise<CloakBrowserDiagnostics>;
       runner: RunnerCommandPort;
     },
-  ) {}
+  ) {
+    if (!this.options.database.ownerId) {
+      throw new Error("IdentityRepository requires a DbAdapter with a valid ownerId");
+    }
+  }
 
   async getOverview(request: IdentityLabOverviewRequest = {}): Promise<IdentityLabOverview> {
     const diagnostics = await this.options.diagnostics();
-    let workflows = this.options.workflows();
+    let workflows = await this.options.workflows();
     if (request.project_id) {
       workflows = workflows.filter((w) => w.project_id === request.project_id);
     }
-    const summaries = workflows
-      .map((workflow) => this.managedSummary(workflow))
+    
+    // Resolve managedSummaries asynchronously
+    const summariesPromises = workflows.map(async (workflow) => await this.managedSummary(workflow));
+    const unresolvedSummaries = await Promise.all(summariesPromises);
+    const summaries = unresolvedSummaries
       .filter((summary): summary is ManagedIdentitySummary => Boolean(summary))
       .filter((summary) => matchesSearch(summary, request.search));
+
     let selectedTarget = request.selected_target;
     if (selectedTarget && request.project_id) {
       if (selectedTarget.workflow_id) {
@@ -88,9 +96,10 @@ export class IdentityRepository {
   ): Promise<IdentityLabDetail> {
     const diagnosticsSnapshot = diagnostics ?? await this.options.diagnostics();
     if (target.type === "historical") {
-      const historical = this.historicalRun(target);
+      const historical = await this.historicalRun(target);
       const browserIdentity = parseBrowserIdentityOutput(historical);
       const workflowId = historical?.workflow_id ?? target.workflow_id ?? null;
+      const allWorkflows = await this.options.workflows();
       return {
         kind: "historical",
         identity_ref: {
@@ -98,18 +107,19 @@ export class IdentityRepository {
           display_name: stringValue(browserIdentity?.display_name),
         },
         workflow_ref: workflowId
-          ? this.options.workflows().find((workflow) => workflow.id === workflowId) ?? null
+          ? allWorkflows.find((workflow) => workflow.id === workflowId) ?? null
           : null,
         run_id: historical?.id ?? null,
         evidence_id: historical ? target.evidence_id ?? null : null,
         observed_fields: safeFields(browserIdentity),
       };
     }
-    const workflow = this.options.workflows().find((item) => item.id === target.workflow_id);
+    const allWorkflows = await this.options.workflows();
+    const workflow = allWorkflows.find((item) => item.id === target.workflow_id);
     if (!workflow) throw { message: "Workflow not found", field: "workflowId" };
-    const settings = this.options.settingsForWorkflow(workflow.id);
+    const settings = await this.options.settingsForWorkflow(workflow.id);
     if (settings.browser_launch.identity_id !== target.identity_id) {
-      return this.getDetail({
+      return await this.getDetail({
         type: "historical",
         workflow_id: workflow.id,
         identity_id: target.identity_id,
@@ -119,7 +129,7 @@ export class IdentityRepository {
     const retained = profileName
       ? this.options.runner.getRetainedSessionState?.(workflow.id, profileName)
       : null;
-    const matchingRuns = this.matchingRuns(workflow.id, settings.browser_launch.identity_id);
+    const matchingRuns = await this.matchingRuns(workflow.id, settings.browser_launch.identity_id);
     const lastRun = matchingRuns[0] ? runSummary(matchingRuns[0]) : null;
     const latestObservedRun = matchingRuns.find((run) =>
       parseJsonRecord(run.outputs_json)?.browser_identity,
@@ -178,15 +188,15 @@ export class IdentityRepository {
     };
   }
 
-  private managedSummary(workflow: WorkflowSummary): ManagedIdentitySummary | null {
-    const settings = this.options.settingsForWorkflow(workflow.id);
+  private async managedSummary(workflow: WorkflowSummary): Promise<ManagedIdentitySummary | null> {
+    const settings = await this.options.settingsForWorkflow(workflow.id);
     const identityId = settings.browser_launch.identity_id;
     if (!identityId) return null;
     const profileName = browserProfileKey(settings);
     const retained = profileName
       ? this.options.runner.getRetainedSessionState?.(workflow.id, profileName)
       : null;
-    const matchingRuns = this.matchingRuns(workflow.id, identityId);
+    const matchingRuns = await this.matchingRuns(workflow.id, identityId);
     return {
       workflow_ref: { id: workflow.id, name: workflow.name },
       identity_ref: { id: identityId, display_name: settings.browser_launch.display_name },
@@ -205,34 +215,35 @@ export class IdentityRepository {
     };
   }
 
-  private matchingRuns(workflowId: string, identityId: string) {
-    const rows = this.options.database
-      .prepare(
+  private async matchingRuns(workflowId: string, identityId: string): Promise<RunRow[]> {
+    const rows = await this.options.database
+      .query(
         `SELECT id, workflow_id, source, status, started_at, finished_at,
                 settings_snapshot_json, outputs_json, error_json
          FROM runs
-         WHERE workflow_id = ?
+         WHERE workflow_id = $1 AND owner_id = $2
          ORDER BY started_at DESC, id DESC`,
-      )
-      .all(workflowId) as RunRow[];
+        [workflowId, this.options.database.ownerId],
+      ) as RunRow[];
     return rows.filter((row) => runIdentityId(row) === identityId);
   }
 
-  private historicalRun(target: Extract<IdentityLabTarget, { type: "historical" }>) {
+  private async historicalRun(target: Extract<IdentityLabTarget, { type: "historical" }>): Promise<RunRow | null> {
     if (target.run_id) {
-      const row = this.options.database
-        .prepare(
+      const row = await this.options.database
+        .queryOne(
           `SELECT id, workflow_id, source, status, started_at, finished_at,
                   settings_snapshot_json, outputs_json, error_json
            FROM runs
-           WHERE id = ?
+           WHERE id = $1 AND owner_id = $2
            LIMIT 1`,
-        )
-        .get(target.run_id) as RunRow | undefined;
+          [target.run_id, this.options.database.ownerId],
+        ) as RunRow | null;
       return row && runIdentityId(row) === target.identity_id ? row : null;
     }
     if (!target.workflow_id) return null;
-    return this.matchingRuns(target.workflow_id, target.identity_id)[0] ?? null;
+    const matching = await this.matchingRuns(target.workflow_id, target.identity_id);
+    return matching[0] ?? null;
   }
 }
 

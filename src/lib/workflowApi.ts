@@ -504,7 +504,7 @@ export function getAppConfig() {
   return bridge().getAppConfig();
 }
 
-export function saveAppConfig(config: { mode: "private" | "public"; publicDatabaseUrl?: string }) {
+export function saveAppConfig(config: { mode: "public"; publicDatabaseUrl?: string }) {
   return bridge().saveAppConfig(config);
 }
 

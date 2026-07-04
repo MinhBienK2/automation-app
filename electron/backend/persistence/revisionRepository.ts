@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DbAdapter } from "./dbAdapter.js";
 import type { WorkflowGraph, WorkflowSettings } from "../../../src/types/workflow.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 
@@ -45,8 +45,8 @@ const MAX_UNTAGGED_REVISIONS = 50;
  * Write a revision snapshot for a workflow or subflow.
  * Assigns the next monotonic revision_number for that owner.
  */
-export function snapshotRevision(
-  db: DatabaseSync,
+export async function snapshotRevision(
+  db: DbAdapter,
   owner: RevisionOwner,
   ownerId: string,
   graph: WorkflowGraph,
@@ -57,13 +57,13 @@ export function snapshotRevision(
     comment?: string | null;
     tag?: string | null;
   } = {},
-): WorkflowRevision | SubflowRevision {
+): Promise<WorkflowRevision | SubflowRevision> {
   const createdAt = options.createdAt ?? new Date().toISOString();
   const id = crypto.randomUUID();
 
   let graphJson = "";
   if (owner === "workflow" && (options.comment || options.tag)) {
-    const subflowBackups = getSubflowSnapshotsForWorkflow(db, ownerId, graph);
+    const subflowBackups = await getSubflowSnapshotsForWorkflow(db, ownerId, graph);
     if (subflowBackups.length > 0) {
       const graphWithBackups = {
         ...graph,
@@ -83,26 +83,29 @@ export function snapshotRevision(
   const table = owner === "workflow" ? "workflow_revisions" : "subflow_revisions";
   const ownerColumn = owner === "workflow" ? "workflow_id" : "subflow_id";
 
-  const maxRow = db
-    .prepare(`SELECT MAX(revision_number) as max_num FROM ${table} WHERE ${ownerColumn} = ?`)
-    .get(ownerId) as { max_num: number | null } | undefined;
-  const revisionNumber = (maxRow?.max_num ?? 0) + 1;
+  const maxRow = await db.queryOne(
+    `SELECT MAX(revision_number) as max_num FROM ${table} WHERE ${ownerColumn} = $1 AND owner_id = $2`,
+    [ownerId, db.ownerId],
+  ) as { max_num: number | string | null } | null;
+  const revisionNumber = (maxRow?.max_num ? Number(maxRow.max_num) : 0) + 1;
 
   if (owner === "workflow") {
-    db.prepare(
-      `INSERT INTO ${table} (id, ${ownerColumn}, revision_number, graph_snapshot_json, settings_snapshot_json, created_at, created_by, comment, tag, size_bytes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(
-      id,
-      ownerId,
-      revisionNumber,
-      graphJson,
-      settingsJson,
-      createdAt,
-      options.createdBy ?? null,
-      options.comment ?? null,
-      options.tag ?? null,
-      sizeBytes,
+    await db.execute(
+      `INSERT INTO ${table} (id, ${ownerColumn}, revision_number, graph_snapshot_json, settings_snapshot_json, created_at, created_by, comment, tag, size_bytes, owner_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [
+        id,
+        ownerId,
+        revisionNumber,
+        graphJson,
+        settingsJson,
+        createdAt,
+        options.createdBy ?? null,
+        options.comment ?? null,
+        options.tag ?? null,
+        sizeBytes,
+        db.ownerId,
+      ],
     );
     return {
       id,
@@ -118,19 +121,21 @@ export function snapshotRevision(
     };
   }
 
-  db.prepare(
-    `INSERT INTO ${table} (id, ${ownerColumn}, revision_number, graph_snapshot_json, created_at, created_by, comment, tag, size_bytes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    id,
-    ownerId,
-    revisionNumber,
-    graphJson,
-    createdAt,
-    options.createdBy ?? null,
-    options.comment ?? null,
-    options.tag ?? null,
-    sizeBytes,
+  await db.execute(
+    `INSERT INTO ${table} (id, ${ownerColumn}, revision_number, graph_snapshot_json, created_at, created_by, comment, tag, size_bytes, owner_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [
+      id,
+      ownerId,
+      revisionNumber,
+      graphJson,
+      createdAt,
+      options.createdBy ?? null,
+      options.comment ?? null,
+      options.tag ?? null,
+      sizeBytes,
+      db.ownerId,
+    ],
   );
   return {
     id,
@@ -145,12 +150,12 @@ export function snapshotRevision(
   };
 }
 
-export function listRevisions(
-  db: DatabaseSync,
+export async function listRevisions(
+  db: DbAdapter,
   owner: RevisionOwner,
   ownerId: string,
   options: { limit?: number; offset?: number; onlyBackups?: boolean } = {},
-): RevisionSummary[] {
+): Promise<RevisionSummary[]> {
   const table = owner === "workflow" ? "workflow_revisions" : "subflow_revisions";
   const ownerColumn = owner === "workflow" ? "workflow_id" : "subflow_id";
   const limit = options.limit ?? 50;
@@ -158,17 +163,15 @@ export function listRevisions(
 
   let query = `SELECT id, revision_number, created_at, created_by, comment, tag, size_bytes
        FROM ${table}
-       WHERE ${ownerColumn} = ?`;
+       WHERE ${ownerColumn} = $1 AND owner_id = $2`;
 
   if (options.onlyBackups) {
     query += ` AND (comment IS NOT NULL OR tag IS NOT NULL)`;
   }
 
-  query += ` ORDER BY revision_number DESC LIMIT ? OFFSET ?`;
+  query += ` ORDER BY revision_number DESC LIMIT $3 OFFSET $4`;
 
-  const rows = db
-    .prepare(query)
-    .all(ownerId, limit, offset) as RevisionRow[];
+  const rows = await db.query(query, [ownerId, db.ownerId, limit, offset]) as RevisionRow[];
 
   return rows.map((row) => ({
     id: row.id,
@@ -181,20 +184,21 @@ export function listRevisions(
   }));
 }
 
-export function getRevision(
-  db: DatabaseSync,
+export async function getRevision(
+  db: DbAdapter,
   owner: RevisionOwner,
   revisionId: string,
-): WorkflowRevision | SubflowRevision | null {
+): Promise<WorkflowRevision | SubflowRevision | null> {
   const table = owner === "workflow" ? "workflow_revisions" : "subflow_revisions";
   const ownerColumn = owner === "workflow" ? "workflow_id" : "subflow_id";
 
-  const row = db
-    .prepare(`SELECT * FROM ${table} WHERE id = ?`)
-    .get(revisionId) as Record<string, unknown> | undefined;
+  const row = await db.queryOne(
+    `SELECT * FROM ${table} WHERE id = $1 AND owner_id = $2`,
+    [revisionId, db.ownerId],
+  ) as Record<string, unknown> | null;
   if (!row) return null;
 
-  const ownerId = row[ownerColumn] as string;
+  const ownerIdValue = row[ownerColumn] as string;
   const base = {
     id: row.id as string,
     revision_number: row.revision_number as number,
@@ -209,80 +213,85 @@ export function getRevision(
   if (owner === "workflow") {
     return {
       ...base,
-      workflow_id: ownerId,
+      workflow_id: ownerIdValue,
       settings_snapshot_json: (row.settings_snapshot_json as string | null) ?? null,
     };
   }
   return {
     ...base,
-    subflow_id: ownerId,
+    subflow_id: ownerIdValue,
   };
 }
 
-export function tagRevision(
-  db: DatabaseSync,
+export async function tagRevision(
+  db: DbAdapter,
   owner: RevisionOwner,
   revisionId: string,
   tag: string,
-): void {
+): Promise<void> {
   const table = owner === "workflow" ? "workflow_revisions" : "subflow_revisions";
-  db.prepare(`UPDATE ${table} SET tag = ? WHERE id = ?`).run(tag, revisionId);
+  await db.execute(`UPDATE ${table} SET tag = $1 WHERE id = $2 AND owner_id = $3`, [tag, revisionId, db.ownerId]);
 }
 
-export function untagRevision(
-  db: DatabaseSync,
+export async function untagRevision(
+  db: DbAdapter,
   owner: RevisionOwner,
   revisionId: string,
-): void {
+): Promise<void> {
   const table = owner === "workflow" ? "workflow_revisions" : "subflow_revisions";
-  db.prepare(`UPDATE ${table} SET tag = NULL WHERE id = ?`).run(revisionId);
+  await db.execute(`UPDATE ${table} SET tag = NULL WHERE id = $1 AND owner_id = $2`, [revisionId, db.ownerId]);
 }
 
-export function deleteRevision(
-  db: DatabaseSync,
+export async function deleteRevision(
+  db: DbAdapter,
   owner: RevisionOwner,
   revisionId: string,
-): void {
+): Promise<void> {
   const table = owner === "workflow" ? "workflow_revisions" : "subflow_revisions";
-  db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(revisionId);
+  await db.execute(`DELETE FROM ${table} WHERE id = $1 AND owner_id = $2`, [revisionId, db.ownerId]);
 }
 
 /**
  * Prune untagged revisions beyond the retention limit.
  * Keeps all tagged revisions indefinitely.
- * Runs in batches of 100.
  */
-export function pruneRevisions(db: DatabaseSync, owner: RevisionOwner): { pruned: number } {
+export async function pruneRevisions(db: DbAdapter, owner: RevisionOwner): Promise<{ pruned: number }> {
   const table = owner === "workflow" ? "workflow_revisions" : "subflow_revisions";
   const ownerColumn = owner === "workflow" ? "workflow_id" : "subflow_id";
+  const ownerId = db.ownerId;
+  if (!ownerId) {
+    return { pruned: 0 };
+  }
 
-  const owners = db
-    .prepare(`SELECT DISTINCT ${ownerColumn} as id FROM ${table}`)
-    .all() as Array<{ id: string }>;
+  const owners = await db.query(
+    `SELECT DISTINCT ${ownerColumn} as id FROM ${table} WHERE owner_id = $1`,
+    [ownerId],
+  ) as Array<{ id: string }>;
 
   let pruned = 0;
   for (const { id } of owners) {
-    const countRow = db
-      .prepare(
-        `SELECT COUNT(*) as c FROM ${table} WHERE ${ownerColumn} = ? AND tag IS NULL`,
-      )
-      .get(id) as { c: number };
+    const countRow = await db.queryOne(
+      `SELECT COUNT(*) as c FROM ${table} WHERE ${ownerColumn} = $1 AND tag IS NULL AND owner_id = $2`,
+      [id, ownerId],
+    ) as { c: number | string } | null;
 
-    if (countRow.c <= MAX_UNTAGGED_REVISIONS) continue;
+    const count = countRow ? Number(countRow.c) : 0;
+    if (count <= MAX_UNTAGGED_REVISIONS) continue;
 
-    const toDelete = countRow.c - MAX_UNTAGGED_REVISIONS;
-    const result = db
-      .prepare(
-        `DELETE FROM ${table}
-         WHERE rowid IN (
-           SELECT rowid FROM ${table}
-           WHERE ${ownerColumn} = ? AND tag IS NULL
-           ORDER BY revision_number ASC
-           LIMIT ?
-         )`,
-      )
-      .run(id, Math.min(toDelete, 100));
-    pruned += Number(result.changes);
+    const toDelete = count - MAX_UNTAGGED_REVISIONS;
+    const limit = Math.min(toDelete, 100);
+
+    const result = await db.execute(
+      `DELETE FROM ${table}
+       WHERE id IN (
+         SELECT id FROM ${table}
+         WHERE ${ownerColumn} = $1 AND tag IS NULL AND owner_id = $2
+         ORDER BY revision_number ASC
+         LIMIT $3
+       )`,
+      [id, ownerId, limit],
+    );
+    pruned += result.changes;
   }
 
   return { pruned };
@@ -300,14 +309,14 @@ export type RestoreResult = {
  * 2. Writes the target revision's graph back to the normalized tables
  * Returns the restored revision number and the captured (pre-restore) revision number.
  */
-export function restoreRevision(
-  db: DatabaseSync,
+export async function restoreRevision(
+  db: DbAdapter,
   owner: RevisionOwner,
   ownerId: string,
   revisionId: string,
   options: { comment?: string; createdAt?: string } = {},
-): RestoreResult {
-  const revision = getRevision(db, owner, revisionId);
+): Promise<RestoreResult> {
+  const revision = await getRevision(db, owner, revisionId);
   if (!revision) {
     throw new Error(`Revision ${revisionId} not found`);
   }
@@ -327,7 +336,7 @@ export function restoreRevision(
     ? `Pre-restore backup before restoring revision #${revision.revision_number}`
     : `Pre-restore backup before restoring subflow revision #${revision.revision_number}`);
 
-  const captured = captureCurrentState(db, owner, ownerId, {
+  const captured = await captureCurrentState(db, owner, ownerId, {
     comment: preRestoreComment,
     createdAt,
   });
@@ -335,9 +344,10 @@ export function restoreRevision(
   // If restoring a workflow with subflow backups, duplicate and remap them
   if (owner === "workflow" && graph.__subflow_backups__ && graph.__subflow_backups__.length > 0) {
     const subflowIdMap = new Map<string, string>();
-    const workflowRow = db
-      .prepare("SELECT project_id FROM workflows WHERE id = ?")
-      .get(ownerId) as { project_id: string } | undefined;
+    const workflowRow = await db.queryOne(
+      "SELECT project_id FROM workflows WHERE id = $1 AND owner_id = $2",
+      [ownerId, db.ownerId],
+    ) as { project_id: string } | null;
     const projectId = workflowRow?.project_id;
 
     if (projectId) {
@@ -345,14 +355,15 @@ export function restoreRevision(
         const newSubflowId = crypto.randomUUID();
         const newSubflowName = `${backup.name} (Backup)`;
 
-        db.prepare(
-          `INSERT INTO subflows (id, project_id, name, description, tags_json, created_at, updated_at)
-           VALUES (?, ?, ?, ?, '[]', ?, ?)`
-        ).run(newSubflowId, projectId, newSubflowName, backup.description, createdAt, createdAt);
+        await db.execute(
+          `INSERT INTO subflows (id, project_id, name, description, tags_json, created_at, updated_at, owner_id)
+           VALUES ($1, $2, $3, $4, '[]', $5, $6, $7)`,
+          [newSubflowId, projectId, newSubflowName, backup.description, createdAt, createdAt, db.ownerId],
+        );
 
-        writeSubflowGraph(db, newSubflowId, backup.graph, createdAt);
+        await writeSubflowGraph(db, newSubflowId, backup.graph, createdAt);
 
-        snapshotRevision(db, "subflow", newSubflowId, backup.graph, {
+        await snapshotRevision(db, "subflow", newSubflowId, backup.graph, {
           comment: `Created as backup subflow for restored workflow revision #${revision.revision_number}`,
           createdAt,
         });
@@ -384,9 +395,9 @@ export function restoreRevision(
 
   // Write the target graph back to normalized tables
   if (owner === "workflow") {
-    writeWorkflowGraph(db, ownerId, graph, createdAt);
+    await writeWorkflowGraph(db, ownerId, graph, createdAt);
   } else {
-    writeSubflowGraph(db, ownerId, graph, createdAt);
+    await writeSubflowGraph(db, ownerId, graph, createdAt);
   }
 
   return {
@@ -395,67 +406,87 @@ export function restoreRevision(
   };
 }
 
-function captureCurrentState(
-  db: DatabaseSync,
+async function captureCurrentState(
+  db: DbAdapter,
   owner: RevisionOwner,
   ownerId: string,
   options: { comment?: string; createdAt: string },
-): number {
+): Promise<number> {
   const graph = owner === "workflow"
-    ? readWorkflowGraph(db, ownerId)
-    : readSubflowGraph(db, ownerId);
+    ? await readWorkflowGraph(db, ownerId)
+    : await readSubflowGraph(db, ownerId);
 
   if (!graph) {
     throw new Error(`${owner} ${ownerId} not found`);
   }
 
-  const rev = snapshotRevision(db, owner, ownerId, graph, {
+  const rev = await snapshotRevision(db, owner, ownerId, graph, {
     comment: options.comment,
     createdAt: options.createdAt,
   });
   return rev.revision_number;
 }
 
-function readWorkflowGraph(db: DatabaseSync, workflowId: string): WorkflowGraph | null {
-  const meta = db
-    .prepare("SELECT graph_version, viewport_json, migration_notes_json FROM workflows WHERE id = ?")
-    .get(workflowId) as { graph_version: number | null; viewport_json: string | null; migration_notes_json: string } | undefined;
+async function readWorkflowGraph(db: DbAdapter, workflowId: string): Promise<WorkflowGraph | null> {
+  const ownerId = db.ownerId;
+  const meta = await db.queryOne(
+    ownerId
+      ? "SELECT graph_version, viewport_json, migration_notes_json FROM workflows WHERE id = $1 AND owner_id = $2"
+      : "SELECT graph_version, viewport_json, migration_notes_json FROM workflows WHERE id = $1",
+    ownerId ? [workflowId, ownerId] : [workflowId],
+  ) as { graph_version: number | null; viewport_json: string | null; migration_notes_json: string } | null;
   if (!meta) return null;
 
-  const nodes = db
-    .prepare("SELECT * FROM workflow_nodes WHERE workflow_id = ? ORDER BY ordinal")
-    .all(workflowId) as Array<Record<string, unknown>>;
-  const edges = db
-    .prepare("SELECT * FROM workflow_edges WHERE workflow_id = ? ORDER BY ordinal")
-    .all(workflowId) as Array<Record<string, unknown>>;
+  const nodes = await db.query(
+    ownerId
+      ? "SELECT * FROM workflow_nodes WHERE workflow_id = $1 AND owner_id = $2 ORDER BY ordinal"
+      : "SELECT * FROM workflow_nodes WHERE workflow_id = $1 ORDER BY ordinal",
+    ownerId ? [workflowId, ownerId] : [workflowId],
+  );
+  const edges = await db.query(
+    ownerId
+      ? "SELECT * FROM workflow_edges WHERE workflow_id = $1 AND owner_id = $2 ORDER BY ordinal"
+      : "SELECT * FROM workflow_edges WHERE workflow_id = $1 ORDER BY ordinal",
+    ownerId ? [workflowId, ownerId] : [workflowId],
+  );
 
   return assembleGraph(meta, nodes, edges);
 }
 
-function readSubflowGraph(db: DatabaseSync, subflowId: string): WorkflowGraph | null {
-  const meta = db
-    .prepare("SELECT graph_version, viewport_json, migration_notes_json FROM subflows WHERE id = ?")
-    .get(subflowId) as { graph_version: number | null; viewport_json: string | null; migration_notes_json: string } | undefined;
+async function readSubflowGraph(db: DbAdapter, subflowId: string): Promise<WorkflowGraph | null> {
+  const ownerId = db.ownerId;
+  const meta = await db.queryOne(
+    ownerId
+      ? "SELECT graph_version, viewport_json, migration_notes_json FROM subflows WHERE id = $1 AND owner_id = $2"
+      : "SELECT graph_version, viewport_json, migration_notes_json FROM subflows WHERE id = $1",
+    ownerId ? [subflowId, ownerId] : [subflowId],
+  ) as { graph_version: number | null; viewport_json: string | null; migration_notes_json: string } | null;
   if (!meta) return null;
 
-  const nodes = db
-    .prepare("SELECT * FROM subflow_nodes WHERE subflow_id = ? ORDER BY ordinal")
-    .all(subflowId) as Array<Record<string, unknown>>;
-  const edges = db
-    .prepare("SELECT * FROM subflow_edges WHERE subflow_id = ? ORDER BY ordinal")
-    .all(subflowId) as Array<Record<string, unknown>>;
+  const nodes = await db.query(
+    ownerId
+      ? "SELECT * FROM subflow_nodes WHERE subflow_id = $1 AND owner_id = $2 ORDER BY ordinal"
+      : "SELECT * FROM subflow_nodes WHERE subflow_id = $1 ORDER BY ordinal",
+    ownerId ? [subflowId, ownerId] : [subflowId],
+  );
+  const edges = await db.query(
+    ownerId
+      ? "SELECT * FROM subflow_edges WHERE subflow_id = $1 AND owner_id = $2 ORDER BY ordinal"
+      : "SELECT * FROM subflow_edges WHERE subflow_id = $1 ORDER BY ordinal",
+    ownerId ? [subflowId, ownerId] : [subflowId],
+  );
 
   return assembleGraph(meta, nodes, edges);
 }
 
-function writeWorkflowGraph(db: DatabaseSync, workflowId: string, graph: WorkflowGraph, timestamp: string): void {
-  db.prepare("UPDATE workflows SET updated_at = ? WHERE id = ?").run(timestamp, workflowId);
-  writeGraphToNormalizedTables(db, graph, "workflow", workflowId, timestamp);
+async function writeWorkflowGraph(db: DbAdapter, workflowId: string, graph: WorkflowGraph, timestamp: string): Promise<void> {
+  await db.execute("UPDATE workflows SET updated_at = $1 WHERE id = $2 AND owner_id = $3", [timestamp, workflowId, db.ownerId]);
+  await writeGraphToNormalizedTables(db, graph, "workflow", workflowId, timestamp);
 }
 
-function writeSubflowGraph(db: DatabaseSync, subflowId: string, graph: WorkflowGraph, timestamp: string): void {
-  db.prepare("UPDATE subflows SET updated_at = ? WHERE id = ?").run(timestamp, subflowId);
-  writeGraphToNormalizedTables(db, graph, "subflow", subflowId, timestamp);
+async function writeSubflowGraph(db: DbAdapter, subflowId: string, graph: WorkflowGraph, timestamp: string): Promise<void> {
+  await db.execute("UPDATE subflows SET updated_at = $1 WHERE id = $2 AND owner_id = $3", [timestamp, subflowId, db.ownerId]);
+  await writeGraphToNormalizedTables(db, graph, "subflow", subflowId, timestamp);
 }
 
 type GraphMetaRow = {
@@ -478,7 +509,7 @@ function assembleGraph(
   meta: GraphMetaRow,
   nodes: Array<Record<string, unknown>>,
   edges: Array<Record<string, unknown>>,
-): WorkflowGraph {
+ ): WorkflowGraph {
   const graphNodes = nodes.map((row) => ({
     id: row.id as string,
     node_type: row.node_type as WorkflowGraph["nodes"][number]["node_type"],
@@ -519,16 +550,16 @@ function assembleGraph(
   };
 }
 
-function getSubflowSnapshotsForWorkflow(
-  db: DatabaseSync,
+async function getSubflowSnapshotsForWorkflow(
+  db: DbAdapter,
   workflowId: string,
   graph: WorkflowGraph,
-): Array<{
+): Promise<Array<{
   subflowId: string;
   name: string;
   description: string;
   graph: WorkflowGraph;
-}> {
+}>> {
   const subflowIds = [
     ...new Set(
       graph.nodes
@@ -546,20 +577,20 @@ function getSubflowSnapshotsForWorkflow(
   }> = [];
 
   for (const subflowId of subflowIds) {
-    const usages = db
-      .prepare(
-        `SELECT DISTINCT workflow_id FROM workflow_nodes WHERE subflow_ref = ?`
-      )
-      .all(subflowId) as Array<{ workflow_id: string }>;
+    const usages = await db.query(
+      `SELECT DISTINCT workflow_id FROM workflow_nodes WHERE subflow_ref = $1 AND owner_id = $2`,
+      [subflowId, db.ownerId]
+    ) as Array<{ workflow_id: string }>;
 
     const isExclusive = usages.length === 0 || (usages.length === 1 && usages[0].workflow_id === workflowId);
     if (isExclusive) {
-      const subflowRow = db
-        .prepare("SELECT name, description FROM subflows WHERE id = ?")
-        .get(subflowId) as { name: string; description: string } | undefined;
+      const subflowRow = await db.queryOne(
+        "SELECT name, description FROM subflows WHERE id = $1 AND owner_id = $2",
+        [subflowId, db.ownerId]
+      ) as { name: string; description: string } | null;
 
       if (subflowRow) {
-        const subflowGraph = readSubflowGraph(db, subflowId);
+        const subflowGraph = await readSubflowGraph(db, subflowId);
         if (subflowGraph) {
           subflowBackups.push({
             subflowId,

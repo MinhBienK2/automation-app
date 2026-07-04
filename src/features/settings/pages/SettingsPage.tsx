@@ -19,15 +19,12 @@ type SettingsPageProps = {
   onGraphAutosaveEnabledChange: (enabled: boolean) => void;
   onInstallBinary: () => void | Promise<void>;
   onCleanupProfiles: () => void | Promise<void>;
-  appMode: "private" | "public";
   theme: Theme;
   accent: Accent;
   density: Density;
   onThemeChange: (theme: Theme) => void;
   onAccentChange: (accent: Accent) => void;
   onDensityChange: (density: Density) => void;
-  pgAvailable?: boolean;
-  onSwitchToLoginMode?: () => void;
 };
 
 export function SettingsPage({
@@ -36,19 +33,15 @@ export function SettingsPage({
   onGraphAutosaveEnabledChange,
   onInstallBinary,
   onCleanupProfiles,
-  appMode,
   theme,
   accent,
   density,
   onThemeChange,
   onAccentChange,
   onDensityChange,
-  pgAvailable,
-  onSwitchToLoginMode,
 }: SettingsPageProps) {
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [cleanupPending, setCleanupPending] = useState(false);
-
 
   async function confirmCleanupProfiles() {
     setCleanupPending(true);
@@ -73,41 +66,6 @@ export function SettingsPage({
           </span>
         </div>
       </header>
-
-      <section className="panel settings-panel" aria-label="Database Mode">
-        <div className="panel-heading">
-          <div>
-            <h2>Database Mode</h2>
-          </div>
-        </div>
-
-        <div className="settings-maintenance-actions" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-            <span style={{ fontWeight: 600 }}>Active Mode:</span>
-            <span style={{
-              padding: "0.25rem 0.75rem",
-              borderRadius: "4px",
-              background: appMode === "public" ? "rgba(57, 217, 138, 0.2)" : "rgba(102, 125, 141, 0.2)",
-              color: appMode === "public" ? "#39D98A" : "#9AAEBD",
-              fontWeight: 600
-            }}>
-              {appMode === "public" ? "Public (Central Shared PostgreSQL)" : "Private (Local SQLite)"}
-            </span>
-          </div>
-          {appMode === "private" && pgAvailable && onSwitchToLoginMode && (
-            <div style={{ display: "flex", marginTop: "0.5rem" }}>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onSwitchToLoginMode}
-              >
-                Switch to Workplace Mode
-              </Button>
-            </div>
-          )}
-        </div>
-
-      </section>
 
       <section className="panel settings-panel" aria-label="Workflow editing settings">
         <div className="panel-heading">
@@ -269,4 +227,3 @@ export function SettingsPage({
     </section>
   );
 }
-

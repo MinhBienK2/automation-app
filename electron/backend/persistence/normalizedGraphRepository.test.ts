@@ -1,17 +1,10 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { createAppPaths, initializeDatabase } from "./database.js";
 import { WorkflowRepository } from "./workflowRepository.js";
 import { assembleGraphFromTables } from "./normalizedGraphRepository.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
-
-function tempRoot() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "normalized-graph-test-"));
-}
+import { TestDbAdapter } from "./testDbAdapter.js";
 
 function sampleGraph(): WorkflowGraph {
   return {
@@ -53,50 +46,39 @@ function sampleGraph(): WorkflowGraph {
 
 describe("normalized graph tables", () => {
   test("tables exist with correct schema", async () => {
-    const root = tempRoot();
-    const db = await initializeDatabase(createAppPaths(root));
+    const db = await TestDbAdapter.create();
 
-    const tables = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
-      .all()
-      .map((r) => (r as { name: string }).name);
+    const tablesResult = await db.query("SELECT name FROM sqlite_master WHERE type='table'");
+    const tables = tablesResult.map((r) => (r as { name: string }).name);
 
     expect(tables).toContain("workflow_nodes");
     expect(tables).toContain("workflow_edges");
     expect(tables).toContain("subflow_nodes");
     expect(tables).toContain("subflow_edges");
 
-    const wfColumns = db
-      .prepare("PRAGMA table_info(workflows)")
-      .all()
-      .map((r) => (r as { name: string }).name);
+    const wfColumnsResult = await db.query("PRAGMA table_info(workflows)");
+    const wfColumns = wfColumnsResult.map((r) => (r as { name: string }).name);
     expect(wfColumns).toContain("graph_version");
     expect(wfColumns).toContain("viewport_json");
     expect(wfColumns).toContain("migration_notes_json");
-
-    db.close();
-    fs.rmSync(root, { recursive: true, force: true });
   });
 
   test("assembleGraphFromTables returns null for non-existent workflow", async () => {
-    const root = tempRoot();
-    const db = await initializeDatabase(createAppPaths(root));
-    expect(assembleGraphFromTables(db, "nonexistent")).toBeNull();
-    db.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    const db = await TestDbAdapter.create();
+    const result = await assembleGraphFromTables(db, "nonexistent");
+    expect(result).toBeNull();
   });
 
   test("assembleGraphFromTables produces identical output to legacy reader when populated", async () => {
-    const root = tempRoot();
-    const db = await initializeDatabase(createAppPaths(root));
+    const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
     const graph = sampleGraph();
 
-    const project = repo.listProjects()[0] ?? repo.createProject("Main");
-    // createWorkflow now dual-writes to normalized tables
-    const wf = repo.createWorkflow("Test", graph, new Date(), { projectId: project.id });
+    const projects = await repo.listProjects();
+    const project = projects[0] ?? (await repo.createProject("Main"));
+    const wf = await repo.createWorkflow("Test", graph, new Date(), { projectId: project.id });
 
-    const fromTables = assembleGraphFromTables(db, wf.id);
+    const fromTables = await assembleGraphFromTables(db, wf.id);
     expect(fromTables).not.toBeNull();
     expect(fromTables!.version).toBe(graph.version);
     expect(fromTables!.nodes).toHaveLength(3);
@@ -105,14 +87,10 @@ describe("normalized graph tables", () => {
     expect(fromTables!.nodes[1].config).toEqual(graph.nodes[1].config);
     expect(fromTables!.viewport).toEqual(graph.viewport);
     expect(fromTables!.edges[0].source_port).toBe("out");
-
-    db.close();
-    fs.rmSync(root, { recursive: true, force: true });
   });
 
   test("saveWorkflowGraph and assembleGraphFromTables preserve edge label, condition, and delay", async () => {
-    const root = tempRoot();
-    const db = await initializeDatabase(createAppPaths(root));
+    const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
     
     const edgeDelay = { type: "random" as const, min_ms: 500, max_ms: 1200 };
@@ -154,10 +132,11 @@ describe("normalized graph tables", () => {
       migration_notes: [],
     };
 
-    const project = repo.listProjects()[0] ?? repo.createProject("Main");
-    const wf = repo.createWorkflow("Test Edge Props", graph, new Date(), { projectId: project.id });
+    const projects = await repo.listProjects();
+    const project = projects[0] ?? (await repo.createProject("Main"));
+    const wf = await repo.createWorkflow("Test Edge Props", graph, new Date(), { projectId: project.id });
 
-    const fromTables = assembleGraphFromTables(db, wf.id);
+    const fromTables = await assembleGraphFromTables(db, wf.id);
     expect(fromTables).not.toBeNull();
     expect(fromTables!.edges).toHaveLength(1);
     
@@ -165,9 +144,5 @@ describe("normalized graph tables", () => {
     expect(edge.label).toBe("my-label");
     expect(edge.condition).toEqual(edgeCondition);
     expect(edge.delay).toEqual(edgeDelay);
-
-    db.close();
-    fs.rmSync(root, { recursive: true, force: true });
   });
 });
-

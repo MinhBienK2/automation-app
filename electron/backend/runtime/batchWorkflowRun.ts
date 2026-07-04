@@ -17,9 +17,9 @@ export type BatchWorkflowRunManager = {
     workflowId: string,
     settings: WorkflowSettings,
     graph: WorkflowGraph,
-  ): string;
+  ): Promise<string>;
   setCurrentBatchRunId(runId: string | null): void;
-  finishRun(runId: string | null, graph: CompiledWorkflowGraph, state: RunState): void;
+  finishRun(runId: string | null, graph: CompiledWorkflowGraph, state: RunState): Promise<void>;
   clearBatchRun(abortController: AbortController): void;
 };
 
@@ -73,7 +73,7 @@ export async function runBatchWorkflowRows({
         },
       });
       const rowGraph = prependBatchRowVariables(compiledGraph, rowIndex, row);
-      const runId = runManager.beginRunRecord(workflowId, batchSettings, graphSnapshot);
+      const runId = await runManager.beginRunRecord(workflowId, batchSettings, graphSnapshot);
       activeRowRunId = runId;
       activeRowGraph = rowGraph;
       activeRowIndex = rowIndex;
@@ -110,7 +110,7 @@ export async function runBatchWorkflowRows({
           error: null,
         };
       }
-      runManager.finishRun(runId, rowGraph, result);
+      await runManager.finishRun(runId, rowGraph, result);
       activeRowRunId = null;
       activeRowGraph = null;
       activeRowIndex = null;
@@ -179,7 +179,7 @@ export async function runBatchWorkflowRows({
           reason,
         },
       };
-      runManager.finishRun(activeRowRunId, activeRowGraph, failedState);
+      await runManager.finishRun(activeRowRunId, activeRowGraph, failedState);
       runManager.setCurrentBatchRunId(null);
       results.push({
         row_index: activeRowIndex ?? results.length,

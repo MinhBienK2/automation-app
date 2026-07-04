@@ -246,8 +246,8 @@ export type WorkflowElectronBridge = {
   listUsers(): Promise<Array<{ id: string; email: string; role: "admin" | "user"; created_at: string }>>;
   createUser(input: { email: string; password: string; role: "admin" | "user" }): Promise<{ id: string; email: string; role: "admin" | "user"; created_at: string }>;
   deleteUser(input: { id: string }): Promise<{ ok: boolean }>;
-  getAppConfig(): Promise<{ mode: "private" | "public"; publicDatabaseUrl?: string }>;
-  saveAppConfig(config: { mode: "private" | "public"; publicDatabaseUrl?: string }): Promise<{ ok: boolean }>;
+  getAppConfig(): Promise<{ mode: "public"; publicDatabaseUrl?: string }>;
+  saveAppConfig(config: { mode: "public"; publicDatabaseUrl?: string }): Promise<{ ok: boolean }>;
 };
 
 declare global {

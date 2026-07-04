@@ -83,9 +83,9 @@ describe("Recording commands integration", () => {
 
   test("starts replace-current-graph recording from saved workflow settings without leaking secrets", async () => {
     const { handlers } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Saved identity");
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    const savedSettings = handlers.saveWorkflowSettings(workflow.id, {
+    const workflow = await handlers.createWorkflow("Saved identity");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    const savedSettings = await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -282,8 +282,9 @@ describe("Recording commands integration", () => {
       "end_success",
     ]);
     expect(handlers.getRecordingDraft(draft.id)).toEqual(draft);
-    expect(handlers.listWorkflows()).toEqual([]);
-    expect(database.prepare("SELECT COUNT(*) AS count FROM workflows").get()).toEqual({
+    expect(await handlers.listWorkflows()).toEqual([]);
+    const countRow = await database.queryOne<{ count: number }>("SELECT COUNT(*) AS count FROM workflows");
+    expect(countRow).toEqual({
       count: 0,
     });
   });
@@ -327,7 +328,7 @@ describe("Recording commands integration", () => {
       included: index !== 0,
     }));
 
-    const saved = handlers.saveRecordingDraft(draft.id, {
+    const saved = await handlers.saveRecordingDraft(draft.id, {
       workflow_name: "Saved recording",
       save_mode: "create_new",
       reviewed_steps: reviewedSteps,
@@ -335,8 +336,8 @@ describe("Recording commands integration", () => {
     });
 
     expect(saved.workflow.name).toBe("Saved recording");
-    expect(handlers.listWorkflows()).toHaveLength(1);
-    expect(handlers.getWorkflowGraph(saved.workflow.id).nodes).toEqual(
+    expect(await handlers.listWorkflows()).toHaveLength(1);
+    expect((await handlers.getWorkflowGraph(saved.workflow.id)).nodes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           label: "Fill recorded email",
@@ -345,12 +346,12 @@ describe("Recording commands integration", () => {
       ]),
     );
     expect(
-      handlers.getWorkflowGraph(saved.workflow.id).nodes.some((node) =>
+      (await handlers.getWorkflowGraph(saved.workflow.id)).nodes.some((node) =>
         node.config && typeof node.config === "object" && "type" in node.config &&
         node.config.type === "navigate"
       ),
     ).toBe(false);
-    expect(handlers.getWorkflowSettings(saved.workflow.id).browser_launch.identity_id)
+    expect((await handlers.getWorkflowSettings(saved.workflow.id)).browser_launch.identity_id)
       .toBe(draft.workflow_settings_snapshot.browser_launch.identity_id);
     expect(() => handlers.getRecordingDraft(draft.id)).toThrow("Recording draft not found");
     expect(() => handlers.getRecordingSession(session.id)).toThrow("Recording session not found");
@@ -414,14 +415,14 @@ describe("Recording commands integration", () => {
       })),
     ] as unknown as typeof draft.steps;
 
-    const saved = handlers.saveRecordingDraft(draft.id, {
+    const saved = await handlers.saveRecordingDraft(draft.id, {
       workflow_name: "Saved recording",
       save_mode: "create_new",
       reviewed_steps: tamperedSteps,
       add_terminal_success: true,
     });
 
-    const graph = handlers.getWorkflowGraph(saved.workflow.id);
+    const graph = await handlers.getWorkflowGraph(saved.workflow.id);
     const actionNodes = graph.nodes.filter((node) => node.node_type === "action");
     expect(actionNodes).toHaveLength(1);
     expect(actionNodes[0]).toMatchObject({
@@ -476,14 +477,14 @@ describe("Recording commands integration", () => {
         : step,
     );
 
-    const saved = handlers.saveRecordingDraft(draft.id, {
+    const saved = await handlers.saveRecordingDraft(draft.id, {
       workflow_name: "Saved recording",
       save_mode: "create_new",
       reviewed_steps: reviewedSteps,
       add_terminal_success: false,
     });
 
-    const actionConfigs = handlers.getWorkflowGraph(saved.workflow.id).nodes
+    const actionConfigs = (await handlers.getWorkflowGraph(saved.workflow.id)).nodes
       .flatMap((node) => node.node_type === "action" ? [node.config] : []);
     expect(actionConfigs).toEqual(
       expect.arrayContaining([
@@ -534,8 +535,8 @@ describe("Recording commands integration", () => {
     const { handlers } = await createTestHandlers({
       recorderDriver: new FakeRecordingDriver(context),
     });
-    const workflow = handlers.createWorkflow("Existing flow");
-    const originalIdentity = handlers.getWorkflowSettings(workflow.id).browser_launch.identity_id;
+    const workflow = await handlers.createWorkflow("Existing flow");
+    const originalIdentity = (await handlers.getWorkflowSettings(workflow.id)).browser_launch.identity_id;
     const session = await handlers.startRecordingSession({
       mode: "replace_current_graph",
       workflow_id: workflow.id,
@@ -568,7 +569,7 @@ describe("Recording commands integration", () => {
       add_terminal_success: true,
     });
 
-    const saved = handlers.saveRecordingDraft(draft.id, {
+    const saved = await handlers.saveRecordingDraft(draft.id, {
       workflow_name: "Ignored for replace",
       save_mode: "replace_graph",
       reviewed_steps: draft.steps,
@@ -576,15 +577,15 @@ describe("Recording commands integration", () => {
     });
 
     expect(saved.workflow.id).toBe(workflow.id);
-    expect(handlers.listWorkflows()).toHaveLength(1);
-    expect(handlers.getWorkflowGraph(workflow.id).nodes).toEqual(
+    expect(await handlers.listWorkflows()).toHaveLength(1);
+    expect((await handlers.getWorkflowGraph(workflow.id)).nodes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           config: expect.objectContaining({ type: "click" }),
         }),
       ]),
     );
-    expect(handlers.getWorkflowSettings(workflow.id).browser_launch.identity_id)
+    expect((await handlers.getWorkflowSettings(workflow.id)).browser_launch.identity_id)
       .toBe(originalIdentity);
   });
 
@@ -610,8 +611,8 @@ describe("Recording commands integration", () => {
         },
       },
     });
-    const workflow = handlers.createWorkflow("Running workflow");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const workflow = await handlers.createWorkflow("Running workflow");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
     const runPromise = handlers.runWorkflow(workflow.id);
     await waitFor(() => activeRunSignal !== null);

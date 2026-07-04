@@ -1,9 +1,6 @@
 // @vitest-environment node
 
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type {
   CompiledWorkflowGraph,
   RunState,
@@ -11,45 +8,35 @@ import type {
   WorkflowSettings,
   WorkflowSummary,
 } from "../../../src/types/workflow";
-import { createAppPaths, initializeDatabase } from "../persistence/database";
-import { idleRunState, RunManager } from "./runManager";
-
-const tempRoots: string[] = [];
-
-afterEach(async () => {
-  for (const root of tempRoots.splice(0)) {
-    await fs.rm(root, { recursive: true, force: true });
-  }
-});
+import { idleRunState, RunManager } from "./runManager.js";
+import { TestDbAdapter } from "../persistence/testDbAdapter.js";
 
 describe("RunManager", () => {
   test("marks durable running rows from a previous app process as failed on startup", async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
-    tempRoots.push(tempRoot);
-    const database = await initializeDatabase(createAppPaths(tempRoot));
+    const database = await TestDbAdapter.create();
     const workflow = workflowSummary("workflow-1", "Interrupted workflow");
     const graph = workflowGraph();
     const settings = workflowSettings(workflow.id, "profile-1");
-    database
-      .prepare(
-        `INSERT INTO workflows (
-          id, name, description, tags_json, settings_json, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?)`,
-      )
-      .run(
+    
+    await database.execute(
+      `INSERT INTO workflows (
+        id, name, description, tags_json, settings_json, created_at, updated_at, owner_id
+      ) VALUES ($1, $2, '', '[]', $3, $4, $5, $6)`,
+      [
         workflow.id,
         workflow.name,
         JSON.stringify(settings),
         workflow.created_at,
         workflow.updated_at,
-      );
-    database
-      .prepare(
-        `INSERT INTO runs (
-          id, workflow_id, source, status, started_at, settings_snapshot_json, graph_snapshot_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+        database.ownerId,
+      ]
+    );
+
+    await database.execute(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, settings_snapshot_json, graph_snapshot_json, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
         "run-interrupted",
         workflow.id,
         "manual",
@@ -57,7 +44,9 @@ describe("RunManager", () => {
         "2026-05-27T10:00:00.000Z",
         JSON.stringify(settings),
         JSON.stringify(graph),
-      );
+        database.ownerId,
+      ]
+    );
 
     new RunManager({
       database,
@@ -67,49 +56,48 @@ describe("RunManager", () => {
       },
     });
 
-    const row = database
-      .prepare(
-        `SELECT status, finished_at, outputs_json, error_json
-         FROM runs
-         WHERE id = ?`,
-      )
-      .get("run-interrupted") as {
-        status: string;
-        finished_at: string | null;
-        outputs_json: string | null;
-        error_json: string | null;
-      };
+    const row = await database.queryOne<{
+      status: string;
+      finished_at: string | null;
+      outputs_json: string | null;
+      error_json: string | null;
+    }>(
+      `SELECT status, finished_at, outputs_json, error_json
+       FROM runs
+       WHERE id = $1`,
+      ["run-interrupted"]
+    );
 
-    expect(row.status).toBe("failed");
-    expect(row.finished_at).toEqual(expect.any(String));
-    expect(row.outputs_json).toBe(JSON.stringify({}));
-    expect(JSON.parse(row.error_json ?? "{}")).toMatchObject({
+    expect(row).not.toBeNull();
+    expect(row!.status).toBe("failed");
+    expect(row!.finished_at).toEqual(expect.any(String));
+    expect(row!.outputs_json).toBe(JSON.stringify({}));
+    expect(JSON.parse(row!.error_json ?? "{}")).toMatchObject({
       action_type: "workflow",
       reason: "App exited before the run completed",
     });
-    database.close();
   });
 
   test("tracks active workflow/profile locks and releases them after final persistence", async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
-    tempRoots.push(tempRoot);
-    const database = await initializeDatabase(createAppPaths(tempRoot));
+    const database = await TestDbAdapter.create();
     const workflow = workflowSummary("workflow-1", "Run manager workflow");
     const graph = workflowGraph();
     const settings = workflowSettings(workflow.id, "profile-1");
-    database
-      .prepare(
-        `INSERT INTO workflows (
-          id, name, description, tags_json, settings_json, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?)`,
-      )
-      .run(
+
+    await database.execute(
+      `INSERT INTO workflows (
+        id, name, description, tags_json, settings_json, created_at, updated_at, owner_id
+      ) VALUES ($1, $2, '', '[]', $3, $4, $5, $6)`,
+      [
         workflow.id,
         workflow.name,
         JSON.stringify(settings),
         workflow.created_at,
         workflow.updated_at,
-      );
+        database.ownerId,
+      ]
+    );
+
     let finishRun: ((state: RunState) => void) | null = null;
     const runner = {
       run: vi.fn(
@@ -160,38 +148,42 @@ describe("RunManager", () => {
         state: expect.objectContaining({ status: "success" }),
       }),
     ]);
-    expect(
-      database.prepare("SELECT status, outputs_json FROM runs WHERE id = ?").get(started.run_id),
-    ).toMatchObject({
+
+    const runRow = await database.queryOne<{ status: string; outputs_json: string }>(
+      "SELECT status, outputs_json FROM runs WHERE id = $1",
+      [started.run_id]
+    );
+    expect(runRow).toMatchObject({
       status: "success",
       outputs_json: JSON.stringify({ ok: true }),
     });
-    expect(database.prepare("SELECT COUNT(*) AS count FROM run_steps").get()).toEqual({
+
+    const stepsCount = await database.queryOne<{ count: number }>("SELECT COUNT(*) AS count FROM run_steps");
+    expect(stepsCount).toEqual({
       count: 1,
     });
-    database.close();
   });
 
   test("preserves terminal retained-session snapshot after active run entry is removed", async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
-    tempRoots.push(tempRoot);
-    const database = await initializeDatabase(createAppPaths(tempRoot));
+    const database = await TestDbAdapter.create();
     const workflow = workflowSummary("workflow-1", "Retained session workflow");
     const graph = workflowGraph();
     const settings = workflowSettings(workflow.id, "profile-1");
-    database
-      .prepare(
-        `INSERT INTO workflows (
-          id, name, description, tags_json, settings_json, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?)`,
-      )
-      .run(
+
+    await database.execute(
+      `INSERT INTO workflows (
+        id, name, description, tags_json, settings_json, created_at, updated_at, owner_id
+      ) VALUES ($1, $2, '', '[]', $3, $4, $5, $6)`,
+      [
         workflow.id,
         workflow.name,
         JSON.stringify(settings),
         workflow.created_at,
         workflow.updated_at,
-      );
+        database.ownerId,
+      ]
+    );
+
     let finishRun: ((state: RunState) => void) | null = null;
     const runner = {
       run: vi.fn(
@@ -245,29 +237,28 @@ describe("RunManager", () => {
       profile_name: "profile-1",
     });
     expect(runner.getRetainedSessionState).toHaveBeenLastCalledWith(workflow.id, "profile-1");
-    database.close();
   });
 
   test("keys retained sessions from normal runs by workflow profile", async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
-    tempRoots.push(tempRoot);
-    const database = await initializeDatabase(createAppPaths(tempRoot));
+    const database = await TestDbAdapter.create();
     const workflow = workflowSummary("workflow-1", "Retained owner workflow");
     const graph = workflowGraph();
     const settings = workflowSettings(workflow.id, "profile-1");
-    database
-      .prepare(
-        `INSERT INTO workflows (
-          id, name, description, tags_json, settings_json, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?)`,
-      )
-      .run(
+
+    await database.execute(
+      `INSERT INTO workflows (
+        id, name, description, tags_json, settings_json, created_at, updated_at, owner_id
+      ) VALUES ($1, $2, '', '[]', $3, $4, $5, $6)`,
+      [
         workflow.id,
         workflow.name,
         JSON.stringify(settings),
         workflow.created_at,
         workflow.updated_at,
-      );
+        database.ownerId,
+      ]
+    );
+
     const runner = {
       run: vi.fn(async (): Promise<RunState> => ({
         ...idleRunState,
@@ -292,22 +283,19 @@ describe("RunManager", () => {
         retainedSessionWorkflowId: workflow.id,
       }),
     );
-    database.close();
   });
 
   test("persists variables marked with persist: true back to browser profile environment after a run", async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
-    tempRoots.push(tempRoot);
-    const database = await initializeDatabase(createAppPaths(tempRoot));
+    const database = await TestDbAdapter.create();
     const workflow = workflowSummary("workflow-1", "Run manager workflow");
     workflow.browser_profile_id = "profile-1";
     const graph = workflowGraph();
     const settings = workflowSettings(workflow.id, "profile-1");
 
-    database.prepare(`
-      INSERT INTO projects (id, name, created_at, updated_at)
-      VALUES (?, ?, ?, ?)
-    `).run("project-1", "Project 1", "2026-05-24T00:00:00.000Z", "2026-05-24T00:00:00.000Z");
+    await database.execute(`
+      INSERT INTO projects (id, name, created_at, updated_at, owner_id)
+      VALUES ($1, $2, $3, $4, $5)
+    `, ["project-1", "Project 1", "2026-05-24T00:00:00.000Z", "2026-05-24T00:00:00.000Z", database.ownerId]);
 
     const initialEnv = {
       variables: [
@@ -315,11 +303,11 @@ describe("RunManager", () => {
         { name: "dont_persist_me", value_type: "text", value: "old-value", persist: false },
       ],
     };
-    database.prepare(`
+    await database.execute(`
       INSERT INTO browser_profiles (
-        id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+        id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `, [
       "profile-1",
       "project-1",
       "profile-1",
@@ -328,23 +316,24 @@ describe("RunManager", () => {
       JSON.stringify(settings.browser_launch),
       JSON.stringify(initialEnv),
       "2026-05-24T00:00:00.000Z",
-      "2026-05-24T00:00:00.000Z"
-    );
+      "2026-05-24T00:00:00.000Z",
+      database.ownerId,
+    ]);
 
-    database
-      .prepare(
-        `INSERT INTO workflows (
-          id, name, description, tags_json, settings_json, browser_profile_id, created_at, updated_at
-        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?)`,
-      )
-      .run(
+    await database.execute(
+      `INSERT INTO workflows (
+        id, name, description, tags_json, settings_json, browser_profile_id, created_at, updated_at, owner_id
+      ) VALUES ($1, $2, '', '[]', $3, $4, $5, $6, $7)`,
+      [
         workflow.id,
         workflow.name,
         JSON.stringify(settings),
         "profile-1",
         workflow.created_at,
         workflow.updated_at,
-      );
+        database.ownerId,
+      ]
+    );
 
     let finishRun: ((state: RunState) => void) | null = null;
     const runner = {
@@ -378,15 +367,15 @@ describe("RunManager", () => {
     });
     await flushAsyncWork();
 
-    const profileRow = database
-      .prepare("SELECT environment_json FROM browser_profiles WHERE id = ?")
-      .get("profile-1") as { environment_json: string };
-    const parsedEnv = JSON.parse(profileRow.environment_json);
+    const profileRow = await database.queryOne<{ environment_json: string }>(
+      "SELECT environment_json FROM browser_profiles WHERE id = $1",
+      ["profile-1"]
+    );
+    const parsedEnv = JSON.parse(profileRow!.environment_json);
     expect(parsedEnv.variables).toEqual([
       { name: "persist_me", value_type: "text", value: "new-value", persist: true },
       { name: "dont_persist_me", value_type: "text", value: "old-value", persist: false },
     ]);
-    database.close();
   });
 });
 

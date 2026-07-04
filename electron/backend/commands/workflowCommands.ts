@@ -66,11 +66,12 @@ export function createWorkflowCommands(deps: CommandDeps) {
     graphContextForWorkflow,
   } = deps;
 
-  function validateWorkflowRun(workflowId: string): RunValidationIssue[] {
-    const workflow = requireWorkflow(workflowId);
-    const graph = getWorkflowGraph(workflowId);
+  async function validateWorkflowRun(workflowId: string): Promise<RunValidationIssue[]> {
+    const workflow = await requireWorkflow(workflowId);
+    const graph = await getWorkflowGraph(workflowId);
+    const settings = await getSettings(workflowId);
     return [
-      ...validateGraph(graph, graphContextForWorkflow(workflow)).map((issue) => ({
+      ...validateGraph(graph, await graphContextForWorkflow(workflow, graph)).map((issue) => ({
         source: "graph" as const,
         field: null,
         node_id: issue.node_id ?? null,
@@ -78,7 +79,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
         message: issue.message,
         level: issue.level,
       })),
-      ...settingsService.validateSettings(getSettings(workflowId)).map((issue) => ({
+      ...settingsService.validateSettings(settings).map((issue) => ({
         source: "settings" as const,
         field: issue.field ?? null,
         node_id: null,
@@ -93,29 +94,29 @@ export function createWorkflowCommands(deps: CommandDeps) {
     workflowId: string,
     source: "manual" | "schedule" = "manual",
   ): Promise<WorkflowRunSnapshot> {
-    const workflow = requireWorkflow(workflowId);
-    const settings = getSettings(workflowId);
+    const workflow = await requireWorkflow(workflowId);
+    const settings = await getSettings(workflowId);
     const conflict = activeRunConflict(workflowId, settings);
     if (conflict) {
       throw commandError(conflict.message, conflict.field);
     }
-    const graph = getWorkflowGraph(workflowId);
-    const runIssues = validateWorkflowRun(workflowId);
+    const graph = await getWorkflowGraph(workflowId);
+    const runIssues = await validateWorkflowRun(workflowId);
     const firstError = runIssues.find((issue) => issue.level === "error");
     if (firstError) {
       if (source === "manual") {
-        deps.operationsRepository.recordLaunchBlocked({ workflow, issues: runIssues });
+        await deps.operationsRepository.recordLaunchBlocked({ workflow, issues: runIssues });
       }
       throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
     }
-    const graphContext = graphContextForWorkflow(workflow);
+    const graphContext = await graphContextForWorkflow(workflow, graph);
     if (compileGraph(graph, graphContext).steps.length === 0) {
       throw commandError("Workflow graph has no executable steps", "graph");
     }
 
     let profileEnvironment: ProfileEnvironment | undefined;
     if (workflow.browser_profile_id) {
-      const profile = repository.getBrowserProfile(workflow.browser_profile_id);
+      const profile = await repository.getBrowserProfile(workflow.browser_profile_id);
       if (profile) {
         profileEnvironment = profile.environment;
       }
@@ -125,7 +126,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
       ...graphContext,
       profileEnvironment,
     });
-    return runManager.startWorkflowRun({
+    return await runManager.startWorkflowRun({
       workflow,
       source,
       settings,
@@ -137,74 +138,69 @@ export function createWorkflowCommands(deps: CommandDeps) {
 
 
   return {
-    listWorkflows(): WorkflowSummary[] {
+    async listWorkflows(): Promise<WorkflowSummary[]> {
       return repository.listWorkflows();
     },
 
-    getWorkflow(id: string): WorkflowDetail | null {
+    async getWorkflow(id: string): Promise<WorkflowDetail | null> {
       return repository.getWorkflow(id);
     },
 
-    validateWorkflowRun(workflowId: string): RunValidationIssue[] {
+    async validateWorkflowRun(workflowId: string): Promise<RunValidationIssue[]> {
       return validateWorkflowRun(workflowId);
     },
 
     createWorkflow,
 
-    renameWorkflow(id: string, name: string) {
+    async renameWorkflow(id: string, name: string) {
       const normalized = name.trim();
       if (!normalized) {
         throw commandError("Workflow name is required", "name");
       }
-      requireWorkflow(id);
-      repository.renameWorkflow(id, normalized);
+      await requireWorkflow(id);
+      await repository.renameWorkflow(id, normalized);
     },
 
-    deleteWorkflow(id: string, _options: WorkflowDeleteOptions = {}) {
-      const settings = getSettings(id);
-      assertWorkflowDeletionAllowed(id, settings);
-      repository.deleteWorkflow(id);
+    async deleteWorkflow(id: string, _options: WorkflowDeleteOptions = {}) {
+      const settings = await getSettings(id);
+      await assertWorkflowDeletionAllowed(id, settings);
+      await repository.deleteWorkflow(id);
     },
 
-    duplicateWorkflow(workflowId: string, name: string): WorkflowDetail {
-      const sourceWorkflow = requireWorkflow(workflowId);
-      deps.context.database.exec("BEGIN IMMEDIATE");
-      try {
-        let created = createWorkflow(name, {
+    async duplicateWorkflow(workflowId: string, name: string): Promise<WorkflowDetail> {
+      const sourceWorkflow = await requireWorkflow(workflowId);
+      return deps.context.database.transaction(async () => {
+        let created = await createWorkflow(name, {
           project_id: sourceWorkflow.project_id,
         });
         if (sourceWorkflow.browser_profile_id) {
-          created = repository.assignWorkflowBrowserProfile(
+          created = await repository.assignWorkflowBrowserProfile(
             created.id,
             sourceWorkflow.browser_profile_id,
           ) ?? created;
         }
-        const graph = repository.getWorkflowGraph(workflowId);
-        if (graph) repository.saveWorkflowGraph(created.id, graph);
-        const settings = getSettings(workflowId);
+        const graph = await repository.getWorkflowGraph(workflowId);
+        if (graph) await repository.saveWorkflowGraph(created.id, graph);
+        const settings = await getSettings(workflowId);
         if (settings) {
-          saveSettings(created.id, {
+          await saveSettings(created.id, {
             ...settingsService.duplicateWorkflowSettings(settings, created),
-            browser_launch: getSettings(created.id).browser_launch,
+            browser_launch: (await getSettings(created.id)).browser_launch,
           });
         }
-        deps.context.database.exec("COMMIT");
         return { workflow: created, steps: [] };
-      } catch (error) {
-        deps.context.database.exec("ROLLBACK");
-        throw error;
-      }
+      });
     },
 
-    getWorkflowGraph(workflowId: string): WorkflowGraph {
+    getWorkflowGraph(workflowId: string): Promise<WorkflowGraph> {
       return getWorkflowGraph(workflowId);
     },
 
-    saveWorkflowGraph(workflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
-      requireWorkflow(workflowId);
+    async saveWorkflowGraph(workflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
+      await requireWorkflow(workflowId);
       const migrated = migrateWorkflowGraph(graph);
       assertNoUnsupportedGraphDiscriminants(migrated);
-      repository.saveWorkflowGraph(workflowId, migrated, options);
+      await repository.saveWorkflowGraph(workflowId, migrated, options);
     },
 
     validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssue[] {
@@ -224,8 +220,8 @@ export function createWorkflowCommands(deps: CommandDeps) {
       startNodeId: string,
       mode?: "selected_only" | "from_selected",
     ): Promise<WorkflowRunSnapshot> {
-      const workflow = requireWorkflow(workflowId);
-      const settings = getSettings(workflowId);
+      const workflow = await requireWorkflow(workflowId);
+      const settings = await getSettings(workflowId);
       const conflict = activeRunConflict(workflowId, settings);
       if (conflict) {
         throw commandError(conflict.message, conflict.field);
@@ -260,20 +256,20 @@ export function createWorkflowCommands(deps: CommandDeps) {
       const runMode = mode ?? settings.run_policy.run_from_selected_mode;
       if (mode && mode !== settings.run_policy.run_from_selected_mode) {
         settings.run_policy.run_from_selected_mode = mode;
-        saveSettings(workflowId, settings);
+        await saveSettings(workflowId, settings);
       }
 
       let profileEnvironment: ProfileEnvironment | undefined;
       if (workflow.browser_profile_id) {
-        const profile = repository.getBrowserProfile(workflow.browser_profile_id);
+        const profile = await repository.getBrowserProfile(workflow.browser_profile_id);
         if (profile) {
           profileEnvironment = profile.environment;
         }
       }
 
-      const graph = getWorkflowGraph(workflowId);
+      const graph = await getWorkflowGraph(workflowId);
       const compiledGraph = compileWorkflowGraphFromNode(graph, startNodeId, {
-        ...graphContextForWorkflow(workflow),
+        ...(await graphContextForWorkflow(workflow, graph)),
         mode: runMode,
         settings,
         profileEnvironment,
@@ -282,7 +278,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
         throw commandError("Selected graph node has no executable steps", "startNodeId");
       }
 
-      return runManager.startWorkflowRun({
+      return await runManager.startWorkflowRun({
         workflow,
         source: "manual",
         settings,
@@ -295,7 +291,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
     },
 
     async stopRun(runId?: string | null): Promise<WorkflowRunSnapshot> {
-      return runManager.stopRun({ runId, fallbackWorkflow: repository.listWorkflows()[0] ?? null });
+      return runManager.stopRun({ runId, fallbackWorkflow: (await repository.listWorkflows())[0] ?? null });
     },
 
     getRunState() {
@@ -310,11 +306,11 @@ export function createWorkflowCommands(deps: CommandDeps) {
       workflowId: string,
       request: BatchRunRequest,
     ) {
-      const workflow = requireWorkflow(workflowId);
+      const workflow = await requireWorkflow(workflowId);
       if (runManager.hasActiveBatchRun() || runManager.hasActiveWorkflowRuns()) {
         throw commandError("A workflow run is already active", "run");
       }
-      const settings = getSettings(workflowId);
+      const settings = await getSettings(workflowId);
       const concurrencyLimit =
         request.concurrency_limit ?? settings.run_policy.batch_concurrency_limit ?? 1;
       if (concurrencyLimit > 1) {
@@ -323,14 +319,14 @@ export function createWorkflowCommands(deps: CommandDeps) {
           "concurrency_limit",
         );
       }
-      const graph = getWorkflowGraph(workflowId);
-      const graphContext = graphContextForWorkflow(workflow);
+      const graph = await getWorkflowGraph(workflowId);
+      const graphContext = await graphContextForWorkflow(workflow, graph);
       if (compileGraph(graph, graphContext).steps.length === 0) {
         throw commandError("Workflow graph has no executable steps", "graph");
       }
       let profileEnvironment: ProfileEnvironment | undefined;
       if (workflow.browser_profile_id) {
-        const profile = repository.getBrowserProfile(workflow.browser_profile_id);
+        const profile = await repository.getBrowserProfile(workflow.browser_profile_id);
         if (profile) {
           profileEnvironment = profile.environment;
         }
@@ -339,7 +335,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
         ...graphContext,
         profileEnvironment,
       });
-      return runBatchWorkflowRows({
+      return await runBatchWorkflowRows({
         workflowId,
         request,
         settings,
@@ -355,60 +351,62 @@ export function createWorkflowCommands(deps: CommandDeps) {
       if (validation) throw commandError(validation.message, validation.field);
     },
 
-    listWorkflowRevisions(workflowId: string, options?: { limit?: number; offset?: number; onlyBackups?: boolean }) {
-      requireWorkflow(workflowId);
+    async listWorkflowRevisions(workflowId: string, options?: { limit?: number; offset?: number; onlyBackups?: boolean }) {
+      await requireWorkflow(workflowId);
       return listRevisions(deps.context.database, "workflow", workflowId, options ?? {});
     },
 
-    getWorkflowRevision(revisionId: string) {
+    async getWorkflowRevision(revisionId: string) {
       return getRevision(deps.context.database, "workflow", revisionId);
     },
 
-    restoreWorkflowRevision(workflowId: string, revisionId: string, options?: { comment?: string }) {
-      requireWorkflow(workflowId);
+    async restoreWorkflowRevision(workflowId: string, revisionId: string, options?: { comment?: string }) {
+      await requireWorkflow(workflowId);
       return restoreRevision(deps.context.database, "workflow", workflowId, revisionId, options ?? {});
     },
 
-    tagWorkflowRevision(revisionId: string, tag: string) {
-      tagRevision(deps.context.database, "workflow", revisionId, tag);
+    async tagWorkflowRevision(revisionId: string, tag: string) {
+      await tagRevision(deps.context.database, "workflow", revisionId, tag);
     },
 
-    untagWorkflowRevision(revisionId: string) {
-      untagRevision(deps.context.database, "workflow", revisionId);
+    async untagWorkflowRevision(revisionId: string) {
+      await untagRevision(deps.context.database, "workflow", revisionId);
     },
 
-    deleteWorkflowRevision(revisionId: string) {
-      deleteRevision(deps.context.database, "workflow", revisionId);
+    async deleteWorkflowRevision(revisionId: string) {
+      await deleteRevision(deps.context.database, "workflow", revisionId);
     },
 
-    listSubflowRevisions(subflowId: string, options?: { limit?: number; offset?: number; onlyBackups?: boolean }) {
-      if (!deps.context.database.prepare("SELECT id FROM subflows WHERE id = ?").get(subflowId)) {
+    async listSubflowRevisions(subflowId: string, options?: { limit?: number; offset?: number; onlyBackups?: boolean }) {
+      const exists = await deps.context.database.queryOne("SELECT id FROM subflows WHERE id = $1", [subflowId]);
+      if (!exists) {
         throw commandError("Subflow not found", "subflowId");
       }
       return listRevisions(deps.context.database, "subflow", subflowId, options ?? {});
     },
 
-    getSubflowRevision(revisionId: string) {
+    async getSubflowRevision(revisionId: string) {
       return getRevision(deps.context.database, "subflow", revisionId);
     },
 
-    restoreSubflowRevision(subflowId: string, revisionId: string, options?: { comment?: string }) {
-      if (!deps.context.database.prepare("SELECT id FROM subflows WHERE id = ?").get(subflowId)) {
+    async restoreSubflowRevision(subflowId: string, revisionId: string, options?: { comment?: string }) {
+      const exists = await deps.context.database.queryOne("SELECT id FROM subflows WHERE id = $1", [subflowId]);
+      if (!exists) {
         throw commandError("Subflow not found", "subflowId");
       }
       return restoreRevision(deps.context.database, "subflow", subflowId, revisionId, options ?? {});
     },
 
-    tagSubflowRevision(revisionId: string, tag: string) {
-      tagRevision(deps.context.database, "subflow", revisionId, tag);
+    async tagSubflowRevision(revisionId: string, tag: string) {
+      await tagRevision(deps.context.database, "subflow", revisionId, tag);
     },
 
-    untagSubflowRevision(revisionId: string) {
-      untagRevision(deps.context.database, "subflow", revisionId);
+    async untagSubflowRevision(revisionId: string) {
+      await untagRevision(deps.context.database, "subflow", revisionId);
     },
 
-    deleteSubflowRevision(revisionId: string) {
-      deleteRevision(deps.context.database, "subflow", revisionId);
+    async deleteSubflowRevision(revisionId: string) {
+      await deleteRevision(deps.context.database, "subflow", revisionId);
     },
     
     // We expose startWorkflowRun as a helper for other domains (e.g., schedules) if needed

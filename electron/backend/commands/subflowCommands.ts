@@ -35,14 +35,14 @@ export function createSubflowCommands(deps: CommandDeps) {
   } = deps;
 
   return {
-    createSubflow(
+    async createSubflow(
       projectId: string,
       input: { name: string; description?: string | null },
-    ): Subflow {
-      requireProject(projectId);
+    ): Promise<Subflow> {
+      await requireProject(projectId);
       const name = input.name.trim();
       if (!name) throw commandError("Subflow name is required", "name");
-      return repository.createSubflow(
+      return await repository.createSubflow(
         projectId,
         name,
         input.description?.trim() ?? "",
@@ -50,21 +50,21 @@ export function createSubflowCommands(deps: CommandDeps) {
       );
     },
 
-    listSubflows(projectId: string): SubflowSummary[] {
-      requireProject(projectId);
-      return repository.listSubflows(projectId);
+    async listSubflows(projectId: string): Promise<SubflowSummary[]> {
+      await requireProject(projectId);
+      return await repository.listSubflows(projectId);
     },
 
-    getSubflow(subflowId: string): Subflow {
-      const subflow = repository.getSubflow(subflowId);
+    async getSubflow(subflowId: string): Promise<Subflow> {
+      const subflow = await repository.getSubflow(subflowId);
       if (!subflow) throw commandError("Subflow not found", "subflowId");
       return subflow;
     },
 
-    updateSubflow(
+    async updateSubflow(
       subflowId: string,
       input: { name?: string; description?: string | null },
-    ): Subflow {
+    ): Promise<Subflow> {
       const patch: { name?: string; description?: string | null } = {};
       if (input.name !== undefined) {
         const name = input.name.trim();
@@ -74,19 +74,19 @@ export function createSubflowCommands(deps: CommandDeps) {
       if (input.description !== undefined) {
         patch.description = input.description?.trim() ?? "";
       }
-      const updated = repository.updateSubflow(subflowId, patch);
+      const updated = await repository.updateSubflow(subflowId, patch);
       if (!updated) throw commandError("Subflow not found", "subflowId");
       return updated;
     },
 
-    getSubflowGraph(subflowId: string): WorkflowGraph {
-      const graph = repository.getSubflowGraph(subflowId);
+    async getSubflowGraph(subflowId: string): Promise<WorkflowGraph> {
+      const graph = await repository.getSubflowGraph(subflowId);
       if (!graph) throw commandError("Subflow not found", "subflowId");
       return migrateWorkflowGraph(graph);
     },
 
-    saveSubflowGraph(subflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
-      const subflow = repository.getSubflow(subflowId);
+    async saveSubflowGraph(subflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
+      const subflow = await repository.getSubflow(subflowId);
       if (!subflow) throw commandError("Subflow not found", "subflowId");
       const migrated = migrateWorkflowGraph(graph);
       const nestedCall = migrated.nodes.find((node) => node.node_type === "call_subflow");
@@ -94,47 +94,47 @@ export function createSubflowCommands(deps: CommandDeps) {
         throw commandError("Subflows cannot call subflows in the MVP", nestedCall.id);
       }
       assertNoUnsupportedGraphDiscriminants(migrated);
-      repository.saveSubflowGraph(subflowId, migrated, options);
+      await repository.saveSubflowGraph(subflowId, migrated, options);
     },
 
-    duplicateSubflow(subflowId: string, name: string): Subflow {
+    async duplicateSubflow(subflowId: string, name: string): Promise<Subflow> {
       const normalized = name.trim();
       if (!normalized) throw commandError("Subflow name is required", "name");
-      const duplicate = repository.duplicateSubflow(subflowId, normalized);
+      const duplicate = await repository.duplicateSubflow(subflowId, normalized);
       if (!duplicate) throw commandError("Subflow not found", "subflowId");
       return duplicate;
     },
 
-    deleteSubflow(subflowId: string) {
-      const usage = repository.getSubflowUsage(subflowId);
+    async deleteSubflow(subflowId: string) {
+      const usage = await repository.getSubflowUsage(subflowId);
       if (usage.length > 0) {
         throw commandError(`Subflow is used by ${usage.length} workflow${usage.length === 1 ? "" : "s"}`, "subflowId");
       }
-      repository.deleteSubflow(subflowId);
+      await repository.deleteSubflow(subflowId);
     },
 
-    getSubflowUsage(subflowId: string): SubflowUsage[] {
-      if (!repository.getSubflow(subflowId)) {
+    async getSubflowUsage(subflowId: string): Promise<SubflowUsage[]> {
+      if (!(await repository.getSubflow(subflowId))) {
         throw commandError("Subflow not found", "subflowId");
       }
-      return repository.getSubflowUsage(subflowId);
+      return await repository.getSubflowUsage(subflowId);
     },
 
-    exportSubflow(subflowId: string): SubflowExport {
-      const subflow = repository.getSubflow(subflowId);
+    async exportSubflow(subflowId: string): Promise<SubflowExport> {
+      const subflow = await repository.getSubflow(subflowId);
       if (!subflow) throw commandError("Subflow not found", "subflowId");
       return {
         version: 1,
         subflow: {
           name: subflow.name,
           description: subflow.description,
-          graph: repository.getSubflowGraph(subflow.id) || createDraftGraph(),
+          graph: (await repository.getSubflowGraph(subflow.id)) || createDraftGraph(),
         },
       };
     },
 
-    importSubflow(projectId: string, exported: SubflowExport): Subflow {
-      requireProject(projectId);
+    async importSubflow(projectId: string, exported: SubflowExport): Promise<Subflow> {
+      await requireProject(projectId);
       if (!exported || exported.version !== 1 || !exported.subflow || !exported.subflow.name) {
         throw commandError("Invalid subflow package file", "exported");
       }
@@ -142,7 +142,7 @@ export function createSubflowCommands(deps: CommandDeps) {
       if (!name) throw commandError("Subflow name is required", "name");
       const description = exported.subflow.description?.trim() ?? "";
       const graph = migrateWorkflowGraph(exported.subflow.graph);
-      return repository.createSubflow(projectId, name, description, graph);
+      return await repository.createSubflow(projectId, name, description, graph);
     },
 
     async saveSubflowPackageFile(packageValue: SubflowExport) {

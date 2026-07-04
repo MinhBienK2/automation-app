@@ -16,8 +16,6 @@ type AppShellProps = {
   currentUser?: { email: string; role: string } | null;
   onToggleSidebar: () => void;
   screen: AppScreen;
-  pgAvailable?: boolean;
-  onSwitchToLoginMode?: () => void;
 };
 
 export function AppShell({
@@ -34,8 +32,6 @@ export function AppShell({
   currentUser,
   onToggleSidebar,
   screen,
-  pgAvailable,
-  onSwitchToLoginMode,
 }: AppShellProps) {
   return (
     <main className={sidebarCollapsed ? "app-shell app-shell-collapsed" : "app-shell"}>
@@ -52,10 +48,7 @@ export function AppShell({
         currentUser={currentUser}
         onToggle={onToggleSidebar}
         screen={screen}
-        pgAvailable={pgAvailable}
-        onSwitchToLoginMode={onSwitchToLoginMode}
       />
-
 
       <section aria-label="Application content" className="app-content" role="region">
         {children}

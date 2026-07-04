@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "../components/ui/button";
-import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight, Users, LogOut, LogIn, User, Shield, Sliders, HelpCircle } from "lucide-react";
+import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight, Users, LogOut, User, Shield, Sliders, HelpCircle } from "lucide-react";
 import type { AppScreen } from "../shared/types/workspaceContracts";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 
@@ -19,10 +19,7 @@ type AppSidebarProps = {
   currentUser?: { email: string; role: string } | null;
   onToggle: () => void;
   screen: AppScreen;
-  pgAvailable?: boolean;
-  onSwitchToLoginMode?: () => void;
 };
-
 
 const appLogoSrc = `${import.meta.env.BASE_URL}app-logo.svg`;
 
@@ -71,8 +68,6 @@ export function AppSidebar({
   currentUser,
   onToggle,
   screen,
-  pgAvailable,
-  onSwitchToLoginMode,
 }: AppSidebarProps) {
   const [settingsExpanded, setSettingsExpanded] = useState(() => activeItem === "settings");
   const [adminExpanded, setAdminExpanded] = useState(() => activeItem === "admin-users");
@@ -262,25 +257,6 @@ export function AppSidebar({
                 <LogOut aria-hidden="true" className="sidebar-profile-logout-icon" size={15} />
               </Button>
             )}
-          </div>
-        )}
-        {!currentUser && pgAvailable && onSwitchToLoginMode && (
-          <div className="sidebar-profile" style={{ padding: collapsed ? "4px" : "8px 12px" }}>
-            <Button
-              aria-label="Sign In to Workplace"
-              className="sidebar-nav-item"
-              variant="ghost"
-              type="button"
-              onClick={onSwitchToLoginMode}
-              style={{
-                width: "100%",
-                justifyContent: collapsed ? "center" : "flex-start",
-                gap: "12px",
-              }}
-            >
-              <LogIn aria-hidden="true" className="sidebar-item-icon" size={16} />
-              {!collapsed && <span>Sign In to Workplace</span>}
-            </Button>
           </div>
         )}
         <Button

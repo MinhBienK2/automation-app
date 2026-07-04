@@ -31,30 +31,30 @@ export function createSettingsCommands(deps: CommandDeps) {
     activeRunConflict,
   } = deps;
 
-  function lastRunAtForWorkflow(workflowId: string): string | null {
-    const row = deps.context.database
-      .prepare(
-        `SELECT COALESCE(finished_at, started_at) AS last_run_at
-         FROM runs
-         WHERE workflow_id = ?
-         ORDER BY started_at DESC
-         LIMIT 1`,
-      )
-      .get(workflowId) as { last_run_at?: string | null } | undefined;
+  async function lastRunAtForWorkflow(workflowId: string): Promise<string | null> {
+    const row = await deps.context.database.queryOne<{ last_run_at?: string | null }>(
+      `SELECT COALESCE(finished_at, started_at) AS last_run_at
+       FROM runs
+       WHERE workflow_id = $1
+       ORDER BY started_at DESC
+       LIMIT 1`,
+      [workflowId]
+    );
     return row?.last_run_at ?? null;
   }
 
   return {
-    getWorkflowBrowserConfig(workflowId: string): WorkflowBrowserConfig {
-      return settingsService.settingsBrowserToConfig(workflowId, getSettings(workflowId).browser_launch);
+    async getWorkflowBrowserConfig(workflowId: string): Promise<WorkflowBrowserConfig> {
+      const settings = await getSettings(workflowId);
+      return settingsService.settingsBrowserToConfig(workflowId, settings.browser_launch);
     },
 
-    saveWorkflowBrowserConfig(
+    async saveWorkflowBrowserConfig(
       workflowId: string,
       config: WorkflowBrowserConfig,
-    ) {
-      const settings = getSettings(workflowId);
-      saveSettings(workflowId, {
+    ): Promise<void> {
+      const settings = await getSettings(workflowId);
+      await saveSettings(workflowId, {
         ...settings,
         browser_launch: {
           ...settings.browser_launch,
@@ -67,24 +67,24 @@ export function createSettingsCommands(deps: CommandDeps) {
       });
     },
 
-    getWorkflowSettings(workflowId: string): WorkflowSettings {
+    async getWorkflowSettings(workflowId: string): Promise<WorkflowSettings> {
       return getSettings(workflowId);
     },
 
-    resetWorkflowBrowserIdentity(workflowId: string): WorkflowSettings {
-      requireWorkflow(workflowId);
+    async resetWorkflowBrowserIdentity(workflowId: string): Promise<WorkflowSettings> {
+      await requireWorkflow(workflowId);
       return rotateBrowserIdentity(workflowId);
     },
 
     saveWorkflowSettings: saveSettings,
 
-    saveWorkflowSettingsSection<Section extends WorkflowSettingsSectionId>(
+    async saveWorkflowSettingsSection<Section extends WorkflowSettingsSectionId>(
       workflowId: string,
       section: Section,
       sectionValue: WorkflowSettings[Section],
-    ): WorkflowSettings {
+    ): Promise<WorkflowSettings> {
       return saveSettings(workflowId, {
-        ...getSettings(workflowId),
+        ...(await getSettings(workflowId)),
         [section]: sectionValue,
       });
     },
@@ -96,7 +96,7 @@ export function createSettingsCommands(deps: CommandDeps) {
     async getCloakBrowserDiagnostics(): Promise<CloakBrowserDiagnostics> {
       return buildCloakBrowserDiagnostics({
         appPaths: deps.context.appPaths,
-        workflows: repository.listWorkflows(),
+        workflows: await repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
         retainedProfileNames: runManager.retainedProfileNames(),
@@ -108,7 +108,7 @@ export function createSettingsCommands(deps: CommandDeps) {
       await cloakbrowser.ensureBinary();
       return buildCloakBrowserDiagnostics({
         appPaths: deps.context.appPaths,
-        workflows: repository.listWorkflows(),
+        workflows: await repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
         retainedProfileNames: runManager.retainedProfileNames(),
@@ -118,7 +118,7 @@ export function createSettingsCommands(deps: CommandDeps) {
     async cleanupOrphanedBrowserProfiles(): Promise<BrowserProfileCleanupResult> {
       const diagnostics = await buildCloakBrowserDiagnostics({
         appPaths: deps.context.appPaths,
-        workflows: repository.listWorkflows(),
+        workflows: await repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
         retainedProfileNames: runManager.retainedProfileNames(),
@@ -144,22 +144,20 @@ export function createSettingsCommands(deps: CommandDeps) {
       return result;
     },
 
-    getOperationsOverview(request: OperationsOverviewRequest) {
+    async getOperationsOverview(request: OperationsOverviewRequest) {
       return operationsRepository.getOverview(request, runManager.listRunStates());
     },
 
-
-
-    getIdentityLabOverview(request: IdentityLabOverviewRequest = {}) {
+    async getIdentityLabOverview(request: IdentityLabOverviewRequest = {}) {
       return identityRepository.getOverview(request);
     },
 
-    getIdentityLabDetail(target: IdentityLabTarget) {
+    async getIdentityLabDetail(target: IdentityLabTarget) {
       return identityRepository.getDetail(target);
     },
 
     async closeIdentityRetainedSession(workflowId: string, profileName: string) {
-      const settings = getSettings(workflowId);
+      const settings = await getSettings(workflowId);
       const currentProfile = browserProfileKey(settings);
       if (currentProfile !== profileName) {
         throw commandError("Identity profile does not match current workflow settings", "profileName");

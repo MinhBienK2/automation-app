@@ -41,9 +41,9 @@ export function createRecordingCommands(deps: CommandDeps) {
 
   return {
     async startRecordingSession(input: RecorderStartSessionInput): Promise<RecordingSession> {
-      return runRecorderCommand(() => {
+      return runRecorderCommand(async () => {
         if (input.mode === "replace_current_graph" && input.workflow_id) {
-          const settings = getSettings(input.workflow_id);
+          const settings = await getSettings(input.workflow_id);
           const conflict = activeRunConflict(input.workflow_id, settings);
           if (conflict) throw commandError(conflict.message, conflict.field);
         }

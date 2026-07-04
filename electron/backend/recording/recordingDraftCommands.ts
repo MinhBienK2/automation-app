@@ -16,10 +16,7 @@ import { validateWorkflowGraph as validateGraphDefault } from "../graph/compiler
 import { generateRecordingGraph } from "./graphGenerator.js";
 import { reconcileReviewedRecordingSteps } from "./reviewReconciliation.js";
 import { normalizeRecordingEvents } from "./timelineNormalizer.js";
-
-type RecordingDraftDatabase = {
-  exec(sql: string): unknown;
-};
+import type { DbAdapter } from "../persistence/dbAdapter.js";
 
 export type RecordingDraftSessionPort = {
   getSession(sessionId: string): RecordingSession | null;
@@ -29,17 +26,17 @@ export type RecordingDraftSessionPort = {
 };
 
 type RecordingDraftCommandDependencies = {
-  database: RecordingDraftDatabase;
+  database: DbAdapter;
   recorderSessions: RecordingDraftSessionPort;
   drafts?: Map<string, RecordingWorkflowDraft>;
   idFactory?: () => string;
   now?: () => Date;
   validateWorkflowGraph?: (graph: WorkflowGraph) => GraphValidationIssue[];
-  createWorkflow(name: string): Workflow;
-  saveWorkflowGraph(workflowId: string, graph: WorkflowGraph): void;
-  saveWorkflowSettings(workflowId: string, settings: WorkflowSettings): void;
-  getWorkflowDetail(workflowId: string): WorkflowDetail | null;
-  requireWorkflow(workflowId: string): Workflow;
+  createWorkflow(name: string): Promise<Workflow>;
+  saveWorkflowGraph(workflowId: string, graph: WorkflowGraph): Promise<void>;
+  saveWorkflowSettings(workflowId: string, settings: WorkflowSettings): Promise<WorkflowSettings>;
+  getWorkflowDetail(workflowId: string): Promise<WorkflowDetail | null>;
+  requireWorkflow(workflowId: string): Promise<Workflow>;
 };
 
 export function createRecordingDraftCommands(
@@ -95,10 +92,10 @@ export function createRecordingDraftCommands(
     );
   }
 
-  function saveRecordingDraft(
+  async function saveRecordingDraft(
     draftId: string,
     input: RecordingSaveDraftInput,
-  ): WorkflowDetail {
+  ): Promise<WorkflowDetail> {
     const draft = getRecordingDraft(draftId);
     if (draft.status !== "draft") {
       throw commandError("Recording draft has already been saved", "draftId");
@@ -124,20 +121,15 @@ export function createRecordingDraftCommands(
       throw commandError("Recording draft is not linked to a workflow", "draftId");
     }
 
-    dependencies.database.exec("BEGIN IMMEDIATE");
-    try {
+    return await dependencies.database.transaction(async (_tx) => {
       const detail =
         input.save_mode === "create_new"
-          ? saveRecordingAsNewWorkflow(draft, graph, normalizedName)
-          : replaceRecordingWorkflowGraph(draft, graph);
-      dependencies.database.exec("COMMIT");
+          ? await saveRecordingAsNewWorkflow(draft, graph, normalizedName)
+          : await replaceRecordingWorkflowGraph(draft, graph);
       drafts.delete(draft.id);
       dependencies.recorderSessions.deleteSession(draft.session_id);
       return detail;
-    } catch (error) {
-      dependencies.database.exec("ROLLBACK");
-      throw error;
-    }
+    });
   }
 
   function discardRecordingDraftsForSession(sessionId: string) {
@@ -148,17 +140,17 @@ export function createRecordingDraftCommands(
     }
   }
 
-  function saveRecordingAsNewWorkflow(
+  async function saveRecordingAsNewWorkflow(
     draft: RecordingWorkflowDraft,
     graph: WorkflowGraph,
     workflowName: string,
-  ): WorkflowDetail {
-    const workflow = dependencies.createWorkflow(workflowName);
-    dependencies.saveWorkflowGraph(workflow.id, graph);
+  ): Promise<WorkflowDetail> {
+    const workflow = await dependencies.createWorkflow(workflowName);
+    await dependencies.saveWorkflowGraph(workflow.id, graph);
     const settingsSnapshot =
       dependencies.recorderSessions.getInternalSettingsSnapshot(draft.session_id) ??
       draft.workflow_settings_snapshot;
-    dependencies.saveWorkflowSettings(workflow.id, {
+    await dependencies.saveWorkflowSettings(workflow.id, {
       ...settingsSnapshot,
       workflow_id: workflow.id,
       general: {
@@ -170,20 +162,20 @@ export function createRecordingDraftCommands(
       created_at: workflow.created_at,
       updated_at: workflow.updated_at,
     });
-    return dependencies.getWorkflowDetail(workflow.id) ?? { workflow, steps: [] };
+    return (await dependencies.getWorkflowDetail(workflow.id)) ?? { workflow, steps: [] };
   }
 
-  function replaceRecordingWorkflowGraph(
+  async function replaceRecordingWorkflowGraph(
     draft: RecordingWorkflowDraft,
     graph: WorkflowGraph,
-  ): WorkflowDetail {
+  ): Promise<WorkflowDetail> {
     const workflowId = draft.workflow_id;
     if (!workflowId) {
       throw commandError("Recording draft is not linked to a workflow", "draftId");
     }
-    dependencies.requireWorkflow(workflowId);
-    dependencies.saveWorkflowGraph(workflowId, graph);
-    const detail = dependencies.getWorkflowDetail(workflowId);
+    await dependencies.requireWorkflow(workflowId);
+    await dependencies.saveWorkflowGraph(workflowId, graph);
+    const detail = await dependencies.getWorkflowDetail(workflowId);
     if (!detail) throw commandError("Workflow not found", "workflowId");
     return detail;
   }

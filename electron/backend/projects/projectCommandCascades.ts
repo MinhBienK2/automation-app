@@ -1,6 +1,6 @@
 import nodeFs from "node:fs";
 import path from "node:path";
-import type { DatabaseSync } from "node:sqlite";
+import type { DbAdapter } from "../persistence/dbAdapter.js";
 import type {
   Project,
   BrowserProfile,
@@ -18,9 +18,10 @@ import {
   createHighEntropyBrowserIdentityId,
   deriveFingerprintSeedFromIdentityId,
 } from "../services/workflowSettingsService.js";
-import type { WorkflowRepository } from "../persistence/workflowRepository.js";
+import { WorkflowRepository } from "../persistence/workflowRepository.js";
 import { commandError } from "../commandHelpers.js";
 import { browserProfileKey } from "../runtime/runManager.js";
+import { personaForSeed } from "../../../src/lib/personaCatalog.js";
 
 type RunConflict = {
   message: string;
@@ -28,16 +29,16 @@ type RunConflict = {
 };
 
 type ProjectCommandCascadeDeps = {
-  database: DatabaseSync;
+  database: DbAdapter;
   browserProfilesDir: string;
   repository: WorkflowRepository;
   projectPackageService: ProjectPackageService;
-  requireProject: (projectId: string) => Project;
-  requireBrowserProfile: (browserProfileId: string) => BrowserProfile;
-  ensureDefaultBrowserProfile: (project: Project) => BrowserProfile;
-  createWorkflow: (name: string, options?: WorkflowCreateOptions) => Workflow;
-  getSettings: (workflowId: string) => WorkflowSettings;
-  saveSettings: (workflowId: string, settings: WorkflowSettings) => WorkflowSettings;
+  requireProject: (projectId: string) => Promise<Project>;
+  requireBrowserProfile: (browserProfileId: string) => Promise<BrowserProfile>;
+  ensureDefaultBrowserProfile: (project: Project) => Promise<BrowserProfile>;
+  createWorkflow: (name: string, options?: WorkflowCreateOptions) => Promise<Workflow>;
+  getSettings: (workflowId: string) => Promise<WorkflowSettings>;
+  saveSettings: (workflowId: string, settings: WorkflowSettings) => Promise<WorkflowSettings>;
   assertWorkflowDeletionAllowed: (workflowId: string, settings: WorkflowSettings) => void;
   activeRunConflict: (workflowId: string, settings: WorkflowSettings) => RunConflict | null;
   retainedSessionActiveFor: (workflowId: string, profileName: string) => boolean;
@@ -82,20 +83,25 @@ export function duplicateProjectWorkflowSettings(
 }
 
 export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
-  function usedFingerprintSeeds(exceptWorkflowId?: string) {
-    return new Set(
-      deps.repository
-          .listWorkflows()
-          .filter((workflow) => workflow.id !== exceptWorkflowId)
-          .map((workflow) => deps.getSettings(workflow.id).browser_launch.fingerprint_seed)
-          .filter((seed): seed is string => Boolean(seed)),
-    );
+  async function usedFingerprintSeeds(exceptWorkflowId?: string) {
+    const workflows = await deps.repository.listWorkflows();
+    const seeds = new Set<string>();
+    for (const workflow of workflows) {
+      if (workflow.id === exceptWorkflowId) continue;
+      const settings = await deps.getSettings(workflow.id);
+      if (settings.browser_launch.fingerprint_seed) {
+        seeds.add(settings.browser_launch.fingerprint_seed);
+      }
+    }
+    return seeds;
   }
 
-  function usedBrowserProfileFingerprintSeeds() {
-    const seeds = usedFingerprintSeeds();
-    for (const project of deps.repository.listProjects()) {
-      for (const profile of deps.repository.listBrowserProfiles(project.id)) {
+  async function usedBrowserProfileFingerprintSeeds() {
+    const seeds = await usedFingerprintSeeds();
+    const projects = await deps.repository.listProjects();
+    for (const project of projects) {
+      const profiles = await deps.repository.listBrowserProfiles(project.id);
+      for (const profile of profiles) {
         const seed = profile.browser_launch?.fingerprint_seed;
         if (seed) seeds.add(seed);
       }
@@ -103,10 +109,11 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
     return seeds;
   }
 
-  function duplicateProjectBrowserLaunch(
+  async function duplicateProjectBrowserLaunch(
     browserLaunch: WorkflowSettings["browser_launch"],
-  ): WorkflowSettings["browser_launch"] {
+  ): Promise<WorkflowSettings["browser_launch"]> {
     const identityId = createHighEntropyBrowserIdentityId();
+    const seeds = await usedBrowserProfileFingerprintSeeds();
     return {
       ...browserLaunch,
       identity_id: identityId,
@@ -115,18 +122,19 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
         browserLaunch.session_mode === "persistent_profile" ? identityId : null,
       fingerprint_seed: deriveFingerprintSeedFromIdentityId(
         identityId,
-        usedBrowserProfileFingerprintSeeds(),
+        seeds,
       ),
     };
   }
 
-  function assertCanResetBrowserProfileIdentity(
+  async function assertCanResetBrowserProfileIdentity(
     profile: BrowserProfile,
   ) {
-    for (const workflow of deps.repository.listWorkflows()) {
+    const workflows = await deps.repository.listWorkflows();
+    for (const workflow of workflows) {
       if (workflow.browser_profile_id !== profile.id) continue;
       const settings = {
-        ...deps.getSettings(workflow.id),
+        ...(await deps.getSettings(workflow.id)),
         browser_launch: profile.browser_launch,
       };
       const conflict = deps.activeRunConflict(workflow.id, settings);
@@ -141,7 +149,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
     }
   }
 
-  function deleteBrowserProfileDirectoryIfPrivate(
+  async function deleteBrowserProfileDirectoryIfPrivate(
     browserProfileId: string,
     profileDir: string | null,
     nextProfileDir: string | null,
@@ -149,7 +157,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
     if (
       !profileDir ||
       profileDir === nextProfileDir ||
-      isProfileReferencedOutsideBrowserProfile(browserProfileId, profileDir)
+      await isProfileReferencedOutsideBrowserProfile(browserProfileId, profileDir)
     ) {
       return;
     }
@@ -159,55 +167,61 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
     });
   }
 
-  function isProfileReferencedOutsideBrowserProfile(
+  async function isProfileReferencedOutsideBrowserProfile(
     browserProfileId: string,
     profileDir: string,
   ) {
-    for (const project of deps.repository.listProjects()) {
-      for (const profile of deps.repository.listBrowserProfiles(project.id)) {
+    const projects = await deps.repository.listProjects();
+    for (const project of projects) {
+      const profiles = await deps.repository.listBrowserProfiles(project.id);
+      for (const profile of profiles) {
         if (profile.id === browserProfileId) continue;
         if (getBrowserProfileKey(profile) === profileDir) return true;
       }
     }
-    return deps.repository
-      .listWorkflows()
-      .some((workflow) => {
-        if (workflow.browser_profile_id === browserProfileId) return false;
-        return browserProfileKey(deps.getSettings(workflow.id)) === profileDir;
-      });
+    const workflows = await deps.repository.listWorkflows();
+    for (const workflow of workflows) {
+      if (workflow.browser_profile_id === browserProfileId) continue;
+      const settings = await deps.getSettings(workflow.id);
+      if (browserProfileKey(settings) === profileDir) return true;
+    }
+    return false;
   }
 
-  function isProfileReferencedOutsideProject(
+  async function isProfileReferencedOutsideProject(
     projectId: string,
     workflowIds: Set<string>,
     profileDir: string,
   ) {
-    for (const project of deps.repository.listProjects()) {
+    const projects = await deps.repository.listProjects();
+    for (const project of projects) {
       if (project.id === projectId) continue;
-      for (const profile of deps.repository.listBrowserProfiles(project.id)) {
+      const profiles = await deps.repository.listBrowserProfiles(project.id);
+      for (const profile of profiles) {
         if (getBrowserProfileKey(profile) === profileDir) return true;
       }
     }
-    return deps.repository
-      .listWorkflows()
-      .some((workflow) => {
-        if (workflowIds.has(workflow.id)) return false;
-        return browserProfileKey(deps.getSettings(workflow.id)) === profileDir;
-      });
+    const workflows = await deps.repository.listWorkflows();
+    for (const workflow of workflows) {
+      if (workflowIds.has(workflow.id)) return false;
+      const settings = await deps.getSettings(workflow.id);
+      if (browserProfileKey(settings) === profileDir) return true;
+    }
+    return false;
   }
 
-  function rotateBrowserProfileIdentity(
+  async function rotateBrowserProfileIdentity(
     browserProfileId: string,
-  ): BrowserProfile {
-    const profile = deps.requireBrowserProfile(browserProfileId);
-    assertCanResetBrowserProfileIdentity(profile);
+  ): Promise<BrowserProfile> {
+    const profile = await deps.requireBrowserProfile(browserProfileId);
+    await assertCanResetBrowserProfileIdentity(profile);
     const oldProfileDir = getBrowserProfileKey(profile);
     const identityId = createHighEntropyBrowserIdentityId();
     const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
       identityId,
-      usedBrowserProfileFingerprintSeeds(),
+      await usedBrowserProfileFingerprintSeeds(),
     );
-    const updated = deps.repository.updateBrowserProfile(profile.id, {
+    const updated = await deps.repository.updateBrowserProfile(profile.id, {
       browser_launch: {
         ...profile.browser_launch,
         identity_id: identityId,
@@ -220,7 +234,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
       },
     });
     if (!updated) throw commandError("Browser profile not found", "browserProfileId");
-    deleteBrowserProfileDirectoryIfPrivate(
+    await deleteBrowserProfileDirectoryIfPrivate(
       profile.id,
       oldProfileDir,
       getBrowserProfileKey(updated),
@@ -228,39 +242,74 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
     return updated;
   }
 
-  function duplicateProjectCascade(projectId: string): Project {
-    const sourceProject = deps.requireProject(projectId);
-    const sourceProfiles = deps.repository.listBrowserProfiles(sourceProject.id);
-    const sourceSubflows = deps.repository
-      .listSubflows(sourceProject.id)
-      .map((subflow) => deps.repository.getSubflow(subflow.id))
-      .filter((subflow): subflow is Subflow => Boolean(subflow));
-    const sourceWorkflows = deps.repository
-      .listWorkflows()
-      .filter((workflow) => workflow.project_id === sourceProject.id);
+  async function duplicateProjectCascade(projectId: string): Promise<Project> {
+    const sourceProject = await deps.requireProject(projectId);
+    const sourceProfiles = await deps.repository.listBrowserProfiles(sourceProject.id);
+    const subflowSummaries = await deps.repository.listSubflows(sourceProject.id);
+    const sourceSubflows: Subflow[] = [];
+    for (const subflowSummary of subflowSummaries) {
+      const subflow = await deps.repository.getSubflow(subflowSummary.id);
+      if (subflow) sourceSubflows.push(subflow);
+    }
+    const allWorkflows = await deps.repository.listWorkflows();
+    const sourceWorkflows = allWorkflows.filter((workflow) => workflow.project_id === sourceProject.id);
 
-    deps.database.exec("BEGIN IMMEDIATE");
-    try {
-      const createdProject = deps.repository.createProject(
+    return await deps.database.transaction(async (tx) => {
+      const txRepository = new WorkflowRepository(tx);
+      const createdProject = await txRepository.createProject(
         `Copy of ${sourceProject.name}`,
         sourceProject.description,
       );
       const browserProfileIdMap = new Map<string, string>();
       for (const profile of sourceProfiles) {
-        const copiedProfile = deps.repository.createBrowserProfile(createdProject.id, {
+        const launchConfig = await duplicateProjectBrowserLaunch(profile.browser_launch);
+        const copiedProfile = await txRepository.createBrowserProfile(createdProject.id, {
           name: profile.name,
           description: profile.description,
           is_default: profile.is_default,
-          browser_launch: duplicateProjectBrowserLaunch(profile.browser_launch),
+          browser_launch: launchConfig,
           environment: profile.environment,
         });
         browserProfileIdMap.set(profile.id, copiedProfile.id);
       }
-      deps.ensureDefaultBrowserProfile(createdProject);
+      
+      // Ensure default profile inside transaction context
+      const defaultProfile = await txRepository.getDefaultBrowserProfile(createdProject.id);
+      if (!defaultProfile) {
+        const identity_id = createHighEntropyBrowserIdentityId();
+        const defaultLaunch = {
+          identity_id,
+          display_name: "Default Profile",
+          session_mode: "persistent_profile" as const,
+          profile_dir: identity_id,
+          profile_name: "Default Profile",
+          proxy_enabled: false,
+          proxy_server: "",
+          proxy_bypass: "",
+          webrtc_policy: "default" as const,
+          timezone: "",
+          locale: "",
+          geoip: true,
+          headless: false,
+          humanize: true,
+          human_preset: "default" as const,
+          fingerprint_seed: "",
+          persona_id: personaForSeed(identity_id).id,
+          persona: personaForSeed(identity_id),
+          font_strategy: "default" as const,
+          override_fonts: [],
+        };
+        await txRepository.createBrowserProfile(createdProject.id, {
+          name: "Default Profile",
+          description: "System created default profile",
+          is_default: true,
+          browser_launch: defaultLaunch,
+        });
+      }
 
       const subflowIdMap = new Map<string, string>();
       for (const subflow of sourceSubflows) {
-        const copiedSubflow = deps.repository.createSubflow(
+        const copiedSubflow = await txRepository.createSubflow(
           createdProject.id,
           subflow.name,
           subflow.description,
@@ -270,75 +319,106 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
       }
 
       for (const workflow of sourceWorkflows) {
-        const copiedWorkflow = deps.createWorkflow(workflow.name, {
-          project_id: createdProject.id,
-        });
+        const copiedWorkflow = await txRepository.createWorkflow(
+          workflow.name,
+          { version: 2, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+          new Date(),
+          { projectId: createdProject.id }
+        );
         const selectedProfileId = workflow.browser_profile_id
           ? browserProfileIdMap.get(workflow.browser_profile_id) ?? null
           : null;
         if (selectedProfileId) {
-          deps.repository.assignWorkflowBrowserProfile(
+          await txRepository.assignWorkflowBrowserProfile(
             copiedWorkflow.id,
             selectedProfileId,
           );
         }
         const selectedProfile = selectedProfileId
-          ? deps.repository.getBrowserProfile(selectedProfileId)
+          ? await txRepository.getBrowserProfile(selectedProfileId)
           : null;
-        const graph = deps.repository.getWorkflowGraph(workflow.id);
+        const graph = await deps.repository.getWorkflowGraph(workflow.id);
         if (graph) {
-          deps.repository.saveWorkflowGraph(
+          await txRepository.saveWorkflowGraph(
             copiedWorkflow.id,
             deps.remapCallSubflowIds(graph, subflowIdMap),
           );
         }
-        const settings = deps.repository.getWorkflowSettings(workflow.id);
+        const settings = await deps.repository.getWorkflowSettings(workflow.id);
         if (settings) {
-          deps.saveSettings(
-            copiedWorkflow.id,
-            duplicateProjectWorkflowSettings(
-              settings,
-              copiedWorkflow,
-              selectedProfile?.browser_launch ??
-                deps.getSettings(copiedWorkflow.id).browser_launch,
-            ),
+          const duplicatedSettings = duplicateProjectWorkflowSettings(
+            settings,
+            copiedWorkflow,
+            selectedProfile?.browser_launch ??
+              (await txRepository.getWorkflowSettings(copiedWorkflow.id))?.browser_launch ?? settings.browser_launch,
           );
+          await txRepository.saveWorkflowSettings(copiedWorkflow.id, duplicatedSettings);
         }
       }
 
-      deps.database.exec("COMMIT");
       return createdProject;
-    } catch (error) {
-      deps.database.exec("ROLLBACK");
-      throw error;
-    }
+    });
   }
 
-  function importProjectPackageCascade(packageValue: ProjectPackage): Project {
+  async function importProjectPackageCascade(packageValue: ProjectPackage): Promise<Project> {
     const preparedImport = deps.projectPackageService.prepareImport({ packageValue });
-    deps.database.exec("BEGIN IMMEDIATE");
-    try {
-      const createdProject = deps.repository.createProject(
+    return await deps.database.transaction(async (tx) => {
+      const txRepository = new WorkflowRepository(tx);
+      const createdProject = await txRepository.createProject(
         preparedImport.importedName,
         preparedImport.description,
       );
       const browserProfileIdMap = new Map<string, string>();
       const profilesSource = preparedImport.browser_profiles ?? [];
       for (const profile of profilesSource) {
-        const createdProfile = deps.repository.createBrowserProfile(createdProject.id, {
+        const launchConfig = await duplicateProjectBrowserLaunch(profile.browser_launch);
+        const createdProfile = await txRepository.createBrowserProfile(createdProject.id, {
           name: profile.name,
           description: profile.description,
           is_default: profile.is_default,
-          browser_launch: duplicateProjectBrowserLaunch(profile.browser_launch),
+          browser_launch: launchConfig,
           environment: profile.environment,
         });
         browserProfileIdMap.set(profile.id, createdProfile.id);
       }
-      deps.ensureDefaultBrowserProfile(createdProject);
+      
+      // Ensure default profile
+      const defaultProfile = await txRepository.getDefaultBrowserProfile(createdProject.id);
+      if (!defaultProfile) {
+        const identity_id = createHighEntropyBrowserIdentityId();
+        const defaultLaunch = {
+          identity_id,
+          display_name: "Default Profile",
+          session_mode: "persistent_profile" as const,
+          profile_dir: identity_id,
+          profile_name: "Default Profile",
+          proxy_enabled: false,
+          proxy_server: "",
+          proxy_bypass: "",
+          webrtc_policy: "default" as const,
+          timezone: "",
+          locale: "",
+          geoip: true,
+          headless: false,
+          humanize: true,
+          human_preset: "default" as const,
+          fingerprint_seed: "",
+          persona_id: personaForSeed(identity_id).id,
+          persona: personaForSeed(identity_id),
+          font_strategy: "default" as const,
+          override_fonts: [],
+        };
+        await txRepository.createBrowserProfile(createdProject.id, {
+          name: "Default Profile",
+          description: "System created default profile",
+          is_default: true,
+          browser_launch: defaultLaunch,
+        });
+      }
 
       const subflowIdMap = new Map<string, string>();
       for (const subflow of preparedImport.subflows) {
-        const createdSubflow = deps.repository.createSubflow(
+        const createdSubflow = await txRepository.createSubflow(
           createdProject.id,
           subflow.name,
           subflow.description,
@@ -348,30 +428,33 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
       }
 
       for (const packagedWorkflow of preparedImport.workflows) {
-        const createdWorkflow = deps.createWorkflow(packagedWorkflow.name, {
-          project_id: createdProject.id,
-        });
+        const createdWorkflow = await txRepository.createWorkflow(
+          packagedWorkflow.name,
+          { version: 2, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+          new Date(),
+          { projectId: createdProject.id }
+        );
         const workflowProfileId = packagedWorkflow.browser_profile_id;
         const selectedProfileId = workflowProfileId
           ? browserProfileIdMap.get(workflowProfileId) ?? null
           : null;
         if (selectedProfileId) {
-          deps.repository.assignWorkflowBrowserProfile(
+          await txRepository.assignWorkflowBrowserProfile(
             createdWorkflow.id,
             selectedProfileId,
           );
         }
         const selectedProfile = selectedProfileId
-          ? deps.repository.getBrowserProfile(selectedProfileId)
+          ? await txRepository.getBrowserProfile(selectedProfileId)
           : null;
         if (packagedWorkflow.flow) {
-          deps.repository.saveWorkflowGraph(
+          await txRepository.saveWorkflowGraph(
             createdWorkflow.id,
             deps.remapCallSubflowIds(packagedWorkflow.flow, subflowIdMap),
           );
         }
         if (packagedWorkflow.settings) {
-          deps.saveSettings(createdWorkflow.id, {
+          await txRepository.saveWorkflowSettings(createdWorkflow.id, {
             ...packagedWorkflow.settings,
             workflow_id: createdWorkflow.id,
             general: {
@@ -385,52 +468,57 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
               run_from_selected_enabled: false,
             },
             browser_launch: selectedProfile?.browser_launch ??
-              deps.getSettings(createdWorkflow.id).browser_launch,
+              (await txRepository.getWorkflowSettings(createdWorkflow.id))?.browser_launch ?? packagedWorkflow.settings.browser_launch,
             created_at: createdWorkflow.created_at,
             updated_at: createdWorkflow.updated_at,
           });
         }
       }
 
-      deps.database.exec("COMMIT");
       return createdProject;
-    } catch (error) {
-      deps.database.exec("ROLLBACK");
-      throw error;
-    }
+    });
   }
 
-  function deleteProjectCascade(projectId: string) {
-    const project = deps.requireProject(projectId);
-    const workflows = deps.repository
-      .listWorkflows()
+  async function deleteProjectCascade(projectId: string) {
+    const project = await deps.requireProject(projectId);
+    const workflows = (await deps.repository.listWorkflows())
       .filter((workflow) => workflow.project_id === project.id);
     const workflowIds = new Set(workflows.map((workflow) => workflow.id));
     for (const workflow of workflows) {
-      deps.assertWorkflowDeletionAllowed(workflow.id, deps.getSettings(workflow.id));
+      deps.assertWorkflowDeletionAllowed(workflow.id, await deps.getSettings(workflow.id));
     }
 
     const profileDirs = new Set<string>();
-    for (const profile of deps.repository.listBrowserProfiles(project.id)) {
+    for (const profile of await deps.repository.listBrowserProfiles(project.id)) {
       const profileDir = getBrowserProfileKey(profile);
       if (profileDir) profileDirs.add(profileDir);
     }
     for (const workflow of workflows) {
-      const profileDir = browserProfileKey(deps.getSettings(workflow.id));
+      const profileDir = browserProfileKey(await deps.getSettings(workflow.id));
       if (profileDir) profileDirs.add(profileDir);
     }
-    const deletableProfileDirs = [...profileDirs].filter(
-      (profileDir) => !isProfileReferencedOutsideProject(project.id, workflowIds, profileDir),
-    );
-
-    deps.database.exec("BEGIN IMMEDIATE");
-    try {
-      deps.repository.deleteProject(project.id);
-      deps.database.exec("COMMIT");
-    } catch (error) {
-      deps.database.exec("ROLLBACK");
-      throw error;
+    const deletableProfileDirs = [];
+    for (const profileDir of profileDirs) {
+      if (!(await isProfileReferencedOutsideProject(project.id, workflowIds, profileDir))) {
+        deletableProfileDirs.push(profileDir);
+      }
     }
+
+    await deps.database.transaction(async (tx) => {
+      const txRepository = new WorkflowRepository(tx);
+      for (const w of workflows) {
+        await txRepository.deleteWorkflow(w.id);
+      }
+      const subflows = await txRepository.listSubflows(project.id);
+      for (const sf of subflows) {
+        await txRepository.deleteSubflow(sf.id);
+      }
+      const profiles = await txRepository.listBrowserProfiles(project.id);
+      for (const p of profiles) {
+        await txRepository.deleteBrowserProfile(p.id);
+      }
+      await txRepository.deleteProject(project.id);
+    });
 
     for (const profileDir of deletableProfileDirs) {
       nodeFs.rmSync(path.join(deps.browserProfilesDir, sanitizePathSegment(profileDir)), {

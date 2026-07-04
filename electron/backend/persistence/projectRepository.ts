@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DbAdapter } from "./dbAdapter.js";
 import type {
   Project,
   BrowserProfile,
@@ -40,48 +40,50 @@ type WorkflowRow = {
 };
 
 export class ProjectRepository {
-  constructor(private readonly database: DatabaseSync) {}
+  constructor(private readonly database: DbAdapter) {
+    if (!this.database.ownerId) {
+      throw new Error("ProjectRepository requires a DbAdapter with a valid ownerId");
+    }
+  }
 
-  createProject(name: string, description = "", now = new Date()): Project {
+  async createProject(name: string, description = "", now = new Date()): Promise<Project> {
     const timestamp = now.toISOString();
     const id = crypto.randomUUID();
-    this.database
-      .prepare(
-        `INSERT INTO projects (id, name, description, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-      .run(id, name, description, timestamp, timestamp);
+    await this.database.execute(
+      `INSERT INTO projects (id, name, description, created_at, updated_at, owner_id)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, name, description, timestamp, timestamp, this.database.ownerId],
+    );
     return { id, name, description, created_at: timestamp, updated_at: timestamp };
   }
 
-  listProjects(): Project[] {
-    return this.database
-      .prepare(
-        `SELECT id, name, description, created_at, updated_at
-         FROM projects
-         ORDER BY created_at ASC, name ASC`,
-      )
-      .all()
-      .map((row) => rowToProject(row as ProjectRow));
+  async listProjects(): Promise<Project[]> {
+    const rows = await this.database.query(
+      `SELECT id, name, description, created_at, updated_at
+       FROM projects
+       WHERE owner_id = $1
+       ORDER BY created_at ASC, name ASC`,
+      [this.database.ownerId],
+    );
+    return rows.map((row) => rowToProject(row as ProjectRow));
   }
 
-  getProject(projectId: string): Project | null {
-    const row = this.database
-      .prepare(
-        `SELECT id, name, description, created_at, updated_at
-         FROM projects
-         WHERE id = ?`,
-      )
-      .get(projectId) as ProjectRow | undefined;
+  async getProject(projectId: string): Promise<Project | null> {
+    const row = await this.database.queryOne(
+      `SELECT id, name, description, created_at, updated_at
+       FROM projects
+       WHERE id = $1 AND owner_id = $2`,
+      [projectId, this.database.ownerId],
+    ) as ProjectRow | null;
     return row ? rowToProject(row) : null;
   }
 
-  updateProject(
+  async updateProject(
     projectId: string,
     input: { name?: string; description?: string | null },
     now = new Date(),
-  ): Project | null {
-    const current = this.getProject(projectId);
+  ): Promise<Project | null> {
+    const current = await this.getProject(projectId);
     if (!current) return null;
     const timestamp = now.toISOString();
     const next: Project = {
@@ -90,35 +92,44 @@ export class ProjectRepository {
       description: input.description ?? current.description,
       updated_at: timestamp,
     };
-    this.database
-      .prepare(
-        `UPDATE projects
-         SET name = ?, description = ?, updated_at = ?
-         WHERE id = ?`,
-      )
-      .run(next.name, next.description, timestamp, projectId);
+    await this.database.execute(
+      `UPDATE projects
+       SET name = $1, description = $2, updated_at = $3
+       WHERE id = $4 AND owner_id = $5`,
+      [next.name, next.description, timestamp, projectId, this.database.ownerId],
+    );
     return next;
   }
 
-  deleteProject(projectId: string) {
-    this.database.prepare("DELETE FROM workflows WHERE project_id = ?").run(projectId);
-    this.database.prepare("DELETE FROM projects WHERE id = ?").run(projectId);
+  async deleteProject(projectId: string): Promise<void> {
+    await this.database.transaction(async (tx) => {
+      await tx.execute(
+        "DELETE FROM workflows WHERE project_id = $1 AND owner_id = $2",
+        [projectId, tx.ownerId],
+      );
+      await tx.execute(
+        "DELETE FROM projects WHERE id = $1 AND owner_id = $2",
+        [projectId, tx.ownerId],
+      );
+    });
   }
 
-  createBrowserProfile(
+  async createBrowserProfile(
     projectId: string,
     input: BrowserProfileInput & { browser_launch: BrowserProfile["browser_launch"] },
     now = new Date(),
-  ): BrowserProfile {
+  ): Promise<BrowserProfile> {
     const timestamp = now.toISOString();
     const id = crypto.randomUUID();
-    if (input.is_default) {
-      this.database
-        .prepare("UPDATE browser_profiles SET is_default = 0 WHERE project_id = ?")
-        .run(projectId);
-    }
-    this.database
-      .prepare(
+    
+    await this.database.transaction(async (tx) => {
+      if (input.is_default) {
+        await tx.execute(
+          "UPDATE browser_profiles SET is_default = 0 WHERE project_id = $1 AND owner_id = $2",
+          [projectId, tx.ownerId],
+        );
+      }
+      await tx.execute(
         `INSERT INTO browser_profiles (
           id,
           project_id,
@@ -128,20 +139,24 @@ export class ProjectRepository {
           browser_launch_json,
           environment_json,
           created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        id,
-        projectId,
-        input.name,
-        input.description ?? "",
-        input.is_default ? 1 : 0,
-        JSON.stringify(input.browser_launch),
-        JSON.stringify(input.environment ?? { variables: [] }),
-        timestamp,
-        timestamp,
+          updated_at,
+          owner_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          id,
+          projectId,
+          input.name,
+          input.description ?? "",
+          input.is_default ? 1 : 0,
+          JSON.stringify(input.browser_launch),
+          JSON.stringify(input.environment ?? { variables: [] }),
+          timestamp,
+          timestamp,
+          tx.ownerId,
+        ],
       );
+    });
+
     return {
       id,
       project_id: projectId,
@@ -155,48 +170,45 @@ export class ProjectRepository {
     };
   }
 
-  listBrowserProfiles(projectId: string): BrowserProfile[] {
-    return this.database
-      .prepare(
-        `SELECT id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
-         FROM browser_profiles
-         WHERE project_id = ?
-         ORDER BY is_default DESC, updated_at DESC, name ASC`,
-      )
-      .all(projectId)
-      .map((row) => rowToBrowserProfile(row as BrowserProfileRow));
+  async listBrowserProfiles(projectId: string): Promise<BrowserProfile[]> {
+    const rows = await this.database.query(
+      `SELECT id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
+       FROM browser_profiles
+       WHERE project_id = $1 AND owner_id = $2
+       ORDER BY is_default DESC, updated_at DESC, name ASC`,
+      [projectId, this.database.ownerId],
+    );
+    return rows.map((row) => rowToBrowserProfile(row as BrowserProfileRow));
   }
 
-  getBrowserProfile(profileId: string): BrowserProfile | null {
-    const row = this.database
-      .prepare(
-        `SELECT id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
-         FROM browser_profiles
-         WHERE id = ?`,
-      )
-      .get(profileId) as BrowserProfileRow | undefined;
+  async getBrowserProfile(profileId: string): Promise<BrowserProfile | null> {
+    const row = await this.database.queryOne(
+      `SELECT id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
+       FROM browser_profiles
+       WHERE id = $1 AND owner_id = $2`,
+      [profileId, this.database.ownerId],
+    ) as BrowserProfileRow | null;
     return row ? rowToBrowserProfile(row) : null;
   }
 
-  getDefaultBrowserProfile(projectId: string): BrowserProfile | null {
-    const row = this.database
-      .prepare(
-        `SELECT id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
-         FROM browser_profiles
-         WHERE project_id = ? AND is_default = 1
-         ORDER BY updated_at DESC
-         LIMIT 1`,
-      )
-      .get(projectId) as BrowserProfileRow | undefined;
+  async getDefaultBrowserProfile(projectId: string): Promise<BrowserProfile | null> {
+    const row = await this.database.queryOne(
+      `SELECT id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at
+       FROM browser_profiles
+       WHERE project_id = $1 AND is_default = 1 AND owner_id = $2
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [projectId, this.database.ownerId],
+    ) as BrowserProfileRow | null;
     return row ? rowToBrowserProfile(row) : null;
   }
 
-  updateBrowserProfile(
+  async updateBrowserProfile(
     profileId: string,
     input: Partial<BrowserProfileInput>,
     now = new Date(),
-  ): BrowserProfile | null {
-    const current = this.getBrowserProfile(profileId);
+  ): Promise<BrowserProfile | null> {
+    const current = await this.getBrowserProfile(profileId);
     if (!current) return null;
     const timestamp = now.toISOString();
     const next: BrowserProfile = {
@@ -208,50 +220,57 @@ export class ProjectRepository {
       environment: input.environment !== undefined ? (input.environment ?? { variables: [] }) : current.environment,
       updated_at: timestamp,
     };
-    if (next.is_default) {
-      this.database
-        .prepare("UPDATE browser_profiles SET is_default = 0 WHERE project_id = ?")
-        .run(current.project_id);
-    }
-    this.database
-      .prepare(
+
+    await this.database.transaction(async (tx) => {
+      if (next.is_default) {
+        await tx.execute(
+          "UPDATE browser_profiles SET is_default = 0 WHERE project_id = $1 AND owner_id = $2",
+          [current.project_id, tx.ownerId],
+        );
+      }
+      await tx.execute(
         `UPDATE browser_profiles
-         SET name = ?, description = ?, is_default = ?, browser_launch_json = ?, environment_json = ?, updated_at = ?
-         WHERE id = ?`,
-      )
-      .run(
-        next.name,
-        next.description,
-        next.is_default ? 1 : 0,
-        JSON.stringify(next.browser_launch),
-        JSON.stringify(next.environment ?? { variables: [] }),
-        timestamp,
-        profileId,
+         SET name = $1, description = $2, is_default = $3, browser_launch_json = $4, environment_json = $5, updated_at = $6
+         WHERE id = $7 AND owner_id = $8`,
+        [
+          next.name,
+          next.description,
+          next.is_default ? 1 : 0,
+          JSON.stringify(next.browser_launch),
+          JSON.stringify(next.environment ?? { variables: [] }),
+          timestamp,
+          profileId,
+          tx.ownerId,
+        ],
       );
+    });
+
     return next;
   }
 
-  deleteBrowserProfile(profileId: string) {
-    this.database.prepare("DELETE FROM browser_profiles WHERE id = ?").run(profileId);
+  async deleteBrowserProfile(profileId: string): Promise<void> {
+    await this.database.execute(
+      "DELETE FROM browser_profiles WHERE id = $1 AND owner_id = $2",
+      [profileId, this.database.ownerId],
+    );
   }
 
-  listWorkflowsUsingBrowserProfile(profileId: string): WorkflowSummary[] {
-    return this.database
-      .prepare(
-        `SELECT workflows.id,
-                workflows.project_id,
-                workflows.browser_profile_id,
-                browser_profiles.name AS browser_profile_name,
-                workflows.name,
-                workflows.created_at,
-                workflows.updated_at
-         FROM workflows
-         LEFT JOIN browser_profiles ON browser_profiles.id = workflows.browser_profile_id
-         WHERE workflows.browser_profile_id = ?
-         ORDER BY workflows.name ASC`,
-      )
-      .all(profileId)
-      .map((row) => rowToSummary(row as WorkflowRow));
+  async listWorkflowsUsingBrowserProfile(profileId: string): Promise<WorkflowSummary[]> {
+    const rows = await this.database.query(
+      `SELECT workflows.id,
+              workflows.project_id,
+              workflows.browser_profile_id,
+              browser_profiles.name AS browser_profile_name,
+              workflows.name,
+              workflows.created_at,
+              workflows.updated_at
+       FROM workflows
+       LEFT JOIN browser_profiles ON browser_profiles.id = workflows.browser_profile_id
+       WHERE workflows.browser_profile_id = $1 AND workflows.owner_id = $2
+       ORDER BY workflows.name ASC`,
+      [profileId, this.database.ownerId],
+    );
+    return rows.map((row) => rowToSummary(row as WorkflowRow));
   }
 }
 

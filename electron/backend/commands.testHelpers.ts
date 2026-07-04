@@ -7,8 +7,8 @@ import {
 } from "./commands.js";
 import {
   createAppPaths,
-  initializeDatabase,
 } from "./persistence/database.js";
+import { TestDbAdapter } from "./persistence/testDbAdapter.js";
 import type {
   GraphNodeType,
   ProjectPackage,
@@ -450,7 +450,7 @@ export async function createTestHandlers(
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-app-"));
   tempRoots.push(tempRoot);
   const appPaths = createAppPaths(tempRoot);
-  const database = await initializeDatabase(appPaths);
+  const database = await TestDbAdapter.create();
   const recorderContext = new FakeRecordingContext(new FakeRecordingPage());
   const handlers = createWorkflowCommandHandlers({
     appPaths,
@@ -459,6 +459,7 @@ export async function createTestHandlers(
     recorderDriver: new FakeRecordingDriver(recorderContext),
     ...overrides,
   });
+  await handlers.ensureProjectModelReady();
   return { appPaths, database, handlers };
 }
 
@@ -495,12 +496,12 @@ export async function waitFor(predicate: () => boolean) {
   throw new Error("Timed out waiting for predicate");
 }
 
-export function makeTemporary(
+export async function makeTemporary(
   handlers: Awaited<ReturnType<typeof createTestHandlers>>["handlers"],
   workflowId: string,
 ) {
-  const settings = handlers.getWorkflowSettings(workflowId);
-  handlers.saveWorkflowSettings(workflowId, {
+  const settings = await handlers.getWorkflowSettings(workflowId);
+  await handlers.saveWorkflowSettings(workflowId, {
     ...settings,
     browser_launch: {
       ...settings.browser_launch,

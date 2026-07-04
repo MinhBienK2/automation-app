@@ -15,8 +15,8 @@ import type {
 import { RecordingEventCollector } from "./eventCollector.js";
 
 type RecorderSessionManagerDependencies = {
-  getWorkflow(workflowId: string): WorkflowSummary | null;
-  getWorkflowSettings(workflowId: string): WorkflowSettings;
+  getWorkflow(workflowId: string): Promise<WorkflowSummary | null> | WorkflowSummary | null;
+  getWorkflowSettings(workflowId: string): Promise<WorkflowSettings> | WorkflowSettings;
   createNewWorkflowSettingsDraft(
     input: { name: string; draftWorkflowId: string; now: Date },
   ): WorkflowSettings;
@@ -49,7 +49,7 @@ export class RecorderSessionManager {
     const warnings: RecordingWarning[] = [];
     let settings =
       input.mode === "replace_current_graph"
-        ? this.savedWorkflowSettings(input.workflow_id)
+        ? await this.savedWorkflowSettings(input.workflow_id)
         : this.newWorkflowSettingsDraft(input, id, now);
 
     settings = applyRecorderBrowserLaunchOverrides(
@@ -161,17 +161,18 @@ export class RecorderSessionManager {
     this.sessions.delete(sessionId);
   }
 
-  private savedWorkflowSettings(workflowId: string | null | undefined) {
+  private async savedWorkflowSettings(workflowId: string | null | undefined): Promise<WorkflowSettings> {
     if (!workflowId) {
       throw new RecorderSessionInputError(
         "Workflow id is required when recording into an existing workflow",
         "workflow_id",
       );
     }
-    if (!this.dependencies.getWorkflow(workflowId)) {
+    const workflow = await this.dependencies.getWorkflow(workflowId);
+    if (!workflow) {
       throw new RecorderSessionInputError("Workflow not found", "workflow_id");
     }
-    return this.dependencies.getWorkflowSettings(workflowId);
+    return await this.dependencies.getWorkflowSettings(workflowId);
   }
 
   private newWorkflowSettingsDraft(
@@ -201,7 +202,7 @@ export class RecorderSessionManager {
 
 export class RecorderSessionInputError extends Error {
   constructor(
-    message: string,
+    readonly message: string,
     readonly field?: string | null,
   ) {
     super(message);

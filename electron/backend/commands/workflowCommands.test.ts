@@ -22,7 +22,8 @@ import type {
   WorkflowSettings,
   RunState,
 } from "../../../src/types/workflow";
-import { deriveFingerprintSeedFromIdentityId, finishRun } from "../commands";
+import { deriveFingerprintSeedFromIdentityId } from "../commands";
+import { finishRun } from "../runtime/runDbHelpers";
 
 vi.mock("electron", () => ({
   dialog: {
@@ -34,7 +35,7 @@ describe("Workflow commands integration", () => {
   test("persists workflow CRUD, graph, and settings in SQLite", async () => {
     const { handlers, database } = await createTestHandlers();
 
-    const created = handlers.createWorkflow("Login flow");
+    const created = await handlers.createWorkflow("Login flow");
     const row = database
       .prepare("SELECT id, name, settings_json FROM workflows WHERE id = ?")
       .get(created.id) as
@@ -92,17 +93,17 @@ describe("Workflow commands integration", () => {
       edges: [],
       viewport: { x: 10, y: 20, zoom: 1.5 },
     };
-    handlers.saveWorkflowGraph(created.id, graph);
-    expect(handlers.getWorkflowGraph(created.id)).toMatchObject({
+    await handlers.saveWorkflowGraph(created.id, graph);
+    expect(await handlers.getWorkflowGraph(created.id)).toMatchObject({
       ...graph,
       version: 3,
     });
 
-    const settings = handlers.getWorkflowSettings(created.id);
+    const settings = await handlers.getWorkflowSettings(created.id);
     expect(settings.browser_launch.profile_name).toBe(settings.browser_launch.profile_dir);
     expect(settings.browser_launch.display_name).toBe("Project browser profile identity");
     const initialSeed = settings.browser_launch.fingerprint_seed;
-    const saved = handlers.saveWorkflowSettings(created.id, {
+    const saved = await handlers.saveWorkflowSettings(created.id, {
       ...settings,
       general: {
         ...settings.general,
@@ -121,7 +122,7 @@ describe("Workflow commands integration", () => {
     expect(saved.browser_launch.display_name).toBe("Project browser profile identity");
     expect(saved.browser_launch.humanize).toBe(false);
     expect(saved.browser_launch.human_preset).toBe("careful");
-    expect(handlers.listWorkflows()[0]).toMatchObject({
+    expect((await handlers.listWorkflows())[0]).toMatchObject({
       id: created.id,
       name: "Renamed flow",
       step_count: 0,
@@ -140,21 +141,21 @@ describe("Workflow commands integration", () => {
       human_preset: "careful",
     });
 
-    handlers.deleteWorkflow(created.id);
-    expect(handlers.getWorkflow(created.id)).toBeNull();
+    await handlers.deleteWorkflow(created.id);
+    expect(await handlers.getWorkflow(created.id)).toBeNull();
   });
 
   test("creates a workflow using the specified browser profile ID", async () => {
     const { handlers } = await createTestHandlers();
     const projectHandlers = handlers as any;
 
-    const project = projectHandlers.listProjects()[0];
-    const customProfile = projectHandlers.createBrowserProfile(project.id, {
+    const project = (await projectHandlers.listProjects())[0];
+    const customProfile = await projectHandlers.createBrowserProfile(project.id, {
       name: "Custom Profile",
       description: "A custom profile for testing workflow creation",
     });
 
-    const workflow = handlers.createWorkflow("My custom workflow", {
+    const workflow = await handlers.createWorkflow("My custom workflow", {
       project_id: project.id,
       browser_profile_id: customProfile.id,
     });
@@ -164,7 +165,7 @@ describe("Workflow commands integration", () => {
       browser_profile_id: customProfile.id,
     });
 
-    const settings = handlers.getWorkflowSettings(workflow.id);
+    const settings = await handlers.getWorkflowSettings(workflow.id);
     expect(settings.browser_launch).toMatchObject({
       identity_id: customProfile.browser_launch.identity_id,
       fingerprint_seed: customProfile.browser_launch.fingerprint_seed,
@@ -182,9 +183,9 @@ describe("Workflow commands integration", () => {
       const { handlers } = await createTestHandlers({
         defaultFingerprintFontsDir: undefined,
       });
-      const workflow = handlers.createWorkflow("Font defaults");
-      const settings = handlers.getWorkflowSettings(workflow.id);
-      const cleared = handlers.saveWorkflowSettings(workflow.id, {
+      const workflow = await handlers.createWorkflow("Font defaults");
+      const settings = await handlers.getWorkflowSettings(workflow.id);
+      const cleared = await handlers.saveWorkflowSettings(workflow.id, {
         ...settings,
         browser_launch: {
           ...settings.browser_launch,
@@ -201,9 +202,9 @@ describe("Workflow commands integration", () => {
 
   test("rolls back duplicate workflow when copied graph persistence fails", async () => {
     const { handlers, database } = await createTestHandlers();
-    const source = handlers.createWorkflow("Source");
-    handlers.saveWorkflowGraph(source.id, runnableGraph());
-    const initialIds = handlers.listWorkflows().map((workflow) => workflow.id);
+    const source = await handlers.createWorkflow("Source");
+    await handlers.saveWorkflowGraph(source.id, runnableGraph());
+    const initialIds = (await handlers.listWorkflows()).map((workflow) => workflow.id);
     database.exec(`
       CREATE TRIGGER fail_duplicate_graph_copy
       BEFORE INSERT ON workflow_nodes
@@ -213,21 +214,21 @@ describe("Workflow commands integration", () => {
       END;
     `);
 
-    expect(() => handlers.duplicateWorkflow(source.id, "Copy of Source")).toThrow(
+    await expect(handlers.duplicateWorkflow(source.id, "Copy of Source")).rejects.toThrow(
       "graph copy failed",
     );
 
-    expect(handlers.listWorkflows().map((workflow) => workflow.id)).toEqual(initialIds);
+    expect((await handlers.listWorkflows()).map((workflow) => workflow.id)).toEqual(initialIds);
   });
 
   test("duplicates workflow with the same selected browser profile", async () => {
     const { handlers } = await createTestHandlers();
-    const source = handlers.createWorkflow("Source");
-    handlers.saveWorkflowGraph(source.id, runnableGraph());
-    const sourceSettings = handlers.getWorkflowSettings(source.id);
+    const source = await handlers.createWorkflow("Source");
+    await handlers.saveWorkflowGraph(source.id, runnableGraph());
+    const sourceSettings = await handlers.getWorkflowSettings(source.id);
     const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "workflow-fonts-"));
     tempRoots.push(fontsDir);
-    handlers.saveWorkflowSettings(source.id, {
+    await handlers.saveWorkflowSettings(source.id, {
       ...sourceSettings,
       general: {
         ...sourceSettings.general,
@@ -262,11 +263,11 @@ describe("Workflow commands integration", () => {
       },
     });
 
-    const duplicated = handlers.duplicateWorkflow(source.id, "Copy of Source").workflow;
-    const copiedSettings = handlers.getWorkflowSettings(duplicated.id);
-    const savedSourceSettings = handlers.getWorkflowSettings(source.id);
+    const duplicated = (await handlers.duplicateWorkflow(source.id, "Copy of Source")).workflow;
+    const copiedSettings = await handlers.getWorkflowSettings(duplicated.id);
+    const savedSourceSettings = await handlers.getWorkflowSettings(source.id);
 
-    expect(handlers.getWorkflowGraph(duplicated.id)).toMatchObject({
+    expect(await handlers.getWorkflowGraph(duplicated.id)).toMatchObject({
       version: 3,
       nodes: runnableGraph().nodes,
       edges: runnableGraph().edges,
@@ -331,14 +332,14 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const workflow = handlers.createWorkflow("Active delete guard");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const workflow = await handlers.createWorkflow("Active delete guard");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
     const snapshot = await handlers.runWorkflow(workflow.id);
 
     let deleteError: unknown;
     try {
-      handlers.deleteWorkflow(workflow.id);
+      await handlers.deleteWorkflow(workflow.id);
     } catch (error) {
       deleteError = error;
     }
@@ -346,7 +347,7 @@ describe("Workflow commands integration", () => {
       message: "Stop the active workflow run before deleting this workflow",
       field: "workflowId",
     });
-    expect(handlers.getWorkflow(workflow.id)).not.toBeNull();
+    expect(await handlers.getWorkflow(workflow.id)).not.toBeNull();
     expect(
       database.prepare("SELECT workflow_id FROM runs WHERE id = ?").get(snapshot.run_id),
     ).toMatchObject({ workflow_id: workflow.id });
@@ -363,14 +364,14 @@ describe("Workflow commands integration", () => {
     });
     await waitForRunSnapshotStatus(handlers, snapshot.run_id, "success");
 
-    handlers.deleteWorkflow(workflow.id);
+    await handlers.deleteWorkflow(workflow.id);
 
-    expect(handlers.getWorkflow(workflow.id)).toBeNull();
+    expect(await handlers.getWorkflow(workflow.id)).toBeNull();
   });
 
   test("preserves workflow graphs on load and persists the current contract", async () => {
     const { handlers, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Legacy graph");
+    const workflow = await handlers.createWorkflow("Legacy graph");
     const graph: WorkflowGraph = {
       version: 1,
       nodes: [
@@ -405,9 +406,9 @@ describe("Workflow commands integration", () => {
       viewport: { x: 0, y: 0, zoom: 1 },
     };
     const { writeGraphToNormalizedTables } = await import("../persistence/backfillGraphTables.js");
-    writeGraphToNormalizedTables(database, graph, "workflow", workflow.id, new Date().toISOString());
+    await writeGraphToNormalizedTables(database, graph, "workflow", workflow.id, new Date().toISOString());
 
-    const migrated = handlers.getWorkflowGraph(workflow.id);
+    const migrated = await handlers.getWorkflowGraph(workflow.id);
 
     expect(migrated).toMatchObject({
       version: 3,
@@ -440,13 +441,13 @@ describe("Workflow commands integration", () => {
 
   test("validates settings and maps browser config through simplified launch section", async () => {
     const { handlers } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Browser flow");
+    const workflow = await handlers.createWorkflow("Browser flow");
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         general: {
-          ...handlers.getWorkflowSettings(workflow.id).general,
+          ...await handlers.getWorkflowSettings(workflow.id).general,
           name: " ",
         },
       }),
@@ -460,9 +461,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...await handlers.getWorkflowSettings(workflow.id).browser_launch,
           proxy_enabled: true,
           proxy_server: null,
         },
@@ -477,9 +478,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...await handlers.getWorkflowSettings(workflow.id).browser_launch,
           proxy_enabled: true,
           proxy_server: "ftp://proxy.local:8080",
         },
@@ -495,9 +496,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...(await handlers.getWorkflowSettings(workflow.id)).browser_launch,
           proxy_enabled: true,
           proxy_server: "http://user:secret@proxy.local:8080",
           proxy_username: "agent",
@@ -514,9 +515,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...(await handlers.getWorkflowSettings(workflow.id)).browser_launch,
           proxy_enabled: true,
           proxy_server: "http://proxy.local:8080",
           timezone: null,
@@ -535,9 +536,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...(await handlers.getWorkflowSettings(workflow.id)).browser_launch,
           fingerprint_seed: "",
         },
       }),
@@ -552,9 +553,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...(await handlers.getWorkflowSettings(workflow.id)).browser_launch,
           fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-fingerprint-fonts"),
         } as WorkflowSettings["browser_launch"] & Record<string, unknown>,
       }),
@@ -571,9 +572,9 @@ describe("Workflow commands integration", () => {
     tempRoots.push(readableFontsDir);
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...await handlers.getWorkflowSettings(workflow.id).browser_launch,
           fingerprint_fonts_dir: readableFontsDir,
         } as WorkflowSettings["browser_launch"] & Record<string, unknown>,
       }),
@@ -588,9 +589,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...await handlers.getWorkflowSettings(workflow.id).browser_launch,
           geoip: true,
         },
       }),
@@ -605,9 +606,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...await handlers.getWorkflowSettings(workflow.id).browser_launch,
           webrtc_policy: "explicit_ip",
           webrtc_ip: null,
         },
@@ -623,9 +624,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...await handlers.getWorkflowSettings(workflow.id).browser_launch,
           webrtc_policy: "explicit_ip",
           webrtc_ip: "not-an-ip",
         },
@@ -641,9 +642,9 @@ describe("Workflow commands integration", () => {
 
     expect(
       handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
+        ...await handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          ...await handlers.getWorkflowSettings(workflow.id).browser_launch,
           webrtc_policy: "disabled_if_supported",
         },
       }),
@@ -657,9 +658,9 @@ describe("Workflow commands integration", () => {
     );
 
     const legacyOverrideSettings = {
-      ...handlers.getWorkflowSettings(workflow.id),
+      ...await handlers.getWorkflowSettings(workflow.id),
       browser_launch: {
-        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+        ...await handlers.getWorkflowSettings(workflow.id).browser_launch,
         browser_brand: "firefox" as never,
         viewport_width: 1366,
         viewport_height: 768,
@@ -674,8 +675,8 @@ describe("Workflow commands integration", () => {
         user_agent: "WorkflowBot/1.0",
       },
     };
-    handlers.saveWorkflowSettings(workflow.id, legacyOverrideSettings);
-    const normalizedLegacyBrowser = handlers.getWorkflowSettings(workflow.id).browser_launch;
+    await handlers.saveWorkflowSettings(workflow.id, legacyOverrideSettings);
+    const normalizedLegacyBrowser = (await handlers.getWorkflowSettings(workflow.id)).browser_launch;
     expect(normalizedLegacyBrowser).not.toHaveProperty("browser_brand");
     expect(normalizedLegacyBrowser).not.toHaveProperty("viewport_width");
     expect(normalizedLegacyBrowser).not.toHaveProperty("viewport_height");
@@ -689,16 +690,16 @@ describe("Workflow commands integration", () => {
     expect(normalizedLegacyBrowser).not.toHaveProperty("storage_quota_mb");
     expect(normalizedLegacyBrowser).not.toHaveProperty("user_agent");
 
-    handlers.saveWorkflowSettings(workflow.id, {
-      ...handlers.getWorkflowSettings(workflow.id),
+    await handlers.saveWorkflowSettings(workflow.id, {
+      ...await handlers.getWorkflowSettings(workflow.id),
       browser_launch: {
-        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+        ...await handlers.getWorkflowSettings(workflow.id).browser_launch,
         timezone: "America/New_York",
         locale: "en-US",
       },
     });
 
-    handlers.saveWorkflowBrowserConfig(workflow.id, {
+    await handlers.saveWorkflowBrowserConfig(workflow.id, {
       workflow_id: workflow.id,
       profile_name: "qa-profile",
       proxy_enabled: true,
@@ -708,7 +709,7 @@ describe("Workflow commands integration", () => {
       headless: false,
     });
 
-    expect(handlers.getWorkflowSettings(workflow.id).browser_launch).toMatchObject({
+    expect((await handlers.getWorkflowSettings(workflow.id)).browser_launch).toMatchObject({
       session_mode: "persistent_profile",
       profile_name: "qa-profile",
       proxy_enabled: true,
@@ -721,8 +722,8 @@ describe("Workflow commands integration", () => {
 
   test("validates run policy numeric ranges", async () => {
     const { handlers } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Settings validation");
-    const settings = handlers.getWorkflowSettings(workflow.id);
+    const workflow = await handlers.createWorkflow("Settings validation");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
 
     expect(
       handlers.validateWorkflowSettings({
@@ -745,8 +746,8 @@ describe("Workflow commands integration", () => {
 
   test("labels graph default link wait validation as new link wait", async () => {
     const { handlers } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Settings validation");
-    const settings = handlers.getWorkflowSettings(workflow.id);
+    const workflow = await handlers.createWorkflow("Settings validation");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
 
     expect(
       handlers.validateWorkflowSettings({
@@ -797,10 +798,10 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const workflow = handlers.createWorkflow("Runnable");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    handlers.saveWorkflowSettings(workflow.id, {
+    const workflow = await handlers.createWorkflow("Runnable");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       environment: {
         ...settings.environment,
@@ -880,10 +881,10 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const workflow = handlers.createWorkflow("Runnable");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    handlers.saveWorkflowSettings(workflow.id, {
+    const workflow = await handlers.createWorkflow("Runnable");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -938,7 +939,7 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const workflow = handlers.createWorkflow("Selected-only");
+    const workflow = await handlers.createWorkflow("Selected-only");
     const graph = runnableGraph();
     graph.nodes.push({
       id: "after",
@@ -958,9 +959,9 @@ describe("Workflow commands integration", () => {
       target_node_id: "after",
       target_port: "in",
     });
-    handlers.saveWorkflowGraph(workflow.id, graph);
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    handlers.saveWorkflowSettings(workflow.id, {
+    await handlers.saveWorkflowGraph(workflow.id, graph);
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -986,11 +987,11 @@ describe("Workflow commands integration", () => {
       run: vi.fn(),
     };
     const { handlers } = await createTestHandlers({ runner });
-    const workflow = handlers.createWorkflow("No reusable session");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const workflow = await handlers.createWorkflow("No reusable session");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    handlers.saveWorkflowSettings(workflow.id, {
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -1003,15 +1004,15 @@ describe("Workflow commands integration", () => {
       field: "browser_launch.session_mode",
     });
 
-    handlers.saveWorkflowSettings(workflow.id, {
-      ...handlers.getWorkflowSettings(workflow.id),
+    await handlers.saveWorkflowSettings(workflow.id, {
+      ...await handlers.getWorkflowSettings(workflow.id),
       browser_launch: {
-        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+        ...(await handlers.getWorkflowSettings(workflow.id)).browser_launch,
         session_mode: "persistent_profile",
-        profile_name: handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir,
+        profile_name: (await handlers.getWorkflowSettings(workflow.id)).browser_launch.profile_dir,
       },
       run_policy: {
-        ...handlers.getWorkflowSettings(workflow.id).run_policy,
+        ...(await handlers.getWorkflowSettings(workflow.id)).run_policy,
         browser_retention: "close",
       },
     });
@@ -1020,10 +1021,10 @@ describe("Workflow commands integration", () => {
       field: "run_policy.browser_retention",
     });
 
-    handlers.saveWorkflowSettings(workflow.id, {
-      ...handlers.getWorkflowSettings(workflow.id),
+    await handlers.saveWorkflowSettings(workflow.id, {
+      ...await handlers.getWorkflowSettings(workflow.id),
       run_policy: {
-        ...handlers.getWorkflowSettings(workflow.id).run_policy,
+        ...await handlers.getWorkflowSettings(workflow.id).run_policy,
         browser_retention: "retain",
       },
     });
@@ -1048,8 +1049,8 @@ describe("Workflow commands integration", () => {
       })),
     };
     const { handlers } = await createTestHandlers({ runner });
-    const workflow = handlers.createWorkflow("Runnable through IPC");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const workflow = await handlers.createWorkflow("Runnable through IPC");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
     const runWorkflow = handlers.runWorkflow;
 
     await expect(runWorkflow(workflow.id)).resolves.toMatchObject({
@@ -1062,8 +1063,8 @@ describe("Workflow commands integration", () => {
   test("rejects graph runs with no executable graph steps before starting the runner", async () => {
     const runner = { run: vi.fn() };
     const { handlers } = await createTestHandlers({ runner });
-    const workflow = handlers.createWorkflow("Draft");
-    handlers.saveWorkflowGraph(workflow.id, startOnlyGraph());
+    const workflow = await handlers.createWorkflow("Draft");
+    await handlers.saveWorkflowGraph(workflow.id, startOnlyGraph());
 
     await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
       message: "Workflow graph has no executable steps",
@@ -1109,10 +1110,10 @@ describe("Workflow commands integration", () => {
     const { handlers } = await createTestHandlers({
       runner,
     });
-    const firstWorkflow = handlers.createWorkflow("Checkout");
-    const secondWorkflow = handlers.createWorkflow("Support");
-    handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
-    handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
+    const firstWorkflow = await handlers.createWorkflow("Checkout");
+    const secondWorkflow = await handlers.createWorkflow("Support");
+    await handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
+    await handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
     makeTemporary(handlers, firstWorkflow.id);
     makeTemporary(handlers, secondWorkflow.id);
 
@@ -1172,13 +1173,13 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const firstWorkflow = handlers.createWorkflow("Profile owner");
-    const secondWorkflow = handlers.createWorkflow("Profile shared");
-    handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
-    handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
-    const firstSettings = handlers.getWorkflowSettings(firstWorkflow.id);
-    const secondSettings = handlers.getWorkflowSettings(secondWorkflow.id);
-    handlers.saveWorkflowSettings(secondWorkflow.id, {
+    const firstWorkflow = await handlers.createWorkflow("Profile owner");
+    const secondWorkflow = await handlers.createWorkflow("Profile shared");
+    await handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
+    await handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
+    const firstSettings = await handlers.getWorkflowSettings(firstWorkflow.id);
+    const secondSettings = await handlers.getWorkflowSettings(secondWorkflow.id);
+    await handlers.saveWorkflowSettings(secondWorkflow.id, {
       ...secondSettings,
       browser_launch: {
         ...secondSettings.browser_launch,
@@ -1217,10 +1218,10 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const firstWorkflow = handlers.createWorkflow("Checkout");
-    const secondWorkflow = handlers.createWorkflow("Support");
-    handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
-    handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
+    const firstWorkflow = await handlers.createWorkflow("Checkout");
+    const secondWorkflow = await handlers.createWorkflow("Support");
+    await handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
+    await handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
     makeTemporary(handlers, firstWorkflow.id);
     makeTemporary(handlers, secondWorkflow.id);
     const first = await handlers.runWorkflow(firstWorkflow.id);
@@ -1326,8 +1327,8 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const workflow = handlers.createWorkflow("Lifecycle");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const workflow = await handlers.createWorkflow("Lifecycle");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
     await expect(handlers.runWorkflow(workflow.id)).resolves.toMatchObject({
       status: "running",
@@ -1420,14 +1421,14 @@ describe("Workflow commands integration", () => {
 
   test("persists executed nested action traces as durable run step rows", async () => {
     const { handlers, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Nested trace persistence");
+    const workflow = await handlers.createWorkflow("Nested trace persistence");
     const runId = "run-nested-traces";
     database
       .prepare(
-        `INSERT INTO runs (id, workflow_id, status, started_at)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT INTO runs (id, workflow_id, status, started_at, owner_id)
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(runId, workflow.id, "running", "1");
+      .run(runId, workflow.id, "running", "1", database.ownerId);
     const graph: CompiledWorkflowGraph = {
       steps: [
         {
@@ -1465,7 +1466,7 @@ describe("Workflow commands integration", () => {
       ],
     };
 
-    finishRun(database, runId, graph, {
+    await finishRun(database, runId, graph, {
       status: "success",
       mode: "run_workflow",
       target_step_id: null,
@@ -1592,14 +1593,14 @@ describe("Workflow commands integration", () => {
 
   test("rolls back terminal run evidence when a step insert fails", async () => {
     const { handlers, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Evidence rollback");
+    const workflow = await handlers.createWorkflow("Evidence rollback");
     const runId = "run-rollback";
     database
       .prepare(
-        `INSERT INTO runs (id, workflow_id, status, started_at)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT INTO runs (id, workflow_id, status, started_at, owner_id)
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(runId, workflow.id, "running", "1");
+      .run(runId, workflow.id, "running", "1", database.ownerId);
     database.exec(`
       CREATE TRIGGER fail_second_step_insert
       BEFORE INSERT ON run_steps
@@ -1623,7 +1624,7 @@ describe("Workflow commands integration", () => {
       ],
     };
 
-    expect(() =>
+    await expect(
       finishRun(database, runId, graph, {
         status: "success",
         mode: "run_workflow",
@@ -1634,7 +1635,7 @@ describe("Workflow commands integration", () => {
         outputs: {},
         error: null,
       }),
-    ).toThrow("step insert failed");
+    ).rejects.toThrow("step insert failed");
 
     expect(
       database.prepare("SELECT status, finished_at FROM runs WHERE id = ?").get(runId),
@@ -1657,8 +1658,8 @@ describe("Workflow commands integration", () => {
       })),
     };
     const { handlers, database } = await createTestHandlers({ runner });
-    const workflow = handlers.createWorkflow("Persistence failure");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const workflow = await handlers.createWorkflow("Persistence failure");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
     database.exec(`
       CREATE TRIGGER fail_run_insert
       BEFORE INSERT ON runs
@@ -1705,10 +1706,10 @@ describe("Workflow commands integration", () => {
       })),
     };
     const { handlers, database } = await createTestHandlers({ runner });
-    const workflow = handlers.createWorkflow("Selected persistence failure");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    handlers.saveWorkflowSettings(workflow.id, {
+    const workflow = await handlers.createWorkflow("Selected persistence failure");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -1761,8 +1762,8 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const workflow = handlers.createWorkflow("Progress");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const workflow = await handlers.createWorkflow("Progress");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
     await handlers.runWorkflow(workflow.id);
 
@@ -1806,10 +1807,10 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const workflow = handlers.createWorkflow("Timeout");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    handlers.saveWorkflowSettings(workflow.id, {
+    const workflow = await handlers.createWorkflow("Timeout");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       run_policy: {
         ...settings.run_policy,
@@ -1864,10 +1865,10 @@ describe("Workflow commands integration", () => {
         },
       },
     });
-    const workflow = handlers.createWorkflow("Batch");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    handlers.saveWorkflowSettings(workflow.id, {
+    const workflow = await handlers.createWorkflow("Batch");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       run_policy: {
         ...settings.run_policy,
@@ -1970,8 +1971,8 @@ describe("Workflow commands integration", () => {
         async closeRetainedContext() {},
       },
     });
-    const workflow = handlers.createWorkflow("Batch lifecycle");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const workflow = await handlers.createWorkflow("Batch lifecycle");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
     const batchPromise = handlers.runBatchWorkflow(workflow.id, {
       rows: [{ name: "A" }, { name: "B" }],
@@ -2011,8 +2012,8 @@ describe("Workflow commands integration", () => {
         run: vi.fn(),
       },
     });
-    const workflow = handlers.createWorkflow("Batch persistence failure");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const workflow = await handlers.createWorkflow("Batch persistence failure");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
     database.exec(`
       CREATE TRIGGER fail_batch_run_insert
       BEFORE INSERT ON runs
@@ -2038,7 +2039,7 @@ describe("Workflow commands integration", () => {
 
   test("rejects workflow graph updates with unknown nested action discriminants", async () => {
     const { handlers } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Unknown nested action");
+    const workflow = await handlers.createWorkflow("Unknown nested action");
     const graph: WorkflowGraph = {
       version: 2,
       nodes: [
@@ -2073,7 +2074,7 @@ describe("Workflow commands integration", () => {
       viewport: { x: 0, y: 0, zoom: 1 },
     };
 
-    expect(() => handlers.saveWorkflowGraph(workflow.id, graph)).toThrow(
+    await expect(handlers.saveWorkflowGraph(workflow.id, graph)).rejects.toThrow(
       expect.objectContaining({
         message: "Node If has invalid action config: Unsupported action type: mystery_action",
         field: "workflow.graph",

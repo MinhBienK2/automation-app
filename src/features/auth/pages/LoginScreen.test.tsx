@@ -14,8 +14,6 @@ describe("LoginScreen remember credentials feature", () => {
         onLogin={vi.fn().mockResolvedValue(true)}
         authError={null}
         isLoading={false}
-        onPrivate={vi.fn()}
-        pgAvailable={true}
       />
     );
 
@@ -34,8 +32,6 @@ describe("LoginScreen remember credentials feature", () => {
         onLogin={vi.fn().mockResolvedValue(true)}
         authError={null}
         isLoading={false}
-        onPrivate={vi.fn()}
-        pgAvailable={true}
       />
     );
 
@@ -51,8 +47,6 @@ describe("LoginScreen remember credentials feature", () => {
         onLogin={onLogin}
         authError={null}
         isLoading={false}
-        onPrivate={vi.fn()}
-        pgAvailable={true}
       />
     );
 
@@ -83,8 +77,6 @@ describe("LoginScreen remember credentials feature", () => {
         onLogin={onLogin}
         authError={null}
         isLoading={false}
-        onPrivate={vi.fn()}
-        pgAvailable={true}
       />
     );
 

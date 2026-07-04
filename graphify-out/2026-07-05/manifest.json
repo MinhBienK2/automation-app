@@ -60,88 +60,88 @@
     "semantic_hash": "5424844dc2d14de5052094f63a5f0e32"
   },
   "electron/backend/commands.testHelpers.ts": {
-    "mtime": 1783190373.5790596,
-    "ast_hash": "1936bfda95cea972c484aeeef759c4b6",
+    "mtime": 1783091239.8215313,
+    "ast_hash": "c00b252b2c5c45926aa8cb9a07ab585c",
     "semantic_hash": ""
   },
   "electron/backend/commands.ts": {
-    "mtime": 1783191124.9246676,
-    "ast_hash": "4013e530c80ddff736896b935c1f6c4b",
-    "semantic_hash": ""
+    "mtime": 1782490583.447516,
+    "ast_hash": "b9f4d214e31bf22140242d922dbd8899",
+    "semantic_hash": "b9f4d214e31bf22140242d922dbd8899"
   },
   "electron/backend/commands/index.ts": {
-    "mtime": 1783190798.0239918,
-    "ast_hash": "965fa029ae7e00b63d6d63ad621c2201",
+    "mtime": 1783080965.9617956,
+    "ast_hash": "e1f6fac8cf045f5b78e6c924f9d60f30",
     "semantic_hash": ""
   },
   "electron/backend/commands/packageCommands.test.ts": {
-    "mtime": 1783189882.8360512,
-    "ast_hash": "cbfa47b9a8f8d1f4c15f7bddd5fb8754",
+    "mtime": 1782997447.1549292,
+    "ast_hash": "e15588279986cce3b0e1e8791e958c46",
     "semantic_hash": ""
   },
   "electron/backend/commands/packageCommands.ts": {
-    "mtime": 1783190443.900712,
-    "ast_hash": "d8dd4380644a23f49df019692cc93138",
-    "semantic_hash": ""
+    "mtime": 1782490583.450516,
+    "ast_hash": "9de886e8085b09eb801ab29ac7364ef0",
+    "semantic_hash": "9de886e8085b09eb801ab29ac7364ef0"
   },
   "electron/backend/commands/projectCommands.test.ts": {
-    "mtime": 1783190455.3343618,
-    "ast_hash": "988632d2bb2ddb16e38fa86c8f3eb361",
-    "semantic_hash": ""
+    "mtime": 1782490583.450516,
+    "ast_hash": "32b7937b2238368a7e0b4922aaf9ae03",
+    "semantic_hash": "32b7937b2238368a7e0b4922aaf9ae03"
   },
   "electron/backend/commands/projectCommands.ts": {
-    "mtime": 1783191153.8384817,
-    "ast_hash": "9b7c47dc8b6ce22117612bb65f8c9259",
-    "semantic_hash": ""
+    "mtime": 1782490583.450516,
+    "ast_hash": "673d89d66dfc8240d118253d3b7d730f",
+    "semantic_hash": "673d89d66dfc8240d118253d3b7d730f"
   },
   "electron/backend/commands/recordingCommands.test.ts": {
-    "mtime": 1783189575.5036364,
-    "ast_hash": "05e0fc2e8ff17f6b0672052bed2ec73f",
-    "semantic_hash": ""
+    "mtime": 1782490583.450516,
+    "ast_hash": "e6760a099dc2185f9e916de0fbc7f856",
+    "semantic_hash": "e6760a099dc2185f9e916de0fbc7f856"
   },
   "electron/backend/commands/recordingCommands.ts": {
-    "mtime": 1783189464.4946349,
-    "ast_hash": "91a86caf8585aa2ff353ba2e9c340868",
-    "semantic_hash": ""
+    "mtime": 1782490583.450516,
+    "ast_hash": "715368af0bcb2b222f18c5843d4b792d",
+    "semantic_hash": "715368af0bcb2b222f18c5843d4b792d"
   },
   "electron/backend/commands/scheduleCommands.test.ts": {
-    "mtime": 1783190637.627779,
-    "ast_hash": "03480d9611b167238a8006ac399de4a6",
-    "semantic_hash": ""
+    "mtime": 1782490583.450516,
+    "ast_hash": "13f3ac012ebcb6e7832b7608b25e19f5",
+    "semantic_hash": "13f3ac012ebcb6e7832b7608b25e19f5"
   },
   "electron/backend/commands/settingsCommands.test.ts": {
-    "mtime": 1783189445.8312953,
-    "ast_hash": "211134bcd6bff187f2e1043b7f1b0608",
+    "mtime": 1782669300.3770773,
+    "ast_hash": "9e6e4f88012fa9539b6cf71ee9d4de1f",
     "semantic_hash": ""
   },
   "electron/backend/commands/settingsCommands.ts": {
-    "mtime": 1783189272.0230794,
-    "ast_hash": "7696898a030d1e839f2d50b065c28530",
-    "semantic_hash": ""
+    "mtime": 1782490583.451516,
+    "ast_hash": "e52d53c4906884480b63b16d5fa93e2d",
+    "semantic_hash": "e52d53c4906884480b63b16d5fa93e2d"
   },
   "electron/backend/commands/subflowCommands.test.ts": {
-    "mtime": 1783190660.1923256,
-    "ast_hash": "04a04dfb691219d80e979f7629b45414",
+    "mtime": 1782997472.1393244,
+    "ast_hash": "70dac124833988a95febd776607328bb",
     "semantic_hash": ""
   },
   "electron/backend/commands/subflowCommands.ts": {
-    "mtime": 1783190298.8879566,
-    "ast_hash": "c5fffd2bb3143c869daeb1472c8bd509",
+    "mtime": 1782741046.4989142,
+    "ast_hash": "93f9f4f290f0a3c579be1c43cfa33396",
     "semantic_hash": ""
   },
   "electron/backend/commands/types.ts": {
-    "mtime": 1783191224.720081,
-    "ast_hash": "63c03b30881393eaf86ec215a61ba12f",
-    "semantic_hash": ""
+    "mtime": 1782490583.451516,
+    "ast_hash": "c2bbc5161fd3251302658a534ffed2f6",
+    "semantic_hash": "c2bbc5161fd3251302658a534ffed2f6"
   },
   "electron/backend/commands/workflowCommands.test.ts": {
-    "mtime": 1783189793.460492,
-    "ast_hash": "b320ce64bb1705444e4fffa413f10cc1",
+    "mtime": 1782997510.4244318,
+    "ast_hash": "551bef149b79f2989369c6970c112467",
     "semantic_hash": ""
   },
   "electron/backend/commands/workflowCommands.ts": {
-    "mtime": 1783191003.363616,
-    "ast_hash": "729e9770cd7bfc4ef6eef748db85083f",
+    "mtime": 1783101121.7597635,
+    "ast_hash": "ed696ee3b93e079fcbf47a81c2ea1963",
     "semantic_hash": ""
   },
   "electron/backend/diagnostics/cloakBrowserDiagnostics.test.ts": {
@@ -150,13 +150,13 @@
     "semantic_hash": "2d34bac6ac0fbcb2a757e6657a57f2b2"
   },
   "electron/backend/diagnostics/cloakBrowserDiagnostics.ts": {
-    "mtime": 1783191147.6615202,
-    "ast_hash": "774765ca490c0ca739d82fc473e26d64",
-    "semantic_hash": ""
+    "mtime": 1782490583.451516,
+    "ast_hash": "11d950d396371757953f72a499d7ccca",
+    "semantic_hash": "11d950d396371757953f72a499d7ccca"
   },
   "electron/backend/graph/compiler.test.ts": {
-    "mtime": 1783189059.8249838,
-    "ast_hash": "66f7b62699a7bdc199afb10d7af84443",
+    "mtime": 1783105245.9798098,
+    "ast_hash": "59f256d9204a2d4f1fb8d33d9de2e4b6",
     "semantic_hash": ""
   },
   "electron/backend/graph/compiler.ts": {
@@ -185,23 +185,28 @@
     "semantic_hash": ""
   },
   "electron/backend/identity/identityRepository.ts": {
-    "mtime": 1783188601.4140022,
-    "ast_hash": "610e197e1cf9d5507989b9b25258e209",
-    "semantic_hash": ""
+    "mtime": 1782490583.453516,
+    "ast_hash": "1fe2466351107fae906a77b3107e5253",
+    "semantic_hash": "1fe2466351107fae906a77b3107e5253"
   },
   "electron/backend/operations/operationsRepository.ts": {
-    "mtime": 1783188594.2868283,
-    "ast_hash": "46e77bbef9802c96331532e6f24f1cf1",
+    "mtime": 1782490583.453516,
+    "ast_hash": "9aedff6cb24c4d6012ed43438739a6ad",
+    "semantic_hash": "9aedff6cb24c4d6012ed43438739a6ad"
+  },
+  "electron/backend/persistence/database.test.ts": {
+    "mtime": 1783091389.4674685,
+    "ast_hash": "2bd23c54359fe31781403409f8c035b2",
     "semantic_hash": ""
   },
   "electron/backend/persistence/database.ts": {
-    "mtime": 1783188640.5389438,
-    "ast_hash": "11fd1c0d8ed026cd55800067e5830d24",
+    "mtime": 1783091227.4252658,
+    "ast_hash": "901ec0db138f18335bfde5f248db4571",
     "semantic_hash": ""
   },
   "electron/backend/persistence/workflowRepository.ts": {
-    "mtime": 1783188570.9592538,
-    "ast_hash": "3a35eabea5266583444b46f438450d83",
+    "mtime": 1783103126.7522662,
+    "ast_hash": "485a62cc17356f92a880300d8615bb89",
     "semantic_hash": ""
   },
   "electron/backend/projects/projectCommandCascades.test.ts": {
@@ -210,9 +215,9 @@
     "semantic_hash": "6f774d2eecec63ade95c117a2ccb251d"
   },
   "electron/backend/projects/projectCommandCascades.ts": {
-    "mtime": 1783191236.044024,
-    "ast_hash": "3f0ba05e3f3d2c5c888e5b276f95e496",
-    "semantic_hash": ""
+    "mtime": 1782490583.454516,
+    "ast_hash": "8916997adf76664fb4a1dcdab40de8ad",
+    "semantic_hash": "8916997adf76664fb4a1dcdab40de8ad"
   },
   "electron/backend/recording/eventCollector.test.ts": {
     "mtime": 1781282239.3771431,
@@ -245,19 +250,19 @@
     "semantic_hash": "4b9eb1ed511d3123f3a98e45b0b406c0"
   },
   "electron/backend/recording/recorderSessionManager.ts": {
-    "mtime": 1783189513.1475158,
-    "ast_hash": "06546ed485118d07ba52b3a331040447",
-    "semantic_hash": ""
+    "mtime": 1781282239.3781433,
+    "ast_hash": "536ebbcab281889825a9bb2f473f03ae",
+    "semantic_hash": "536ebbcab281889825a9bb2f473f03ae"
   },
   "electron/backend/recording/recordingDraftCommands.test.ts": {
-    "mtime": 1783189819.2229424,
-    "ast_hash": "78953503a5309f612ab89a883e342c84",
-    "semantic_hash": ""
+    "mtime": 1782490583.454516,
+    "ast_hash": "5671d1e8857bb99ce45b51010d97958f",
+    "semantic_hash": "5671d1e8857bb99ce45b51010d97958f"
   },
   "electron/backend/recording/recordingDraftCommands.ts": {
-    "mtime": 1783191076.2210138,
-    "ast_hash": "1dff2ce63e60ad2ec05ce2a0d3fc89e2",
-    "semantic_hash": ""
+    "mtime": 1782490583.454516,
+    "ast_hash": "8d6dccec993a7bde606d1342f403aa55",
+    "semantic_hash": "8d6dccec993a7bde606d1342f403aa55"
   },
   "electron/backend/recording/reviewReconciliation.test.ts": {
     "mtime": 1782490583.4555159,
@@ -295,9 +300,9 @@
     "semantic_hash": "b6ce0fb5d73fa37ce8fb65094c9d634b"
   },
   "electron/backend/runtime/batchWorkflowRun.ts": {
-    "mtime": 1783189597.464029,
-    "ast_hash": "2fc2749b0946bbcabb84034b7df78d9c",
-    "semantic_hash": ""
+    "mtime": 1782490583.4555159,
+    "ast_hash": "b46af1c7c2110a517ae5f68f3ee83a31",
+    "semantic_hash": "b46af1c7c2110a517ae5f68f3ee83a31"
   },
   "electron/backend/runtime/conditions.test.ts": {
     "mtime": 1783017000.716224,
@@ -340,14 +345,14 @@
     "semantic_hash": "5e449a59e70e75220281168a3a00d844"
   },
   "electron/backend/runtime/runManager.test.ts": {
-    "mtime": 1783188934.6414459,
-    "ast_hash": "0dc20faba61495a434764a09411a4d02",
+    "mtime": 1783091281.0823894,
+    "ast_hash": "0fd806a79ae0aac87c6598670ee3e6d5",
     "semantic_hash": ""
   },
   "electron/backend/runtime/runManager.ts": {
-    "mtime": 1783191088.2409244,
-    "ast_hash": "f06b37e8409d85fa806f49c669f9f5f3",
-    "semantic_hash": ""
+    "mtime": 1782490583.456516,
+    "ast_hash": "25cb84e4c6e39c51612ab4d2d9074cb9",
+    "semantic_hash": "25cb84e4c6e39c51612ab4d2d9074cb9"
   },
   "electron/backend/runtime/runner.smoke.test.ts": {
     "mtime": 1781282239.3811433,
@@ -415,14 +420,14 @@
     "semantic_hash": ""
   },
   "electron/backend/scheduling/scheduleCommands.test.ts": {
-    "mtime": 1783190835.8524663,
-    "ast_hash": "b195e4fc7285e5f5cf91396181e83763",
-    "semantic_hash": ""
+    "mtime": 1782490583.458516,
+    "ast_hash": "049940278537e396eb8709dc0a75f042",
+    "semantic_hash": "049940278537e396eb8709dc0a75f042"
   },
   "electron/backend/scheduling/scheduleCommands.ts": {
-    "mtime": 1783189303.127663,
-    "ast_hash": "ea6c22bf05242f319d6eb53670e6de90",
-    "semantic_hash": ""
+    "mtime": 1782490583.458516,
+    "ast_hash": "bd2b47b25bc2d2a878621d314d2df05a",
+    "semantic_hash": "bd2b47b25bc2d2a878621d314d2df05a"
   },
   "electron/backend/scheduling/scheduler.test.ts": {
     "mtime": 1781282239.3851433,
@@ -430,19 +435,19 @@
     "semantic_hash": "3f4d861135910f99e6d2831e7afefff7"
   },
   "electron/backend/scheduling/scheduler.ts": {
-    "mtime": 1783190617.6351993,
-    "ast_hash": "31fdaed2966ca220d48aed36666b3dbf",
-    "semantic_hash": ""
+    "mtime": 1781282239.3861432,
+    "ast_hash": "9b2313fbc732deb520bd051bbab344a0",
+    "semantic_hash": "9b2313fbc732deb520bd051bbab344a0"
   },
   "electron/backend/scheduling/workflowScheduleRepository.test.ts": {
-    "mtime": 1783188913.8910143,
-    "ast_hash": "197718c475d0606f36eb8ae1a2d65ea2",
+    "mtime": 1783091289.01555,
+    "ast_hash": "feafe1c105927a6cb2c26ba13946f322",
     "semantic_hash": ""
   },
   "electron/backend/scheduling/workflowScheduleRepository.ts": {
-    "mtime": 1783188583.598566,
-    "ast_hash": "52cc631ce5d1eae37581a3c8a96f6f84",
-    "semantic_hash": ""
+    "mtime": 1781282239.3861432,
+    "ast_hash": "feb8b61980dd786b0fbd903ef1862c79",
+    "semantic_hash": "feb8b61980dd786b0fbd903ef1862c79"
   },
   "electron/backend/services/projectPackageService.test.ts": {
     "mtime": 1782490583.458516,
@@ -495,8 +500,8 @@
     "semantic_hash": "1da15a27b8690ff60277c1d672802026"
   },
   "electron/main.ts": {
-    "mtime": 1783190874.0449796,
-    "ast_hash": "a777b179b69065dae88a8d65028121d8",
+    "mtime": 1783098357.8701947,
+    "ast_hash": "899262e4444002e31ad0673206571993",
     "semantic_hash": ""
   },
   "eslint.config.js": {
@@ -585,13 +590,13 @@
     "semantic_hash": "d46b25e937853f741ca889dc1de31027"
   },
   "src/App.test.tsx": {
-    "mtime": 1783190910.8625486,
-    "ast_hash": "86449ca96880e2feff2dbf67bf11e820",
+    "mtime": 1783092001.6341965,
+    "ast_hash": "49ffbb3fde57b69f73abdb7f18b17a15",
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1783188782.9092035,
-    "ast_hash": "a4bcc21beb71127c71b9448c28bf2415",
+    "mtime": 1783182908.032632,
+    "ast_hash": "6bd059ef2fde68c7e8beff15027c1fb1",
     "semantic_hash": ""
   },
   "src/AppCss.test.ts": {
@@ -820,8 +825,8 @@
     "semantic_hash": "ebcbf6a9f9f5557add44c2d821226958"
   },
   "src/features/settings/pages/SettingsPage.tsx": {
-    "mtime": 1783190865.3410869,
-    "ast_hash": "1a0add1ae1ef6d890472baea4e1c2916",
+    "mtime": 1783182866.8081188,
+    "ast_hash": "46f8eab585d9383efe7cb5d4616532f5",
     "semantic_hash": ""
   },
   "src/features/settings/useSettingsDiagnostics.test.tsx": {
@@ -1370,13 +1375,13 @@
     "semantic_hash": ""
   },
   "src/layouts/AppShell.tsx": {
-    "mtime": 1783188757.2966344,
-    "ast_hash": "57791c21bbe3501a39ea7cabff5425f8",
+    "mtime": 1783182902.1365588,
+    "ast_hash": "34d414e5672cf6119d85b0a81bc3dd8b",
     "semantic_hash": ""
   },
   "src/layouts/AppSidebar.tsx": {
-    "mtime": 1783188764.899804,
-    "ast_hash": "6547a48fb0417bb78c6af4893950ccdd",
+    "mtime": 1783182897.2014976,
+    "ast_hash": "bfb6bf1764285de86312a563278f11e0",
     "semantic_hash": ""
   },
   "src/lib/actionCapabilities.test.ts": {
@@ -1435,8 +1440,8 @@
     "semantic_hash": ""
   },
   "src/lib/workflowApi.ts": {
-    "mtime": 1783190940.2042305,
-    "ast_hash": "499def104519be1a416b4e014190d203",
+    "mtime": 1783101135.740013,
+    "ast_hash": "0636147cbe855d8598dcdd54482a353b",
     "semantic_hash": ""
   },
   "src/lib/workflowUi.test.ts": {
@@ -1460,8 +1465,8 @@
     "semantic_hash": ""
   },
   "src/types/electron.ts": {
-    "mtime": 1783188788.1613195,
-    "ast_hash": "71a05294b247200bedf0c4c7d2db4f3c",
+    "mtime": 1783101130.7809246,
+    "ast_hash": "bc3fb1faacb99073309c0ac75eee0a21",
     "semantic_hash": ""
   },
   "src/types/workflow.ts": {
@@ -2190,13 +2195,13 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/backfillGraphTables.test.ts": {
-    "mtime": 1783188969.772169,
-    "ast_hash": "873ad3273eb2764653ffdedfd98b2494",
+    "mtime": 1783091248.3287115,
+    "ast_hash": "69ba407dd840a86100f107376f2d2c24",
     "semantic_hash": ""
   },
   "electron/backend/persistence/backfillGraphTables.ts": {
-    "mtime": 1783191008.6265688,
-    "ast_hash": "669f0b8ef80b222c81c5f5ce05895bf6",
+    "mtime": 1782737357.073204,
+    "ast_hash": "54ab7e9d5635647d4294616b624890a4",
     "semantic_hash": ""
   },
   "electron/backend/persistence/graphLoader.ts": {
@@ -2205,33 +2210,33 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/migrateAllGraphs.test.ts": {
-    "mtime": 1783188978.7213519,
-    "ast_hash": "fb1673877167fdb848318c9d8c06d977",
+    "mtime": 1783091254.6228437,
+    "ast_hash": "3042168dfbfa7c57b5607b6eaa55413b",
     "semantic_hash": ""
   },
   "electron/backend/persistence/migrateAllGraphs.ts": {
-    "mtime": 1783188631.5947304,
-    "ast_hash": "9a9f5941d17baeab1fab2ed76610ecc2",
+    "mtime": 1782669300.3810773,
+    "ast_hash": "0e3c104da9ef97d2db6ecfdbab11df52",
     "semantic_hash": ""
   },
   "electron/backend/persistence/normalizedGraphRepository.test.ts": {
-    "mtime": 1783189009.580978,
-    "ast_hash": "bb62daac10819a51225b2f372189d986",
+    "mtime": 1783091260.293962,
+    "ast_hash": "3f18688e989f7a9cb0dcc02b141f4de0",
     "semantic_hash": ""
   },
   "electron/backend/persistence/normalizedGraphRepository.ts": {
-    "mtime": 1783188546.7846491,
-    "ast_hash": "9cd12ae4229e6f24efcefcdea9d10335",
+    "mtime": 1782737370.9771373,
+    "ast_hash": "e44e0c6572d771c8e4339de0ef41e7ef",
     "semantic_hash": ""
   },
   "electron/backend/persistence/revisionRepository.test.ts": {
-    "mtime": 1783188922.6611972,
-    "ast_hash": "5ed45407655b97e7f87ddbba6099debb",
+    "mtime": 1783101107.6115103,
+    "ast_hash": "053cb2655a39ebdd963634222614c2c7",
     "semantic_hash": ""
   },
   "electron/backend/persistence/revisionRepository.ts": {
-    "mtime": 1783188564.334089,
-    "ast_hash": "b848e02e622ef401b7bf95e09693378b",
+    "mtime": 1783101114.9586418,
+    "ast_hash": "8ad9e5554419c520aaddcf45f75ca73b",
     "semantic_hash": ""
   },
   "electron/backend/runtime/nestedExecutionHelpers.ts": {
@@ -2335,18 +2340,18 @@
     "semantic_hash": ""
   },
   "electron/backend/commands/authCommands.ts": {
-    "mtime": 1783188675.068757,
-    "ast_hash": "a1f1d3655926a5fbcc89d1231e930c69",
+    "mtime": 1783097824.7840786,
+    "ast_hash": "06b9b418810761552a81bbad91ef1cb8",
     "semantic_hash": ""
   },
   "electron/backend/persistence/appConfig.ts": {
-    "mtime": 1783188707.833515,
-    "ast_hash": "6d09292ea8ef539baceb61cf55d541e7",
+    "mtime": 1783086027.622801,
+    "ast_hash": "af3fbbe1da236d94359ad0ec6cadb83a",
     "semantic_hash": ""
   },
   "electron/backend/persistence/pgSync.ts": {
-    "mtime": 1783191015.9525042,
-    "ast_hash": "322c7bab2b2a3ade8a6e4a7ee9419825",
+    "mtime": 1783097841.8737006,
+    "ast_hash": "423da10ca5eec55cab679e9ac7c65c7b",
     "semantic_hash": ""
   },
   "src/features/auth/pages/AdminPanel.tsx": {
@@ -2355,18 +2360,18 @@
     "semantic_hash": ""
   },
   "src/features/auth/pages/LoginScreen.tsx": {
-    "mtime": 1783188739.2962303,
-    "ast_hash": "4496f1dfbfdf6c30c728163b4487e74a",
+    "mtime": 1783090438.5301905,
+    "ast_hash": "5c2e4f94e6268a2a88a5021bdfd072b2",
     "semantic_hash": ""
   },
   "src/features/auth/state/useAuthState.ts": {
-    "mtime": 1783188732.2360706,
-    "ast_hash": "eed35df7de2704c56d60d0ba8bac3761",
+    "mtime": 1783093896.6070046,
+    "ast_hash": "df7727af511b30d66558038b0cbd7591",
     "semantic_hash": ""
   },
   "src/features/auth/pages/LoginScreen.test.tsx": {
-    "mtime": 1783190961.7200108,
-    "ast_hash": "c1a5fbe307faa07841e9301b0bdf5336",
+    "mtime": 1783090470.1842637,
+    "ast_hash": "77ba6c8bd1cb29fd51c3687c00e9a5eb",
     "semantic_hash": ""
   },
   "electron/backend/persistence/initialSchema.test.ts": {
@@ -2390,8 +2395,8 @@
     "semantic_hash": ""
   },
   "migrations/001_initial_schema.ts": {
-    "mtime": 1783188999.1747675,
-    "ast_hash": "e7183e59d374e912a1790aaf3cbb0fd8",
+    "mtime": 1783091050.1529984,
+    "ast_hash": "3da9517a04978e9e75682d742fc92b92",
     "semantic_hash": ""
   },
   "scripts/db-migrate.mjs": {
@@ -2415,13 +2420,13 @@
     "semantic_hash": ""
   },
   "src/layouts/AppSidebar.test.tsx": {
-    "mtime": 1783190933.7982981,
-    "ast_hash": "1f888673991f20706f09e3bdc3b97c5f",
+    "mtime": 1783182845.3538506,
+    "ast_hash": "d9af42924c6ad80f50267df917601a41",
     "semantic_hash": ""
   },
   "electron/backend/commands/authCommands.test.ts": {
-    "mtime": 1783188809.078778,
-    "ast_hash": "8e0b67af4ec62e2d489d9fe315b11ccf",
+    "mtime": 1783097817.6252403,
+    "ast_hash": "8f5ce6beb7cb480366cf5958e96501b1",
     "semantic_hash": ""
   },
   "electron/backend/persistence/pgSync.test.ts": {
@@ -2440,8 +2445,8 @@
     "semantic_hash": ""
   },
   "src/features/settings/pages/SettingsPage.test.tsx": {
-    "mtime": 1783190926.3883777,
-    "ast_hash": "e19fa0fe58edc3569977459cc69181e8",
+    "mtime": 1783182840.1447854,
+    "ast_hash": "9eaee8271e2e25a5142fd40e0aa1a1d1",
     "semantic_hash": ""
   },
   "src/features/workflows/components/VariableAutocompletePopover.tsx": {
@@ -2525,13 +2530,13 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/projectRepository.ts": {
-    "mtime": 1783188535.4263618,
-    "ast_hash": "e4ad6182878ffbbff396151db9982689",
+    "mtime": 1783103115.0240507,
+    "ast_hash": "31286b02a1f1e0c93989dccffced2e7a",
     "semantic_hash": ""
   },
   "electron/backend/persistence/subflowRepository.ts": {
-    "mtime": 1783188541.5275166,
-    "ast_hash": "b5776c5e2416dbf6c3529091be1e4429",
+    "mtime": 1783103120.1901457,
+    "ast_hash": "2187577b4a580bcc82bc8a055d7f210c",
     "semantic_hash": ""
   },
   "electron/backend/actions/schemas/crypto_operation.ts": {
@@ -2602,36 +2607,6 @@
   "src/features/workflows/components/inspector/SwitchNodeFields.tsx": {
     "mtime": 1783105332.1041808,
     "ast_hash": "dc939ea6e246ced895466f059a34ab57",
-    "semantic_hash": ""
-  },
-  "electron/backend/persistence/dbAdapter.ts": {
-    "mtime": 1783188671.073664,
-    "ast_hash": "b75572a52fe8da0a535166404154cc31",
-    "semantic_hash": ""
-  },
-  "electron/backend/persistence/testDbAdapter.ts": {
-    "mtime": 1783191026.486413,
-    "ast_hash": "2fcb4dbd82b75b8eb02b0d13477d31db",
-    "semantic_hash": ""
-  },
-  "electron/backend/runtime/runDbHelpers.ts": {
-    "mtime": 1783191082.5249665,
-    "ast_hash": "d871b1cc6de733a5d50f5102848b828b",
-    "semantic_hash": ""
-  },
-  "scratch/fix_package_tests.js": {
-    "mtime": 1783189845.8564072,
-    "ast_hash": "dbe68c42dea0c8c382d6fd5db8bc842b",
-    "semantic_hash": ""
-  },
-  "scratch/fix_tests.js": {
-    "mtime": 1783190325.6618667,
-    "ast_hash": "cf578eb61b8abb486e7c2a76e9e1437c",
-    "semantic_hash": ""
-  },
-  "scratch/fix_workflow_commands.js": {
-    "mtime": 1783189252.9337196,
-    "ast_hash": "a3545699c55118c642c732050e37f3a9",
     "semantic_hash": ""
   }
 }

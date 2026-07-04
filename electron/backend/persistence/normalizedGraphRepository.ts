@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DbAdapter } from "./dbAdapter.js";
 import type {
   GraphEdge,
   GraphEdgeDelay,
@@ -7,7 +7,6 @@ import type {
   WorkflowCondition,
   WorkflowGraph,
 } from "../../../src/types/workflow.js";
-
 
 type NodeRow = {
   id: string;
@@ -40,24 +39,32 @@ type GraphMetaRow = {
  * Read a workflow graph from the normalized node/edge tables.
  * Source of truth after PR 2.3 (graph_json dropped).
  */
-export function assembleGraphFromTables(
-  db: DatabaseSync,
+export async function assembleGraphFromTables(
+  db: DbAdapter,
   workflowId: string,
-): WorkflowGraph | null {
-  const meta = db
-    .prepare(
-      "SELECT graph_version, viewport_json, migration_notes_json FROM workflows WHERE id = ?",
-    )
-    .get(workflowId) as GraphMetaRow | undefined;
+): Promise<WorkflowGraph | null> {
+  const ownerId = db.ownerId;
+  const meta = await db.queryOne(
+    ownerId
+      ? "SELECT graph_version, viewport_json, migration_notes_json FROM workflows WHERE id = $1 AND owner_id = $2"
+      : "SELECT graph_version, viewport_json, migration_notes_json FROM workflows WHERE id = $1",
+    ownerId ? [workflowId, ownerId] : [workflowId],
+  ) as GraphMetaRow | null;
   if (!meta) return null;
 
-  const nodeRows = db
-    .prepare("SELECT * FROM workflow_nodes WHERE workflow_id = ? ORDER BY ordinal")
-    .all(workflowId) as NodeRow[];
+  const nodeRows = await db.query(
+    ownerId
+      ? "SELECT * FROM workflow_nodes WHERE workflow_id = $1 AND owner_id = $2 ORDER BY ordinal"
+      : "SELECT * FROM workflow_nodes WHERE workflow_id = $1 ORDER BY ordinal",
+    ownerId ? [workflowId, ownerId] : [workflowId],
+  ) as NodeRow[];
 
-  const edgeRows = db
-    .prepare("SELECT * FROM workflow_edges WHERE workflow_id = ? ORDER BY ordinal")
-    .all(workflowId) as EdgeRow[];
+  const edgeRows = await db.query(
+    ownerId
+      ? "SELECT * FROM workflow_edges WHERE workflow_id = $1 AND owner_id = $2 ORDER BY ordinal"
+      : "SELECT * FROM workflow_edges WHERE workflow_id = $1 ORDER BY ordinal",
+    ownerId ? [workflowId, ownerId] : [workflowId],
+  ) as EdgeRow[];
 
   return assembleGraph(meta, nodeRows, edgeRows);
 }
@@ -65,24 +72,32 @@ export function assembleGraphFromTables(
 /**
  * Read a subflow graph from the normalized node/edge tables.
  */
-export function assembleSubflowGraphFromTables(
-  db: DatabaseSync,
+export async function assembleSubflowGraphFromTables(
+  db: DbAdapter,
   subflowId: string,
-): WorkflowGraph | null {
-  const meta = db
-    .prepare(
-      "SELECT graph_version, viewport_json, migration_notes_json FROM subflows WHERE id = ?",
-    )
-    .get(subflowId) as GraphMetaRow | undefined;
+): Promise<WorkflowGraph | null> {
+  const ownerId = db.ownerId;
+  const meta = await db.queryOne(
+    ownerId
+      ? "SELECT graph_version, viewport_json, migration_notes_json FROM subflows WHERE id = $1 AND owner_id = $2"
+      : "SELECT graph_version, viewport_json, migration_notes_json FROM subflows WHERE id = $1",
+    ownerId ? [subflowId, ownerId] : [subflowId],
+  ) as GraphMetaRow | null;
   if (!meta) return null;
 
-  const nodeRows = db
-    .prepare("SELECT * FROM subflow_nodes WHERE subflow_id = ? ORDER BY ordinal")
-    .all(subflowId) as NodeRow[];
+  const nodeRows = await db.query(
+    ownerId
+      ? "SELECT * FROM subflow_nodes WHERE subflow_id = $1 AND owner_id = $2 ORDER BY ordinal"
+      : "SELECT * FROM subflow_nodes WHERE subflow_id = $1 ORDER BY ordinal",
+    ownerId ? [subflowId, ownerId] : [subflowId],
+  ) as NodeRow[];
 
-  const edgeRows = db
-    .prepare("SELECT * FROM subflow_edges WHERE subflow_id = ? ORDER BY ordinal")
-    .all(subflowId) as EdgeRow[];
+  const edgeRows = await db.query(
+    ownerId
+      ? "SELECT * FROM subflow_edges WHERE subflow_id = $1 AND owner_id = $2 ORDER BY ordinal"
+      : "SELECT * FROM subflow_edges WHERE subflow_id = $1 ORDER BY ordinal",
+    ownerId ? [subflowId, ownerId] : [subflowId],
+  ) as EdgeRow[];
 
   return assembleGraph(meta, nodeRows, edgeRows);
 }
@@ -91,7 +106,7 @@ function assembleGraph(
   meta: GraphMetaRow,
   nodeRows: NodeRow[],
   edgeRows: EdgeRow[],
-): WorkflowGraph {
+ ): WorkflowGraph {
   const nodes: GraphNode[] = nodeRows.map((row) => ({
     id: row.id,
     node_type: row.node_type as GraphNode["node_type"],

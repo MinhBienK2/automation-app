@@ -4,13 +4,14 @@ import type {
   BrowserProfileInput,
   Workflow,
 } from "../../../src/types/workflow.js";
-import { commandError } from "../commandHelpers.js";
+import { commandError, createDraftGraph } from "../commandHelpers.js";
 import type { CommandDeps } from "./types.js";
 import { randomUUID } from "node:crypto";
 import nodeFs from "node:fs";
 import path from "node:path";
 import { sanitizePathSegment } from "../evidence/artifacts.js";
 import { getBrowserProfileKey } from "../projects/projectCommandCascades.js";
+import { WorkflowRepository } from "../persistence/workflowRepository.js";
 
 export function createProjectCommands(deps: CommandDeps) {
   const {
@@ -18,40 +19,60 @@ export function createProjectCommands(deps: CommandDeps) {
     projectCascades,
     requireProject,
     requireBrowserProfile,
-    ensureDefaultBrowserProfile,
-    createWorkflow,
     requireWorkflow,
   } = deps;
 
-  function listProjects(): Project[] {
-    return repository.listProjects();
+  async function listProjects(): Promise<Project[]> {
+    return await repository.listProjects();
   }
 
-  function createProject(input: { name: string; description?: string | null }): Project {
+  async function createProject(input: { name: string; description?: string | null }): Promise<Project> {
     const name = input.name.trim();
     if (!name) throw commandError("Project name is required", "name");
-    deps.context.database.exec("BEGIN IMMEDIATE");
-    try {
-      const project = repository.createProject(name, input.description?.trim() ?? "");
-      ensureDefaultBrowserProfile(project);
-      createWorkflow("Main", { project_id: project.id });
-      deps.context.database.exec("COMMIT");
+    
+    return await deps.context.database.transaction(async (tx) => {
+      const txRepository = new WorkflowRepository(tx);
+      const project = await txRepository.createProject(name, input.description?.trim() ?? "");
+      
+      const nowStr = new Date().toISOString();
+      const defaultLaunch = deps.settingsService.defaultWorkflowSettings(
+        {
+          id: `profile-${randomUUID()}`,
+          name: "Default Profile",
+          created_at: nowStr,
+          updated_at: nowStr,
+        },
+        { randomizeIdentity: true },
+      ).browser_launch;
+
+      const defaultProfile = await txRepository.createBrowserProfile(project.id, {
+        name: "Default Profile",
+        description: "System created default profile",
+        is_default: true,
+        browser_launch: defaultLaunch,
+      });
+
+      const createdWorkflow = await txRepository.createWorkflow("Main", createDraftGraph(), new Date(), {
+        projectId: project.id,
+        browserProfileId: defaultProfile.id,
+      });
+
+      const defaultSettings = deps.settingsService.defaultWorkflowSettings(createdWorkflow, { randomizeIdentity: true });
+      await txRepository.saveWorkflowSettings(createdWorkflow.id, defaultSettings);
+
       return project;
-    } catch (error) {
-      deps.context.database.exec("ROLLBACK");
-      throw error;
-    }
+    });
   }
 
-  function updateProject(
+  async function updateProject(
     projectId: string,
     input: { name?: string; description?: string | null },
-  ): Project {
-    requireProject(projectId);
+  ): Promise<Project> {
+    await requireProject(projectId);
     if (input.name != null && !input.name.trim()) {
       throw commandError("Project name is required", "name");
     }
-    const updated = repository.updateProject(projectId, {
+    const updated = await repository.updateProject(projectId, {
       name: input.name?.trim(),
       description:
         input.description === undefined ? undefined : input.description?.trim() ?? "",
@@ -60,24 +81,24 @@ export function createProjectCommands(deps: CommandDeps) {
     return updated;
   }
 
-  function duplicateProject(projectId: string): Project {
-    return projectCascades.duplicateProjectCascade(projectId);
+  async function duplicateProject(projectId: string): Promise<Project> {
+    return await projectCascades.duplicateProjectCascade(projectId);
   }
 
-  function deleteProject(projectId: string) {
-    projectCascades.deleteProjectCascade(projectId);
+  async function deleteProject(projectId: string): Promise<void> {
+    await projectCascades.deleteProjectCascade(projectId);
   }
 
-  function listBrowserProfiles(projectId: string): BrowserProfile[] {
-    requireProject(projectId);
-    return repository.listBrowserProfiles(projectId);
+  async function listBrowserProfiles(projectId: string): Promise<BrowserProfile[]> {
+    await requireProject(projectId);
+    return await repository.listBrowserProfiles(projectId);
   }
 
-  function createBrowserProfile(
+  async function createBrowserProfile(
     projectId: string,
     input: BrowserProfileInput,
-  ): BrowserProfile {
-    requireProject(projectId);
+  ): Promise<BrowserProfile> {
+    await requireProject(projectId);
     const name = input.name.trim();
     if (!name) throw commandError("Profile name is required", "name");
     
@@ -92,7 +113,7 @@ export function createProjectCommands(deps: CommandDeps) {
       { randomizeIdentity: true },
     ).browser_launch;
 
-    return repository.createBrowserProfile(projectId, {
+    return await repository.createBrowserProfile(projectId, {
       name,
       description: input.description?.trim() ?? "",
       is_default: Boolean(input.is_default),
@@ -101,35 +122,37 @@ export function createProjectCommands(deps: CommandDeps) {
     });
   }
 
-  function updateBrowserProfile(
+  async function updateBrowserProfile(
     profileId: string,
     input: Partial<BrowserProfileInput>,
-  ): BrowserProfile {
-    const current = requireBrowserProfile(profileId);
+  ): Promise<BrowserProfile> {
+    const current = await requireBrowserProfile(profileId);
     if (input.name != null && !input.name.trim()) {
       throw commandError("Profile name is required", "name");
     }
-    const updated = repository.updateBrowserProfile(profileId, {
+    const updated = await repository.updateBrowserProfile(profileId, {
       ...input,
       name: input.name?.trim(),
       description: input.description?.trim(),
     });
     if (!updated) throw commandError("Browser profile not found", "profileId");
-    if (!repository.getDefaultBrowserProfile(current.project_id)) {
-      repository.updateBrowserProfile(updated.id, { is_default: true });
-      return requireBrowserProfile(updated.id);
+    
+    const defaultProfile = await repository.getDefaultBrowserProfile(current.project_id);
+    if (!defaultProfile) {
+      const restored = await repository.updateBrowserProfile(updated.id, { is_default: true });
+      if (restored) return restored;
     }
     return updated;
   }
 
-  function deleteBrowserProfile(profileId: string) {
-    const profile = requireBrowserProfile(profileId);
-    const usage = repository.listWorkflowsUsingBrowserProfile(profile.id);
+  async function deleteBrowserProfile(profileId: string): Promise<void> {
+    const profile = await requireBrowserProfile(profileId);
+    const usage = await repository.listWorkflowsUsingBrowserProfile(profile.id);
     if (usage.length > 0) {
       throw commandError("Browser profile is used by workflows", "profileId");
     }
     const profileDir = getBrowserProfileKey(profile);
-    repository.deleteBrowserProfile(profile.id);
+    await repository.deleteBrowserProfile(profile.id);
     if (profileDir) {
       nodeFs.rmSync(path.join(deps.context.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)), {
         recursive: true,
@@ -138,22 +161,22 @@ export function createProjectCommands(deps: CommandDeps) {
     }
   }
 
-  function setWorkflowBrowserProfile(
+  async function setWorkflowBrowserProfile(
     workflowId: string,
     profileId: string,
-  ): Workflow {
-    const workflow = requireWorkflow(workflowId);
-    const profile = requireBrowserProfile(profileId);
+  ): Promise<Workflow> {
+    const workflow = await requireWorkflow(workflowId);
+    const profile = await requireBrowserProfile(profileId);
     if (!workflow.project_id || workflow.project_id !== profile.project_id) {
       throw commandError("Browser profile must belong to the workflow project", "profileId");
     }
-    const updated = repository.assignWorkflowBrowserProfile(workflow.id, profile.id);
+    const updated = await repository.assignWorkflowBrowserProfile(workflow.id, profile.id);
     if (!updated) throw commandError("Workflow not found", "workflowId");
     return updated;
   }
 
-  function resetBrowserProfileIdentity(profileId: string): BrowserProfile {
-    return projectCascades.rotateBrowserProfileIdentity(profileId);
+  async function resetBrowserProfileIdentity(profileId: string): Promise<BrowserProfile> {
+    return await projectCascades.rotateBrowserProfileIdentity(profileId);
   }
 
   return {

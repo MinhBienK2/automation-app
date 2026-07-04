@@ -10,7 +10,6 @@ describe("SettingsPage Appearance Preferences", () => {
     onGraphAutosaveEnabledChange: vi.fn(),
     onInstallBinary: vi.fn(),
     onCleanupProfiles: vi.fn(),
-    appMode: "private" as const,
     theme: "dark" as Theme,
     accent: "cyan" as Accent,
     density: "normal" as Density,
@@ -62,46 +61,6 @@ describe("SettingsPage Appearance Preferences", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^spacious$/i }));
     expect(baseProps.onDensityChange).toHaveBeenCalledWith("spacious");
-  });
-
-  test("renders Switch to Workplace Mode button in Private mode when PG is available", () => {
-    const onSwitchToLoginMode = vi.fn();
-    render(
-      <SettingsPage
-        {...baseProps}
-        appMode="private"
-        pgAvailable={true}
-        onSwitchToLoginMode={onSwitchToLoginMode}
-      />
-    );
-
-    const switchBtn = screen.getByRole("button", { name: /switch to workplace mode/i });
-    expect(switchBtn).toBeInTheDocument();
-
-    fireEvent.click(switchBtn);
-    expect(onSwitchToLoginMode).toHaveBeenCalledTimes(1);
-  });
-
-  test("does not render Switch to Workplace Mode button when appMode is public or pgAvailable is false", () => {
-    const { rerender } = render(
-      <SettingsPage
-        {...baseProps}
-        appMode="public"
-        pgAvailable={true}
-        onSwitchToLoginMode={vi.fn()}
-      />
-    );
-    expect(screen.queryByRole("button", { name: /switch to workplace mode/i })).not.toBeInTheDocument();
-
-    rerender(
-      <SettingsPage
-        {...baseProps}
-        appMode="private"
-        pgAvailable={false}
-        onSwitchToLoginMode={vi.fn()}
-      />
-    );
-    expect(screen.queryByRole("button", { name: /switch to workplace mode/i })).not.toBeInTheDocument();
   });
 });
 

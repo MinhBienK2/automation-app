@@ -5,7 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { createWorkflowCommandHandlers } from "../commands";
-import { createAppPaths, initializeDatabase } from "../persistence/database";
+import { createAppPaths } from "../persistence/database.js";
+import { TestDbAdapter } from "../persistence/testDbAdapter.js";
 import {
   compileWorkflowGraphFromNode,
   compileWorkflowRunPlan,
@@ -1752,7 +1753,7 @@ async function createTestHandlers() {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-app-"));
   tempRoots.push(tempRoot);
   const appPaths = createAppPaths(tempRoot);
-  const database = await initializeDatabase(appPaths);
+  const database = await TestDbAdapter.create();
   return {
     handlers: createWorkflowCommandHandlers({ appPaths, database }),
   };

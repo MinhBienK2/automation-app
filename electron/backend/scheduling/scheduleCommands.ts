@@ -17,25 +17,25 @@ import {
 } from "./scheduler.js";
 import type { WorkflowScheduleRepository } from "./workflowScheduleRepository.js";
 
-export function prepareScheduleInput(
+export async function prepareScheduleInput(
   input: WorkflowScheduleInput,
   {
     requireWorkflow,
     validateWorkflowRun,
     now = new Date(),
   }: {
-    requireWorkflow: (workflowId: string) => unknown;
-    validateWorkflowRun: (workflowId: string) => RunValidationIssue[];
+    requireWorkflow: (workflowId: string) => Promise<unknown> | unknown;
+    validateWorkflowRun: (workflowId: string) => Promise<RunValidationIssue[]> | RunValidationIssue[];
     now?: Date;
   },
-): WorkflowScheduleInput & { next_run_at: string | null } {
+): Promise<WorkflowScheduleInput & { next_run_at: string | null }> {
   const issues = validateScheduleInput(input);
   const firstError = issues.find((issue) => issue.level === "error");
   if (firstError) {
     throw commandError(firstError.message, firstError.field);
   }
   if (input.enabled) {
-    const workflowIssues = validateWorkflowRun(input.workflow_id);
+    const workflowIssues = await validateWorkflowRun(input.workflow_id);
     const firstWorkflowError = workflowIssues.find((issue) => issue.level === "error");
     if (firstWorkflowError) {
       throw commandError(
@@ -44,7 +44,7 @@ export function prepareScheduleInput(
       );
     }
   } else {
-    requireWorkflow(input.workflow_id);
+    await requireWorkflow(input.workflow_id);
   }
   return {
     ...input,
@@ -61,79 +61,77 @@ export function createScheduleCommandHandlers({
   startWorkflowRun,
 }: {
   scheduleRepository: WorkflowScheduleRepository;
-  requireWorkflow: (workflowId: string) => unknown;
-  validateWorkflowRun: (workflowId: string) => RunValidationIssue[];
-  schedulerConflictReason: (workflowId: string) => string | null;
+  requireWorkflow: (workflowId: string) => Promise<unknown> | unknown;
+  validateWorkflowRun: (workflowId: string) => Promise<RunValidationIssue[]> | RunValidationIssue[];
+  schedulerConflictReason: (workflowId: string) => Promise<string | null> | string | null;
   startWorkflowRun: (workflowId: string, source: "schedule") => Promise<WorkflowRunSnapshot>;
 }) {
-  const scheduleInputWithNextRun = (input: WorkflowScheduleInput) =>
-    prepareScheduleInput(input, { requireWorkflow, validateWorkflowRun });
+  const scheduleInputWithNextRun = async (input: WorkflowScheduleInput) =>
+    await prepareScheduleInput(input, { requireWorkflow, validateWorkflowRun });
 
   return {
-    listSchedules(): WorkflowSchedule[] {
-      return scheduleRepository.listSchedules();
+    async listSchedules(): Promise<WorkflowSchedule[]> {
+      return await scheduleRepository.listSchedules();
     },
 
-    getSchedule(scheduleId: string): WorkflowSchedule {
-      const schedule = scheduleRepository.getSchedule(scheduleId);
+    async getSchedule(scheduleId: string): Promise<WorkflowSchedule> {
+      const schedule = await scheduleRepository.getSchedule(scheduleId);
       if (!schedule) {
         throw commandError("Schedule not found", "scheduleId");
       }
       return schedule;
     },
 
-    createSchedule(input: WorkflowScheduleInput): WorkflowSchedule {
-      return scheduleRepository.createSchedule(scheduleInputWithNextRun(input));
+    async createSchedule(input: WorkflowScheduleInput): Promise<WorkflowSchedule> {
+      const prepared = await scheduleInputWithNextRun(input);
+      return await scheduleRepository.createSchedule(prepared);
     },
 
-    updateSchedule(
+    async updateSchedule(
       scheduleId: string,
       patch: WorkflowScheduleUpdate,
-    ): WorkflowSchedule {
-      const current = scheduleRepository.getSchedule(scheduleId);
+    ): Promise<WorkflowSchedule> {
+      const current = await scheduleRepository.getSchedule(scheduleId);
       if (!current) {
         throw commandError("Schedule not found", "scheduleId");
       }
-      return scheduleRepository.updateSchedule(
-        scheduleId,
-        scheduleInputWithNextRun({
-          workflow_id: patch.workflow_id ?? current.workflow_id,
-          name: patch.name ?? current.name,
-          enabled: patch.enabled ?? current.enabled,
-          kind: patch.kind ?? current.kind,
-        }),
-      );
+      const prepared = await scheduleInputWithNextRun({
+        workflow_id: patch.workflow_id ?? current.workflow_id,
+        name: patch.name ?? current.name,
+        enabled: patch.enabled ?? current.enabled,
+        kind: patch.kind ?? current.kind,
+      });
+      return await scheduleRepository.updateSchedule(scheduleId, prepared);
     },
 
-    deleteSchedule(scheduleId: string) {
-      if (!scheduleRepository.getSchedule(scheduleId)) {
-        throw commandError("Schedule not found", "scheduleId");
-      }
-      scheduleRepository.deleteSchedule(scheduleId);
-    },
-
-    enableSchedule(scheduleId: string): WorkflowSchedule {
-      const current = scheduleRepository.getSchedule(scheduleId);
+    async deleteSchedule(scheduleId: string): Promise<void> {
+      const current = await scheduleRepository.getSchedule(scheduleId);
       if (!current) {
         throw commandError("Schedule not found", "scheduleId");
       }
-      return scheduleRepository.updateSchedule(
-        scheduleId,
-        scheduleInputWithNextRun({
-          workflow_id: current.workflow_id,
-          name: current.name,
-          enabled: true,
-          kind: current.kind,
-        }),
-      );
+      await scheduleRepository.deleteSchedule(scheduleId);
     },
 
-    disableSchedule(scheduleId: string): WorkflowSchedule {
-      const current = scheduleRepository.getSchedule(scheduleId);
+    async enableSchedule(scheduleId: string): Promise<WorkflowSchedule> {
+      const current = await scheduleRepository.getSchedule(scheduleId);
       if (!current) {
         throw commandError("Schedule not found", "scheduleId");
       }
-      return scheduleRepository.updateSchedule(scheduleId, {
+      const prepared = await scheduleInputWithNextRun({
+        workflow_id: current.workflow_id,
+        name: current.name,
+        enabled: true,
+        kind: current.kind,
+      });
+      return await scheduleRepository.updateSchedule(scheduleId, prepared);
+    },
+
+    async disableSchedule(scheduleId: string): Promise<WorkflowSchedule> {
+      const current = await scheduleRepository.getSchedule(scheduleId);
+      if (!current) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
+      return await scheduleRepository.updateSchedule(scheduleId, {
         workflow_id: current.workflow_id,
         name: current.name,
         enabled: false,
@@ -142,8 +140,8 @@ export function createScheduleCommandHandlers({
       });
     },
 
-    listScheduleEvents(filter: WorkflowScheduleEventFilter = {}): WorkflowScheduleEvent[] {
-      return scheduleRepository.listEvents(filter);
+    async listScheduleEvents(filter: WorkflowScheduleEventFilter = {}): Promise<WorkflowScheduleEvent[]> {
+      return await scheduleRepository.listEvents(filter);
     },
 
     validateSchedule(schedule: OrchestrationSchedule): ScheduleValidationIssue[] {

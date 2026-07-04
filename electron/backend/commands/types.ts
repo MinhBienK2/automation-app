@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DbAdapter } from "../persistence/dbAdapter.js";
 import type { AppPaths } from "../persistence/database.js";
 import type { BrowserDriver } from "../browser/sessionManager.js";
 import type { RunnerCommandPort } from "../runtime/runManager.js";
@@ -29,7 +29,7 @@ import { createProjectCommandCascades } from "../projects/projectCommandCascades
 
 export type CommandContext = {
   appPaths: AppPaths;
-  database: DatabaseSync;
+  database: DbAdapter;
   runner?: RunnerCommandPort;
   recorderDriver?: BrowserDriver;
   recorderUsesDefaultDriver?: boolean;
@@ -55,28 +55,31 @@ export type CommandDeps = {
   projectCascades: ReturnType<typeof createProjectCommandCascades>;
 
   // Common helper functions shared from orchestrator
-  requireProject: (projectId: string) => Project;
-  ensureDefaultProject: () => Project;
-  requireBrowserProfile: (profileId: string) => BrowserProfile;
-  ensureDefaultBrowserProfile: (project: Project) => BrowserProfile;
-  requireWorkflow: (workflowId: string) => WorkflowSummary;
-  getSettings: (workflowId: string) => WorkflowSettings;
-  saveSettings: (workflowId: string, settings: WorkflowSettings) => WorkflowSettings;
-  createWorkflow: (name: string, options?: WorkflowCreateOptions) => Workflow;
-  getWorkflowGraph: (workflowId: string) => WorkflowGraph;
+  requireProject: (projectId: string) => Promise<Project>;
+  ensureDefaultProject: () => Promise<Project>;
+  requireBrowserProfile: (profileId: string) => Promise<BrowserProfile>;
+  ensureDefaultBrowserProfile: (project: Project) => Promise<BrowserProfile>;
+  requireWorkflow: (workflowId: string) => Promise<WorkflowSummary>;
+  getSettings: (workflowId: string) => Promise<WorkflowSettings>;
+  saveSettings: (workflowId: string, settings: WorkflowSettings) => Promise<WorkflowSettings>;
+  createWorkflow: (name: string, options?: WorkflowCreateOptions) => Promise<Workflow>;
+  getWorkflowGraph: (workflowId: string) => Promise<WorkflowGraph>;
   activeRunConflict: (workflowId: string, settings: WorkflowSettings) => { message: string; field: string } | null;
-  schedulerConflictReason: (workflowId: string) => string | null;
+  schedulerConflictReason: (workflowId: string) => Promise<string | null>;
   assertWorkflowDeletionAllowed: (workflowId: string, settings: WorkflowSettings) => void;
-  rotateBrowserIdentity: (workflowId: string) => WorkflowSettings;
+  rotateBrowserIdentity: (workflowId: string) => Promise<WorkflowSettings>;
   duplicateBrowserProfileLaunch: (
     browserLaunch: WorkflowSettings["browser_launch"],
     exceptWorkflowId?: string,
-  ) => WorkflowSettings["browser_launch"];
+  ) => Promise<WorkflowSettings["browser_launch"]>;
   remapCallSubflowIds: (graph: WorkflowGraph, subflowIdMap: Map<string, string>) => WorkflowGraph;
-  referencedSubflowsForWorkflowGraph: (workflow: WorkflowSummary, graph: WorkflowGraph) => Subflow[];
-  graphContextForWorkflow: (workflow: WorkflowSummary) => {
+  referencedSubflowsForWorkflowGraph: (workflow: WorkflowSummary, graph: WorkflowGraph) => Promise<Subflow[]>;
+  graphContextForWorkflow: (
+    workflow: WorkflowSummary,
+    graph?: WorkflowGraph,
+  ) => Promise<{
     projectId: string | null;
     workflowLabel: string;
     resolveSubflow(subflowId: string): { id: string; project_id: string; name: string; graph: WorkflowGraph } | null;
-  };
+  }>;
 };

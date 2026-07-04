@@ -63,8 +63,8 @@ export async function buildCloakBrowserDiagnostics({
 }: {
   appPaths: AppPaths;
   workflows: WorkflowSummary[];
-  settingsForWorkflow: (workflowId: string) => WorkflowSettings;
-  lastRunAtForWorkflow: (workflowId: string) => string | null;
+  settingsForWorkflow: (workflowId: string) => Promise<WorkflowSettings> | WorkflowSettings;
+  lastRunAtForWorkflow: (workflowId: string) => Promise<string | null> | string | null;
   retainedProfileNames: Set<string>;
 }): Promise<CloakBrowserDiagnostics> {
   const binary = await cloakBinaryInfo();
@@ -80,7 +80,7 @@ export async function buildCloakBrowserDiagnostics({
     Array<{ workflow_id: string; workflow_name: string; identity_id: string }>
   >();
   for (const workflow of workflows) {
-    const settings = settingsForWorkflow(workflow.id);
+    const settings = await settingsForWorkflow(workflow.id);
     const profileDir = settings.browser_launch.profile_dir?.trim();
     if (!profileDir) continue;
     identityByProfileDir.set(profileDir, {
@@ -88,7 +88,7 @@ export async function buildCloakBrowserDiagnostics({
       display_name: settings.browser_launch.display_name,
       workflow_id: workflow.id,
       workflow_name: workflow.name,
-      last_run_at: lastRunAtForWorkflow(workflow.id),
+      last_run_at: await lastRunAtForWorkflow(workflow.id),
     });
     const fontsDir = settings.browser_launch.fingerprint_fonts_dir?.trim();
     if (fontsDir) {

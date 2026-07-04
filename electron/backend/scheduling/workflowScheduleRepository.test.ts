@@ -1,34 +1,23 @@
 // @vitest-environment node
 
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
-import { createAppPaths, initializeDatabase } from "../persistence/database";
-import { WorkflowRepository } from "../persistence/workflowRepository";
-import { WorkflowScheduleRepository } from "./workflowScheduleRepository";
-
-const tempRoots: string[] = [];
-
-afterEach(async () => {
-  for (const root of tempRoots.splice(0)) {
-    await fs.rm(root, { recursive: true, force: true });
-  }
-});
+import { describe, expect, test } from "vitest";
+import { WorkflowRepository } from "../persistence/workflowRepository.js";
+import { WorkflowScheduleRepository } from "./workflowScheduleRepository.js";
+import { TestDbAdapter } from "../persistence/testDbAdapter.js";
 
 describe("WorkflowScheduleRepository", () => {
   test("persists schedules with workflow names and schedule events", async () => {
     const { workflowRepository, scheduleRepository } = await createRepositories();
-    const workflow = workflowRepository.createWorkflow("Nightly", draftGraph());
+    const workflow = await workflowRepository.createWorkflow("Nightly", draftGraph());
 
-    const schedule = scheduleRepository.createSchedule({
+    const schedule = await scheduleRepository.createSchedule({
       workflow_id: workflow.id,
       name: "Every hour",
       enabled: true,
       kind: { type: "interval", every_seconds: 3600 },
       next_run_at: "2026-05-17T09:00:00.000Z",
     });
-    scheduleRepository.createEvent({
+    await scheduleRepository.createEvent({
       schedule_id: schedule.id,
       workflow_id: workflow.id,
       event_type: "started",
@@ -39,7 +28,8 @@ describe("WorkflowScheduleRepository", () => {
       details_json: null,
     });
 
-    expect(scheduleRepository.listSchedules()).toEqual([
+    const schedulesList = await scheduleRepository.listSchedules();
+    expect(schedulesList).toEqual([
       expect.objectContaining({
         id: schedule.id,
         workflow_id: workflow.id,
@@ -50,7 +40,9 @@ describe("WorkflowScheduleRepository", () => {
         next_run_at: "2026-05-17T09:00:00.000Z",
       }),
     ]);
-    expect(scheduleRepository.listEvents({ schedule_id: schedule.id })).toEqual([
+
+    const eventsList = await scheduleRepository.listEvents({ schedule_id: schedule.id });
+    expect(eventsList).toEqual([
       expect.objectContaining({
         schedule_id: schedule.id,
         workflow_id: workflow.id,
@@ -62,15 +54,15 @@ describe("WorkflowScheduleRepository", () => {
 
   test("cascades schedules and events when a workflow is deleted", async () => {
     const { workflowRepository, scheduleRepository } = await createRepositories();
-    const workflow = workflowRepository.createWorkflow("Temporary", draftGraph());
-    const schedule = scheduleRepository.createSchedule({
+    const workflow = await workflowRepository.createWorkflow("Temporary", draftGraph());
+    const schedule = await scheduleRepository.createSchedule({
       workflow_id: workflow.id,
       name: "Once",
       enabled: false,
       kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
       next_run_at: null,
     });
-    scheduleRepository.createEvent({
+    await scheduleRepository.createEvent({
       schedule_id: schedule.id,
       workflow_id: workflow.id,
       event_type: "skipped",
@@ -81,17 +73,18 @@ describe("WorkflowScheduleRepository", () => {
       details_json: null,
     });
 
-    workflowRepository.deleteWorkflow(workflow.id);
+    await workflowRepository.deleteWorkflow(workflow.id);
 
-    expect(scheduleRepository.listSchedules()).toEqual([]);
-    expect(scheduleRepository.listEvents({ schedule_id: schedule.id })).toEqual([]);
+    const schedulesList = await scheduleRepository.listSchedules();
+    expect(schedulesList).toEqual([]);
+
+    const eventsList = await scheduleRepository.listEvents({ schedule_id: schedule.id });
+    expect(eventsList).toEqual([]);
   });
 });
 
 async function createRepositories() {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "schedule-repo-"));
-  tempRoots.push(tempRoot);
-  const database = await initializeDatabase(createAppPaths(tempRoot));
+  const database = await TestDbAdapter.create();
   return {
     workflowRepository: new WorkflowRepository(database),
     scheduleRepository: new WorkflowScheduleRepository(database),

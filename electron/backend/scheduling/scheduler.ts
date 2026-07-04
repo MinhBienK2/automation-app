@@ -9,7 +9,7 @@ import type {
 } from "../../../src/types/workflow.js";
 
 export type ScheduleRepositoryPort = {
-  listDueSchedules(now: Date): WorkflowSchedule[];
+  listDueSchedules(now: Date): Promise<WorkflowSchedule[]> | WorkflowSchedule[];
   updateScheduleRuntime(
     scheduleId: string,
     update: {
@@ -19,16 +19,16 @@ export type ScheduleRepositoryPort = {
       last_reason?: string | null;
       last_event_at?: string | null;
     },
-  ): void;
-  createEvent(event: Omit<WorkflowScheduleEvent, "id">): WorkflowScheduleEvent;
+  ): Promise<void> | void;
+  createEvent(event: Omit<WorkflowScheduleEvent, "id">): Promise<WorkflowScheduleEvent> | WorkflowScheduleEvent;
 };
 
 type ProcessDueSchedulesOptions = {
   now: Date;
   missedWindowMs?: number;
   repository: ScheduleRepositoryPort;
-  getRunConflict: (workflowId: string) => string | null;
-  validateWorkflow: (workflowId: string) => RunValidationIssue[];
+  getRunConflict: (workflowId: string) => Promise<string | null> | string | null;
+  validateWorkflow: (workflowId: string) => Promise<RunValidationIssue[]> | RunValidationIssue[];
   startWorkflow: (workflowId: string) => Promise<{ runId?: string | null } | void>;
 };
 
@@ -170,7 +170,7 @@ export async function processDueSchedules({
   validateWorkflow,
   startWorkflow,
 }: ProcessDueSchedulesOptions) {
-  const dueSchedules = repository.listDueSchedules(now);
+  const dueSchedules = await repository.listDueSchedules(now);
   for (const schedule of dueSchedules) {
     const scheduledFor = schedule.next_run_at;
     if (!scheduledFor) continue;
@@ -178,25 +178,25 @@ export async function processDueSchedules({
     const isOneTime = schedule.kind.type === "once_at";
 
     if (now.getTime() - scheduledDate.getTime() > missedWindowMs) {
-      recordEvent(repository, schedule, "missed", scheduledFor, now, {
+      await recordEvent(repository, schedule, "missed", scheduledFor, now, {
         reason: "missed_window",
       });
-      updateAfterOccurrence(repository, schedule, scheduledDate, now, {
+      await updateAfterOccurrence(repository, schedule, scheduledDate, now, {
         status: "missed",
         reason: "missed_window",
       });
       continue;
     }
 
-    const conflictReason = getRunConflict(schedule.workflow_id);
+    const conflictReason = await getRunConflict(schedule.workflow_id);
     if (conflictReason) {
-      recordEvent(repository, schedule, "skipped", scheduledFor, now, {
+      await recordEvent(repository, schedule, "skipped", scheduledFor, now, {
         reason: conflictReason,
       });
       if (isOneTime) {
-        disableOneTime(repository, schedule, scheduledFor, now);
+        await disableOneTime(repository, schedule, scheduledFor, now);
       } else {
-        updateAfterOccurrence(repository, schedule, scheduledDate, now, {
+        await updateAfterOccurrence(repository, schedule, scheduledDate, now, {
           status: "skipped",
           reason: conflictReason,
         });
@@ -204,17 +204,17 @@ export async function processDueSchedules({
       continue;
     }
 
-    const validationIssues = validateWorkflow(schedule.workflow_id);
+    const validationIssues = await validateWorkflow(schedule.workflow_id);
     const firstError = validationIssues.find((issue) => issue.level === "error");
     if (firstError) {
-      recordEvent(repository, schedule, "failed_to_start", scheduledFor, now, {
+      await recordEvent(repository, schedule, "failed_to_start", scheduledFor, now, {
         reason: "validation_failed",
         detailsJson: JSON.stringify({ issues: validationIssues }),
       });
       if (isOneTime) {
-        disableOneTime(repository, schedule, scheduledFor, now);
+        await disableOneTime(repository, schedule, scheduledFor, now);
       } else {
-        updateAfterOccurrence(repository, schedule, scheduledDate, now, {
+        await updateAfterOccurrence(repository, schedule, scheduledDate, now, {
           status: "failed_to_start",
           reason: "validation_failed",
         });
@@ -224,28 +224,28 @@ export async function processDueSchedules({
 
     try {
       const result = await startWorkflow(schedule.workflow_id);
-      recordEvent(repository, schedule, "started", scheduledFor, now, {
+      await recordEvent(repository, schedule, "started", scheduledFor, now, {
         runId: result?.runId ?? null,
       });
       if (isOneTime) {
-        disableOneTime(repository, schedule, scheduledFor, now);
+        await disableOneTime(repository, schedule, scheduledFor, now);
       } else {
-        updateAfterOccurrence(repository, schedule, scheduledDate, now, {
+        await updateAfterOccurrence(repository, schedule, scheduledDate, now, {
           status: "started",
           reason: null,
         });
       }
     } catch (error) {
-      recordEvent(repository, schedule, "failed_to_start", scheduledFor, now, {
+      await recordEvent(repository, schedule, "failed_to_start", scheduledFor, now, {
         reason: "start_failed",
         detailsJson: JSON.stringify({
           message: error instanceof Error ? error.message : String(error),
         }),
       });
       if (isOneTime) {
-        disableOneTime(repository, schedule, scheduledFor, now);
+        await disableOneTime(repository, schedule, scheduledFor, now);
       } else {
-        updateAfterOccurrence(repository, schedule, scheduledDate, now, {
+        await updateAfterOccurrence(repository, schedule, scheduledDate, now, {
           status: "failed_to_start",
           reason: "start_failed",
         });
@@ -254,14 +254,14 @@ export async function processDueSchedules({
   }
 }
 
-function updateAfterOccurrence(
+async function updateAfterOccurrence(
   repository: ScheduleRepositoryPort,
   schedule: WorkflowSchedule,
   scheduledDate: Date,
   now: Date,
   update: { status: WorkflowScheduleStatus; reason: string | null },
 ) {
-  repository.updateScheduleRuntime(schedule.id, {
+  await repository.updateScheduleRuntime(schedule.id, {
     next_run_at: calculateNextRunAt(schedule.kind, scheduledDate),
     last_event_at: now.toISOString(),
     last_status: update.status,
@@ -269,16 +269,16 @@ function updateAfterOccurrence(
   });
 }
 
-function disableOneTime(
+async function disableOneTime(
   repository: ScheduleRepositoryPort,
   schedule: WorkflowSchedule,
   scheduledFor: string,
   now: Date,
 ) {
-  recordEvent(repository, schedule, "disabled", scheduledFor, now, {
+  await recordEvent(repository, schedule, "disabled", scheduledFor, now, {
     reason: "one_time_elapsed",
   });
-  repository.updateScheduleRuntime(schedule.id, {
+  await repository.updateScheduleRuntime(schedule.id, {
     enabled: false,
     next_run_at: null,
     last_event_at: now.toISOString(),
@@ -287,7 +287,7 @@ function disableOneTime(
   });
 }
 
-function recordEvent(
+async function recordEvent(
   repository: ScheduleRepositoryPort,
   schedule: WorkflowSchedule,
   eventType: WorkflowScheduleStatus,
@@ -299,7 +299,7 @@ function recordEvent(
     detailsJson?: string | null;
   } = {},
 ) {
-  repository.createEvent({
+  await repository.createEvent({
     schedule_id: schedule.id,
     workflow_id: schedule.workflow_id,
     event_type: eventType,

@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
+import type { DbAdapter } from "../persistence/dbAdapter.js";
 import type {
   CompiledWorkflowGraph,
   ProfileEnvironment,
@@ -11,6 +10,15 @@ import type {
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
 import type { BrowserWorkflowRunner } from "./runner.js";
+import {
+  browserProfileKey,
+  beginRun,
+  finishRun,
+  fallbackWorkflowSummary,
+  serializeVariableValue,
+} from "./runDbHelpers.js";
+
+export { browserProfileKey };
 
 export type CommandError = {
   message: string;
@@ -79,11 +87,16 @@ export class RunManager {
 
   constructor(
     private readonly options: {
-      database: DatabaseSync;
+      database: DbAdapter;
       runner: RunnerCommandPort;
     },
   ) {
-    this.recoverInterruptedRuns();
+    if (!this.options.database.ownerId) {
+      throw new Error("RunManager requires a DbAdapter with a valid ownerId");
+    }
+    void this.recoverInterruptedRuns().catch((err) =>
+      console.error("Failed to recover interrupted runs:", err),
+    );
   }
 
   activeRunConflict(workflowId: string, settings: WorkflowSettings): RunConflict | null {
@@ -230,7 +243,7 @@ export class RunManager {
     const workflowId = workflow.id;
     const profileName = browserProfileKey(settings);
     const abortController = new AbortController();
-    const runId = this.beginRunRecord(workflowId, settings, graphSnapshot, source);
+    const runId = await this.beginRunRecord(workflowId, settings, graphSnapshot, source);
     const runningState: RunState = {
       ...idleRunState,
       status: "running",
@@ -437,35 +450,38 @@ export class RunManager {
     this.currentBatchRunId = null;
   }
 
-  beginRunRecord(
+  async beginRunRecord(
     workflowId: string,
     settings: WorkflowSettings,
     graph: WorkflowGraph,
     source: WorkflowRunSource = "manual",
-  ) {
-    return beginRun(this.options.database, workflowId, settings, graph, source);
+  ): Promise<string> {
+    return await beginRun(this.options.database, workflowId, settings, graph, source);
   }
 
-  private recoverInterruptedRuns() {
-    this.options.database
-      .prepare(
-        `UPDATE runs
-         SET status = 'failed',
-             finished_at = ?,
-             outputs_json = COALESCE(outputs_json, ?),
-             error_json = ?
-         WHERE status = 'running'
-           AND finished_at IS NULL`,
-      )
-      .run(
+  async recoverInterruptedRuns(): Promise<void> {
+    const ownerId = this.options.database.ownerId;
+    if (!ownerId) return;
+    await this.options.database.execute(
+      `UPDATE runs
+       SET status = 'failed',
+           finished_at = $1,
+           outputs_json = COALESCE(outputs_json, $2),
+           error_json = $3
+       WHERE status = 'running'
+         AND finished_at IS NULL
+         AND owner_id = $4`,
+      [
         new Date().toISOString(),
         JSON.stringify({}),
         JSON.stringify(interruptedRunError),
-      );
+        ownerId,
+      ],
+    );
   }
 
-  finishRun(runId: string | null, graph: CompiledWorkflowGraph, state: RunState) {
-    finishRun(this.options.database, runId, graph, state);
+  async finishRun(runId: string | null, graph: CompiledWorkflowGraph, state: RunState): Promise<void> {
+    await finishRun(this.options.database, runId, graph, state);
   }
 
   private createRunRunner(): RunnerCommandPort {
@@ -602,7 +618,7 @@ export class RunManager {
         };
       }
       this.updateSnapshot(runId, terminalState);
-      this.finishRun(runId, compiledGraph, terminalState);
+      await this.finishRun(runId, compiledGraph, terminalState);
     } catch (error) {
       const currentState = this.runEntries.get(runId)?.snapshot.state ?? runningState;
       const failedState: RunState = {
@@ -621,7 +637,7 @@ export class RunManager {
         },
       };
       this.updateSnapshot(runId, failedState);
-      this.finishRun(runId, compiledGraph, failedState);
+      await this.finishRun(runId, compiledGraph, failedState);
     } finally {
       const activeEntry = this.runEntries.get(runId);
       if (activeEntry?.timeoutHandle) clearTimeout(activeEntry.timeoutHandle);
@@ -633,9 +649,10 @@ export class RunManager {
           const finalSnapshot = this.sessionRunSnapshots.get(runId);
           const finalState = finalSnapshot?.state;
           if (finalState && finalState.outputs) {
-            const profileRow = this.options.database
-              .prepare("SELECT environment_json FROM browser_profiles WHERE id = ?")
-              .get(browserProfileId) as { environment_json?: string } | undefined;
+            const profileRow = await this.options.database.queryOne(
+              "SELECT environment_json FROM browser_profiles WHERE id = $1 AND owner_id = $2",
+              [browserProfileId, this.options.database.ownerId],
+            ) as { environment_json?: string } | null;
             if (profileRow?.environment_json) {
               const environment = JSON.parse(profileRow.environment_json) as ProfileEnvironment;
               let changed = false;
@@ -653,13 +670,12 @@ export class RunManager {
               }
               if (changed) {
                 const timestamp = new Date().toISOString();
-                this.options.database
-                  .prepare(
-                    `UPDATE browser_profiles
-                     SET environment_json = ?, updated_at = ?
-                     WHERE id = ?`,
-                  )
-                  .run(JSON.stringify(environment), timestamp, browserProfileId);
+                await this.options.database.execute(
+                  `UPDATE browser_profiles
+                   SET environment_json = $1, updated_at = $2
+                   WHERE id = $3 AND owner_id = $4`,
+                  [JSON.stringify(environment), timestamp, browserProfileId, this.options.database.ownerId],
+                );
               }
             }
           }
@@ -680,183 +696,6 @@ export class RunManager {
   }
 }
 
-export function browserProfileKey(settings: WorkflowSettings) {
-  if (settings.browser_launch.session_mode !== "persistent_profile") return null;
-  return settings.browser_launch.profile_dir?.trim() || settings.browser_launch.profile_name?.trim() || null;
-}
-
-function beginRun(
-  database: DatabaseSync,
-  workflowId: string,
-  settings: WorkflowSettings,
-  graph: WorkflowGraph,
-  source: WorkflowRunSource = "manual",
-) {
-  const runId = randomUUID();
-  database
-    .prepare(
-      `INSERT INTO runs (
-        id,
-        workflow_id,
-        source,
-        status,
-        started_at,
-        settings_snapshot_json,
-        graph_snapshot_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      runId,
-      workflowId,
-      source,
-      "running",
-      new Date().toISOString(),
-      JSON.stringify(settings),
-      JSON.stringify(graph),
-    );
-  return runId;
-}
-
-export function finishRun(
-  database: DatabaseSync,
-  runId: string | null,
-  graph: CompiledWorkflowGraph,
-  state: RunState,
-) {
-  if (!runId) return;
-  database.exec("BEGIN IMMEDIATE");
-  try {
-    database
-      .prepare(
-        `UPDATE runs
-         SET status = ?,
-             finished_at = ?,
-             outputs_json = ?,
-             error_json = ?
-         WHERE id = ?`,
-      )
-      .run(
-        state.status,
-        new Date().toISOString(),
-        JSON.stringify(state.outputs ?? {}),
-        state.error ? JSON.stringify(state.error) : null,
-        runId,
-      );
-
-    const traces = Array.isArray(state.outputs?.__action_traces)
-      ? (state.outputs.__action_traces as Array<Record<string, unknown>>)
-      : [];
-    const insertStep = database.prepare(
-      `INSERT INTO run_steps (
-        id,
-        run_id,
-        node_id,
-        step_number,
-        action_type,
-        status,
-        started_at,
-        finished_at,
-        trace_json,
-        error_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    );
-    for (const [index, step] of graph.steps.entries()) {
-      const trace = traces.find((candidate) =>
-        candidate.node_id === step.node_id && !isNestedTrace(candidate),
-      ) ?? traces.find((candidate) => candidate.node_id === step.node_id);
-      const failed = state.error?.step_id === step.node_id;
-      const completed = state.completed_step_ids.includes(step.node_id);
-      insertStep.run(
-        randomUUID(),
-        runId,
-        step.node_id,
-        index + 1,
-        step.config.type,
-        failed ? "failed" : completed ? "success" : "skipped",
-        traceTimestamp(trace, "started_at"),
-        traceTimestamp(trace, "finished_at") ?? (trace || failed ? new Date().toISOString() : null),
-        trace ? JSON.stringify(trace) : null,
-        failed && state.error ? JSON.stringify(state.error) : traceErrorJson(trace),
-      );
-    }
-    const nestedTraces = traces
-      .map((trace, index) => ({ trace, index }))
-      .filter(({ trace }) => isNestedTrace(trace))
-      .sort((left, right) => traceOrder(left.trace, left.index) - traceOrder(right.trace, right.index));
-    for (const [nestedIndex, { trace }] of nestedTraces.entries()) {
-      insertStep.run(
-        randomUUID(),
-        runId,
-        String(trace.node_id),
-        graph.steps.length + nestedIndex + 1,
-        typeof trace.action_type === "string" ? trace.action_type : "unknown",
-        traceRunStepStatus(trace),
-        traceTimestamp(trace, "started_at"),
-        traceTimestamp(trace, "finished_at") ?? new Date().toISOString(),
-        JSON.stringify(trace),
-        traceErrorJson(trace),
-      );
-    }
-    database.exec("COMMIT");
-  } catch (error) {
-    database.exec("ROLLBACK");
-    throw error;
-  }
-}
-
-function isNestedTrace(trace: Record<string, unknown>) {
-  return typeof trace.parent_node_id === "string" && trace.parent_node_id.length > 0;
-}
-
-function traceOrder(trace: Record<string, unknown>, fallback: number) {
-  return typeof trace.trace_sequence === "number" ? trace.trace_sequence : fallback;
-}
-
-function traceTimestamp(
-  trace: Record<string, unknown> | undefined,
-  key: "started_at" | "finished_at",
-) {
-  return typeof trace?.[key] === "string" ? trace[key] : null;
-}
-
-function traceRunStepStatus(trace: Record<string, unknown>) {
-  return typeof trace.status === "string" ? trace.status : "success";
-}
-
-function traceErrorJson(trace: Record<string, unknown> | undefined) {
-  if (!trace || trace.status !== "failed") return null;
-  const reason = typeof trace.reason === "string" ? trace.reason : "Action failed";
-  return JSON.stringify({
-    step_id: typeof trace.node_id === "string" ? trace.node_id : null,
-    action_type: typeof trace.action_type === "string" ? trace.action_type : "unknown",
-    reason,
-  });
-}
-
-function fallbackWorkflowSummary(id: string, name: string): WorkflowSummary {
-  const timestamp = new Date().toISOString();
-  return {
-    id,
-    name,
-    step_count: 0,
-    created_at: timestamp,
-    updated_at: timestamp,
-  };
-}
-
 function commandError(message: string, field?: string): CommandError {
   return { message, field };
-}
-
-function serializeVariableValue(valueType: string, value: unknown): string {
-  if (value === undefined || value === null) {
-    return "";
-  }
-  if (valueType === "json") {
-    return JSON.stringify(value);
-  }
-  if (valueType === "boolean") {
-    return value ? "true" : "false";
-  }
-  return String(value);
 }

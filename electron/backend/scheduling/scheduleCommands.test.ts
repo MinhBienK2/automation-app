@@ -5,7 +5,7 @@ import type { RunValidationIssue, WorkflowScheduleInput } from "../../../src/typ
 import { prepareScheduleInput } from "./scheduleCommands";
 
 describe("prepareScheduleInput", () => {
-  test("trims disabled draft names and requires the referenced workflow without run validation", () => {
+  test("trims disabled draft names and requires the referenced workflow without run validation", async () => {
     const requireWorkflow = vi.fn();
     const validateWorkflowRun = vi.fn<() => RunValidationIssue[]>(() => [
       {
@@ -18,7 +18,7 @@ describe("prepareScheduleInput", () => {
       },
     ]);
 
-    const prepared = prepareScheduleInput(disabledSchedule(), {
+    const prepared = await prepareScheduleInput(disabledSchedule(), {
       requireWorkflow,
       validateWorkflowRun,
       now: new Date("2026-05-27T12:00:00.000Z"),
@@ -34,10 +34,10 @@ describe("prepareScheduleInput", () => {
     expect(validateWorkflowRun).not.toHaveBeenCalled();
   });
 
-  test("rejects enabled schedules when the saved workflow is not runnable", () => {
+  test("rejects enabled schedules when the saved workflow is not runnable", async () => {
     let thrown: unknown;
     try {
-      prepareScheduleInput(
+      await prepareScheduleInput(
         { ...disabledSchedule(), enabled: true },
         {
           requireWorkflow: vi.fn(),

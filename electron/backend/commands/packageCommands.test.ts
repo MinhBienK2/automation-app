@@ -30,11 +30,11 @@ vi.mock("electron", () => ({
 describe("Package commands integration", () => {
   test("exports sanitized packages and imports selected flow/settings as a new workflow", async () => {
     const { handlers } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Export me");
-    const settings = handlers.getWorkflowSettings(workflow.id);
+    const workflow  = await handlers.createWorkflow("Export me");
+    const settings  = await handlers.getWorkflowSettings(workflow.id);
     const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "export-fonts-"));
     tempRoots.push(fontsDir);
-    handlers.saveWorkflowSettings(workflow.id, {
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -44,7 +44,7 @@ describe("Package commands integration", () => {
       },
     });
 
-    const packageValue = handlers.exportWorkflowPackage(workflow.id, {
+    const packageValue  = await handlers.exportWorkflowPackage(workflow.id, {
       include_flow: true,
       settings_sections: ["general", "browser_launch", "environment"],
     });
@@ -63,7 +63,7 @@ describe("Package commands integration", () => {
       ]),
     );
     expect(
-      handlers.previewWorkflowPackage({
+      await handlers.previewWorkflowPackage({
         ...packageValue,
         included_sections: ["settings.general", "settings.unknown_section"],
         settings: {
@@ -89,13 +89,13 @@ describe("Package commands integration", () => {
         },
       },
     };
-    const imported = handlers.importWorkflowPackage(importedPackage, {
+    const imported  = await handlers.importWorkflowPackage(importedPackage, {
       include_flow: true,
       settings_sections: ["general"],
     });
 
     expect(imported.workflow.name).toBe("Imported package (imported)");
-    expect(handlers.getWorkflowSettings(imported.workflow.id).general).toMatchObject({
+    expect(await (await handlers.getWorkflowSettings(imported.workflow.id)).general).toMatchObject({
       name: "Imported package (imported)",
       description: "Shared",
       tags: ["imported"],
@@ -105,12 +105,12 @@ describe("Package commands integration", () => {
   test("imports workflow packages into the target project without mutating its saved session", async () => {
     const { handlers } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const sourceWorkflow = handlers.createWorkflow("Source package") as ProjectWorkflow;
-    const targetProject = projectHandlers.createProject({ name: "Target Project" });
-    const targetDefaultProfile = projectHandlers.listBrowserProfiles(targetProject.id)[0];
+    const sourceWorkflow  = await handlers.createWorkflow("Source package") as ProjectWorkflow;
+    const targetProject  = await projectHandlers.createProject({ name: "Target Project" });
+    const targetDefaultProfile  = await (await projectHandlers.listBrowserProfiles(targetProject.id))[0];
     const targetSavedSessionBefore = structuredClone(targetDefaultProfile.browser_launch);
-    const sourceSettings = handlers.getWorkflowSettings(sourceWorkflow.id);
-    handlers.saveWorkflowSettings(sourceWorkflow.id, {
+    const sourceSettings  = await handlers.getWorkflowSettings(sourceWorkflow.id);
+    await handlers.saveWorkflowSettings(sourceWorkflow.id, {
       ...sourceSettings,
       browser_launch: {
         ...sourceSettings.browser_launch,
@@ -120,12 +120,12 @@ describe("Package commands integration", () => {
         proxy_password: "secret",
       },
     });
-    const packageValue = handlers.exportWorkflowPackage(sourceWorkflow.id, {
+    const packageValue  = await handlers.exportWorkflowPackage(sourceWorkflow.id, {
       include_flow: true,
       settings_sections: ["browser_launch"],
     });
 
-    const imported = handlers.importWorkflowPackage(
+    const imported  = await handlers.importWorkflowPackage(
       {
         ...packageValue,
         workflow: { name: "Imported into target" },
@@ -136,20 +136,19 @@ describe("Package commands integration", () => {
         target_project_id: targetProject.id,
       },
     ) as { workflow: ProjectWorkflow };
-    const targetSavedSessionAfter = projectHandlers.listBrowserProfiles(targetProject.id)
-      .find((profile) => profile.id === targetDefaultProfile.id);
+    const targetSavedSessionAfter  = await (await projectHandlers.listBrowserProfiles(targetProject.id)).find((profile) => profile.id === targetDefaultProfile.id);
 
     expect(imported.workflow.project_id).toBe(targetProject.id);
     expect(imported.workflow.browser_profile_id).toEqual(expect.any(String));
     expect(imported.workflow.browser_profile_id).not.toBe(targetDefaultProfile.id);
-    expect(handlers.listWorkflows().find((item) => item.id === imported.workflow.id))
+    expect((await handlers.listWorkflows()).find((item) => item.id === imported.workflow.id))
       .toMatchObject({
         project_id: targetProject.id,
         browser_profile_id: imported.workflow.browser_profile_id,
         browser_profile_name: "Imported into target (imported) browser profile",
       });
     expect(targetSavedSessionAfter?.browser_launch).toEqual(targetSavedSessionBefore);
-    expect(handlers.getWorkflowSettings(imported.workflow.id).browser_launch)
+    expect((await handlers.getWorkflowSettings(imported.workflow.id)).browser_launch)
       .toMatchObject({
         proxy_enabled: true,
         proxy_server: "http://proxy.owned.test:8080",
@@ -160,13 +159,13 @@ describe("Package commands integration", () => {
   test("exports referenced subflows and remaps Call Subflow ids on package import", async () => {
     const { handlers } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const workflow = handlers.createWorkflow("Checkout E2E") as ProjectWorkflow;
-    const subflow = projectHandlers.createSubflow(workflow.project_id, { name: "Login" });
+    const workflow  = await handlers.createWorkflow("Checkout E2E") as ProjectWorkflow;
+    const subflow  = await projectHandlers.createSubflow(workflow.project_id, { name: "Login" });
     const subflowGraph = subflowGraphWithAction("fill-username", "Fill username");
-    projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
-    handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
+    await projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
+    await handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
 
-    const packageValue = handlers.exportWorkflowPackage(workflow.id, {
+    const packageValue  = await handlers.exportWorkflowPackage(workflow.id, {
       include_flow: true,
       settings_sections: [],
     });
@@ -180,7 +179,7 @@ describe("Package commands integration", () => {
       }),
     ]);
 
-    const imported = handlers.importWorkflowPackage(
+    const imported  = await handlers.importWorkflowPackage(
       {
         ...packageValue,
         workflow: { ...packageValue.workflow, name: "Imported Checkout" },
@@ -191,7 +190,7 @@ describe("Package commands integration", () => {
         target_project_id: workflow.project_id,
       },
     ) as { workflow: ProjectWorkflow };
-    const importedGraph = handlers.getWorkflowGraph(imported.workflow.id);
+    const importedGraph  = await handlers.getWorkflowGraph(imported.workflow.id);
     const importedCallNode = importedGraph.nodes.find(
       (node) => node.node_type === "call_subflow",
     );
@@ -200,22 +199,21 @@ describe("Package commands integration", () => {
 
     expect(importedSubflowId).toEqual(expect.any(String));
     expect(importedSubflowId).not.toBe(subflow.id);
-    expect(projectHandlers.getSubflowGraph(importedSubflowId ?? "")).toEqual({
+    expect(await projectHandlers.getSubflowGraph(importedSubflowId ?? "")).toEqual({
       ...subflowGraph,
       version: 3,
       migration_notes: [],
     });
     expect(
-      projectHandlers.listSubflows(imported.workflow.project_id)
-        .some((subflow) => subflow.id === importedSubflowId),
+      await (await projectHandlers.listSubflows(imported.workflow.project_id)).some((subflow) => subflow.id === importedSubflowId),
     ).toBe(true);
   });
 
   test("rejects invalid workflow package imports without creating orphan workflows", async () => {
     const { handlers } = await createTestHandlers();
-    const existing = handlers.createWorkflow("Existing");
-    const baseSettings = handlers.getWorkflowSettings(existing.id);
-    const initialCount = handlers.listWorkflows().length;
+    const existing  = await handlers.createWorkflow("Existing");
+    const baseSettings  = await handlers.getWorkflowSettings(existing.id);
+    const initialCount  = (await handlers.listWorkflows()).length;
     const invalidSettingsPackage: WorkflowPackage = {
       kind: "workflow_package",
       version: 2,
@@ -234,7 +232,7 @@ describe("Package commands integration", () => {
 
     let settingsError: unknown;
     try {
-      handlers.importWorkflowPackage(invalidSettingsPackage, {
+      await handlers.importWorkflowPackage(invalidSettingsPackage, {
         include_flow: false,
         settings_sections: ["browser_launch"],
       });
@@ -244,7 +242,7 @@ describe("Package commands integration", () => {
     expect(settingsError).toMatchObject({
       field: "browser_launch.proxy_server",
     });
-    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+    expect(await handlers.listWorkflows()).toHaveLength(initialCount);
 
     const invalidFlowPackage: WorkflowPackage = {
       kind: "workflow_package",
@@ -263,7 +261,7 @@ describe("Package commands integration", () => {
 
     let flowError: unknown;
     try {
-      handlers.importWorkflowPackage(invalidFlowPackage, {
+      await handlers.importWorkflowPackage(invalidFlowPackage, {
         include_flow: true,
         settings_sections: [],
       });
@@ -273,7 +271,7 @@ describe("Package commands integration", () => {
     expect(flowError).toMatchObject({
       field: "package.flow",
     });
-    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+    expect(await handlers.listWorkflows()).toHaveLength(initialCount);
 
     const unknownNodePackage: WorkflowPackage = {
       kind: "workflow_package",
@@ -309,16 +307,16 @@ describe("Package commands integration", () => {
       },
       settings: null,
     };
-    expect(() =>
+    await expect(
       handlers.importWorkflowPackage(unknownNodePackage, {
         include_flow: true,
         settings_sections: [],
       }),
-    ).toThrow(expect.objectContaining({
+    ).rejects.toThrow(expect.objectContaining({
       message: "Unsupported graph node type: sidequest",
       field: "package.flow",
     }));
-    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+    expect(await handlers.listWorkflows()).toHaveLength(initialCount);
 
     const unknownActionPackage: WorkflowPackage = {
       ...unknownNodePackage,
@@ -336,16 +334,16 @@ describe("Package commands integration", () => {
         ),
       },
     };
-    expect(() =>
+    await expect(
       handlers.importWorkflowPackage(unknownActionPackage, {
         include_flow: true,
         settings_sections: [],
       }),
-    ).toThrow(expect.objectContaining({
+    ).rejects.toThrow(expect.objectContaining({
       message: "Node Unknown has invalid action config: Unsupported action type: mystery_action",
       field: "package.flow",
     }));
-    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+    expect(await handlers.listWorkflows()).toHaveLength(initialCount);
 
     const missingPackagedSubflowPackage: WorkflowPackage = {
       kind: "workflow_package",
@@ -357,16 +355,16 @@ describe("Package commands integration", () => {
       subflows: [],
       settings: null,
     };
-    expect(() =>
+    await expect(
       handlers.importWorkflowPackage(missingPackagedSubflowPackage, {
         include_flow: true,
         settings_sections: [],
       }),
-    ).toThrow(expect.objectContaining({
+    ).rejects.toThrow(expect.objectContaining({
       message: "Workflow package is missing a referenced subflow",
       field: "package.subflows",
     }));
-    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+    expect(await handlers.listWorkflows()).toHaveLength(initialCount);
 
     const invalidPackagedSubflowPackage: WorkflowPackage = {
       ...missingPackagedSubflowPackage,
@@ -384,23 +382,23 @@ describe("Package commands integration", () => {
         },
       ],
     };
-    expect(() =>
+    await expect(
       handlers.importWorkflowPackage(invalidPackagedSubflowPackage, {
         include_flow: true,
         settings_sections: [],
       }),
-    ).toThrow(expect.objectContaining({
+    ).rejects.toThrow(expect.objectContaining({
       message: "Referenced subflow has blocking validation errors",
       field: "package.subflows",
     }));
-    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+    expect(await handlers.listWorkflows()).toHaveLength(initialCount);
   });
 
   test("rejects invalid legacy workflow imports without creating orphan workflows", async () => {
     const { handlers } = await createTestHandlers();
-    const existing = handlers.createWorkflow("Existing");
-    const baseSettings = handlers.getWorkflowSettings(existing.id);
-    const initialCount = handlers.listWorkflows().length;
+    const existing  = await handlers.createWorkflow("Existing");
+    const baseSettings  = await handlers.getWorkflowSettings(existing.id);
+    const initialCount  = (await handlers.listWorkflows()).length;
     const invalidLegacyExport: WorkflowExport = {
       version: 1,
       workflow: {
@@ -420,26 +418,26 @@ describe("Package commands integration", () => {
       },
     };
 
-    expect(() => handlers.importWorkflow(invalidLegacyExport)).toThrow(
+    await expect(handlers.importWorkflow(invalidLegacyExport)).rejects.toThrow(
       expect.objectContaining({
         field: "browser_launch.proxy_server",
       }),
     );
-    expect(handlers.listWorkflows()).toHaveLength(initialCount);
-    expect(handlers.listWorkflows().some((item) => item.name === "Bad legacy import"))
+    expect(await handlers.listWorkflows()).toHaveLength(initialCount);
+    expect((await handlers.listWorkflows()).some((item) => item.name === "Bad legacy import"))
       .toBe(false);
   });
 
   test("rejects malformed workflow package payloads with command errors", async () => {
     const { handlers } = await createTestHandlers();
 
-    expect(() =>
+    await expect(
       handlers.previewWorkflowPackage(null as unknown as WorkflowPackage),
-    ).toThrow(expect.objectContaining({
+    ).rejects.toThrow(expect.objectContaining({
       message: "Unsupported workflow package",
       field: "package",
     }));
-    expect(() =>
+    await expect(
       handlers.previewWorkflowPackage({
         kind: "workflow_package",
         version: 2,
@@ -449,11 +447,11 @@ describe("Package commands integration", () => {
         flow: null,
         settings: null,
       } as unknown as WorkflowPackage),
-    ).toThrow(expect.objectContaining({
+    ).rejects.toThrow(expect.objectContaining({
       message: "Workflow package name is required",
       field: "package.workflow.name",
     }));
-    expect(() =>
+    await expect(
       handlers.previewWorkflowPackage({
         kind: "workflow_package",
         version: 2,
@@ -462,7 +460,7 @@ describe("Package commands integration", () => {
         flow: null,
         settings: null,
       } as unknown as WorkflowPackage),
-    ).toThrow(expect.objectContaining({
+    ).rejects.toThrow(expect.objectContaining({
       message: "Workflow package sections are required",
       field: "package.included_sections",
     }));

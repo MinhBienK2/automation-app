@@ -1559,11 +1559,6 @@ describe("App settings and graph autosave", () => {
   });
 
   test("isRouteAllowed helper behaves correctly for different modes and roles", () => {
-    // 1. Private Mode
-    expect(isRouteAllowed("overview", "private")).toBe(true);
-    expect(isRouteAllowed("projects", "private")).toBe(true);
-    expect(isRouteAllowed("admin-users", "private")).toBe(false);
-
     // 2. Team Mode / Admin
     expect(isRouteAllowed("overview", "team", "admin")).toBe(true);
     expect(isRouteAllowed("admin-users", "team", "admin")).toBe(true);

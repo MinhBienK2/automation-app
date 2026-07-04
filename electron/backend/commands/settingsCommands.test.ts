@@ -27,11 +27,11 @@ vi.mock("electron", () => ({
 describe("Settings commands integration", () => {
   test("rotates browser identity through backend-owned high-entropy generation", async () => {
     const { handlers } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Identity reset");
-    const settings = handlers.getWorkflowSettings(workflow.id);
+    const workflow = await handlers.createWorkflow("Identity reset");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
     const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "identity-fonts-"));
     tempRoots.push(fontsDir);
-    handlers.saveWorkflowSettings(workflow.id, {
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       run_policy: {
         ...settings.run_policy,
@@ -47,7 +47,7 @@ describe("Settings commands integration", () => {
       },
     });
 
-    const rotated = handlers.resetWorkflowBrowserIdentity(workflow.id);
+    const rotated = await handlers.resetWorkflowBrowserIdentity(workflow.id);
 
     expect(rotated.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
     expect(rotated.browser_launch.identity_id).not.toBe(settings.browser_launch.identity_id);
@@ -72,7 +72,7 @@ describe("Settings commands integration", () => {
         }),
       ]),
     );
-    expect(handlers.getWorkflowSettings(workflow.id).browser_launch.identity_id)
+    expect((await handlers.getWorkflowSettings(workflow.id)).browser_launch.identity_id)
       .toBe(rotated.browser_launch.identity_id);
   });
 
@@ -98,14 +98,14 @@ describe("Settings commands integration", () => {
         ]),
       },
     });
-    const workflow = handlers.createWorkflow("Identity flow");
-    database.exec("PRAGMA foreign_keys = OFF");
-    database.prepare("UPDATE workflows SET id = ? WHERE id = ?").run("workflow-identity", workflow.id);
-    database.prepare("UPDATE workflow_nodes SET workflow_id = ? WHERE workflow_id = ?").run("workflow-identity", workflow.id);
-    database.prepare("UPDATE workflow_edges SET workflow_id = ? WHERE workflow_id = ?").run("workflow-identity", workflow.id);
-    database.exec("PRAGMA foreign_keys = ON");
-    const settings = handlers.getWorkflowSettings("workflow-identity");
-    handlers.saveWorkflowSettings("workflow-identity", {
+    const workflow = await handlers.createWorkflow("Identity flow");
+    await database.execute("PRAGMA foreign_keys = OFF");
+    await database.execute("UPDATE workflows SET id = $1 WHERE id = $2", ["workflow-identity", workflow.id]);
+    await database.execute("UPDATE workflow_nodes SET workflow_id = $1 WHERE workflow_id = $2", ["workflow-identity", workflow.id]);
+    await database.execute("UPDATE workflow_edges SET workflow_id = $1 WHERE workflow_id = $2", ["workflow-identity", workflow.id]);
+    await database.execute("PRAGMA foreign_keys = ON");
+    const settings = await handlers.getWorkflowSettings("workflow-identity");
+    await handlers.saveWorkflowSettings("workflow-identity", {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -128,14 +128,12 @@ describe("Settings commands integration", () => {
         },
       ],
     });
-    database
-      .prepare(
-        `INSERT INTO runs (
-          id, workflow_id, source, status, started_at, finished_at,
-          settings_snapshot_json, outputs_json, error_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await database.execute(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, finished_at,
+        settings_snapshot_json, outputs_json, error_json, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
         "run-old",
         "workflow-identity",
         "manual",
@@ -145,15 +143,15 @@ describe("Settings commands integration", () => {
         JSON.stringify({ browser_launch: { identity_id: "bi_old", display_name: "Old identity" } }),
         JSON.stringify({ browser_identity: { identity_id: "bi_old" } }),
         null,
-      );
-    database
-      .prepare(
-        `INSERT INTO runs (
-          id, workflow_id, source, status, started_at, finished_at,
-          settings_snapshot_json, outputs_json, error_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+        database.ownerId,
+      ]
+    );
+    await database.execute(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, finished_at,
+        settings_snapshot_json, outputs_json, error_json, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
         "run-current",
         "workflow-identity",
         "manual",
@@ -186,7 +184,9 @@ describe("Settings commands integration", () => {
           ],
         }),
         JSON.stringify({ reason: "Assertion failed" }),
-      );
+        database.ownerId,
+      ]
+    );
 
     const overview = await handlers.getIdentityLabOverview();
 
@@ -227,9 +227,9 @@ describe("Settings commands integration", () => {
   test("filters getIdentityLabOverview by project_id", async () => {
     const { handlers } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const projectA = projectHandlers.createProject({ name: "Project A" });
-    const projectB = projectHandlers.createProject({ name: "Project B" });
-    const workflows = handlers.listWorkflows();
+    const projectA = await projectHandlers.createProject({ name: "Project A" });
+    const projectB = await projectHandlers.createProject({ name: "Project B" });
+    const workflows = await handlers.listWorkflows();
     const workflowA = workflows.find(w => w.project_id === projectA.id)!;
     const workflowB = workflows.find(w => w.project_id === projectB.id)!;
     const overviewA = await handlers.getIdentityLabOverview({ project_id: projectA.id });
@@ -242,9 +242,9 @@ describe("Settings commands integration", () => {
 
   test("resolves stale managed identity targets with historical run context", async () => {
     const { handlers, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Rotated identity flow");
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    handlers.saveWorkflowSettings(workflow.id, {
+    const workflow = await handlers.createWorkflow("Rotated identity flow");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -252,14 +252,12 @@ describe("Settings commands integration", () => {
         display_name: "Current identity",
       },
     });
-    database
-      .prepare(
-        `INSERT INTO runs (
-          id, workflow_id, source, status, started_at, finished_at,
-          settings_snapshot_json, outputs_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await database.execute(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, finished_at,
+        settings_snapshot_json, outputs_json, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
         "run-old-identity",
         workflow.id,
         "manual",
@@ -276,7 +274,9 @@ describe("Settings commands integration", () => {
             fingerprint_seed_hash: "old-seed",
           },
         }),
-      );
+        database.ownerId,
+      ]
+    );
 
     const overview = await handlers.getIdentityLabOverview({
       selected_target: {
@@ -299,17 +299,28 @@ describe("Settings commands integration", () => {
 
   test("resolves historical identities older than the newest 200 workflow runs", async () => {
     const { handlers, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Long identity archive");
-    const insertRun = database.prepare(
-      `INSERT INTO runs (
-        id, workflow_id, source, status, started_at, finished_at,
-        settings_snapshot_json, outputs_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    );
-    insertRun.run(
+    const workflow = await handlers.createWorkflow("Long identity archive");
+    const insertRun = async (
+      id: string,
+      workflowId: string,
+      status: string,
+      startedAt: string,
+      finishedAt: string,
+      settingsSnapshotJson: string,
+      outputsJson: string
+    ) => {
+      await database.execute(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json, owner_id
+        ) VALUES ($1, $2, 'manual', $3, $4, $5, $6, $7, $8)`,
+        [id, workflowId, status, startedAt, finishedAt, settingsSnapshotJson, outputsJson, database.ownerId]
+      );
+    };
+
+    await insertRun(
       "run-archived-identity",
       workflow.id,
-      "manual",
       "success",
       "2026-01-01T07:00:00.000Z",
       "2026-01-01T07:01:00.000Z",
@@ -319,10 +330,9 @@ describe("Settings commands integration", () => {
     for (let index = 0; index < 200; index += 1) {
       const startedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 0)).toISOString();
       const finishedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 30)).toISOString();
-      insertRun.run(
+      await insertRun(
         `run-new-identity-${index}`,
         workflow.id,
-        "manual",
         "success",
         startedAt,
         finishedAt,
@@ -348,16 +358,14 @@ describe("Settings commands integration", () => {
 
   test("derives historical identity workflow context from the matched run", async () => {
     const { handlers, database } = await createTestHandlers();
-    const historicalWorkflow = handlers.createWorkflow("Historical identity source");
-    const otherWorkflow = handlers.createWorkflow("Unrelated current workflow");
-    database
-      .prepare(
-        `INSERT INTO runs (
-          id, workflow_id, source, status, started_at, finished_at,
-          settings_snapshot_json, outputs_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    const historicalWorkflow = await handlers.createWorkflow("Historical identity source");
+    const otherWorkflow = await handlers.createWorkflow("Unrelated current workflow");
+    await database.execute(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, finished_at,
+        settings_snapshot_json, outputs_json, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
         "run-cross-workflow-history",
         historicalWorkflow.id,
         "manual",
@@ -366,7 +374,9 @@ describe("Settings commands integration", () => {
         "2026-05-27T07:01:00.000Z",
         JSON.stringify({ browser_launch: { identity_id: "bi_cross_history" } }),
         JSON.stringify({ browser_identity: { identity_id: "bi_cross_history" } }),
-      );
+        database.ownerId,
+      ]
+    );
 
     const overview = await handlers.getIdentityLabOverview({
       selected_target: {
@@ -398,8 +408,8 @@ describe("Settings commands integration", () => {
 
   test("never deletes browser profile data when a workflow is deleted", async () => {
     const { handlers, appPaths } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Delete me");
-    const settings = handlers.getWorkflowSettings(workflow.id);
+    const workflow = await handlers.createWorkflow("Delete me");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
     const profilePath = path.join(
       appPaths.browserProfilesDir,
       settings.browser_launch.profile_dir,
@@ -407,9 +417,9 @@ describe("Settings commands integration", () => {
     await fs.mkdir(profilePath, { recursive: true });
     await fs.writeFile(path.join(profilePath, "storage.txt"), "state");
 
-    handlers.deleteWorkflow(workflow.id, { deleteBrowserProfile: true });
+    await handlers.deleteWorkflow(workflow.id, { deleteBrowserProfile: true });
 
-    expect(handlers.getWorkflow(workflow.id)).toBeNull();
+    expect(await handlers.getWorkflow(workflow.id)).toBeNull();
     // Verify browser profile directory on disk is preserved because it belongs to the project
     await expect(fs.stat(profilePath)).resolves.toBeTruthy();
   });
@@ -417,9 +427,9 @@ describe("Settings commands integration", () => {
 
   test("reports CloakBrowser diagnostics and profile storage without secrets", async () => {
     const { handlers, appPaths, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Diagnostics flow");
-    const settings = handlers.getWorkflowSettings(workflow.id);
-    handlers.saveWorkflowSettings(workflow.id, {
+    const workflow = await handlers.createWorkflow("Diagnostics flow");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -429,23 +439,23 @@ describe("Settings commands integration", () => {
         proxy_password: "secret-proxy-password",
       },
     });
-    const profileDir = handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir;
+    const profileDir = (await handlers.getWorkflowSettings(workflow.id)).browser_launch.profile_dir;
     await fs.mkdir(path.join(appPaths.browserProfilesDir, profileDir), { recursive: true });
     await fs.writeFile(path.join(appPaths.browserProfilesDir, profileDir, "storage.txt"), "state");
-    database
-      .prepare(
-        `INSERT INTO runs (
-          id, workflow_id, status, started_at, finished_at, outputs_json
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await database.execute(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, finished_at, outputs_json, owner_id
+      ) VALUES ($1, $2, 'manual', $3, $4, $5, $6, $7)`,
+      [
         "run-diagnostics",
         workflow.id,
         "success",
         "2026-05-15T00:00:00.000Z",
         "2026-05-15T00:00:02.000Z",
         JSON.stringify({ browser_identity: { identity_id: "bi_qa" } }),
-      );
+        database.ownerId,
+      ]
+    );
 
     const diagnostics = await handlers.getCloakBrowserDiagnostics();
 
@@ -480,14 +490,14 @@ describe("Settings commands integration", () => {
 
   test("reports configured fingerprint font directory hash and expected family coverage", async () => {
     const { handlers } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Font diagnostics");
-    const settings = handlers.getWorkflowSettings(workflow.id);
+    const workflow = await handlers.createWorkflow("Font diagnostics");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
     const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "font-diagnostics-"));
     tempRoots.push(fontsDir);
     await fs.writeFile(path.join(fontsDir, "Arial-Regular.ttf"), "arial");
     await fs.writeFile(path.join(fontsDir, "NotoSans-Regular.otf"), "noto");
     await fs.writeFile(path.join(fontsDir, "CourierNew.ttf"), "courier");
-    handlers.saveWorkflowSettings(workflow.id, {
+    await handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
@@ -515,54 +525,56 @@ describe("Settings commands integration", () => {
   test("reports missing and shared fingerprint font directories as actionable diagnostics", async () => {
     const { handlers, database } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
-    const owner = handlers.createWorkflow("Font owner");
-    const shared = handlers.createWorkflow("Font shared");
-    const missing = handlers.createWorkflow("Font missing");
+    const owner = await handlers.createWorkflow("Font owner");
+    const shared = await handlers.createWorkflow("Font shared");
+    const missing = await handlers.createWorkflow("Font missing");
     const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "shared-fonts-"));
     tempRoots.push(fontsDir);
     await fs.writeFile(path.join(fontsDir, "Arial-Regular.ttf"), "arial");
     await fs.writeFile(path.join(fontsDir, "NotoSans-Regular.otf"), "noto");
     await fs.writeFile(path.join(fontsDir, "CourierNew.ttf"), "courier");
-    const ownerSettings = handlers.getWorkflowSettings(owner.id);
-    const sharedProfile = projectHandlers.createBrowserProfile(owner.project_id ?? "", {
+    const ownerSettings = await handlers.getWorkflowSettings(owner.id);
+    const sharedProfile = await projectHandlers.createBrowserProfile(owner.project_id ?? "", {
       name: "Shared font profile",
     });
-    const missingProfile = projectHandlers.createBrowserProfile(owner.project_id ?? "", {
+    const missingProfile = await projectHandlers.createBrowserProfile(owner.project_id ?? "", {
       name: "Missing font profile",
     });
-    projectHandlers.setWorkflowBrowserProfile(shared.id, sharedProfile.id);
-    projectHandlers.setWorkflowBrowserProfile(missing.id, missingProfile.id);
-    handlers.saveWorkflowSettings(owner.id, {
+    await projectHandlers.setWorkflowBrowserProfile(shared.id, sharedProfile.id);
+    await projectHandlers.setWorkflowBrowserProfile(missing.id, missingProfile.id);
+    await handlers.saveWorkflowSettings(owner.id, {
       ...ownerSettings,
       browser_launch: {
         ...ownerSettings.browser_launch,
         fingerprint_fonts_dir: fontsDir,
       },
     });
-    projectHandlers.updateBrowserProfile(sharedProfile.id, {
+    await projectHandlers.updateBrowserProfile(sharedProfile.id, {
       browser_launch: {
         ...sharedProfile.browser_launch,
         fingerprint_fonts_dir: fontsDir,
       },
     });
-    database
-      .prepare("UPDATE browser_profiles SET browser_launch_json = ? WHERE id = ?")
-      .run(
+    await database.execute(
+      "UPDATE browser_profiles SET browser_launch_json = $1 WHERE id = $2",
+      [
         JSON.stringify({
           ...missingProfile.browser_launch,
           fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
         }),
         missingProfile.id,
-      );
-    database
-      .prepare("UPDATE browser_profiles SET browser_launch_json = ? WHERE id = ?")
-      .run(
+      ]
+    );
+    await database.execute(
+      "UPDATE browser_profiles SET browser_launch_json = $1 WHERE id = $2",
+      [
         JSON.stringify({
           ...missingProfile.browser_launch,
           fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
         }),
         missingProfile.id,
-      );
+      ]
+    );
 
     const diagnostics = await handlers.getCloakBrowserDiagnostics();
 
@@ -590,8 +602,8 @@ describe("Settings commands integration", () => {
     process.env.WAM_PROFILE_DIAGNOSTICS_MAX_ENTRIES = "1";
     try {
       const { handlers, appPaths } = await createTestHandlers();
-      const workflow = handlers.createWorkflow("Large profile diagnostics");
-      const profileDir = handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir;
+      const workflow = await handlers.createWorkflow("Large profile diagnostics");
+      const profileDir = (await handlers.getWorkflowSettings(workflow.id)).browser_launch.profile_dir;
       const profilePath = path.join(appPaths.browserProfilesDir, profileDir);
       await fs.mkdir(profilePath, { recursive: true });
       await fs.writeFile(path.join(profilePath, "a.bin"), "a".repeat(100));
@@ -621,8 +633,8 @@ describe("Settings commands integration", () => {
       })),
     };
     const { handlers, appPaths } = await createTestHandlers({ runner: activeRunner });
-    const workflow = handlers.createWorkflow("Persistent profile");
-    const profileDir = handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir;
+    const workflow = await handlers.createWorkflow("Persistent profile");
+    const profileDir = (await handlers.getWorkflowSettings(workflow.id)).browser_launch.profile_dir;
     await fs.mkdir(path.join(appPaths.browserProfilesDir, profileDir), { recursive: true });
     await fs.writeFile(path.join(appPaths.browserProfilesDir, profileDir, "state.txt"), "state");
     await fs.mkdir(path.join(appPaths.browserProfilesDir, "orphan-profile"), { recursive: true });
@@ -656,8 +668,8 @@ describe("Settings commands integration", () => {
       })),
     };
     const { handlers } = await createTestHandlers({ runner });
-    const workflow = handlers.createWorkflow("Active identity");
-    const settings = handlers.getWorkflowSettings(workflow.id);
+    const workflow = await handlers.createWorkflow("Active identity");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
     runner.getRetainedSessionState.mockReturnValue({
       available: true,
       workflow_id: workflow.id,
@@ -665,8 +677,7 @@ describe("Settings commands integration", () => {
       reason: null,
     });
 
-    expect(() =>
-      handlers.saveWorkflowSettings(workflow.id, {
+    await expect(handlers.saveWorkflowSettings(workflow.id, {
         ...settings,
         browser_launch: {
           ...settings.browser_launch,
@@ -676,9 +687,9 @@ describe("Settings commands integration", () => {
           profile_name: "bi_rotated",
         },
       }),
-    ).toThrow("Close the retained browser session before changing or deleting its identity profile");
+    ).rejects.toThrow("Close the retained browser session before changing or deleting its identity profile");
 
-    expect(() => handlers.deleteWorkflow(workflow.id)).toThrow(
+    await expect(handlers.deleteWorkflow(workflow.id)).rejects.toThrow(
       "Close the retained browser session before changing or deleting its identity profile",
     );
   });
@@ -691,8 +702,8 @@ describe("Settings commands integration", () => {
       hasReusableRetainedSession: vi.fn(() => true),
     };
     const { handlers } = await createTestHandlers({ runner });
-    const workflow = handlers.createWorkflow("Active reset");
-    const settings = handlers.getWorkflowSettings(workflow.id);
+    const workflow = await handlers.createWorkflow("Active reset");
+    const settings = await handlers.getWorkflowSettings(workflow.id);
     runner.getRetainedSessionState.mockReturnValue({
       available: true,
       workflow_id: workflow.id,
@@ -700,7 +711,7 @@ describe("Settings commands integration", () => {
       reason: null,
     });
 
-    expect(() => handlers.resetWorkflowBrowserIdentity(workflow.id)).toThrow(
+    await expect(handlers.resetWorkflowBrowserIdentity(workflow.id)).rejects.toThrow(
       "Close the retained browser session before resetting this browser identity",
     );
   });
@@ -712,14 +723,14 @@ describe("Settings commands integration", () => {
       handlers.dryRunValidateConfig({
         type: "navigate",
         config: { url: " " },
-      }),
+      })
     ).toThrow("URL is required");
 
     expect(() =>
       handlers.dryRunValidateConfig({
         type: "set_json_variables",
         config: { json: "[1,2,3]" },
-      }),
+      })
     ).toThrow("JSON variables must be an object");
   });
 
@@ -727,8 +738,8 @@ describe("Settings commands integration", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-27T12:00:00.000Z"));
     const { handlers, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Checkout flow");
-    handlers.saveWorkflowGraph(workflow.id, {
+    const workflow = await handlers.createWorkflow("Checkout flow");
+    await handlers.saveWorkflowGraph(workflow.id, {
       version: 2,
       nodes: [],
       edges: [],
@@ -739,9 +750,9 @@ describe("Settings commands integration", () => {
       message: "Graph must contain exactly one start node",
     });
 
-    const attentionRows = database
-      .prepare("SELECT event_type, source, workflow_id, severity, summary FROM operational_attention_events")
-      .all() as Array<Record<string, string>>;
+    const attentionRows = await database.query(
+      "SELECT event_type, source, workflow_id, severity, summary FROM operational_attention_events"
+    ) as Array<Record<string, string>>;
     expect(attentionRows).toEqual([
       expect.objectContaining({
         event_type: "launch_blocked",
@@ -752,7 +763,7 @@ describe("Settings commands integration", () => {
       }),
     ]);
 
-    const overview = handlers.getOperationsOverview({
+    const overview = await handlers.getOperationsOverview({
       day_start_utc: "2026-05-27T00:00:00.000Z",
       day_end_utc: "2026-05-28T00:00:00.000Z",
       timezone_label: "UTC",
@@ -776,7 +787,7 @@ describe("Settings commands integration", () => {
 
     let thrown: unknown;
     try {
-      handlers.getOperationsOverview({
+      await handlers.getOperationsOverview({
         day_start_utc: "2026-01-01T00:00:00.000Z",
         day_end_utc: "2026-02-01T00:00:00.000Z",
         timezone_label: "UTC",
@@ -795,21 +806,19 @@ describe("Settings commands integration", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-27T12:00:00.000Z"));
     const { handlers, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Evidence flow");
-    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
-    const schedule = handlers.createSchedule({
+    const workflow = await handlers.createWorkflow("Evidence flow");
+    await handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const schedule = await handlers.createSchedule({
       workflow_id: workflow.id,
       name: "Daily evidence",
       enabled: true,
       kind: { type: "once_at", timestamp: "2026-05-27T20:00:00.000Z" },
     });
-    database
-      .prepare(
-        `INSERT INTO runs (
-          id, workflow_id, status, started_at, finished_at, outputs_json, error_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await database.execute(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, finished_at, outputs_json, error_json, owner_id
+      ) VALUES ($1, $2, 'manual', $3, $4, $5, $6, $7, $8)`,
+      [
         "run-success",
         workflow.id,
         "success",
@@ -827,28 +836,28 @@ describe("Settings commands integration", () => {
           ],
         }),
         null,
-      );
-    database
-      .prepare(
-        `INSERT INTO runs (
-          id, workflow_id, status, started_at, finished_at, error_json
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+        database.ownerId,
+      ]
+    );
+    await database.execute(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, finished_at, error_json, owner_id
+      ) VALUES ($1, $2, 'manual', $3, $4, $5, $6, $7)`,
+      [
         "run-failed",
         workflow.id,
         "failed",
         "2026-05-27T10:00:00.000Z",
         "2026-05-27T10:03:00.000Z",
         JSON.stringify({ reason: "Assertion failed", step_id: "assert" }),
-      );
-    database
-      .prepare(
-        `INSERT INTO run_steps (
-          id, run_id, node_id, step_number, action_type, status, started_at, finished_at, error_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+        database.ownerId,
+      ]
+    );
+    await database.execute(
+      `INSERT INTO run_steps (
+        id, run_id, node_id, step_number, action_type, status, started_at, finished_at, error_json, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
         "step-1",
         "run-failed",
         "assert",
@@ -858,14 +867,14 @@ describe("Settings commands integration", () => {
         "2026-05-27T10:00:00.000Z",
         "2026-05-27T10:03:00.000Z",
         JSON.stringify({ reason: "Assertion failed" }),
-      );
-    database
-      .prepare(
-        `INSERT INTO workflow_schedule_events (
-          id, schedule_id, workflow_id, event_type, run_id, scheduled_for, created_at, reason
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+        database.ownerId,
+      ]
+    );
+    await database.execute(
+      `INSERT INTO workflow_schedule_events (
+        id, schedule_id, workflow_id, event_type, run_id, scheduled_for, created_at, reason, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
         "schedule-event-1",
         schedule.id,
         workflow.id,
@@ -874,9 +883,11 @@ describe("Settings commands integration", () => {
         "2026-05-27T08:00:00.000Z",
         "2026-05-27T08:00:01.000Z",
         "Workflow validation failed",
-      );
+        database.ownerId,
+      ]
+    );
 
-    const overview = handlers.getOperationsOverview({
+    const overview = await handlers.getOperationsOverview({
       day_start_utc: "2026-05-27T00:00:00.000Z",
       day_end_utc: "2026-05-28T00:00:00.000Z",
       timezone_label: "UTC",
@@ -916,14 +927,25 @@ describe("Settings commands integration", () => {
 
   test("surfaces recent evidence beyond newer output rows without evidence", async () => {
     const { handlers, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Overview evidence archive");
+    const workflow = await handlers.createWorkflow("Overview evidence archive");
 
-    const insertRun = database.prepare(
-      `INSERT INTO runs (
-        id, workflow_id, status, started_at, finished_at, outputs_json
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
-    );
-    insertRun.run(
+    const insertRun = async (
+      id: string,
+      workflowId: string,
+      status: string,
+      startedAt: string,
+      finishedAt: string,
+      outputsJson: string
+    ) => {
+      await database.execute(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at, outputs_json, owner_id
+        ) VALUES ($1, $2, 'manual', $3, $4, $5, $6, $7)`,
+        [id, workflowId, status, startedAt, finishedAt, outputsJson, database.ownerId]
+      );
+    };
+
+    await insertRun(
       "run-evidence-archive",
       workflow.id,
       "success",
@@ -937,22 +959,22 @@ describe("Settings commands integration", () => {
             created_at: "2026-05-26T08:00:30.000Z",
           },
         ],
-      }),
+      })
     );
     for (let index = 0; index < 100; index += 1) {
       const startedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 0)).toISOString();
       const finishedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 30)).toISOString();
-      insertRun.run(
+      await insertRun(
         `run-output-only-${index}`,
         workflow.id,
         "success",
         startedAt,
         finishedAt,
-        JSON.stringify({}),
+        JSON.stringify({})
       );
     }
 
-    const overview = handlers.getOperationsOverview({
+    const overview = await handlers.getOperationsOverview({
       day_start_utc: "2026-05-27T00:00:00.000Z",
       day_end_utc: "2026-05-28T00:00:00.000Z",
       timezone_label: "UTC",
@@ -969,14 +991,12 @@ describe("Settings commands integration", () => {
 
   test("skips overview evidence metadata with Windows absolute paths", async () => {
     const { handlers, database } = await createTestHandlers();
-    const workflow = handlers.createWorkflow("Overview unsafe evidence");
-    database
-      .prepare(
-        `INSERT INTO runs (
-          id, workflow_id, status, started_at, finished_at, outputs_json
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    const workflow = await handlers.createWorkflow("Overview unsafe evidence");
+    await database.execute(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, finished_at, outputs_json, owner_id
+      ) VALUES ($1, $2, 'manual', $3, $4, $5, $6, $7)`,
+      [
         "run-unsafe-evidence",
         workflow.id,
         "success",
@@ -1001,9 +1021,11 @@ describe("Settings commands integration", () => {
             },
           ],
         }),
-      );
+        database.ownerId,
+      ]
+    );
 
-    const overview = handlers.getOperationsOverview({
+    const overview = await handlers.getOperationsOverview({
       day_start_utc: "2026-05-27T00:00:00.000Z",
       day_end_utc: "2026-05-28T00:00:00.000Z",
       timezone_label: "UTC",

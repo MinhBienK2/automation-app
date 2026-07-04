@@ -8,12 +8,12 @@ import {
   serializeCommandError,
   type WorkflowCommandHandlers,
 } from "./backend/commands.js";
-import { createAppPaths, initializeDatabase, dropGraphJsonColumn } from "./backend/persistence/database.js";
-import { migrateAllGraphs } from "./backend/persistence/migrateAllGraphs.js";
-import { backfillGraphTables } from "./backend/persistence/backfillGraphTables.js";
-import { pruneRevisions } from "./backend/persistence/revisionRepository.js";
+import { createAppPaths } from "./backend/persistence/database.js";
 import { loadAppConfig } from "./backend/persistence/appConfig.js";
 import { initializePgPool } from "./backend/persistence/pgSync.js";
+import { PgDbAdapter } from "./backend/persistence/dbAdapter.js";
+import { PostgresDbConnection, runMigrations } from "./backend/persistence/migrationRunner.js";
+import { migrations } from "./backend/persistence/migrations.js";
 import pkg from "electron-updater";
 const { autoUpdater } = pkg;
 import {
@@ -94,6 +94,14 @@ function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
       try {
         const handler = handlers[methodName] as (...handlerArgs: unknown[]) => unknown;
         const value = await handler(...args);
+
+        // Auto ensure default project/profiles model exists on login/me
+        if (methodName === "login" || methodName === "me") {
+          if (value && typeof (handlers as any).ensureProjectModelReady === "function") {
+            await (handlers as any).ensureProjectModelReady();
+          }
+        }
+
         return { ok: true, value };
       } catch (error) {
         return { ok: false, error: serializeCommandError(error) };
@@ -135,31 +143,43 @@ function loadEnvFile(appPath: string) {
   }
 }
 
+// eslint-disable-next-line max-lines-per-function
 app.whenReady().then(async () => {
   loadEnvFile(app.getAppPath());
   const appPaths = createAppPaths(app.getPath("appData"));
   
-  // Load app config
+  // Load config & assert PG URL
   const appConfig = loadAppConfig(appPaths.rootDir);
-  if (appConfig.mode === "public" && appConfig.publicDatabaseUrl) {
-    try {
-      console.log("[startup] Public mode enabled. Initializing PG Pool...");
-      await initializePgPool(appConfig.publicDatabaseUrl);
-      console.log("[startup] PG Pool initialized successfully.");
-    } catch (error) {
-      console.error("[startup] Failed to initialize PG Pool on startup:", error);
-    }
+  if (!appConfig.publicDatabaseUrl) {
+    dialog.showErrorBox(
+      "Database Connection Required",
+      "DATABASE_URL environment variable is not configured. The application requires PostgreSQL connection to run.",
+    );
+    app.quit();
+    return;
   }
 
-  const database = await initializeDatabase(appPaths);
-  const backfillReport = backfillGraphTables(database);
-  console.log("[startup] graph backfill report:", backfillReport);
-  const migrationReport = migrateAllGraphs(database);
-  console.log("[startup] graph migration report:", migrationReport);
-  dropGraphJsonColumn(database);
-  const workflowPrune = pruneRevisions(database, "workflow");
-  const subflowPrune = pruneRevisions(database, "subflow");
-  console.log("[startup] revision pruning:", { workflow: workflowPrune, subflow: subflowPrune });
+  let pool;
+  try {
+    console.log("[startup] Connecting to PG database...");
+    pool = await initializePgPool(appConfig.publicDatabaseUrl);
+    console.log("[startup] PG Pool initialized successfully.");
+
+    // Run schema migrations
+    const conn = new PostgresDbConnection(pool);
+    await runMigrations(conn, migrations);
+    console.log("[startup] Schema migrations run successfully.");
+  } catch (error) {
+    dialog.showErrorBox(
+      "Database Connection Failed",
+      `Failed to connect or migrate PostgreSQL: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    app.quit();
+    return;
+  }
+
+  const database = new PgDbAdapter(pool);
+
   const handlers = createWorkflowCommandHandlers({
     appPaths,
     database,
@@ -205,14 +225,16 @@ app.whenReady().then(async () => {
       await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
       return filePath;
     },
-
   });
+
   registerWorkflowIpc(handlers);
+
   const schedulerInterval = setInterval(() => {
     void handlers.runSchedulerTick().catch((error) => {
       console.error("Workflow scheduler tick failed", error);
     });
   }, 30_000);
+
   app.once("before-quit", () => clearInterval(schedulerInterval));
   createMainWindow();
   setupAutoUpdater();

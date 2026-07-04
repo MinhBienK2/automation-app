@@ -71,7 +71,7 @@ describe("recording draft commands", () => {
     expect(commands.getRecordingDraft("draft_test")).toEqual(draft);
   });
 
-  test("saves a reviewed draft as a new workflow and clears recorder state", () => {
+  test("saves a reviewed draft as a new workflow and clears recorder state", async () => {
     const draft = recordingDraft();
     const drafts = new Map([[draft.id, draft]]);
     const transactionStatements: string[] = [];
@@ -91,18 +91,18 @@ describe("recording draft commands", () => {
           deletedSessionId = sessionId;
         },
       },
-      createWorkflow: () => createdWorkflow,
-      saveWorkflowGraph: (_workflowId, graph) => {
+      createWorkflow: async () => createdWorkflow,
+      saveWorkflowGraph: async (_workflowId, graph) => {
         savedGraph = graph;
       },
-      saveWorkflowSettings: (_workflowId, value) => {
+      saveWorkflowSettings: async (_workflowId, value) => {
         savedSettings = value;
       },
-      getWorkflowDetail: () => ({ workflow: createdWorkflow, steps: [] }),
-      requireWorkflow: () => createdWorkflow,
+      getWorkflowDetail: async () => ({ workflow: createdWorkflow, steps: [] }),
+      requireWorkflow: async () => createdWorkflow,
     });
 
-    const saved = commands.saveRecordingDraft(draft.id, {
+    const saved = await commands.saveRecordingDraft(draft.id, {
       workflow_name: "Reviewed recording",
       save_mode: "create_new",
       reviewed_steps: draft.steps.map((step) => ({
@@ -144,10 +144,22 @@ describe("recording draft commands", () => {
 
 function databaseStub(statements: string[] = []) {
   return {
-    exec(sql: string) {
-      statements.push(sql);
-    },
-  };
+    async transaction<T>(callback: (tx: any) => Promise<T>): Promise<T> {
+      statements.push("BEGIN IMMEDIATE");
+      try {
+        const result = await callback({
+          exec(sql: string) {
+            statements.push(sql);
+          }
+        });
+        statements.push("COMMIT");
+        return result;
+      } catch (e) {
+        statements.push("ROLLBACK");
+        throw e;
+      }
+    }
+  } as any;
 }
 
 function recordingDraft(): RecordingWorkflowDraft {

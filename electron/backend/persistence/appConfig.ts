@@ -1,7 +1,7 @@
 import path from "node:path";
 
 export interface AppConfig {
-  mode: "private" | "public";
+  mode: "public";
   publicDatabaseUrl?: string;
 }
 
@@ -10,13 +10,10 @@ export function getAppConfigPath(rootDir: string): string {
 }
 
 export function loadAppConfig(_rootDir: string): AppConfig {
-  if (process.env.DATABASE_URL) {
-    return {
-      mode: "public",
-      publicDatabaseUrl: process.env.DATABASE_URL,
-    };
-  }
-  return { mode: "private" };
+  return {
+    mode: "public",
+    publicDatabaseUrl: process.env.DATABASE_URL,
+  };
 }
 
 export function saveAppConfig(_rootDir: string, _config: AppConfig): void {

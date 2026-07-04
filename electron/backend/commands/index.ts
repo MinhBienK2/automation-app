@@ -60,16 +60,18 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const runManager = new RunManager({ database: context.database, runner });
   const identityRepository = new IdentityRepository({
     database: context.database,
-    workflows: () => repository.listWorkflows(),
-    settingsForWorkflow: (workflowId) => getSettings(workflowId),
-    diagnostics: () =>
-      buildCloakBrowserDiagnostics({
+    workflows: async () => await repository.listWorkflows(),
+    settingsForWorkflow: async (workflowId) => await getSettings(workflowId),
+    diagnostics: async () => {
+      const list = await repository.listWorkflows();
+      return await buildCloakBrowserDiagnostics({
         appPaths: context.appPaths,
-        workflows: repository.listWorkflows(),
+        workflows: list,
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
         retainedProfileNames: runManager.retainedProfileNames(),
-      }),
+      });
+    },
     runner,
   });
   const settingsService = new WorkflowSettingsService({
@@ -90,8 +92,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     defaultSettings: settingsService.defaultWorkflowSettings,
   });
   const recorderSessionManager = new RecorderSessionManager({
-    getWorkflow: (workflowId) => repository.getWorkflowSummary(workflowId),
-    getWorkflowSettings: (workflowId) => getSettings(workflowId),
+    getWorkflow: async (workflowId) => await repository.getWorkflowSummary(workflowId),
+    getWorkflowSettings: async (workflowId) => await getSettings(workflowId),
     createNewWorkflowSettingsDraft({ name, draftWorkflowId, now }) {
       return settingsService.defaultWorkflowSettings(
         {
@@ -114,9 +116,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     database: context.database,
     recorderSessions: recorderSessionManager,
     createWorkflow,
-    saveWorkflowGraph: (workflowId, graph) => repository.saveWorkflowGraph(workflowId, graph),
+    saveWorkflowGraph: async (workflowId, graph) => await repository.saveWorkflowGraph(workflowId, graph),
     saveWorkflowSettings: saveSettings,
-    getWorkflowDetail: (workflowId) => repository.getWorkflow(workflowId),
+    getWorkflowDetail: async (workflowId) => await repository.getWorkflow(workflowId),
     requireWorkflow,
   });
   const projectCascades = createProjectCommandCascades({
@@ -137,45 +139,47 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     remapCallSubflowIds,
   });
 
-  ensureProjectModelReady();
-
-  function ensureProjectModelReady() {
-    const project = ensureDefaultProject();
-    ensureDefaultBrowserProfile(project);
-    for (const workflow of repository.listWorkflows()) {
+  async function ensureProjectModelReady() {
+    if (!context.database.ownerId) return;
+    const project = await ensureDefaultProject();
+    await ensureDefaultBrowserProfile(project);
+    const workflows = await repository.listWorkflows();
+    for (const workflow of workflows) {
       const projectId = workflow.project_id ?? project.id;
       if (!workflow.project_id) {
-        repository.assignWorkflowProject(workflow.id, projectId);
+        await repository.assignWorkflowProject(workflow.id, projectId);
       }
-      const current = repository.getWorkflowSummary(workflow.id);
+      const current = await repository.getWorkflowSummary(workflow.id);
       if (!current?.browser_profile_id) {
-        const ownerProject = repository.getProject(projectId) ?? project;
-        const browserProfile = ensureDefaultBrowserProfile(ownerProject);
-        repository.assignWorkflowBrowserProfile(workflow.id, browserProfile.id);
+        const ownerProject = (await repository.getProject(projectId)) ?? project;
+        const browserProfile = await ensureDefaultBrowserProfile(ownerProject);
+        await repository.assignWorkflowBrowserProfile(workflow.id, browserProfile.id);
       }
     }
   }
 
-  function ensureDefaultProject(): Project {
-    const existing = repository.listProjects()[0];
+  async function ensureDefaultProject(): Promise<Project> {
+    const list = await repository.listProjects();
+    const existing = list[0];
     if (existing) return existing;
-    return repository.createProject("Main");
+    return await repository.createProject("Main");
   }
 
-  function ensureDefaultBrowserProfile(project: Project): BrowserProfile {
-    const existing = repository.getDefaultBrowserProfile(project.id);
+  async function ensureDefaultBrowserProfile(project: Project): Promise<BrowserProfile> {
+    const existing = await repository.getDefaultBrowserProfile(project.id);
     if (existing) return existing;
-    return repository.createBrowserProfile(project.id, {
+    const launchConfig = await defaultProfileBrowserLaunch("Project browser profile");
+    return await repository.createBrowserProfile(project.id, {
       name: "Project browser profile",
       description: "Project-owned browser profile with persistent storage and fingerprint identity",
-      browser_launch: defaultProfileBrowserLaunch("Project browser profile"),
+      browser_launch: launchConfig,
       is_default: true,
     });
   }
 
-  function defaultProfileBrowserLaunch(name: string): WorkflowSettings["browser_launch"] {
+  async function defaultProfileBrowserLaunch(name: string): Promise<WorkflowSettings["browser_launch"]> {
     const now = new Date().toISOString();
-    return settingsService.defaultWorkflowSettings(
+    const defaultSettings = await settingsService.defaultWorkflowSettings(
       {
         id: `profile-${randomUUID()}`,
         name,
@@ -183,52 +187,62 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         updated_at: now,
       },
       { randomizeIdentity: true },
-    ).browser_launch;
+    );
+    return defaultSettings.browser_launch;
   }
 
-  function requireProject(projectId: string): Project {
-    const project = repository.getProject(projectId);
+  async function requireProject(projectId: string): Promise<Project> {
+    const project = await repository.getProject(projectId);
     if (!project) throw commandError("Project not found", "projectId");
     return project;
   }
 
-  function requireBrowserProfile(browserProfileId: string): BrowserProfile {
-    const browserProfile = repository.getBrowserProfile(browserProfileId);
+  async function requireBrowserProfile(browserProfileId: string): Promise<BrowserProfile> {
+    const browserProfile = await repository.getBrowserProfile(browserProfileId);
     if (!browserProfile) {
       throw commandError("Browser profile not found", "browserProfileId");
     }
     return browserProfile;
   }
 
-
-
-  function graphContextForWorkflow(workflow: WorkflowSummary) {
-    return {
-      projectId: workflow.project_id ?? null,
-      workflowLabel: workflow.name,
-      resolveSubflow(subflowId: string) {
-        const subflow = repository.getSubflow(subflowId);
-        return subflow
-          ? {
+  async function graphContextForWorkflow(workflow: WorkflowSummary, graph?: WorkflowGraph) {
+    const subflowMap = new Map<string, any>();
+    if (graph) {
+      const subflowIds = callSubflowIds(graph);
+      await Promise.all(
+        subflowIds.map(async (subflowId) => {
+          const subflow = await repository.getSubflow(subflowId);
+          if (subflow) {
+            subflowMap.set(subflowId, {
               id: subflow.id,
               project_id: subflow.project_id,
               name: subflow.name,
               graph: migrateWorkflowGraph(subflow.graph),
-            }
-          : null;
+            });
+          }
+        })
+      );
+    }
+
+    return {
+      projectId: workflow.project_id ?? null,
+      workflowLabel: workflow.name,
+      resolveSubflow(subflowId: string) {
+        return subflowMap.get(subflowId) ?? null;
       },
     };
   }
 
-  function referencedSubflowsForWorkflowGraph(
+  async function referencedSubflowsForWorkflowGraph(
     workflow: WorkflowSummary,
     graph: WorkflowGraph,
-  ): any[] {
+  ): Promise<any[]> {
     const projectId = workflow.project_id;
     if (!projectId) return [];
     const referencedIds = callSubflowIds(graph);
-    return referencedIds.map((subflowId) => {
-      const subflow = repository.getSubflow(subflowId);
+    const subflows = [];
+    for (const subflowId of referencedIds) {
+      const subflow = await repository.getSubflow(subflowId);
       if (!subflow) {
         throw commandError("Workflow references a missing subflow", "workflow.graph");
       }
@@ -238,8 +252,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           "workflow.graph",
         );
       }
-      return subflow;
-    });
+      subflows.push(subflow);
+    }
+    return subflows;
   }
 
   function callSubflowIds(graph: WorkflowGraph): string[] {
@@ -285,23 +300,23 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       : {};
   }
 
-  function requireWorkflow(workflowId: string): WorkflowSummary {
-    const workflow = repository.getWorkflowSummary(workflowId);
+  async function requireWorkflow(workflowId: string): Promise<WorkflowSummary> {
+    const workflow = await repository.getWorkflowSummary(workflowId);
     if (!workflow) {
       throw commandError("Workflow not found", "workflowId");
     }
     return workflow;
   }
 
-  function getSettings(workflowId: string): WorkflowSettings {
-    const persisted = repository.getWorkflowSettings(workflowId);
-    const workflow = requireWorkflow(workflowId);
+  async function getSettings(workflowId: string): Promise<WorkflowSettings> {
+    const persisted = await repository.getWorkflowSettings(workflowId);
+    const workflow = await requireWorkflow(workflowId);
     const normalized = persisted
       ? settingsService.normalizeWorkflowSettings(persisted, workflow)
       : settingsService.defaultWorkflowSettings(workflow);
     const profileId = workflow.browser_profile_id;
     if (!profileId) return normalized;
-    const browserProfile = repository.getBrowserProfile(profileId);
+    const browserProfile = await repository.getBrowserProfile(profileId);
     if (!browserProfile || browserProfile.project_id !== workflow.project_id) return normalized;
     return settingsService.normalizeWorkflowSettings(
       {
@@ -312,16 +327,15 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     );
   }
 
-  function lastRunAtForWorkflow(workflowId: string): string | null {
-    const row = context.database
-      .prepare(
-        `SELECT COALESCE(finished_at, started_at) AS last_run_at
-         FROM runs
-         WHERE workflow_id = ?
-         ORDER BY started_at DESC
-         LIMIT 1`,
-      )
-      .get(workflowId) as { last_run_at?: string | null } | undefined;
+  async function lastRunAtForWorkflow(workflowId: string): Promise<string | null> {
+    const row = await context.database.queryOne(
+      `SELECT COALESCE(finished_at, started_at) AS last_run_at
+       FROM runs
+       WHERE workflow_id = $1 AND owner_id = $2
+       ORDER BY started_at DESC
+       LIMIT 1`,
+      [workflowId, context.database.ownerId],
+    ) as { last_run_at?: string | null } | null;
     return row?.last_run_at ?? null;
   }
 
@@ -329,56 +343,62 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return runManager.activeRunConflict(workflowId, settings);
   }
 
-  function schedulerConflictReason(workflowId: string) {
-    const settings = getSettings(workflowId);
+  async function schedulerConflictReason(workflowId: string) {
+    const settings = await getSettings(workflowId);
     return activeRunConflict(workflowId, settings)?.reason ?? null;
   }
 
-  function assertCanChangeBrowserIdentityProfile(
+  async function assertCanChangeBrowserIdentityProfile(
     workflowId: string,
     nextSettings: WorkflowSettings,
   ) {
-    const currentSettings = getSettings(workflowId);
+    const currentSettings = await getSettings(workflowId);
     runManager.assertCanChangeBrowserIdentityProfile(workflowId, currentSettings, nextSettings);
   }
 
-  function assertWorkflowDeletionAllowed(workflowId: string, settings: WorkflowSettings) {
+  async function assertWorkflowDeletionAllowed(workflowId: string, settings: WorkflowSettings) {
     runManager.assertWorkflowDeletionAllowed(workflowId, settings);
   }
 
-  function saveSelectedProfileBrowserLaunch(
+  async function saveSelectedProfileBrowserLaunch(
     workflow: WorkflowSummary,
     browserLaunch: WorkflowSettings["browser_launch"],
   ) {
     const profileId = workflow.browser_profile_id;
     if (!profileId) return browserLaunch;
-    const browserProfile = repository.getBrowserProfile(profileId);
+    const browserProfile = await repository.getBrowserProfile(profileId);
     if (!browserProfile || browserProfile.project_id !== workflow.project_id) {
       return browserLaunch;
     }
-    return repository.updateBrowserProfile(browserProfile.id, {
+    const updated = await repository.updateBrowserProfile(browserProfile.id, {
       browser_launch: browserLaunch,
-    })?.browser_launch ?? browserLaunch;
+    });
+    return updated?.browser_launch ?? browserLaunch;
   }
 
   function assertCanResetBrowserIdentity(workflowId: string, settings: WorkflowSettings) {
     runManager.assertCanResetBrowserIdentity(workflowId, settings);
   }
 
-  function usedFingerprintSeeds(exceptWorkflowId?: string) {
-    return new Set(
-      repository
-        .listWorkflows()
-        .filter((workflow) => workflow.id !== exceptWorkflowId)
-        .map((workflow) => getSettings(workflow.id).browser_launch.fingerprint_seed)
-        .filter((seed): seed is string => Boolean(seed)),
-    );
+  async function usedFingerprintSeeds(exceptWorkflowId?: string) {
+    const list = await repository.listWorkflows();
+    const filtered = list.filter((workflow) => workflow.id !== exceptWorkflowId);
+    const seeds = new Set<string>();
+    for (const w of filtered) {
+      const s = await getSettings(w.id);
+      if (s.browser_launch.fingerprint_seed) {
+        seeds.add(s.browser_launch.fingerprint_seed);
+      }
+    }
+    return seeds;
   }
 
-  function usedBrowserProfileFingerprintSeeds(exceptWorkflowId?: string) {
-    const seeds = usedFingerprintSeeds(exceptWorkflowId);
-    for (const project of repository.listProjects()) {
-      for (const profile of repository.listBrowserProfiles(project.id)) {
+  async function usedBrowserProfileFingerprintSeeds(exceptWorkflowId?: string) {
+    const seeds = await usedFingerprintSeeds(exceptWorkflowId);
+    const projects = await repository.listProjects();
+    for (const project of projects) {
+      const profiles = await repository.listBrowserProfiles(project.id);
+      for (const profile of profiles) {
         const seed = profile.browser_launch.fingerprint_seed;
         if (seed) seeds.add(seed);
       }
@@ -386,11 +406,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return seeds;
   }
 
-  function duplicateBrowserProfileLaunch(
+  async function duplicateBrowserProfileLaunch(
     browserLaunch: WorkflowSettings["browser_launch"],
     exceptWorkflowId?: string,
-  ): WorkflowSettings["browser_launch"] {
+  ): Promise<WorkflowSettings["browser_launch"]> {
     const identityId = createHighEntropyBrowserIdentityId();
+    const seeds = await usedBrowserProfileFingerprintSeeds(exceptWorkflowId);
     return {
       ...browserLaunch,
       identity_id: identityId,
@@ -399,21 +420,22 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         browserLaunch.session_mode === "persistent_profile" ? identityId : null,
       fingerprint_seed: deriveFingerprintSeedFromIdentityId(
         identityId,
-        usedBrowserProfileFingerprintSeeds(exceptWorkflowId),
+        seeds,
       ),
     };
   }
 
-  function rotateBrowserIdentity(workflowId: string): WorkflowSettings {
-    const settings = getSettings(workflowId);
+  async function rotateBrowserIdentity(workflowId: string): Promise<WorkflowSettings> {
+    const settings = await getSettings(workflowId);
     assertCanResetBrowserIdentity(workflowId, settings);
     const identityId = createHighEntropyBrowserIdentityId();
+    const seeds = await usedBrowserProfileFingerprintSeeds(workflowId);
     const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
       identityId,
-      usedBrowserProfileFingerprintSeeds(workflowId),
+      seeds,
     );
     const timestamp = new Date().toISOString();
-    return saveSettings(workflowId, {
+    return await saveSettings(workflowId, {
       ...settings,
       run_policy: {
         ...settings.run_policy,
@@ -440,10 +462,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     });
   }
 
-  function saveSettings(workflowId: string, settings: WorkflowSettings) {
-    const workflow = requireWorkflow(workflowId);
+  async function saveSettings(workflowId: string, settings: WorkflowSettings) {
+    const workflow = await requireWorkflow(workflowId);
     const activeSettings = settingsService.normalizeWorkflowSettings(settings, workflow);
-    assertCanChangeBrowserIdentityProfile(workflowId, activeSettings);
+    await assertCanChangeBrowserIdentityProfile(workflowId, activeSettings);
     const issues = settingsService.validateSettings(activeSettings);
     const firstError = issues.find((issue) => issue.level === "error");
     if (firstError) {
@@ -455,7 +477,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       );
     }
 
-    const browserLaunch = saveSelectedProfileBrowserLaunch(
+    const browserLaunch = await saveSelectedProfileBrowserLaunch(
       workflow,
       activeSettings.browser_launch,
     );
@@ -475,22 +497,22 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       updated_at: timestamp,
       created_at: activeSettings.created_at ?? workflow.created_at,
     };
-    repository.saveWorkflowSettings(workflowId, normalized);
+    await repository.saveWorkflowSettings(workflowId, normalized);
     return normalized;
   }
 
-  function createWorkflow(name: string, options: WorkflowCreateOptions = {}): Workflow {
+  async function createWorkflow(name: string, options: WorkflowCreateOptions = {}): Promise<Workflow> {
     const normalized = name.trim();
     if (!normalized) {
       throw commandError("Workflow name is required", "name");
     }
     const project = options.project_id
-      ? requireProject(options.project_id)
-      : ensureDefaultProject();
+      ? await requireProject(options.project_id)
+      : await ensureDefaultProject();
     const browserProfile = options.browser_profile_id
-      ? requireBrowserProfile(options.browser_profile_id)
-      : ensureDefaultBrowserProfile(project);
-    const workflow = repository.createWorkflow(
+      ? await requireBrowserProfile(options.browser_profile_id)
+      : await ensureDefaultBrowserProfile(project);
+    const workflow = await repository.createWorkflow(
       normalized,
       createDraftGraph(),
       new Date(),
@@ -499,7 +521,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const defaultSettings = settingsService.defaultWorkflowSettings(workflow, {
       randomizeIdentity: true,
     });
-    repository.saveWorkflowSettings(workflow.id, {
+    await repository.saveWorkflowSettings(workflow.id, {
       ...defaultSettings,
       browser_launch: browserProfile.browser_launch,
     });
@@ -510,15 +532,15 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     };
   }
 
-  function getWorkflowGraph(workflowId: string): WorkflowGraph {
-    const graph = repository.getWorkflowGraph(workflowId);
+  async function getWorkflowGraph(workflowId: string): Promise<WorkflowGraph> {
+    const graph = await repository.getWorkflowGraph(workflowId);
     if (!graph) {
-      requireWorkflow(workflowId);
+      await requireWorkflow(workflowId);
       return createDraftGraph();
     }
     const migrated = migrateWorkflowGraph(graph);
     if (JSON.stringify(migrated) !== JSON.stringify(graph)) {
-      repository.saveWorkflowGraph(workflowId, migrated);
+      await repository.saveWorkflowGraph(workflowId, migrated);
     }
     return migrated;
   }
@@ -573,6 +595,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ...packageCommands,
     ...recordingCommands,
     ...authCommands,
+    ensureProjectModelReady,
     getAppConfig() {
       return loadAppConfig(context.appPaths.rootDir);
     },

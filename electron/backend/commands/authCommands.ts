@@ -4,14 +4,11 @@ import {
   verifyToken,
   listUsers,
   createUser,
-  deleteUser,
-  syncPullAll
+  deleteUser
 } from "../persistence/pgSync.js";
-import type { DatabaseSyncWrapper } from "../persistence/database.js";
+import type { DbAdapter } from "../persistence/dbAdapter.js";
 
-export function createAuthCommands(database: any) {
-  const dbWrapper = database as DatabaseSyncWrapper;
-
+export function createAuthCommands(database: DbAdapter) {
   async function login(input: any) {
     const { email, password } = input;
     if (!email || !password) {
@@ -22,32 +19,14 @@ export function createAuthCommands(database: any) {
       throw commandError("Invalid email or password", "password");
     }
     
-    // Set the owner ID on the database wrapper so that subsequent writes are replicated
-    dbWrapper.ownerId = result.user.id;
+    // Set the owner ID on the database wrapper so that queries are isolated
+    database.ownerId = result.user.id;
     
-    // Pull all data for this user from PG to local SQLite
-    await syncPullAll(dbWrapper, result.user.id);
-
     return result;
   }
 
   async function logout() {
-    dbWrapper.ownerId = null;
-    // Clear user tables in SQLite on logout to prevent data remnants
-    dbWrapper.exec("PRAGMA foreign_keys = OFF");
-    try {
-      const tables = [
-        "projects", "browser_profiles", "workflows", "subflows",
-        "workflow_nodes", "workflow_edges", "subflow_nodes", "subflow_edges",
-        "runs", "run_steps", "workflow_schedules", "workflow_schedule_events",
-        "operational_attention_events", "workflow_revisions", "subflow_revisions"
-      ];
-      for (const table of tables) {
-        dbWrapper.exec(`DELETE FROM ${table}`);
-      }
-    } finally {
-      dbWrapper.exec("PRAGMA foreign_keys = ON");
-    }
+    database.ownerId = null;
     return { ok: true };
   }
 
@@ -55,10 +34,7 @@ export function createAuthCommands(database: any) {
     if (!input.token) return null;
     const user = await verifyToken(input.token);
     if (user) {
-      dbWrapper.ownerId = user.id;
-      
-      // Sync on app startup / validation
-      await syncPullAll(dbWrapper, user.id);
+      database.ownerId = user.id;
       return user;
     }
     return null;

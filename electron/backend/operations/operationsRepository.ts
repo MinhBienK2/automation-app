@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
+import type { DbAdapter } from "../persistence/dbAdapter.js";
 import type {
   OperationsOverview,
   OperationsOverviewRequest,
@@ -71,22 +71,24 @@ const maxDashboardLimit = 50;
 const maxOverviewRangeMs = 48 * 60 * 60 * 1000;
 
 export class OperationsRepository {
-  constructor(private readonly database: DatabaseSync) {}
+  constructor(private readonly database: DbAdapter) {
+    if (!this.database.ownerId) {
+      throw new Error("OperationsRepository requires a DbAdapter with a valid ownerId");
+    }
+  }
 
-  recordLaunchBlocked(input: {
+  async recordLaunchBlocked(input: {
     workflow: WorkflowSummary;
     issues: RunValidationIssue[];
     now?: Date;
-  }) {
+  }): Promise<void> {
     const firstError = input.issues.find((issue) => issue.level === "error");
     if (!firstError) return;
-    this.database
-      .prepare(
-        `INSERT INTO operational_attention_events (
-          id, event_type, source, workflow_id, created_at, severity, summary, details_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.database.execute(
+      `INSERT INTO operational_attention_events (
+        id, event_type, source, workflow_id, created_at, severity, summary, details_json, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
         randomUUID(),
         "launch_blocked",
         "manual",
@@ -104,29 +106,55 @@ export class OperationsRepository {
             message: sanitizeSummary(issue.message),
           })),
         }),
-      );
+        this.database.ownerId,
+      ],
+    );
   }
 
-  getOverview(
+  async getOverview(
     request: OperationsOverviewRequest,
     liveSnapshots: WorkflowRunSnapshot[],
-  ): OperationsOverview {
+  ): Promise<OperationsOverview> {
     const range = validateRange(request);
     const limits = dashboardLimits(request);
     const activeSnapshots = liveSnapshots.filter((snapshot) => snapshot.state.status === "running");
-    const liveRuns = activeSnapshots.map((snapshot) => this.liveRunFromSnapshot(snapshot));
-    const runFailures = this.failedRunAttention(range.day_start_utc, range.day_end_utc);
-    const launchBlocks = this.launchBlockedAttention(range.day_start_utc, range.day_end_utc);
-    const scheduleAttention = this.scheduleAttention(range.day_start_utc, range.day_end_utc);
+    
+    // Asynchronously call all helpers
+    const liveRunsPromises = Promise.all(activeSnapshots.map(async (snapshot) => await this.liveRunFromSnapshot(snapshot)));
+    const runFailuresPromise = this.failedRunAttention(range.day_start_utc, range.day_end_utc);
+    const launchBlocksPromise = this.launchBlockedAttention(range.day_start_utc, range.day_end_utc);
+    const scheduleAttentionPromise = this.scheduleAttention(range.day_start_utc, range.day_end_utc);
+    const upcomingSchedulesPromise = this.upcomingSchedules();
+    const succeededRunCountPromise = this.succeededRunCount(range.day_start_utc, range.day_end_utc);
+    const succeededRunTimesPromise = this.succeededRunTimes(range.day_start_utc, range.day_end_utc);
+    
+    const [
+      liveRuns,
+      runFailures,
+      launchBlocks,
+      scheduleAttention,
+      upcomingSchedules,
+      succeededToday,
+      succeededTimes,
+    ] = await Promise.all([
+      liveRunsPromises,
+      runFailuresPromise,
+      launchBlocksPromise,
+      scheduleAttentionPromise,
+      upcomingSchedulesPromise,
+      succeededRunCountPromise,
+      succeededRunTimesPromise,
+    ]);
+
     const allAttention = [...runFailures, ...launchBlocks, ...scheduleAttention]
       .filter((item) => attentionMatchesFilter(item, request))
       .sort((left, right) => right.occurred_at.localeCompare(left.occurred_at));
     const unfilteredAttentionCount = runFailures.length + launchBlocks.length + scheduleAttention.length;
-    const upcomingSchedules = this.upcomingSchedules();
+    
     evidenceSkippedCount = 0;
-    const evidence = this.recentEvidence(limits.recent_evidence);
+    const evidence = await this.recentEvidence(limits.recent_evidence);
     const activity = this.activityBuckets(range.day_start_utc, range.day_end_utc, {
-      succeededRuns: this.succeededRunTimes(range.day_start_utc, range.day_end_utc),
+      succeededRuns: succeededTimes,
       failedRuns: runFailures.map((item) => item.occurred_at),
       blocked: launchBlocks.map((item) => item.occurred_at),
       scheduleAttention: scheduleAttention.map((item) => item.occurred_at),
@@ -137,7 +165,7 @@ export class OperationsRepository {
       range,
       metrics: {
         active_runs: activeSnapshots.length,
-        succeeded_today: this.succeededRunCount(range.day_start_utc, range.day_end_utc),
+        succeeded_today: succeededToday,
         attention_today: unfilteredAttentionCount,
         upcoming_schedules: upcomingSchedules.length,
       },
@@ -150,7 +178,8 @@ export class OperationsRepository {
     };
   }
 
-  private liveRunFromSnapshot(snapshot: WorkflowRunSnapshot): OverviewLiveRun {
+  private async liveRunFromSnapshot(snapshot: WorkflowRunSnapshot): Promise<OverviewLiveRun> {
+    const identityName = await this.identityDisplayName(snapshot.run_id, snapshot.workflow_id);
     return {
       run_id: snapshot.run_id,
       workflow_id: snapshot.workflow_id,
@@ -160,77 +189,75 @@ export class OperationsRepository {
       current_step_id: snapshot.state.current_step_id,
       current_step_number: snapshot.state.current_step_number,
       started_at: snapshot.started_at,
-      identity_display_name: this.identityDisplayName(snapshot.run_id, snapshot.workflow_id),
+      identity_display_name: identityName,
       navigation_target: { type: "workflow", workflow_id: snapshot.workflow_id },
     };
   }
 
-  private identityDisplayName(runId: string, workflowId: string) {
-    const row = this.database
-      .prepare(
-        `SELECT
-          runs.settings_snapshot_json,
-          workflows.settings_json
-         FROM workflows
-         LEFT JOIN runs ON runs.id = ?
-         WHERE workflows.id = ?`,
-      )
-      .get(runId, workflowId) as
+  private async identityDisplayName(runId: string, workflowId: string): Promise<string | null> {
+    const row = await this.database.queryOne(
+      `SELECT
+        runs.settings_snapshot_json,
+        workflows.settings_json
+       FROM workflows
+       LEFT JOIN runs ON runs.id = $1 AND runs.owner_id = $2
+       WHERE workflows.id = $3 AND workflows.owner_id = $2`,
+      [runId, this.database.ownerId, workflowId],
+    ) as
       | { settings_snapshot_json?: string | null; settings_json?: string | null }
-      | undefined;
+      | null;
     const settings = parseJsonRecord(row?.settings_snapshot_json) ?? parseJsonRecord(row?.settings_json);
     const browserLaunch = parseJsonRecord(settings?.browser_launch);
     return stringValue(browserLaunch?.display_name) ?? stringValue(browserLaunch?.identity_id);
   }
 
-  private succeededRunCount(start: string, end: string) {
-    const row = this.database
-      .prepare(
-        `SELECT COUNT(*) AS count
-         FROM runs
-         WHERE status = 'success'
-           AND finished_at >= ?
-           AND finished_at < ?`,
-      )
-      .get(start, end) as { count: number } | undefined;
-    return row?.count ?? 0;
+  private async succeededRunCount(start: string, end: string): Promise<number> {
+    const row = await this.database.queryOne(
+      `SELECT COUNT(*) AS count
+       FROM runs
+       WHERE status = 'success'
+         AND finished_at >= $1
+         AND finished_at < $2
+         AND owner_id = $3`,
+      [start, end, this.database.ownerId],
+    ) as { count: number | string } | null;
+    return row ? Number(row.count) : 0;
   }
 
-  private succeededRunTimes(start: string, end: string) {
-    return (
-      this.database
-        .prepare(
-          `SELECT finished_at
-           FROM runs
-           WHERE status = 'success'
-             AND finished_at >= ?
-             AND finished_at < ?`,
-        )
-        .all(start, end) as Array<{ finished_at: string }>
-    ).map((row) => row.finished_at);
+  private async succeededRunTimes(start: string, end: string): Promise<string[]> {
+    const rows = await this.database.query(
+      `SELECT finished_at
+       FROM runs
+       WHERE status = 'success'
+         AND finished_at >= $1
+         AND finished_at < $2
+         AND owner_id = $3`,
+      [start, end, this.database.ownerId],
+    ) as Array<{ finished_at: string }>;
+    return rows.map((row) => row.finished_at);
   }
 
-  private failedRunAttention(start: string, end: string): OverviewAttentionItem[] {
-    const rows = this.database
-      .prepare(
-        `SELECT
-          runs.id,
-          runs.workflow_id,
-          workflows.name AS workflow_name,
-          runs.status,
-          runs.started_at,
-          runs.finished_at,
-          runs.settings_snapshot_json,
-          runs.outputs_json,
-          runs.error_json
-         FROM runs
-         INNER JOIN workflows ON workflows.id = runs.workflow_id
-         WHERE runs.status = 'failed'
-           AND COALESCE(runs.finished_at, runs.started_at) >= ?
-           AND COALESCE(runs.finished_at, runs.started_at) < ?
-         ORDER BY COALESCE(runs.finished_at, runs.started_at) DESC`,
-      )
-      .all(start, end) as RunRow[];
+  private async failedRunAttention(start: string, end: string): Promise<OverviewAttentionItem[]> {
+    const rows = await this.database.query(
+      `SELECT
+        runs.id,
+        runs.workflow_id,
+        workflows.name AS workflow_name,
+        runs.status,
+        runs.started_at,
+        runs.finished_at,
+        runs.settings_snapshot_json,
+        runs.outputs_json,
+        runs.error_json
+       FROM runs
+       INNER JOIN workflows ON workflows.id = runs.workflow_id
+       WHERE runs.status = 'failed'
+         AND COALESCE(runs.finished_at, runs.started_at) >= $1
+         AND COALESCE(runs.finished_at, runs.started_at) < $2
+         AND runs.owner_id = $3
+       ORDER BY COALESCE(runs.finished_at, runs.started_at) DESC`,
+      [start, end, this.database.ownerId],
+    ) as RunRow[];
     return rows.map((row) => ({
       id: `run:${row.id}`,
       source_kind: "run_failed",
@@ -244,26 +271,26 @@ export class OperationsRepository {
     }));
   }
 
-  private launchBlockedAttention(start: string, end: string): OverviewAttentionItem[] {
-    const rows = this.database
-      .prepare(
-        `SELECT
-          events.id,
-          events.event_type,
-          events.source,
-          events.workflow_id,
-          workflows.name AS workflow_name,
-          events.created_at,
-          events.severity,
-          events.summary,
-          events.details_json
-         FROM operational_attention_events events
-         INNER JOIN workflows ON workflows.id = events.workflow_id
-         WHERE events.created_at >= ?
-           AND events.created_at < ?
-         ORDER BY events.created_at DESC`,
-      )
-      .all(start, end) as AttentionEventRow[];
+  private async launchBlockedAttention(start: string, end: string): Promise<OverviewAttentionItem[]> {
+    const rows = await this.database.query(
+      `SELECT
+        events.id,
+        events.event_type,
+        events.source,
+        events.workflow_id,
+        workflows.name AS workflow_name,
+        events.created_at,
+        events.severity,
+        events.summary,
+        events.details_json
+       FROM operational_attention_events events
+       INNER JOIN workflows ON workflows.id = events.workflow_id
+       WHERE events.created_at >= $1
+         AND events.created_at < $2
+         AND events.owner_id = $3
+       ORDER BY events.created_at DESC`,
+      [start, end, this.database.ownerId],
+    ) as AttentionEventRow[];
     return rows.map((row) => ({
       id: row.id,
       source_kind: "launch_blocked",
@@ -276,27 +303,27 @@ export class OperationsRepository {
     }));
   }
 
-  private scheduleAttention(start: string, end: string): OverviewAttentionItem[] {
-    const rows = this.database
-      .prepare(
-        `SELECT
-          events.id,
-          events.schedule_id,
-          events.workflow_id,
-          workflows.name AS workflow_name,
-          events.event_type,
-          events.run_id,
-          events.scheduled_for,
-          events.created_at,
-          events.reason
-         FROM workflow_schedule_events events
-         INNER JOIN workflows ON workflows.id = events.workflow_id
-         WHERE events.event_type IN ('failed_to_start', 'skipped')
-           AND events.created_at >= ?
-           AND events.created_at < ?
-         ORDER BY events.created_at DESC`,
-      )
-      .all(start, end) as ScheduleEventRow[];
+  private async scheduleAttention(start: string, end: string): Promise<OverviewAttentionItem[]> {
+    const rows = await this.database.query(
+      `SELECT
+        events.id,
+        events.schedule_id,
+        events.workflow_id,
+        workflows.name AS workflow_name,
+        events.event_type,
+        events.run_id,
+        events.scheduled_for,
+        events.created_at,
+        events.reason
+       FROM workflow_schedule_events events
+       INNER JOIN workflows ON workflows.id = events.workflow_id
+       WHERE events.event_type IN ('failed_to_start', 'skipped')
+         AND events.created_at >= $1
+         AND events.created_at < $2
+         AND events.owner_id = $3
+       ORDER BY events.created_at DESC`,
+      [start, end, this.database.ownerId],
+    ) as ScheduleEventRow[];
     return rows.map((row) => ({
       id: `schedule:${row.id}`,
       source_kind: "schedule_event",
@@ -312,25 +339,25 @@ export class OperationsRepository {
     }));
   }
 
-  private upcomingSchedules(): OverviewUpcomingSchedule[] {
-    const rows = this.database
-      .prepare(
-        `SELECT
-          schedules.id,
-          schedules.workflow_id,
-          workflows.name AS workflow_name,
-          schedules.name,
-          schedules.next_run_at,
-          schedules.last_status,
-          schedules.last_reason
-         FROM workflow_schedules schedules
-         INNER JOIN workflows ON workflows.id = schedules.workflow_id
-         WHERE schedules.enabled = 1
-           AND schedules.next_run_at IS NOT NULL
-         ORDER BY schedules.next_run_at ASC, schedules.name ASC
-         LIMIT 51`,
-      )
-      .all() as ScheduleRow[];
+  private async upcomingSchedules(): Promise<OverviewUpcomingSchedule[]> {
+    const rows = await this.database.query(
+      `SELECT
+        schedules.id,
+        schedules.workflow_id,
+        workflows.name AS workflow_name,
+        schedules.name,
+        schedules.next_run_at,
+        schedules.last_status,
+        schedules.last_reason
+       FROM workflow_schedules schedules
+       INNER JOIN workflows ON workflows.id = schedules.workflow_id
+       WHERE schedules.enabled = 1
+         AND schedules.next_run_at IS NOT NULL
+         AND schedules.owner_id = $1
+       ORDER BY schedules.next_run_at ASC, schedules.name ASC
+       LIMIT 51`,
+      [this.database.ownerId],
+    ) as ScheduleRow[];
     return rows.map((row) => ({
       schedule_id: row.id,
       workflow_id: row.workflow_id,
@@ -343,27 +370,26 @@ export class OperationsRepository {
     }));
   }
 
-  private recentEvidence(limit: number) {
-    const rows = this.database
-      .prepare(
-        `SELECT
-          runs.id,
-          runs.workflow_id,
-          workflows.name AS workflow_name,
-          runs.status,
-          runs.started_at,
-          runs.finished_at,
-          runs.settings_snapshot_json,
-          runs.outputs_json,
-          runs.error_json
-         FROM runs
-         INNER JOIN workflows ON workflows.id = runs.workflow_id
-         WHERE runs.outputs_json IS NOT NULL
-           AND runs.outputs_json LIKE '%"__evidence"%'
-         ORDER BY COALESCE(runs.finished_at, runs.started_at) DESC
-        `,
-      )
-      .all() as RunRow[];
+  private async recentEvidence(limit: number): Promise<{ items: OverviewEvidenceItem[]; total: number; has_more: boolean }> {
+    const rows = await this.database.query(
+      `SELECT
+        runs.id,
+        runs.workflow_id,
+        workflows.name AS workflow_name,
+        runs.status,
+        runs.started_at,
+        runs.finished_at,
+        runs.settings_snapshot_json,
+        runs.outputs_json,
+        runs.error_json
+       FROM runs
+       INNER JOIN workflows ON workflows.id = runs.workflow_id
+       WHERE runs.outputs_json IS NOT NULL
+         AND runs.outputs_json LIKE '%"__evidence"%'
+         AND runs.owner_id = $1
+       ORDER BY COALESCE(runs.finished_at, runs.started_at) DESC`,
+      [this.database.ownerId],
+    ) as RunRow[];
     const items = rows.flatMap((row) => evidenceItemsFromRun(row, limit + 1).items);
     items.sort((left, right) => (right.created_at ?? "").localeCompare(left.created_at ?? ""));
     return bounded(items, limit);

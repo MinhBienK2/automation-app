@@ -78,27 +78,24 @@ import { LoginScreen } from "./features/auth/pages/LoginScreen";
 import { AdminPanel } from "./features/auth/pages/AdminPanel";
 import type { AppScreen } from "./shared/types/workspaceContracts";
 
-const ROUTE_CONFIGS: Record<AppScreen, { allowedRoles?: ("admin" | "user")[]; allowPrivate?: boolean }> = {
-  overview: { allowPrivate: true, allowedRoles: ["admin", "user"] },
-  projects: { allowPrivate: true, allowedRoles: ["admin", "user"] },
-  detail: { allowPrivate: true, allowedRoles: ["admin", "user"] },
-  "subflow-detail": { allowPrivate: true, allowedRoles: ["admin", "user"] },
-  settings: { allowPrivate: true, allowedRoles: ["admin", "user"] },
-  schedules: { allowPrivate: true, allowedRoles: ["admin", "user"] },
-  "settings-help": { allowPrivate: true, allowedRoles: ["admin", "user"] },
-  "admin-users": { allowPrivate: false, allowedRoles: ["admin"] },
+const ROUTE_CONFIGS: Record<AppScreen, { allowedRoles?: ("admin" | "user")[] }> = {
+  overview: { allowedRoles: ["admin", "user"] },
+  projects: { allowedRoles: ["admin", "user"] },
+  detail: { allowedRoles: ["admin", "user"] },
+  "subflow-detail": { allowedRoles: ["admin", "user"] },
+  settings: { allowedRoles: ["admin", "user"] },
+  schedules: { allowedRoles: ["admin", "user"] },
+  "settings-help": { allowedRoles: ["admin", "user"] },
+  "admin-users": { allowedRoles: ["admin"] },
 };
 
 export function isRouteAllowed(
   screen: AppScreen,
-  mode: "pending" | "private" | "team",
+  mode: "pending" | "team",
   role?: "admin" | "user",
 ): boolean {
   const config = ROUTE_CONFIGS[screen];
   if (!config) return true;
-  if (mode === "private") {
-    return config.allowPrivate !== false;
-  }
   if (mode === "team") {
     if (!role) return false;
     return config.allowedRoles?.includes(role) ?? true;
@@ -689,8 +686,6 @@ function App() {
         onLogin={auth.login}
         authError={auth.authError}
         isLoading={auth.isLoggingIn}
-        onPrivate={auth.enterPrivateMode}
-        pgAvailable={auth.pgAvailable}
       />
     );
   }
@@ -725,8 +720,6 @@ function App() {
       currentUser={auth.currentUser}
       onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
       screen={nav.screen}
-      pgAvailable={auth.pgAvailable}
-      onSwitchToLoginMode={auth.switchToLoginMode}
     >
       {nav.screen === "overview" ? (
         <OperationsOverviewPage
@@ -749,15 +742,12 @@ function App() {
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
           onInstallBinary={installSettingsBrowserBinary}
           onCleanupProfiles={cleanupSettingsBrowserProfiles}
-          appMode={auth.mode === "team" ? "public" : "private"}
           theme={themePreferences.theme}
           accent={themePreferences.accent}
           density={themePreferences.density}
           onThemeChange={themePreferences.setTheme}
           onAccentChange={themePreferences.setAccent}
           onDensityChange={themePreferences.setDensity}
-          pgAvailable={auth.pgAvailable}
-          onSwitchToLoginMode={auth.switchToLoginMode}
         />
       ) : nav.screen === "admin-users" && isRouteAllowed("admin-users", auth.mode, auth.currentUser?.role) ? (
 

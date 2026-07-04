@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { login as apiLogin, logout as apiLogout, me as apiMe, getAppConfig } from "../../../lib/workflowApi";
+import { login as apiLogin, logout as apiLogout, me as apiMe } from "../../../lib/workflowApi";
 
 export interface User {
   id: string;
@@ -15,43 +15,29 @@ export function useAuthState() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [mode, setMode] = useState<"pending" | "private" | "team">("pending");
-  const [pgAvailable, setPgAvailable] = useState(false);
-  const [publicDatabaseUrl, setPublicDatabaseUrl] = useState("");
+  const [mode, setMode] = useState<"pending" | "team">("pending");
 
   const loadConfigAndSession = useCallback(async () => {
     try {
       setIsLoading(true);
-      const config = await getAppConfig();
-      const isPgConfigured = config.mode === "public";
-      setPgAvailable(isPgConfigured);
-      setPublicDatabaseUrl(config.publicDatabaseUrl || "");
+      const savedToken = localStorage.getItem("auth_token");
 
-      if (!isPgConfigured) {
-        setMode("private");
-      } else {
-        const preferredMode = localStorage.getItem("preferred_mode");
-        const savedToken = localStorage.getItem("auth_token");
-
-        if (preferredMode === "private") {
-          setMode("private");
-        } else if (savedToken) {
-          const user = await apiMe({ token: savedToken });
-          if (user) {
-            setCurrentUser(user);
-            setToken(savedToken);
-            setMode("team");
-          } else {
-            localStorage.removeItem("auth_token");
-            setMode("pending");
-          }
+      if (savedToken) {
+        const user = await apiMe({ token: savedToken });
+        if (user) {
+          setCurrentUser(user);
+          setToken(savedToken);
+          setMode("team");
         } else {
+          localStorage.removeItem("auth_token");
           setMode("pending");
         }
+      } else {
+        setMode("pending");
       }
     } catch (error: any) {
       console.error("Failed to load auth config or session:", error);
-      setMode("private");
+      setMode("pending");
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +55,6 @@ export function useAuthState() {
       setCurrentUser(response.user);
       setToken(response.token);
       localStorage.setItem("auth_token", response.token);
-      localStorage.setItem("preferred_mode", "team");
       setMode("team");
       return true;
     } catch (error: any) {
@@ -87,23 +72,12 @@ export function useAuthState() {
       setCurrentUser(null);
       setToken(null);
       localStorage.removeItem("auth_token");
-      localStorage.removeItem("preferred_mode");
       setMode("pending");
     } catch (error) {
       console.error("Failed to log out:", error);
     } finally {
       setIsLoggingOut(false);
     }
-  }, []);
-
-  const enterPrivateMode = useCallback(() => {
-    localStorage.setItem("preferred_mode", "private");
-    setMode("private");
-  }, []);
-
-  const switchToLoginMode = useCallback(() => {
-    localStorage.removeItem("preferred_mode");
-    setMode("pending");
   }, []);
 
   return {
@@ -114,12 +88,8 @@ export function useAuthState() {
     isLoggingOut,
     authError,
     mode,
-    pgAvailable,
-    publicDatabaseUrl,
     login,
     logout,
-    enterPrivateMode,
-    switchToLoginMode,
     reloadSession: loadConfigAndSession,
   };
 }
