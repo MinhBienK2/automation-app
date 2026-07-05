@@ -525,6 +525,80 @@ describe("Workflow detail integration", () => {
     });
   });
 
+  test("enables Run from selected when the completed run is returned from list_run_states", async () => {
+    const scenario = workflowDetailScenario([sleepStep]);
+    const browserLaunch = {
+      ...scenario.get_workflow_settings.browser_launch,
+      session_mode: "persistent_profile",
+      profile_dir: "qa-profile-dir",
+      profile_name: "legacy-display-name",
+    };
+    const selectedWorkflow = {
+      ...workflow,
+      project_id: "project-1",
+      browser_profile_id: "environment-qa",
+      browser_profile_name: "QA profile",
+    };
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      list_workflows: () => [selectedWorkflow],
+      list_browser_profiles: () => [
+        {
+          id: "environment-qa",
+          project_id: "project-1",
+          name: "QA profile",
+          description: "",
+          is_default: true,
+          browser_launch: browserLaunch,
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      get_workflow: ({ id }: { id: string }) => ({
+        workflow: selectedWorkflow,
+        steps: id === selectedWorkflow.id ? [sleepStep] : [],
+      }),
+      save_workflow_graph: undefined,
+      get_run_state: idleRunState,
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: selectedWorkflow.id,
+          workflow_name: selectedWorkflow.name,
+          source: "manual",
+          started_at: "2026-05-27T09:00:00.000Z",
+          state: {
+            ...idleRunState,
+            status: "success" as const,
+            retained_session: {
+              available: true,
+              workflow_id: selectedWorkflow.id,
+              profile_name: "qa-profile-dir",
+              reason: null,
+            },
+          },
+        },
+      ],
+      get_workflow_settings: {
+        ...scenario.get_workflow_settings,
+        run_policy: {
+          ...scenario.get_workflow_settings.run_policy,
+          browser_retention: "retain",
+          run_from_selected_enabled: true,
+          run_from_selected_mode: "from_selected",
+        },
+        browser_launch: browserLaunch,
+      },
+    });
+
+    renderApp();
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
+    const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
+    await waitFor(() => expect(runFromSelected).toBeEnabled());
+  });
+
   test("enables Run from selected for a main-path node after a merge", async () => {
     const scenario = workflowDetailScenario([sleepStep]);
     const browserLaunch = {

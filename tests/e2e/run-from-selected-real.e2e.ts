@@ -105,4 +105,63 @@ test.describe("run from selected real session", () => {
         retained: true,
       });
   });
+
+  test("enables the detail action after running from the detail page without reload", async ({
+    appWindow,
+    fixtureServer,
+  }) => {
+    const graph = linearGraph([
+      {
+        id: "visit",
+        label: "Visit fixture",
+        config: { type: "navigate", config: { url: `${fixtureServer.baseUrl}/basic` } },
+      },
+    ]);
+
+    // Create workflow
+    await appWindow.evaluate(async ({ workflowGraph }) => {
+      const api = window.workflowApi;
+      if (!api) throw new Error("Workflow API bridge is unavailable");
+
+      const workflow = await api.createWorkflow("Run from detail page directly");
+      const settings = await api.getWorkflowSettings(workflow.id);
+      await api.saveWorkflowSettings(workflow.id, {
+        ...settings,
+        run_policy: {
+          ...settings.run_policy,
+          browser_retention: "retain",
+          run_from_selected_enabled: true,
+          run_from_selected_mode: "from_selected",
+        },
+        browser_launch: {
+          ...settings.browser_launch,
+          session_mode: "persistent_profile",
+          profile_name:
+            settings.browser_launch.profile_dir ??
+            settings.browser_launch.profile_name,
+          headless: true,
+        },
+      });
+      await api.saveWorkflowGraph(workflow.id, workflowGraph);
+    }, { workflowGraph: graph });
+
+    // Open detail page in UI
+    await appWindow.getByRole("button", { name: "View Details" }).last().click();
+
+    // Click Run button in UI
+    await appWindow.getByRole("button", { name: "Run" }).click();
+
+    // Wait for the run to finish (Run button becomes enabled again)
+    const runButton = appWindow.getByRole("button", { name: "Run" });
+    await expect(runButton).toBeDisabled();
+    await expect(runButton).toBeEnabled({ timeout: 30000 });
+
+    // Click a node in the graph
+    const editor = appWindow.getByRole("region", { name: "Visual Graph" });
+    await editor.getByRole("button", { name: "Graph canvas node visit" }).click();
+
+    // Verify Run from selected is enabled
+    const runFromSelected = appWindow.getByRole("button", { name: "Run from selected" });
+    await expect(runFromSelected).toBeEnabled();
+  });
 });

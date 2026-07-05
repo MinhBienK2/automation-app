@@ -1034,5 +1034,51 @@ describe("Settings commands integration", () => {
     expect(overview.recent_evidence.items).toEqual([]);
     expect(overview.data_warnings.evidence_items_skipped).toBe(3);
   });
+
+  test("resolves a null browser_profile_id in getWorkflowSettings to the project default browser profile", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = await handlers.createWorkflow("Profile fallback test");
+    
+    // Create a default project profile with a specific profile_dir
+    const profileId = "profile-project-default";
+    await database.execute(
+      `INSERT INTO browser_profiles (
+        id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at, owner_id
+      ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9)`,
+      [
+        profileId,
+        workflow.project_id,
+        "Default Profile",
+        "",
+        JSON.stringify({ session_mode: "persistent_profile", profile_dir: "project-default-dir" }),
+        JSON.stringify({ variables: [] }),
+        new Date().toISOString(),
+        new Date().toISOString(),
+        database.ownerId,
+      ]
+    );
+
+    // Explicitly set browser_profile_id to null and update settings to use a different profile_dir
+    await database.execute(
+      "UPDATE workflows SET browser_profile_id = NULL WHERE id = $1 AND owner_id = $2",
+      [workflow.id, database.ownerId]
+    );
+
+    const settings = await handlers.getWorkflowSettings(workflow.id);
+    await handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        profile_dir: "workflow-specific-dir",
+      },
+    });
+
+    // Now, get the settings again.
+    // If the backend resolves null browser_profile_id to the default profile,
+    // it should return settings with profile_dir = "project-default-dir" (merged from the default profile).
+    // If it doesn't resolve, it will return "workflow-specific-dir".
+    const refreshed = await handlers.getWorkflowSettings(workflow.id);
+    expect(refreshed.browser_launch.profile_dir).toBe("project-default-dir");
+  });
 });
 

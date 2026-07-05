@@ -115,7 +115,8 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     if (profileId && profiles.some((profile) => profile.id === profileId)) {
       return profileId;
     }
-    return profiles[0]?.id ?? null;
+    const defaultProfile = profiles.find((profile) => profile.is_default);
+    return defaultProfile?.id ?? profiles[0]?.id ?? null;
   }, []);
 
   const performOpenWorkflow = useCallback(async (id: string) => {

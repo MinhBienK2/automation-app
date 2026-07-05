@@ -319,10 +319,22 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const normalized = persisted
       ? settingsService.normalizeWorkflowSettings(persisted, workflow)
       : settingsService.defaultWorkflowSettings(workflow);
-    const profileId = workflow.browser_profile_id;
-    if (!profileId) return normalized;
-    const browserProfile = await repository.getBrowserProfile(profileId);
-    if (!browserProfile || browserProfile.project_id !== workflow.project_id) return normalized;
+    
+    let browserProfile = workflow.browser_profile_id
+      ? await repository.getBrowserProfile(workflow.browser_profile_id)
+      : null;
+    
+    if (!browserProfile || browserProfile.project_id !== workflow.project_id) {
+      if (workflow.project_id) {
+        const defaultProfile = await repository.getDefaultBrowserProfile(workflow.project_id);
+        if (defaultProfile) {
+          browserProfile = defaultProfile;
+        }
+      }
+    }
+
+    if (!browserProfile) return normalized;
+
     return settingsService.normalizeWorkflowSettings(
       {
         ...normalized,
