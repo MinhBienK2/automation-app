@@ -39,6 +39,16 @@ function cleanForIpc<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
+function cleanOptionsForIpc(options?: { comment?: string; tag?: string }) {
+  if (!options || typeof options !== "object" || "nativeEvent" in options) {
+    return undefined;
+  }
+  return {
+    comment: options.comment,
+    tag: options.tag,
+  };
+}
+
 export function listWorkflows() {
   return bridge().listWorkflows();
 }
@@ -138,7 +148,7 @@ export function getSubflowGraph(subflowId: string) {
 }
 
 export function saveSubflowGraph(subflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
-  return bridge().saveSubflowGraph(subflowId, cleanForIpc(graph), options);
+  return bridge().saveSubflowGraph(subflowId, cleanForIpc(graph), cleanOptionsForIpc(options));
 }
 
 export function duplicateSubflow(subflowId: string, name: string) {
@@ -234,7 +244,7 @@ export function getWorkflowGraph(workflowId: string) {
 }
 
 export function saveWorkflowGraph(workflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
-  return bridge().saveWorkflowGraph(workflowId, cleanForIpc(graph), options);
+  return bridge().saveWorkflowGraph(workflowId, cleanForIpc(graph), cleanOptionsForIpc(options));
 }
 
 export function validateWorkflowGraph(graph: WorkflowGraph) {

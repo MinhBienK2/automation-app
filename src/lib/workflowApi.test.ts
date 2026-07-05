@@ -654,6 +654,39 @@ describe("workflow API settings commands", () => {
       settings,
     );
   });
+
+  test("sanitizes options parameter to prevent passing React/Mouse events over IPC", async () => {
+    resetWorkflowBridge();
+    workflowBridgeMock.saveWorkflowGraph.mockResolvedValue(undefined);
+    workflowBridgeMock.saveSubflowGraph.mockResolvedValue(undefined);
+
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    const mockEvent = {
+      preventDefault: () => {},
+      nativeEvent: {},
+      target: {},
+    } as any;
+
+    await saveWorkflowGraph("workflow-1", graph, mockEvent);
+    await saveSubflowGraph("subflow-1", graph, mockEvent);
+
+    expect(workflowBridgeMock.saveWorkflowGraph).toHaveBeenCalledWith(
+      "workflow-1",
+      graph,
+      undefined,
+    );
+    expect(workflowBridgeMock.saveSubflowGraph).toHaveBeenCalledWith(
+      "subflow-1",
+      graph,
+      undefined,
+    );
+  });
 });
 
 function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {
