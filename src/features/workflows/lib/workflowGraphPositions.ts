@@ -58,10 +58,31 @@ function nodeColumnsOverlap(leftX: number, rightX: number) {
   return leftX < rightX + graphNodeWidth && rightX < leftX + graphNodeWidth;
 }
 
+let lastNodesSig = "";
+let lastEdgesSig = "";
+let lastPositions: Map<string, GraphPosition> | null = null;
+
 export function displayPositionsForGraphNodes(
   nodes: GraphNode[],
   edges: GraphEdge[],
 ): Map<string, GraphPosition> {
+  const nodesSig = nodes
+    .map(
+      (n) =>
+        `${n.id}:${n.position.x},${n.position.y}:${(n.ports ?? []).map((p) => `${p.id},${p.direction}`).join(";")}`,
+    )
+    .join("|");
+  const edgesSig = edges
+    .map(
+      (e) =>
+        `${e.id}:${e.source_node_id}:${e.source_port}:${e.target_node_id}:${e.target_port}`,
+    )
+    .join("|");
+
+  if (lastPositions && nodesSig === lastNodesSig && edgesSig === lastEdgesSig) {
+    return lastPositions;
+  }
+
   const positions = new Map<string, GraphPosition>();
 
   // 1. Initial pass: node-node collision resolution (same as original implementation)
@@ -290,5 +311,8 @@ export function displayPositionsForGraphNodes(
     }
   }
 
+  lastNodesSig = nodesSig;
+  lastEdgesSig = edgesSig;
+  lastPositions = positions;
   return positions;
 }

@@ -195,6 +195,21 @@ export function WorkflowGraphEditor({
   const flowGraphRef = useRef<ReturnType<typeof toReactFlowGraph> | null>(null);
   const reactFlowNodesRef = useRef<WorkflowFlowNode[]>([]);
   const reactFlowEdgesRef = useRef<WorkflowFlowEdge[]>([]);
+  const onChangeRef = useRef(onChange);
+  const defaultEdgeDelayRef = useRef(defaultEdgeDelay);
+  const syncFlowGraphRef = useRef<((nodes: any[], edges: any[]) => void) | null>(null);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    defaultEdgeDelayRef.current = defaultEdgeDelay;
+  }, [defaultEdgeDelay]);
+
+  useEffect(() => {
+    syncFlowGraphRef.current = syncFlowGraph;
+  }, [syncFlowGraph]);
   const {
     isSelectionSubflowDialogOpen,
     selectionSubflowName,
@@ -323,14 +338,14 @@ export function WorkflowGraphEditor({
           hasIssue: false,
           status: "idle",
           kind: edgeKindForFlowSource(currentFlowGraph.nodes, source.nodeId, source.portId),
-          delay: cloneGraphEdgeDelay(defaultEdgeDelay),
+          delay: cloneGraphEdgeDelay(defaultEdgeDelayRef.current),
         },
       };
       const nextEdges = replacePortEdge(currentFlowGraph.edges, nextEdge, currentFlowGraph.nodes);
       setReactFlowEdges(nextEdges);
-      syncFlowGraph(currentFlowGraph.nodes, nextEdges);
+      syncFlowGraphRef.current?.(currentFlowGraph.nodes, nextEdges);
     },
-    [defaultEdgeDelay, onChange],
+    [],
   );
   const clearPreviewConnection = useCallback(() => {
     activePortConnectionRef.current = null;

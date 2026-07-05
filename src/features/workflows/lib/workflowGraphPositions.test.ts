@@ -237,5 +237,45 @@ describe("displayPositionsForGraphNodes - Node-Edge collision resolution", () =>
     // Vertical segment top is 141. Node C should be pushed UP to at most 141 - 82 - 24 = 35
     expect(posC?.y).toBeLessThanOrEqual(35);
   });
+
+  test("caches resolved positions map when layout-relevant properties are unchanged", () => {
+    const nodes: GraphNode[] = [
+      {
+        id: "nodeA",
+        node_type: "action",
+        label: "Node A",
+        position: { x: 0, y: 100 },
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+        config: {},
+      },
+    ];
+    const edges: GraphEdge[] = [];
+
+    const positions1 = displayPositionsForGraphNodes(nodes, edges);
+    const positions2 = displayPositionsForGraphNodes(nodes, edges);
+
+    // This should fail currently since it returns a new Map reference on each call
+    expect(positions1).toBe(positions2);
+
+    // If we update a non-layout property (e.g. label), it should still hits cache
+    const nonLayoutChangeNodes: GraphNode[] = [
+      {
+        ...nodes[0],
+        label: "Node A Edited",
+      },
+    ];
+    const positionsCacheHit = displayPositionsForGraphNodes(nonLayoutChangeNodes, edges);
+    expect(positionsCacheHit).toBe(positions1);
+
+    // Changing layout-relevant properties (e.g. position) should invalidate cache
+    const layoutChangeNodes: GraphNode[] = [
+      {
+        ...nodes[0],
+        position: { x: 100, y: 100 },
+      },
+    ];
+    const positions3 = displayPositionsForGraphNodes(layoutChangeNodes, edges);
+    expect(positions3).not.toBe(positions1);
+  });
 });
 

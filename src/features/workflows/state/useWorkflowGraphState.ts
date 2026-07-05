@@ -61,6 +61,8 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
 
   const graphRevisionRef = useRef(graphRevision);
   const savedGraphRevisionRef = useRef(savedGraphRevision);
+  const workflowGraphRef = useRef(workflowGraph);
+  const graphIssuesRef = useRef(graphIssues);
 
   useEffect(() => {
     graphRevisionRef.current = graphRevision;
@@ -70,18 +72,26 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
     savedGraphRevisionRef.current = savedGraphRevision;
   }, [savedGraphRevision]);
 
+  useEffect(() => {
+    workflowGraphRef.current = workflowGraph;
+  }, [workflowGraph]);
+
+  useEffect(() => {
+    graphIssuesRef.current = graphIssues;
+  }, [graphIssues]);
+
   const changeWorkflowGraph = useCallback((nextGraph: WorkflowGraph) => {
-    const hasEditableChange = hasEditableGraphChange(workflowGraph, nextGraph);
+    const hasEditableChange = hasEditableGraphChange(workflowGraphRef.current, nextGraph);
     setWorkflowGraph(nextGraph);
     if (!hasEditableChange) return;
-    setGraphIssuesNeedRecheck((current) => current || graphIssues.length > 0);
+    setGraphIssuesNeedRecheck((current) => current || graphIssuesRef.current.length > 0);
     setGraphRevision((current) => {
       const nextRevision = current + 1;
       graphRevisionRef.current = nextRevision;
       return nextRevision;
     });
     setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
-  }, [graphAutosaveEnabled, graphIssues.length, workflowGraph, setWorkflowGraph, setGraphIssuesNeedRecheck, setGraphRevision, setGraphSaveStatus]);
+  }, [graphAutosaveEnabled, setWorkflowGraph, setGraphIssuesNeedRecheck, setGraphRevision, setGraphSaveStatus]);
 
   const persistCurrentGraph = useCallback(async (options?: { comment?: string; tag?: string }) => {
     if (!detail || !workflowGraph) return false;
