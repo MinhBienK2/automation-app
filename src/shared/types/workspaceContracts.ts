@@ -185,7 +185,7 @@ export interface SubflowWorkspaceAPI {
   subflowsLoading: boolean;
   selectedSubflow: Subflow | null;
   selectedSubflowGraph: WorkflowGraph | null;
-  selectedSubflowUsage: SubflowUsage[];
+  selectedSubflowUsage: SubflowUsage[] | null;
   subflowBackTarget: SubflowBackTarget;
   subflowGraphSaveStatus: GraphSaveStatus;
 
@@ -193,7 +193,7 @@ export interface SubflowWorkspaceAPI {
   setSubflowsLoading: (loading: boolean) => void;
   setSelectedSubflow: (subflow: Subflow | null) => void;
   setSelectedSubflowGraph: (graph: WorkflowGraph | null) => void;
-  setSelectedSubflowUsage: (usage: SubflowUsage[]) => void;
+  setSelectedSubflowUsage: (usage: SubflowUsage[] | null) => void;
   setSubflowBackTarget: (target: SubflowBackTarget) => void;
   setSubflowGraphSaveStatus: (status: GraphSaveStatus) => void;
 

@@ -91,7 +91,7 @@ export function WorkflowSettingsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={requestOpenChange}>
-        {settings ? (
+        {open ? (
           <DialogContent className="workflow-settings-dialog">
             <DialogHeader className="workflow-settings-dialog-header">
               <div className="workflow-settings-title-row">
@@ -110,8 +110,9 @@ export function WorkflowSettingsDialog({
                   shape="pill"
                   type="button"
                   onClick={() => {
-                    void onSaveSettings();
+                    if (settings) void onSaveSettings();
                   }}
+                  disabled={!settings}
                 >
                   <Save aria-hidden="true" />
                   Save Settings
@@ -135,6 +136,7 @@ export function WorkflowSettingsDialog({
                     variant={activeSection === section.id ? "default" : "ghost"}
                     aria-selected={activeSection === section.id}
                     onClick={() => onActiveSectionChange(section.id)}
+                    disabled={!settings}
                   >
                     {section.label}
                   </Button>
@@ -146,49 +148,68 @@ export function WorkflowSettingsDialog({
                 className="workflow-settings-content"
                 role="tabpanel"
               >
-                <div className="workflow-settings-section-header">
-                  <div>
-                    <h2 id="workflow-settings-section-title">{activeMeta.label}</h2>
-                    {activeSection !== "environment" && (
-                      <p>{workflowSettingsHelp[activeSection]?.en.summary}</p>
-                    )}
+                {settings ? (
+                  <>
+                    <div className="workflow-settings-section-header">
+                      <div>
+                        <h2 id="workflow-settings-section-title">{activeMeta.label}</h2>
+                        {activeSection !== "environment" && (
+                          <p>{workflowSettingsHelp[activeSection]?.en.summary}</p>
+                        )}
+                      </div>
+                      <WorkflowSettingsHelpButton section={activeSection} />
+                    </div>
+
+                    {error ? <p className="field-error">{error}</p> : null}
+
+                    {activeSection === "general" ? (
+                      <GeneralSettingsSection
+                        value={settings.general}
+                        onChange={(value) => updateSection("general", value)}
+                      />
+                    ) : null}
+                    {activeSection === "run_policy" ? (
+                      <RunPolicySettingsSection
+                        value={settings.run_policy}
+                        onChange={(value) => updateSection("run_policy", value)}
+                      />
+                    ) : null}
+                    {activeSection === "browser_launch" ? (
+                      <BrowserLaunchSettingsSection
+                        browserProfiles={browserProfiles}
+                        selectedBrowserProfileId={selectedBrowserProfileId}
+                        onBrowserProfileChange={onBrowserProfileChange}
+                      />
+                    ) : null}
+                    {activeSection === "graph_defaults" ? (
+                      <GraphDefaultsSettingsSection
+                        value={settings.graph_defaults}
+                        onChange={(value) => updateSection("graph_defaults", value)}
+                      />
+                    ) : null}
+                    {activeSection === "environment" ? (
+                      <EnvironmentSettingsSection
+                        value={settings.environment}
+                        onChange={(value) => updateSection("environment", value)}
+                      />
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="workflow-settings-skeleton animate-pulse" aria-label="Workflow Settings Loading">
+                    <div className="skeleton-title" style={{ height: "24px", width: "150px", backgroundColor: "var(--app-border)", marginBottom: "8px", borderRadius: "var(--app-radius-sm)" }} />
+                    <div className="skeleton-desc" style={{ height: "16px", width: "300px", backgroundColor: "var(--app-border-light)", marginBottom: "24px", borderRadius: "var(--app-radius-sm)" }} />
+                    <div className="skeleton-fields" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      <div className="skeleton-field">
+                        <div style={{ height: "14px", width: "80px", backgroundColor: "var(--app-border-light)", marginBottom: "8px", borderRadius: "var(--app-radius-sm)" }} />
+                        <div style={{ height: "36px", width: "100%", backgroundColor: "var(--app-surface-hover)", borderRadius: "var(--app-radius-md)", border: "1px solid var(--app-border)" }} />
+                      </div>
+                      <div className="skeleton-field">
+                        <div style={{ height: "14px", width: "100px", backgroundColor: "var(--app-border-light)", marginBottom: "8px", borderRadius: "var(--app-radius-sm)" }} />
+                        <div style={{ height: "80px", width: "100%", backgroundColor: "var(--app-surface-hover)", borderRadius: "var(--app-radius-md)", border: "1px solid var(--app-border)" }} />
+                      </div>
+                    </div>
                   </div>
-                  <WorkflowSettingsHelpButton section={activeSection} />
-                </div>
-
-                {error ? <p className="field-error">{error}</p> : null}
-
-                {activeSection === "general" ? (
-                  <GeneralSettingsSection
-                    value={settings.general}
-                    onChange={(value) => updateSection("general", value)}
-                  />
-                ) : null}
-                {activeSection === "run_policy" ? (
-                  <RunPolicySettingsSection
-                    value={settings.run_policy}
-                    onChange={(value) => updateSection("run_policy", value)}
-                  />
-                ) : null}
-                {activeSection === "browser_launch" ? (
-                  <BrowserLaunchSettingsSection
-                    browserProfiles={browserProfiles}
-                    selectedBrowserProfileId={selectedBrowserProfileId}
-                    onBrowserProfileChange={onBrowserProfileChange}
-                  />
-                ) : null}
-                {activeSection === "graph_defaults" ? (
-                  <GraphDefaultsSettingsSection
-                    value={settings.graph_defaults}
-                    onChange={(value) => updateSection("graph_defaults", value)}
-                  />
-                ) : null}
-                {activeSection === "environment" ? (
-                  <EnvironmentSettingsSection
-                    value={settings.environment}
-                    onChange={(value) => updateSection("environment", value)}
-                  />
-                ) : null}
+                )}
               </section>
             </div>
           </DialogContent>

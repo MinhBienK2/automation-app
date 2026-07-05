@@ -14,7 +14,7 @@ import { WorkflowGraphEditor } from "../components/WorkflowGraphEditor";
 type SubflowDetailPageProps = {
   subflow: Subflow;
   projectName?: string | null;
-  usage: SubflowUsage[];
+  usage: SubflowUsage[] | null;
   graph: WorkflowGraph | null;
   graphSaveStatus: string;
   canSaveGraph: boolean;
@@ -43,8 +43,10 @@ export function SubflowDetailPage({
   onUpdateSubflow,
 }: SubflowDetailPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const usageCount = usage.length;
-  const usageLabel = `${usageCount} ${usageCount === 1 ? "workflow" : "workflows"}`;
+  const usageCount = usage ? usage.length : 0;
+  const usageLabel = usage
+    ? `${usageCount} ${usageCount === 1 ? "workflow" : "workflows"}`
+    : "...";
 
   return (
     <section className="app-screen workflow-detail-screen">
@@ -101,10 +103,15 @@ export function SubflowDetailPage({
         <div className="panel-heading">
           <div>
             <p className="eyebrow">Usage</p>
-            <h2>Used by {usageLabel}</h2>
+            <h2>{usage ? `Used by ${usageLabel}` : "Loading usage..."}</h2>
           </div>
         </div>
-        {usageCount > 0 ? (
+        {usage === null ? (
+          <ul className="subflow-usage-list animate-pulse" aria-label="Subflow Usage Loading">
+            <li style={{ height: "16px", width: "120px", backgroundColor: "var(--app-border-light)", margin: "8px 0", borderRadius: "var(--app-radius-sm)" }} />
+            <li style={{ height: "16px", width: "160px", backgroundColor: "var(--app-border-light)", margin: "8px 0", borderRadius: "var(--app-radius-sm)" }} />
+          </ul>
+        ) : usageCount > 0 ? (
           <>
             <p className="field-warning">
               This subflow is used by {usageLabel}. Saving changes will affect their next run.
@@ -131,10 +138,25 @@ export function SubflowDetailPage({
           onSaveGraph={onSaveGraph}
         />
       ) : (
-        <div className="empty-state panel">
-          <h2>Loading graph</h2>
-          <p className="muted">Subflow graph is loading.</p>
-        </div>
+        <>
+          <div
+            className="graph-toolbar animate-pulse"
+            style={{
+              height: "48px",
+              backgroundColor: "var(--app-surface)",
+              borderBottom: "1px solid var(--app-border)",
+            }}
+          />
+          <div
+            className="graph-canvas animate-pulse"
+            aria-label="Subflow Graph Loading"
+            style={{
+              flex: 1,
+              backgroundColor: "var(--app-surface-hover)",
+              position: "relative",
+            }}
+          />
+        </>
       )}
     </section>
   );

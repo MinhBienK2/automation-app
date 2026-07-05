@@ -53,7 +53,7 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
   const [subflowsLoading, setSubflowsLoading] = useState(false);
   const [selectedSubflow, setSelectedSubflow] = useState<Subflow | null>(null);
   const [selectedSubflowGraph, setSelectedSubflowGraph] = useState<WorkflowGraph | null>(null);
-  const [selectedSubflowUsage, setSelectedSubflowUsage] = useState<SubflowUsage[]>([]);
+  const [selectedSubflowUsage, setSelectedSubflowUsage] = useState<SubflowUsage[] | null>([]);
   const [subflowBackTarget, setSubflowBackTarget] = useState<SubflowBackTarget>({ type: "subflows" });
   const [subflowGraphSaveStatus, setSubflowGraphSaveStatus] = useState<GraphSaveStatus>("saved");
 
@@ -91,17 +91,24 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
         setProjectCollection("subflows");
         return;
       }
-      const [graph, usage] = await Promise.all([
-        getSubflowGraph(subflowId),
-        getSubflowUsage(subflowId),
-      ]);
       setSelectedSubflow(loadedSubflow);
-      setSelectedSubflowGraph(graph);
-      setSelectedSubflowUsage(usage);
+      setSelectedSubflowGraph(null);
+      setSelectedSubflowUsage(null);
       setSubflowBackTarget(backTarget);
       setSubflowGraphSaveStatus("saved");
       setSidebarCollapsed(true);
       setScreen("subflow-detail");
+
+      const graphPromise = Promise.resolve(getSubflowGraph(subflowId)).catch(() => null);
+      const usagePromise = Promise.resolve(getSubflowUsage(subflowId)).catch(() => null);
+
+      const [graph, usage] = await Promise.all([
+        graphPromise,
+        usagePromise,
+      ]);
+
+      setSelectedSubflowGraph(graph);
+      setSelectedSubflowUsage(usage ?? []);
     } catch (error) {
       setAppError(commandMessage(error));
     }

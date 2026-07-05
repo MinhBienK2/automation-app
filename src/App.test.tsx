@@ -1606,4 +1606,92 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByRole("region", { name: "Visual Graph" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Visual Graph Loading")).not.toBeInTheDocument();
   });
+
+  test("shows workflow settings dialog with loading skeleton immediately when opening settings", async () => {
+    let resolveSettingsPromise: (value: any) => void = () => {};
+    const settingsPromise = new Promise((resolve) => {
+      resolveSettingsPromise = resolve;
+    });
+
+    const scenario = workflowDetailScenario([]);
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      get_workflow_settings: () => settingsPromise,
+    });
+
+    renderApp();
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    const header = await screen.findByRole("region", { name: "Workflow detail header" });
+    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+
+    // Verify dialog opens immediately
+    const dialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
+    expect(dialog).toBeInTheDocument();
+
+    // Verify loading skeleton is visible
+    expect(within(dialog).getByLabelText("Workflow Settings Loading")).toBeInTheDocument();
+
+    // Resolve settings
+    resolveSettingsPromise(scenario.get_workflow_settings);
+
+    // Verify content loads and skeleton disappears
+    await waitFor(() => {
+      expect(within(dialog).queryByLabelText("Workflow Settings Loading")).not.toBeInTheDocument();
+    });
+  });
+
+  test("shows subflow detail with loading skeleton immediately when opening subflow", async () => {
+    let resolveGraphPromise: (value: any) => void = () => {};
+    const graphPromise = new Promise((resolve) => {
+      resolveGraphPromise = resolve;
+    });
+
+    const subflow = {
+      id: "subflow-login",
+      project_id: "project-1",
+      name: "Login Subflow",
+      description: "",
+      tags: [],
+      used_by_count: 0,
+      created_at: "1",
+      updated_at: "1",
+    };
+    const graph = linearGraphFromSteps([]);
+
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_subflows: [subflow],
+      get_subflow: subflow,
+      get_subflow_graph: () => graphPromise,
+      get_subflow_usage: [],
+    });
+
+    renderApp();
+
+    await openProjectTab("Subflows");
+
+    // Click Open Login Subflow
+    await userEvent.click(await screen.findByRole("button", { name: "Open Login Subflow" }));
+
+    // Verify immediate screen transition (header title "Login Subflow" in breadcrumb should be visible)
+    const headerTitle = await screen.findByText("Login Subflow", { selector: ".page-breadcrumb-current" });
+    expect(headerTitle).toBeInTheDocument();
+
+    // Verify subflow loading skeletons are displayed
+    expect(screen.getByLabelText("Subflow Usage Loading")).toBeInTheDocument();
+    expect(screen.getByLabelText("Subflow Graph Loading")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Visual Graph" })).not.toBeInTheDocument();
+
+    // Resolve graph promise
+    resolveGraphPromise(graph);
+
+    // Verify graph loads and skeletons are gone
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Subflow Graph Loading")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Subflow Usage Loading")).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("region", { name: "Visual Graph" })).toBeInTheDocument();
+  });
 });

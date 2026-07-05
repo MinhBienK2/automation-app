@@ -191,16 +191,30 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
   ) => {
     setAppError("");
     setWorkflowSettingsActiveSection(section);
-    let workflowBrowserProfiles = browserProfiles;
+    setWorkflowSettings(null);
+    setWorkflowSettingsSavedSnapshot(null);
+    setWorkflowSettingsDialogOpen(true);
+
     if (workflow.project_id) {
       setSelectedProjectId(workflow.project_id);
-      try {
-        workflowBrowserProfiles = await listBrowserProfiles(workflow.project_id);
-        setBrowserProfiles(workflowBrowserProfiles);
-      } catch {
-        // Keep settings dialog usable if project metadata is temporarily unavailable.
-      }
     }
+
+    const profilesPromise = workflow.project_id
+      ? Promise.resolve(listBrowserProfiles(workflow.project_id)).catch(() => null)
+      : Promise.resolve(null);
+
+    const settingsPromise = Promise.resolve(getWorkflowSettings(workflow.id)).catch(() => null);
+
+    const [profilesResult, settingsResult] = await Promise.all([
+      profilesPromise,
+      settingsPromise,
+    ]);
+
+    const workflowBrowserProfiles = profilesResult ?? browserProfiles;
+    if (profilesResult) {
+      setBrowserProfiles(profilesResult);
+    }
+
     const profileId = resolveWorkflowProfileId(
       workflow.browser_profile_id,
       workflowBrowserProfiles,
@@ -208,9 +222,8 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
     setWorkflowProfileDraftId(profileId);
     setWorkflowProfileSavedId(profileId);
 
-    try {
-      const loadedSettings = await getWorkflowSettings(workflow.id);
-      const normalizedSettings = withWorkflowSettingsDefaults(loadedSettings, {
+    if (settingsResult) {
+      const normalizedSettings = withWorkflowSettingsDefaults(settingsResult, {
         workflowId: workflow.id,
         workflowName: workflow.name,
         createdAt: workflow.created_at,
@@ -222,7 +235,7 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
         : normalizedSettings;
       setWorkflowSettings(nextSettings);
       setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(nextSettings));
-    } catch {
+    } else {
       const fallbackSettings = defaultWorkflowSettings({
         workflowId: workflow.id,
         workflowName: workflow.name,
@@ -237,7 +250,6 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
       setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(nextSettings));
     }
     setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
-    setWorkflowSettingsDialogOpen(true);
   }, [
     browserProfiles,
     setSelectedProjectId,
