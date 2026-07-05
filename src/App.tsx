@@ -794,7 +794,7 @@ function App() {
  
         <AdminPanel />
       ) : nav.screen === "admin-backups" && isRouteAllowed("admin-backups", auth.mode, auth.currentUser?.role) ? (
-        <AdminBackupsPanel />
+        <AdminBackupsPanel showToast={showToast} />
       ) : nav.screen === "settings-help" ? (
         <SettingsHelpPage />
       ) : nav.screen === "schedules" ? (

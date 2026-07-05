@@ -8,7 +8,15 @@ import {
   saveBackupConfig,
   openBackupsFolder,
 } from "../../../lib/workflowApi";
-import { Database, Clock, RefreshCw, Trash2, Settings, AlertTriangle, ShieldCheck, FolderOpen } from "lucide-react";
+import { Database, Clock, RefreshCw, Trash2, Settings, AlertTriangle, FolderOpen } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog";
 
 interface BackupFile {
   filename: string;
@@ -24,7 +32,7 @@ interface BackupConfig {
   format: "sql" | "custom";
 }
 
-export function AdminBackupsPanel() {
+export function AdminBackupsPanel({ showToast }: { showToast: (message: string) => void }) {
   const [backups, setBackups] = useState<BackupFile[]>([]);
   const [config, setConfig] = useState<BackupConfig>({
     enabled: false,
@@ -36,18 +44,16 @@ export function AdminBackupsPanel() {
 
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
-    setError(null);
     try {
       const [files, cfg] = await Promise.all([listBackups(), getBackupConfig()]);
       setBackups(files);
       setConfig(cfg);
     } catch (err: any) {
-      setError(err.message || "Failed to load backups data");
+      showToast(err.message || "Failed to load backups data");
     } finally {
       setLoading(false);
     }
@@ -59,36 +65,36 @@ export function AdminBackupsPanel() {
 
   const handleManualBackup = async () => {
     setActionLoading("backup");
-    setError(null);
-    setSuccess(null);
     try {
       const newBackup = await createBackup(config.format);
-      setSuccess(`Backup ${newBackup.filename} created successfully.`);
+      showToast(`Backup ${newBackup.filename} created successfully.`);
       // Refresh list
       const files = await listBackups();
       setBackups(files);
     } catch (err: any) {
-      setError(err.message || "Manual backup failed");
+      showToast(err.message || "Manual backup failed");
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleDeleteBackup = async (filename: string) => {
-    if (!confirm(`Are you sure you want to permanently delete backup file: ${filename}?`)) {
-      return;
-    }
+  const handleDeleteBackup = (filename: string) => {
+    setDeleteCandidate(filename);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteCandidate) return;
+    const filename = deleteCandidate;
+    setDeleteCandidate(null);
     setActionLoading(`delete-${filename}`);
-    setError(null);
-    setSuccess(null);
     try {
       await deleteBackup(filename);
-      setSuccess(`Deleted backup ${filename}.`);
+      showToast(`Deleted backup ${filename}.`);
       // Refresh list
       const files = await listBackups();
       setBackups(files);
     } catch (err: any) {
-      setError(err.message || "Failed to delete backup file");
+      showToast(err.message || "Failed to delete backup file");
     } finally {
       setActionLoading(null);
     }
@@ -97,16 +103,14 @@ export function AdminBackupsPanel() {
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading("config");
-    setError(null);
-    setSuccess(null);
     try {
       await saveBackupConfig(config);
-      setSuccess("Backup configuration saved successfully.");
+      showToast("Backup configuration saved successfully.");
       // Refresh config to be sure
       const cfg = await getBackupConfig();
       setConfig(cfg);
     } catch (err: any) {
-      setError(err.message || "Failed to save configuration");
+      showToast(err.message || "Failed to save configuration");
     } finally {
       setActionLoading(null);
     }
@@ -133,20 +137,6 @@ export function AdminBackupsPanel() {
           <h1>Database Backups</h1>
         </div>
       </header>
-
-      {error && (
-        <div className="error-message" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", padding: "1rem", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "8px", color: "#f87171" }}>
-          <AlertTriangle size={18} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {success && (
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", padding: "1rem", background: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.2)", borderRadius: "8px", color: "#4ade80" }}>
-          <ShieldCheck size={18} />
-          <span>{success}</span>
-        </div>
-      )}
 
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "300px", gap: "1rem" }}>
@@ -308,7 +298,7 @@ export function AdminBackupsPanel() {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => openBackupsFolder().catch(err => setError(err.message || "Failed to open folder"))}
+                onClick={() => openBackupsFolder().catch(err => showToast(err.message || "Failed to open folder"))}
                 style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#60a5fa" }}
               >
                 <FolderOpen size={16} />
@@ -367,6 +357,35 @@ export function AdminBackupsPanel() {
           </section>
         </div>
       )}
+
+      <Dialog open={!!deleteCandidate} onOpenChange={(o) => !o && setDeleteCandidate(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xóa bản sao lưu?</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa bản sao lưu <strong>{deleteCandidate}</strong> không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setDeleteCandidate(null)}
+              disabled={actionLoading === `delete-${deleteCandidate}`}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void handleConfirmDelete()}
+              disabled={actionLoading === `delete-${deleteCandidate}`}
+            >
+              {actionLoading === `delete-${deleteCandidate}` ? "Đang xóa..." : "Xóa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

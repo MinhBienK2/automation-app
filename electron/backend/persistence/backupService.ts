@@ -160,12 +160,15 @@ export class BackupService {
       const isPg = this.db.constructor.name === "PgDbAdapter";
 
       if (isPg) {
-        // Disable triggers/foreign keys check in PostgreSQL
-        sqlContent += `SET session_replication_role = 'replica';\n\n`;
-        // Clean tables with cascade
-        const quoteTables = tables.map((t) => `"${t}"`).join(", ");
-        sqlContent += `TRUNCATE TABLE ${quoteTables} CASCADE;\n\n`;
+        sqlContent += `BEGIN;\n\n`;
+        // Clean tables by deleting rows in reverse order of dependencies to avoid superuser requirements
+        const reverseTables = [...TABLES_ORDER].reverse().filter((t) => tables.includes(t));
+        for (const t of reverseTables) {
+          sqlContent += `DELETE FROM "${t}";\n`;
+        }
+        sqlContent += `\n`;
       } else {
+        sqlContent += `BEGIN TRANSACTION;\n\n`;
         // Disable foreign keys check in SQLite
         sqlContent += `PRAGMA foreign_keys = OFF;\n\n`;
         // Truncate tables by deleting rows in reverse order of dependencies
@@ -212,11 +215,11 @@ export class BackupService {
       }
 
       if (isPg) {
-        // Restore triggers in PostgreSQL
-        sqlContent += `SET session_replication_role = 'origin';\n`;
+        sqlContent += `COMMIT;\n`;
       } else {
         // Restore foreign keys in SQLite
         sqlContent += `PRAGMA foreign_keys = ON;\n`;
+        sqlContent += `COMMIT;\n`;
       }
 
       await fs.writeFile(filePath, sqlContent, "utf8");
