@@ -552,7 +552,10 @@ function App() {
     const prevScreen = prevScreenRef.current;
     prevScreenRef.current = nav.screen;
 
-    if (prevScreen === "detail" && nav.screen !== "detail" && nav.screen !== "subflow-detail") {
+    const wasEditing = prevScreen === "detail" || prevScreen === "subflow-detail";
+    const isEditing = nav.screen === "detail" || nav.screen === "subflow-detail";
+
+    if (wasEditing && !isEditing) {
       setRunSnapshots((current) =>
         current.filter(
           (snapshot) =>
@@ -560,8 +563,31 @@ function App() {
             snapshot.state.retained_session?.available === true,
         ),
       );
+      workflowsWorkspace.setSelectedWorkflowId(null);
+      workflowsWorkspace.setDetail(null);
+      setWorkflowGraph(null);
+      setWorkflowSettings(null);
+      setWorkflowProfileDraftId(null);
+      setWorkflowProfileSavedId(null);
+      setSelectedGraphNodeId(null);
+      setGraphIssues([]);
+      setGraphIssuesNeedRecheck(false);
+      setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
     }
-  }, [nav.screen, setRunSnapshots]);
+  }, [
+    nav.screen,
+    setRunSnapshots,
+    workflowsWorkspace,
+    setWorkflowGraph,
+    setWorkflowSettings,
+    setWorkflowProfileDraftId,
+    setWorkflowProfileSavedId,
+    setSelectedGraphNodeId,
+    setGraphIssues,
+    setGraphIssuesNeedRecheck,
+    setGraphSaveStatus,
+    graphAutosaveEnabled,
+  ]);
 
   // --- Enforce route authorization ---
   useEffect(() => {

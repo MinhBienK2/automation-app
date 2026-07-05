@@ -120,7 +120,7 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
     }
 
     if (subflowResult) {
-      setSelectedSubflow(subflowResult);
+      setSelectedSubflow(subflowResult as any);
     }
     setSelectedSubflowGraph(graphResult);
     setSelectedSubflowUsage(usageResult ?? []);

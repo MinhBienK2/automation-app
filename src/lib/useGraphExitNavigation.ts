@@ -45,8 +45,10 @@ export function useGraphExitNavigation({
 
   function hasPendingWorkflowGraphChanges() {
     if (!workflow.active) return false;
-    if (workflow.graphAutosaveEnabled) return workflow.graphSaveStatus === "failed";
-    return graphRevisionRef.current !== savedGraphRevisionRef.current;
+    return (
+      graphRevisionRef.current !== savedGraphRevisionRef.current ||
+      (workflow.graphAutosaveEnabled && workflow.graphSaveStatus === "failed")
+    );
   }
 
   function hasPendingSubflowGraphChanges() {

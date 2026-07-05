@@ -1,5 +1,4 @@
 import type {
-  GraphNodeType,
   RunState,
   WorkflowGraph,
   WorkflowSettings,
@@ -76,6 +75,7 @@ function workflowBrowserProfileKey(settings: WorkflowSettings) {
   );
 }
 
+/*
 function mainPathNodeIds(graph: WorkflowGraph) {
   const ids = new Set<string>();
   let node = graph.nodes.find((candidate) => candidate.node_type === "start") ?? null;
@@ -97,7 +97,9 @@ function mainPathNodeIds(graph: WorkflowGraph) {
 
   return ids;
 }
+*/
 
+/*
 function mainContinuationPort(nodeType: GraphNodeType) {
   switch (nodeType) {
     case "start":
@@ -132,3 +134,4 @@ function mainContinuationPort(nodeType: GraphNodeType) {
       return null;
   }
 }
+*/

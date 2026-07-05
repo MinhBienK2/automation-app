@@ -84,6 +84,27 @@ describe("useGraphExitNavigation", () => {
     expect(discardSubflowGraph).not.toHaveBeenCalled();
     expect(navigation).toHaveBeenCalledOnce();
   });
+
+  test("asks before leaving a workflow detail when autosave is enabled but has unsaved changes", async () => {
+    const navigation = vi.fn();
+    const { result } = renderHook(() =>
+      useGraphExitNavigation({
+        workflow: workflowExitState({
+          active: true,
+          graphAutosaveEnabled: true,
+          graphRevision: 2,
+          savedGraphRevision: 1,
+        }),
+        subflow: subflowExitState({ active: false }),
+      }),
+    );
+
+    await act(async () => {
+      await expect(result.current.requestGraphExitNavigation(navigation)).resolves.toBe(false);
+    });
+    expect(result.current.graphExitDialogOpen).toBe(true);
+    expect(navigation).not.toHaveBeenCalled();
+  });
 });
 
 function workflowExitState(overrides: Partial<Parameters<typeof useGraphExitNavigation>[0]["workflow"]> = {}) {
