@@ -45,6 +45,7 @@ import { createPackageCommands } from "./packageCommands.js";
 import { createRecordingCommands } from "./recordingCommands.js";
 import { createSettingsCommands } from "./settingsCommands.js";
 import { createAuthCommands } from "./authCommands.js";
+import { createBackupCommands } from "./backupCommands.js";
 import { loadAppConfig, saveAppConfig } from "../persistence/appConfig.js";
 
 export function createWorkflowCommandHandlers(context: CommandContext) {
@@ -590,6 +591,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const recordingCommands = createRecordingCommands(deps);
   const settingsCommands = createSettingsCommands(deps);
   const authCommands = createAuthCommands(context.database);
+  const backupCommands = createBackupCommands(deps);
 
   return {
     ...projectCommands,
@@ -599,6 +601,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ...packageCommands,
     ...recordingCommands,
     ...authCommands,
+    ...backupCommands,
     ensureProjectModelReady,
     getAppConfig() {
       return loadAppConfig(context.appPaths.rootDir);

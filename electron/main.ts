@@ -2,7 +2,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import {
   createWorkflowCommandHandlers,
   serializeCommandError,
@@ -192,6 +192,9 @@ app.whenReady().then(async () => {
   const handlers = createWorkflowCommandHandlers({
     appPaths,
     database,
+    async openPath(targetPath) {
+      await shell.openPath(targetPath);
+    },
     async saveWorkflowPackageFile(packageValue) {
       const { canceled, filePath } = await dialog.showSaveDialog({
         defaultPath: path.join(
@@ -241,6 +244,9 @@ app.whenReady().then(async () => {
   const schedulerInterval = setInterval(() => {
     void handlers.runSchedulerTick().catch((error) => {
       console.error("Workflow scheduler tick failed", error);
+    });
+    void handlers.checkAndRunAutomaticBackup().catch((error) => {
+      console.error("Automatic backup tick failed", error);
     });
   }, 30_000);
 

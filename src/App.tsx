@@ -78,6 +78,7 @@ import { useGraphExitNavigation } from "./lib/useGraphExitNavigation";
 import { useAuthState } from "./features/auth/state/useAuthState";
 import { LoginScreen } from "./features/auth/pages/LoginScreen";
 import { AdminPanel } from "./features/auth/pages/AdminPanel";
+import { AdminBackupsPanel } from "./features/auth/pages/AdminBackupsPanel";
 import type { AppScreen } from "./shared/types/workspaceContracts";
 
 const ROUTE_CONFIGS: Record<AppScreen, { allowedRoles?: ("admin" | "user")[] }> = {
@@ -89,6 +90,7 @@ const ROUTE_CONFIGS: Record<AppScreen, { allowedRoles?: ("admin" | "user")[] }> 
   schedules: { allowedRoles: ["admin", "user"] },
   "settings-help": { allowedRoles: ["admin", "user"] },
   "admin-users": { allowedRoles: ["admin"] },
+  "admin-backups": { allowedRoles: ["admin"] },
 };
 
 export function isRouteAllowed(
@@ -738,7 +740,9 @@ function App() {
                 ? "overview"
                 : nav.screen === "admin-users"
                   ? "admin-users"
-                  : "projects"
+                  : nav.screen === "admin-backups"
+                    ? "admin-backups"
+                    : "projects"
       }
       sidebarCollapsed={nav.sidebarCollapsed}
       onOpenOverview={() => nav.openOverview()}
@@ -747,6 +751,7 @@ function App() {
       onOpenSettings={nav.openSettings}
       onOpenSettingsHelp={nav.openSettingsHelp}
       onOpenAdminUsers={() => nav.setScreen("admin-users")}
+      onOpenAdminBackups={() => nav.setScreen("admin-backups")}
       onLogout={() => {
         void auth.logout();
         nav.setScreen("overview");
@@ -786,8 +791,10 @@ function App() {
           onDensityChange={themePreferences.setDensity}
         />
       ) : nav.screen === "admin-users" && isRouteAllowed("admin-users", auth.mode, auth.currentUser?.role) ? (
-
+ 
         <AdminPanel />
+      ) : nav.screen === "admin-backups" && isRouteAllowed("admin-backups", auth.mode, auth.currentUser?.role) ? (
+        <AdminBackupsPanel />
       ) : nav.screen === "settings-help" ? (
         <SettingsHelpPage />
       ) : nav.screen === "schedules" ? (

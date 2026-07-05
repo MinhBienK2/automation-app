@@ -21,7 +21,7 @@ import type {
   WorkflowSettingsSaveStatus,
 } from "../../lib/appState";
 
-export type AppScreen = "overview" | "projects" | "detail" | "subflow-detail" | "settings" | "schedules" | "settings-help" | "admin-users";
+export type AppScreen = "overview" | "projects" | "detail" | "subflow-detail" | "settings" | "schedules" | "settings-help" | "admin-users" | "admin-backups";
 export type OverviewFocus = "attention" | "recent_evidence" | "live_runs" | null;
 export type WorkflowDialogMode = "create" | "edit" | null;
 export type SubflowBackTarget =

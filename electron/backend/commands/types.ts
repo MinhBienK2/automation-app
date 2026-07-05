@@ -36,6 +36,7 @@ export type CommandContext = {
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
   saveProjectPackageFile?: (packageValue: ProjectPackage) => Promise<string | null>;
   saveSubflowPackageFile?: (packageValue: SubflowExport) => Promise<string | null>;
+  openPath?: (path: string) => Promise<void>;
   defaultFingerprintFontsDir?: string | null | (() => string | null);
 };
 

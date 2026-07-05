@@ -248,6 +248,26 @@ export type WorkflowElectronBridge = {
   deleteUser(input: { id: string }): Promise<{ ok: boolean }>;
   getAppConfig(): Promise<{ mode: "public"; publicDatabaseUrl?: string }>;
   saveAppConfig(config: { mode: "public"; publicDatabaseUrl?: string }): Promise<{ ok: boolean }>;
+  listBackups(): Promise<BackupFile[]>;
+  createBackup(format?: "sql" | "custom"): Promise<BackupFile>;
+  deleteBackup(filename: string): Promise<{ ok: boolean }>;
+  getBackupConfig(): Promise<BackupConfig>;
+  saveBackupConfig(config: BackupConfig): Promise<{ ok: boolean }>;
+  openBackupsFolder(): Promise<{ ok: boolean }>;
+};
+
+export type BackupConfig = {
+  enabled: boolean;
+  intervalHours: number;
+  maxKeepVersions: number;
+  lastBackupAt: string | null;
+  format: "sql" | "custom";
+};
+
+export type BackupFile = {
+  filename: string;
+  createdAt: string;
+  size: number;
 };
 
 declare global {

@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../../components/ui/dialog";
-import { Switch, SwitchField } from "../../../components/ui/switch";
+import { Switch } from "../../../components/ui/switch";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { Input } from "../../../components/ui/input";
 import type { Accent, Density, Theme } from "../../../app/useThemePreferences";

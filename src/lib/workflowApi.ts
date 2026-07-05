@@ -508,3 +508,28 @@ export function saveAppConfig(config: { mode: "public"; publicDatabaseUrl?: stri
   return bridge().saveAppConfig(config);
 }
 
+export function listBackups() {
+  return bridge().listBackups();
+}
+
+export function createBackup(format?: "sql" | "custom") {
+  return bridge().createBackup(format);
+}
+
+export function deleteBackup(filename: string) {
+  return bridge().deleteBackup(filename);
+}
+
+export function getBackupConfig() {
+  return bridge().getBackupConfig();
+}
+
+export function saveBackupConfig(config: any) {
+  return bridge().saveBackupConfig(config);
+}
+
+export function openBackupsFolder() {
+  return bridge().openBackupsFolder();
+}
+
+

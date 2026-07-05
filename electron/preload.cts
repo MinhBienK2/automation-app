@@ -230,6 +230,12 @@ const workflowApi: WorkflowElectronBridge = {
   deleteUser: (input) => invokeWorkflow("deleteUser", input),
   getAppConfig: () => invokeWorkflow("getAppConfig"),
   saveAppConfig: (config) => invokeWorkflow("saveAppConfig", config),
+  listBackups: () => invokeWorkflow("listBackups"),
+  createBackup: () => invokeWorkflow("createBackup"),
+  deleteBackup: (filename) => invokeWorkflow("deleteBackup", filename),
+  getBackupConfig: () => invokeWorkflow("getBackupConfig"),
+  saveBackupConfig: (config) => invokeWorkflow("saveBackupConfig", config),
+  openBackupsFolder: () => invokeWorkflow("openBackupsFolder"),
 };
 
 contextBridge.exposeInMainWorld("workflowApi", workflowApi);

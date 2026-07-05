@@ -105,6 +105,12 @@ export const workflowIpcChannels = {
   deleteUser: "workflow:deleteUser",
   getAppConfig: "workflow:getAppConfig",
   saveAppConfig: "workflow:saveAppConfig",
+  listBackups: "workflow:listBackups",
+  createBackup: "workflow:createBackup",
+  deleteBackup: "workflow:deleteBackup",
+  getBackupConfig: "workflow:getBackupConfig",
+  saveBackupConfig: "workflow:saveBackupConfig",
+  openBackupsFolder: "workflow:openBackupsFolder",
 } as const;
 
 export type WorkflowIpcChannelName = keyof typeof workflowIpcChannels;

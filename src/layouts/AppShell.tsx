@@ -4,7 +4,7 @@ import type { AppScreen } from "../shared/types/workspaceContracts";
 
 type AppShellProps = {
   children: ReactNode;
-  activeItem: "overview" | "projects" | "schedules" | "settings" | "admin-users";
+  activeItem: "overview" | "projects" | "schedules" | "settings" | "admin-users" | "admin-backups";
   sidebarCollapsed: boolean;
   onOpenOverview: () => void;
   onOpenProjects: () => void;
@@ -12,6 +12,7 @@ type AppShellProps = {
   onOpenSettings: () => void;
   onOpenSettingsHelp: () => void;
   onOpenAdminUsers?: () => void;
+  onOpenAdminBackups?: () => void;
   onLogout?: () => void;
   currentUser?: { email: string; role: string } | null;
   onToggleSidebar: () => void;
@@ -28,6 +29,7 @@ export function AppShell({
   onOpenSettings,
   onOpenSettingsHelp,
   onOpenAdminUsers,
+  onOpenAdminBackups,
   onLogout,
   currentUser,
   onToggleSidebar,
@@ -44,6 +46,7 @@ export function AppShell({
         onOpenSettings={onOpenSettings}
         onOpenSettingsHelp={onOpenSettingsHelp}
         onOpenAdminUsers={onOpenAdminUsers}
+        onOpenAdminBackups={onOpenAdminBackups}
         onLogout={onLogout}
         currentUser={currentUser}
         onToggle={onToggleSidebar}

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "../components/ui/button";
-import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight, Users, LogOut, User, Shield, Sliders, HelpCircle } from "lucide-react";
+import { CalendarClock, Folder, Gauge, Settings, ChevronDown, ChevronRight, Users, LogOut, User, Shield, Sliders, HelpCircle, Database } from "lucide-react";
 import type { AppScreen } from "../shared/types/workspaceContracts";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 
-type AppSidebarActiveItem = "overview" | "projects" | "schedules" | "settings" | "admin-users";
+type AppSidebarActiveItem = "overview" | "projects" | "schedules" | "settings" | "admin-users" | "admin-backups";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
@@ -15,6 +15,7 @@ type AppSidebarProps = {
   onOpenSettings: () => void;
   onOpenSettingsHelp: () => void;
   onOpenAdminUsers?: () => void;
+  onOpenAdminBackups?: () => void;
   onLogout?: () => void;
   currentUser?: { email: string; role: string } | null;
   onToggle: () => void;
@@ -64,20 +65,21 @@ export function AppSidebar({
   onOpenSettings,
   onOpenSettingsHelp,
   onOpenAdminUsers,
+  onOpenAdminBackups,
   onLogout,
   currentUser,
   onToggle,
   screen,
 }: AppSidebarProps) {
   const [settingsExpanded, setSettingsExpanded] = useState(() => activeItem === "settings");
-  const [adminExpanded, setAdminExpanded] = useState(() => activeItem === "admin-users");
+  const [adminExpanded, setAdminExpanded] = useState(() => activeItem === "admin-users" || activeItem === "admin-backups");
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   useEffect(() => {
     if (activeItem === "settings") {
       setSettingsExpanded(true);
     }
-    if (activeItem === "admin-users") {
+    if (activeItem === "admin-users" || activeItem === "admin-backups") {
       setAdminExpanded(true);
     }
   }, [activeItem]);
@@ -227,6 +229,20 @@ export function AppSidebar({
                 >
                   <Users aria-hidden="true" className="sidebar-submenu-item-icon" size={14} />
                   <span>Users</span>
+                </Button>
+                <Button
+                  className={
+                    activeItem === "admin-backups"
+                      ? "sidebar-submenu-item sidebar-submenu-item-active"
+                      : "sidebar-submenu-item"
+                  }
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={onOpenAdminBackups}
+                >
+                  <Database aria-hidden="true" className="sidebar-submenu-item-icon" size={14} />
+                  <span>Backups</span>
                 </Button>
               </div>
             )}
