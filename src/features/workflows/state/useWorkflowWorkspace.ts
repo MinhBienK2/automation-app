@@ -101,6 +101,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
   const [selectedProfileIdDraft, setSelectedProfileIdDraft] = useState<string | null>(null);
   const [deleteWorkflowCandidate, setDeleteWorkflowCandidate] = useState<WorkflowSummary | null>(null);
+  const [workflowDialogBusy, setWorkflowDialogBusy] = useState(false);
 
   const loadWorkflows = useCallback(async () => {
     const items = await listWorkflows();
@@ -271,6 +272,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     setWorkflowNameDraft("");
     const defaultProfile = browserProfiles.find((p) => p.is_default) ?? browserProfiles[0];
     setSelectedProfileIdDraft(defaultProfile?.id ?? null);
+    setWorkflowDialogBusy(false);
     setAppError("");
   }, [browserProfiles, setAppError]);
 
@@ -278,6 +280,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     setWorkflowDialogMode("edit");
     setEditingWorkflowId(workflow.id);
     setWorkflowNameDraft(workflow.name);
+    setWorkflowDialogBusy(false);
     setAppError("");
   }, [setAppError]);
 
@@ -285,12 +288,14 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     setWorkflowDialogMode(null);
     setEditingWorkflowId(null);
     setWorkflowNameDraft("");
+    setWorkflowDialogBusy(false);
     setAppError("");
   }, [setAppError]);
 
   const submitWorkflowDialog = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
     setAppError("");
+    setWorkflowDialogBusy(true);
 
     try {
       if (workflowDialogMode === "create") {
@@ -326,6 +331,8 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
       }
     } catch (error) {
       setAppError(commandMessage(error));
+    } finally {
+      setWorkflowDialogBusy(false);
     }
   }, [
     workflowDialogMode,
@@ -351,6 +358,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     if (!deleteWorkflowCandidate) return;
     const id = deleteWorkflowCandidate.id;
     setAppError("");
+    setWorkflowDialogBusy(true);
 
     try {
       await deleteWorkflowCommand(id);
@@ -368,6 +376,8 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
       await loadWorkflows();
     } catch (error) {
       setAppError(commandMessage(error));
+    } finally {
+      setWorkflowDialogBusy(false);
     }
   }, [
     deleteWorkflowCandidate,
@@ -379,11 +389,14 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     setWorkflowSettings,
     setGraphIssues,
     setGraphIssuesNeedRecheck,
+    setDetail,
+    setSelectedWorkflowId,
     setAppError,
   ]);
 
   const cancelDeleteWorkflow = useCallback(() => {
     setDeleteWorkflowCandidate(null);
+    setWorkflowDialogBusy(false);
   }, []);
 
   const duplicateWorkflow = useCallback(async (workflow: WorkflowSummary) => {
@@ -424,5 +437,6 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     confirmDeleteWorkflow,
     cancelDeleteWorkflow,
     duplicateWorkflow,
+    workflowDialogBusy,
   };
 }

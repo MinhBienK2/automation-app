@@ -95,6 +95,7 @@ export interface WorkflowWorkspaceAPI {
   confirmDeleteWorkflow: () => Promise<void>;
   cancelDeleteWorkflow: () => void;
   duplicateWorkflow: (workflow: WorkflowSummary) => Promise<void>;
+  workflowDialogBusy: boolean;
 }
 
 export interface WorkflowGraphStateAPI {

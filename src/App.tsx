@@ -386,6 +386,7 @@ function App() {
     importProjectPackageFile,
     closeImportProjectPackageDialog,
     submitImportProjectPackage,
+    isPackageActionBusy,
   } = useAppPackageDialogs({
     currentProjectId: () => projectsWorkspace.currentProjectId(),
     setAppError,
@@ -919,6 +920,7 @@ function App() {
                 void workflowsWorkspace.openWorkflow(id);
               }}
               onDeleteWorkflow={workflowsWorkspace.deleteWorkflow}
+              workflowDialogBusy={workflowsWorkspace.workflowDialogBusy}
             />
           )}
         </ProjectsPage>
@@ -951,6 +953,7 @@ function App() {
               await subflowsWorkspace.updateProjectSubflow(subflowsWorkspace.selectedSubflow, input);
             }
           }}
+          isSavingGraph={subflowsWorkspace.subflowGraphSaveStatus === "saving"}
         />
       ) : nav.screen === "detail" && workflowsWorkspace.detail ? (
         <>
@@ -1023,6 +1026,7 @@ function App() {
               graphState.changeWorkflowGraph(restoredGraph);
               await subflowsWorkspace.loadSubflowsForProject(workflowsWorkspace.detail?.workflow.project_id);
             }}
+            isSavingGraph={graphSaveStatus === "saving"}
           />
         </>
       ) : null}
@@ -1094,6 +1098,7 @@ function App() {
           showToast("Workflow settings saved.");
         }}
         onDiscardChanges={settingsWorkspace.discardWorkflowSettingsChanges}
+        saveStatuses={workflowSettingsSaveStatuses}
       />
       <UnsavedChangesDialog
         open={graphExitDialogOpen}
@@ -1132,6 +1137,8 @@ function App() {
           void workflowsWorkspace.confirmDeleteWorkflow();
         }}
         onCancelDeleteWorkflow={workflowsWorkspace.cancelDeleteWorkflow}
+        isPackageActionBusy={isPackageActionBusy}
+        workflowDialogBusy={workflowsWorkspace.workflowDialogBusy}
       />
      </AppShell>
     </>

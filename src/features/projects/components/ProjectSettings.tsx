@@ -144,6 +144,7 @@ export function ProjectSettings({
                     void saveProjectName();
                   }}
                   disabled={!project || !projectNameChanged || projectActionPending}
+                  loading={savingProject}
                 >
                   Save
                 </Button>
@@ -157,6 +158,7 @@ export function ProjectSettings({
                   void duplicateProject();
                 }}
                 disabled={!project || projectActionPending}
+                loading={duplicatingProject}
               >
                 Duplicate project
               </Button>
@@ -167,6 +169,7 @@ export function ProjectSettings({
                   void exportProjectPackage();
                 }}
                 disabled={!project || projectActionPending}
+                loading={exportingProject}
               >
                 <Download aria-hidden="true" style={{ width: "16px", height: "16px" }} />
                 Export project
@@ -227,6 +230,7 @@ export function ProjectSettings({
                 void confirmDeleteProject();
               }}
               disabled={!project || deletingProject}
+              loading={deletingProject}
             >
               Delete project
             </Button>

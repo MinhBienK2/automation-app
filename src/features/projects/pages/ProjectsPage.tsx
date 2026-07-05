@@ -80,6 +80,7 @@ export function ProjectsPage({
   const [projectError, setProjectError] = useState("");
   const [gridSearchDraft, setGridSearchDraft] = useState("");
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -128,14 +129,21 @@ export function ProjectsPage({
       setProjectError("Project name is required");
       return;
     }
-    await onCreateProject({
-      name,
-      description: projectDescriptionDraft.trim() || null,
-    });
-    setCreateDialogOpen(false);
-    setProjectNameDraft("");
-    setProjectDescriptionDraft("");
-    setProjectError("");
+    setCreating(true);
+    try {
+      await onCreateProject({
+        name,
+        description: projectDescriptionDraft.trim() || null,
+      });
+      setCreateDialogOpen(false);
+      setProjectNameDraft("");
+      setProjectDescriptionDraft("");
+      setProjectError("");
+    } catch (err: any) {
+      setProjectError(err.message || "Failed to create project");
+    } finally {
+      setCreating(false);
+    }
   }
 
   function closeProjectDialog() {
@@ -408,10 +416,10 @@ export function ProjectsPage({
             />
             {projectError ? <p className="field-error">{projectError}</p> : null}
             <DialogFooter className="form-actions">
-              <Button shape="pill" type="submit">
+              <Button shape="pill" type="submit" disabled={creating} loading={creating}>
                 Create
               </Button>
-              <Button variant="secondary" type="button" onClick={closeProjectDialog}>
+              <Button variant="secondary" type="button" disabled={creating} onClick={closeProjectDialog}>
                 Cancel
               </Button>
             </DialogFooter>

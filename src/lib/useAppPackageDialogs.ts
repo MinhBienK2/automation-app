@@ -62,6 +62,7 @@ export function useAppPackageDialogs({
     useState<ProjectPackage | null>(null);
   const [importProjectPackagePreview, setImportProjectPackagePreview] =
     useState<ProjectPackagePreview | null>(null);
+  const [busy, setBusy] = useState(false);
 
   function showToast(message: string) {
     setToastMessage(message);
@@ -73,6 +74,7 @@ export function useAppPackageDialogs({
     setExportPackageWorkflow(workflow);
     setExportPackageIncludeFlow(true);
     setExportPackageSections(workflowPackageSections);
+    setBusy(false);
   }
 
   function closeExportPackageDialog() {
@@ -80,6 +82,7 @@ export function useAppPackageDialogs({
     setExportPackageIncludeFlow(true);
     setExportPackageSections(workflowPackageSections);
     setAppError("");
+    setBusy(false);
   }
 
   async function submitExportPackage(event: FormEvent) {
@@ -91,6 +94,7 @@ export function useAppPackageDialogs({
     }
 
     setAppError("");
+    setBusy(true);
 
     try {
       const packageValue = await exportWorkflowPackage(exportPackageWorkflow.id, {
@@ -102,12 +106,15 @@ export function useAppPackageDialogs({
       closeExportPackageDialog();
     } catch (error) {
       setAppError(commandMessage(error));
+    } finally {
+      setBusy(false);
     }
   }
 
   async function importWorkflowPackageFile(file: File | null) {
     if (!file) return;
     setAppError("");
+    setBusy(false);
     if (file.size > workflowPackageFileSizeLimitBytes) {
       setAppError("Workflow package file must be 5 MB or smaller");
       return;
@@ -131,6 +138,7 @@ export function useAppPackageDialogs({
     setImportPackageIncludeFlow(true);
     setImportPackageSections([]);
     setAppError("");
+    setBusy(false);
   }
 
   async function submitImportPackage(event: FormEvent) {
@@ -142,6 +150,7 @@ export function useAppPackageDialogs({
     }
 
     setAppError("");
+    setBusy(true);
 
     try {
       const imported = await importWorkflowPackage(importPackage, {
@@ -153,6 +162,8 @@ export function useAppPackageDialogs({
       await onWorkflowImported(imported.workflow.id);
     } catch (error) {
       setAppError(commandMessage(error));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -171,6 +182,7 @@ export function useAppPackageDialogs({
   async function importProjectPackageFile(file: File | null) {
     if (!file) return;
     setAppError("");
+    setBusy(false);
     if (file.size > projectPackageFileSizeLimitBytes) {
       setAppError("Project package file must be 20 MB or smaller");
       return;
@@ -190,12 +202,14 @@ export function useAppPackageDialogs({
     setImportProjectPackageValue(null);
     setImportProjectPackagePreview(null);
     setAppError("");
+    setBusy(false);
   }
 
   async function submitImportProjectPackage(event: FormEvent) {
     event.preventDefault();
     if (!importProjectPackageValue) return;
     setAppError("");
+    setBusy(true);
 
     try {
       const project = await importProjectPackage(importProjectPackageValue);
@@ -204,6 +218,8 @@ export function useAppPackageDialogs({
       showToast("Project imported.");
     } catch (error) {
       setAppError(commandMessage(error));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -230,5 +246,6 @@ export function useAppPackageDialogs({
     importProjectPackageFile,
     closeImportProjectPackageDialog,
     submitImportProjectPackage,
+    isPackageActionBusy: busy,
   };
 }

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { Button } from "./button";
 import {
@@ -12,7 +13,7 @@ type UnsavedChangesDialogProps = {
   open: boolean;
   onKeepEditing: () => void;
   onDiscardChanges: () => void;
-  onSaveAndClose: () => void | boolean | Promise<void | boolean>;
+  onSaveAndClose: () => void | boolean | Promise<unknown>;
 };
 
 export function UnsavedChangesDialog({
@@ -21,6 +22,14 @@ export function UnsavedChangesDialog({
   onDiscardChanges,
   onSaveAndClose,
 }: UnsavedChangesDialogProps) {
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setSaving(false);
+    }
+  }, [open]);
+
   return (
     <Dialog
       open={open}
@@ -40,17 +49,24 @@ export function UnsavedChangesDialog({
           <Button
             shape="pill"
             type="button"
-            onClick={() => {
-              void onSaveAndClose();
+            disabled={saving}
+            loading={saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onSaveAndClose();
+              } finally {
+                setSaving(false);
+              }
             }}
           >
             <Save aria-hidden="true" />
             Save and close
           </Button>
-          <Button variant="secondary" type="button" onClick={onDiscardChanges}>
+          <Button variant="secondary" type="button" disabled={saving} onClick={onDiscardChanges}>
             Discard changes
           </Button>
-          <Button variant="ghost" type="button" onClick={onKeepEditing}>
+          <Button variant="ghost" type="button" disabled={saving} onClick={onKeepEditing}>
             Keep editing
           </Button>
         </div>

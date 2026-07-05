@@ -44,6 +44,7 @@ export function ProfileEditDialog({
   const [profileNameDraft, setProfileNameDraft] = useState("");
   const [browserLaunchDraft, setBrowserLaunchDraft] = useState<WorkflowSettingsBrowserLaunch | null>(null);
   const [environmentDraft, setEnvironmentDraft] = useState<EditorVariable[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const associatedWorkflows = selectedEnv ? workflows.filter((w) => w.browser_profile_id === selectedEnv.id) : [];
 
@@ -54,6 +55,7 @@ export function ProfileEditDialog({
   }, [open]);
 
   useEffect(() => {
+    setSaving(false);
     if (selectedEnv) {
       setProfileNameDraft(selectedEnv.name);
       setBrowserLaunchDraft(selectedEnv.browser_launch);
@@ -393,12 +395,17 @@ export function ProfileEditDialog({
         )}
 
         <DialogFooter className="form-actions" style={{ borderTop: "1px solid #233240", paddingTop: "16px", marginTop: "auto" }}>
-          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="secondary" disabled={saving} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={!hasChanges} onClick={async () => {
-            await handleSaveProfile();
-            onOpenChange(false);
+          <Button type="button" disabled={!hasChanges || saving} loading={saving} onClick={async () => {
+            setSaving(true);
+            try {
+              await handleSaveProfile();
+              onOpenChange(false);
+            } finally {
+              setSaving(false);
+            }
           }}>
             Save
           </Button>

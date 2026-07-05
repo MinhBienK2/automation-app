@@ -58,6 +58,7 @@ type WorkflowDetailPageProps = {
   onRestoreRevision?: (graph: WorkflowGraph) => void | Promise<void>;
   initialVariables?: Array<{ name: string; value: string }> | null;
   profileVariables?: Array<{ name: string; value: string }> | null;
+  isSavingGraph?: boolean;
 };
 
 export function WorkflowDetailPage({
@@ -93,7 +94,9 @@ export function WorkflowDetailPage({
   onRestoreRevision,
   initialVariables,
   profileVariables,
+  isSavingGraph = false,
 }: WorkflowDetailPageProps) {
+  console.log("DEBUG: WorkflowDetailPage rendering", { isRunning, isSavingGraph });
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
   const [isRunFromSelectedOpen, setIsRunFromSelectedOpen] = useState(false);
@@ -325,7 +328,8 @@ export function WorkflowDetailPage({
               type="button"
               label="Save"
               onClick={onSaveGraph}
-              disabled={!canSaveGraph}
+              disabled={!canSaveGraph || isSavingGraph}
+              loading={isSavingGraph}
             >
               <Save aria-hidden="true" />
             </IconButton>

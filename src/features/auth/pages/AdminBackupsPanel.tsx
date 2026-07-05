@@ -161,19 +161,11 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
                 type="button"
                 onClick={handleManualBackup}
                 disabled={actionLoading !== null}
+                loading={actionLoading === "backup"}
                 style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
               >
-                {actionLoading === "backup" ? (
-                  <>
-                    <RefreshCw className="animate-spin" size={16} />
-                    <span>Backing up...</span>
-                  </>
-                ) : (
-                  <>
-                    <Database size={16} />
-                    <span>Backup Now</span>
-                  </>
-                )}
+                <Database size={16} />
+                <span>Backup Now</span>
               </Button>
             </section>
 
@@ -281,8 +273,8 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
                   </p>
                 )}
 
-                <Button type="submit" disabled={actionLoading !== null} style={{ width: "100%" }}>
-                  {actionLoading === "config" ? "Saving..." : "Save Configuration"}
+                <Button type="submit" disabled={actionLoading !== null} loading={actionLoading === "config"} style={{ width: "100%" }}>
+                  Save Configuration
                 </Button>
               </form>
             </section>
@@ -336,16 +328,11 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
                             variant="ghost"
                             onClick={() => handleDeleteBackup(b.filename)}
                             disabled={actionLoading !== null}
+                            loading={actionLoading === `delete-${b.filename}`}
                             style={{ color: "#ef4444", padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
                           >
-                            {actionLoading === `delete-${b.filename}` ? (
-                              <RefreshCw className="animate-spin" size={14} />
-                            ) : (
-                              <>
-                                <Trash2 size={14} />
-                                <span>Delete</span>
-                              </>
-                            )}
+                            <Trash2 size={14} />
+                            <span>Delete</span>
                           </Button>
                         </td>
                       </tr>
@@ -380,8 +367,9 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
               variant="destructive"
               onClick={() => void handleConfirmDelete()}
               disabled={actionLoading === `delete-${deleteCandidate}`}
+              loading={actionLoading === `delete-${deleteCandidate}`}
             >
-              {actionLoading === `delete-${deleteCandidate}` ? "Đang xóa..." : "Xóa"}
+              Xóa
             </Button>
           </DialogFooter>
         </DialogContent>

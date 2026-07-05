@@ -62,21 +62,33 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
   const [selectedEnvId, setSelectedEnvId] = useState<string | null>(null);
   const [newProfileName, setNewProfileName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const selectedEnv = browserProfiles.find((env) => env.id === selectedEnvId) ?? null;
 
   async function handleAddProfile() {
     if (!project || !newProfileName.trim()) return;
-    await onCreateBrowserProfile(project.id, { name: newProfileName.trim(), description: null });
-    setNewProfileName("");
-    setCreateDialogOpen(false);
+    setAdding(true);
+    try {
+      await onCreateBrowserProfile(project.id, { name: newProfileName.trim(), description: null });
+      setNewProfileName("");
+      setCreateDialogOpen(false);
+    } finally {
+      setAdding(false);
+    }
   }
 
   async function handleDeleteProfile() {
     if (!selectedEnvId) return;
-    await onDeleteBrowserProfile(selectedEnvId);
-    setDeleteDialogOpen(false);
-    setSelectedEnvId(null);
+    setDeleting(true);
+    try {
+      await onDeleteBrowserProfile(selectedEnvId);
+      setDeleteDialogOpen(false);
+      setSelectedEnvId(null);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const filteredProfiles = useMemo(() => {
@@ -209,10 +221,10 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
               />
             </label>
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setCreateDialogOpen(false)}>
+              <Button type="button" variant="secondary" disabled={adding} onClick={() => setCreateDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="button" onClick={handleAddProfile}>
+              <Button type="button" disabled={adding} loading={adding} onClick={handleAddProfile}>
                 Create profile
               </Button>
             </DialogFooter>
@@ -226,10 +238,10 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
               <DialogDescription>Do you want to delete this browser profile?</DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setDeleteDialogOpen(false)}>
+              <Button type="button" variant="secondary" disabled={deleting} onClick={() => setDeleteDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="button" variant="destructive" onClick={handleDeleteProfile}>
+              <Button type="button" variant="destructive" disabled={deleting} loading={deleting} onClick={handleDeleteProfile}>
                 Delete profile
               </Button>
             </DialogFooter>

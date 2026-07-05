@@ -52,6 +52,8 @@ export function SubflowListPage({
   const [deleteSubflowCandidate, setDeleteSubflowCandidate] = useState<SubflowSummary | null>(null);
   const [localError, setLocalError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function submitCreateSubflow(event: React.FormEvent) {
     event.preventDefault();
@@ -60,14 +62,21 @@ export function SubflowListPage({
       setLocalError("Subflow name is required");
       return;
     }
-    await onCreateSubflow({
-      name,
-      description: descriptionDraft.trim() || null,
-    });
-    setCreateDialogOpen(false);
-    setNameDraft("");
-    setDescriptionDraft("");
-    setLocalError("");
+    setCreating(true);
+    try {
+      await onCreateSubflow({
+        name,
+        description: descriptionDraft.trim() || null,
+      });
+      setCreateDialogOpen(false);
+      setNameDraft("");
+      setDescriptionDraft("");
+      setLocalError("");
+    } catch (err: any) {
+      setLocalError(err.message || "Failed to create subflow");
+    } finally {
+      setCreating(false);
+    }
   }
 
   function closeCreateDialog() {
@@ -261,10 +270,10 @@ export function SubflowListPage({
             />
             {localError ? <p className="field-error">{localError}</p> : null}
             <DialogFooter className="form-actions">
-              <Button shape="pill" type="submit">
+              <Button shape="pill" type="submit" disabled={creating} loading={creating}>
                 Create
               </Button>
-              <Button variant="secondary" type="button" onClick={closeCreateDialog}>
+              <Button variant="secondary" type="button" disabled={creating} onClick={closeCreateDialog}>
                 Cancel
               </Button>
             </DialogFooter>
@@ -303,10 +312,17 @@ export function SubflowListPage({
               <Button
                 type="button"
                 variant="destructive"
+                disabled={deleting}
+                loading={deleting}
                 onClick={async () => {
                   if (deleteSubflowCandidate) {
-                    await onDeleteSubflow(deleteSubflowCandidate);
-                    setDeleteSubflowCandidate(null);
+                    setDeleting(true);
+                    try {
+                      await onDeleteSubflow(deleteSubflowCandidate);
+                      setDeleteSubflowCandidate(null);
+                    } finally {
+                      setDeleting(false);
+                    }
                   }
                 }}
               >
@@ -315,6 +331,7 @@ export function SubflowListPage({
               <Button
                 type="button"
                 variant="secondary"
+                disabled={deleting}
                 onClick={() => setDeleteSubflowCandidate(null)}
               >
                 Cancel

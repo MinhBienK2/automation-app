@@ -25,6 +25,7 @@ type SubflowDetailPageProps = {
   onGraphChange: (graph: WorkflowGraph) => void;
   onSaveGraph: () => void;
   onUpdateSubflow: (input: { name: string }) => Promise<void>;
+  isSavingGraph?: boolean;
 };
 
 export function SubflowDetailPage({
@@ -41,6 +42,7 @@ export function SubflowDetailPage({
   onGraphChange,
   onSaveGraph,
   onUpdateSubflow,
+  isSavingGraph = false,
 }: SubflowDetailPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const usageCount = usage ? usage.length : 0;
@@ -80,7 +82,8 @@ export function SubflowDetailPage({
               type="button"
               label="Save"
               onClick={onSaveGraph}
-              disabled={!canSaveGraph}
+              disabled={!canSaveGraph || isSavingGraph}
+              loading={isSavingGraph}
             >
               <Save aria-hidden="true" />
             </IconButton>

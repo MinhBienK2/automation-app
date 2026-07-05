@@ -85,7 +85,7 @@ export function SubflowSettingsDialog({
             </p>
           ) : null}
           <DialogFooter className="form-actions">
-            <Button shape="pill" type="submit" disabled={saving}>
+            <Button shape="pill" type="submit" disabled={saving} loading={saving}>
               Save Settings
             </Button>
             <Button

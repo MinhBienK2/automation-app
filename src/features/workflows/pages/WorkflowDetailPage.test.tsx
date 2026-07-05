@@ -1057,16 +1057,7 @@ describe("Workflow detail integration", () => {
   test("disables graph run actions while running and polls final failure", async () => {
     let runStateCalls = 0;
     mockWorkflowBridgeCommands({
-      list_workflows: [workflow],
-      get_workflow: { workflow, steps: [sleepStep] },
-      get_workflow_browser_config: {
-        workflow_id: "workflow-1",
-        profile_name: null,
-        proxy_enabled: false,
-        proxy_server: null,
-        proxy_username: null,
-        proxy_password: null,
-      },
+      ...workflowDetailScenario([sleepStep]),
       get_workflow_graph: {
         version: 1,
         nodes: [
@@ -1120,12 +1111,16 @@ describe("Workflow detail integration", () => {
       },
       save_workflow_graph: undefined,
       save_workflow_browser_config: undefined,
+      list_run_states: undefined,
       run_workflow: { ...idleRunState, status: "running" },
     });
 
     renderApp();
 
     await openWorkflowDetails();
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Visual Graph Loading")).not.toBeInTheDocument();
+    });
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
@@ -1134,7 +1129,9 @@ describe("Workflow detail integration", () => {
     });
     await launchRun(controlsRow);
 
-    expect(within(controlsRow).getByRole("button", { name: "Run" })).toBeDisabled();
+    await waitFor(() => {
+      expect(within(controlsRow).getByRole("button", { name: "Run" })).toBeDisabled();
+    });
     expect(screen.queryByRole("button", { name: "Test to Here" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Test All" }))

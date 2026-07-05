@@ -44,6 +44,8 @@ type AppPackageDialogsProps = {
   deleteWorkflowCandidate: WorkflowSummary | null;
   onConfirmDeleteWorkflow: () => void;
   onCancelDeleteWorkflow: () => void;
+  isPackageActionBusy?: boolean;
+  workflowDialogBusy?: boolean;
 };
 
 export function AppPackageDialogs({
@@ -70,6 +72,8 @@ export function AppPackageDialogs({
   deleteWorkflowCandidate,
   onConfirmDeleteWorkflow,
   onCancelDeleteWorkflow,
+  isPackageActionBusy = false,
+  workflowDialogBusy = false,
 }: AppPackageDialogsProps) {
   return (
     <>
@@ -100,12 +104,13 @@ export function AppPackageDialogs({
             />
             {appError ? <p className="field-error">{appError}</p> : null}
             <DialogFooter className="form-actions">
-              <Button shape="pill" type="submit">
+              <Button shape="pill" type="submit" disabled={isPackageActionBusy} loading={isPackageActionBusy}>
                 Export
               </Button>
               <Button
                 variant="secondary"
                 type="button"
+                disabled={isPackageActionBusy}
                 onClick={onCloseExportPackageDialog}
               >
                 Cancel
@@ -165,12 +170,13 @@ export function AppPackageDialogs({
             ) : null}
             {appError ? <p className="field-error">{appError}</p> : null}
             <DialogFooter className="form-actions">
-              <Button shape="pill" type="submit">
+              <Button shape="pill" type="submit" disabled={isPackageActionBusy} loading={isPackageActionBusy}>
                 Import
               </Button>
               <Button
                 variant="secondary"
                 type="button"
+                disabled={isPackageActionBusy}
                 onClick={onCloseImportPackageDialog}
               >
                 Cancel
@@ -228,12 +234,13 @@ export function AppPackageDialogs({
             ) : null}
             {appError ? <p className="field-error">{appError}</p> : null}
             <DialogFooter className="form-actions">
-              <Button shape="pill" type="submit">
+              <Button shape="pill" type="submit" disabled={isPackageActionBusy} loading={isPackageActionBusy}>
                 Import
               </Button>
               <Button
                 variant="secondary"
                 type="button"
+                disabled={isPackageActionBusy}
                 onClick={onCloseImportProjectPackageDialog}
               >
                 Cancel
@@ -264,6 +271,8 @@ export function AppPackageDialogs({
             <Button
               type="button"
               variant="destructive"
+              disabled={workflowDialogBusy}
+              loading={workflowDialogBusy}
               onClick={onConfirmDeleteWorkflow}
             >
               Delete Workflow
@@ -271,6 +280,7 @@ export function AppPackageDialogs({
             <Button
               type="button"
               variant="secondary"
+              disabled={workflowDialogBusy}
               onClick={onCancelDeleteWorkflow}
             >
               Cancel

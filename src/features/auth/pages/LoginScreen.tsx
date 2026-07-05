@@ -17,22 +17,28 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
     const savedPassword = localStorage.getItem("remembered_password");
     return localStorage.getItem("remember_me") === "true" && savedPassword ? savedPassword : "";
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) return;
 
-    if (rememberMe) {
-      localStorage.setItem("remember_me", "true");
-      localStorage.setItem("remembered_email", email);
-      localStorage.setItem("remembered_password", password);
-    } else {
-      localStorage.removeItem("remember_me");
-      localStorage.removeItem("remembered_email");
-      localStorage.removeItem("remembered_password");
-    }
+    setSubmitting(true);
+    try {
+      if (rememberMe) {
+        localStorage.setItem("remember_me", "true");
+        localStorage.setItem("remembered_email", email);
+        localStorage.setItem("remembered_password", password);
+      } else {
+        localStorage.removeItem("remember_me");
+        localStorage.removeItem("remembered_email");
+        localStorage.removeItem("remembered_password");
+      }
 
-    await onLogin(email, password);
+      await onLogin(email, password);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -53,7 +59,7 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
               placeholder="e.g. admin@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || submitting}
               required
             />
           </div>
@@ -90,8 +96,8 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
             </div>
           )}
 
-          <Button type="submit" disabled={isLoading} className="login-submit-btn">
-            {isLoading ? "Signing in..." : "Sign In"}
+          <Button type="submit" disabled={isLoading || submitting} loading={isLoading || submitting} className="login-submit-btn">
+            Sign In
           </Button>
         </form>
 

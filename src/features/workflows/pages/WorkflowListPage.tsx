@@ -57,6 +57,7 @@ type WorkflowListPageProps = {
   onCloseWorkflowDialog: () => void;
   onOpenWorkflow: (id: string) => void;
   onDeleteWorkflow: (id: string) => void;
+  workflowDialogBusy?: boolean;
 };
 
 export function WorkflowListPage({
@@ -81,6 +82,7 @@ export function WorkflowListPage({
   onCloseWorkflowDialog,
   onOpenWorkflow,
   onDeleteWorkflow,
+  workflowDialogBusy = false,
 }: WorkflowListPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const workflowDialogTitle =
@@ -319,10 +321,10 @@ export function WorkflowListPage({
                 ) : null}
                 {appError ? <p className="field-error">{appError}</p> : null}
                 <DialogFooter className="form-actions">
-                  <Button shape="pill" type="submit">
+                  <Button shape="pill" type="submit" disabled={workflowDialogBusy} loading={workflowDialogBusy}>
                     {workflowDialogMode === "create" ? "Create" : "Save Changes"}
                   </Button>
-                  <Button variant="secondary" type="button" onClick={onCloseWorkflowDialog}>
+                  <Button variant="secondary" type="button" disabled={workflowDialogBusy} onClick={onCloseWorkflowDialog}>
                     Cancel
                   </Button>
                 </DialogFooter>

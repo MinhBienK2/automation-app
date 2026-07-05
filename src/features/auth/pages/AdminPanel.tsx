@@ -14,9 +14,10 @@ export function AdminPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -58,6 +59,7 @@ export function AdminPanel() {
 
     setError(null);
     setSuccess(null);
+    setDeletingUserId(id);
 
     try {
       await deleteUser({ id });
@@ -65,6 +67,8 @@ export function AdminPanel() {
       await fetchUsers();
     } catch (err: any) {
       setError(err.message || "Failed to delete user");
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -133,8 +137,8 @@ export function AdminPanel() {
             {error && <p className="error-message">{error}</p>}
             {success && <p style={{ color: "#4ade80", fontSize: "0.875rem", textAlign: "center" }}>{success}</p>}
 
-            <Button type="submit" disabled={loading} style={{ marginTop: "1rem" }}>
-              {loading ? "Creating..." : "Create User"}
+            <Button type="submit" disabled={loading} loading={loading} style={{ marginTop: "1rem" }}>
+              Create User
             </Button>
           </form>
         </section>
@@ -181,6 +185,8 @@ export function AdminPanel() {
                         variant="ghost"
                         onClick={() => handleDeleteUser(u.id, u.email)}
                         style={{ color: "#ef4444", padding: "4px 8px" }}
+                        disabled={deletingUserId !== null}
+                        loading={deletingUserId === u.id}
                       >
                         Delete
                       </Button>

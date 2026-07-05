@@ -72,9 +72,11 @@ export function ScheduleFormDialog({
 }: ScheduleFormDialogProps) {
   const [form, setForm] = useState<ScheduleFormState>(() => defaultForm(workflows));
   const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setSaving(false);
       if (mode === "edit" && schedule) {
         setForm(formFromSchedule(schedule));
       } else {
@@ -87,6 +89,7 @@ export function ScheduleFormDialog({
   async function submitSchedule(event: FormEvent) {
     event.preventDefault();
     setFormError("");
+    setSaving(true);
 
     try {
       const input: WorkflowScheduleInput = {
@@ -103,6 +106,8 @@ export function ScheduleFormDialog({
       onClose();
     } catch (caught) {
       setFormError(commandMessage(caught));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -292,10 +297,10 @@ export function ScheduleFormDialog({
 
           {formError ? <p className="field-error">{formError}</p> : null}
           <DialogFooter className="form-actions">
-            <Button shape="pill" type="submit">
+            <Button shape="pill" type="submit" disabled={saving} loading={saving}>
               {mode === "edit" ? "Save Schedule" : "Create Schedule"}
             </Button>
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" disabled={saving} onClick={onClose}>
               Cancel
             </Button>
           </DialogFooter>

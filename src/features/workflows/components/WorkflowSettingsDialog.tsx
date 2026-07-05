@@ -5,6 +5,7 @@ import type {
   WorkflowSettings,
   WorkflowSettingsSectionId,
 } from "../../../types/workflow";
+import type { WorkflowSettingsSaveStatus } from "../../../lib/appState";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -42,6 +43,7 @@ type WorkflowSettingsDialogProps = {
   onSettingsChange: (settings: WorkflowSettings) => void;
   onSaveSettings: () => void | boolean | Promise<void | boolean>;
   onDiscardChanges: () => void;
+  saveStatuses?: Partial<Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>>;
 };
 
 export function WorkflowSettingsDialog({
@@ -58,6 +60,7 @@ export function WorkflowSettingsDialog({
   onSettingsChange,
   onSaveSettings,
   onDiscardChanges,
+  saveStatuses = {},
 }: WorkflowSettingsDialogProps) {
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const activeMeta =
@@ -112,7 +115,8 @@ export function WorkflowSettingsDialog({
                   onClick={() => {
                     if (settings) void onSaveSettings();
                   }}
-                  disabled={!settings}
+                  disabled={!settings || Object.values(saveStatuses).some((status) => status === "saving")}
+                  loading={Object.values(saveStatuses).some((status) => status === "saving")}
                 >
                   <Save aria-hidden="true" />
                   Save Settings
