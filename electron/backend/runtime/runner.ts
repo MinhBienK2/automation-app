@@ -412,7 +412,12 @@ export class BrowserWorkflowRunner {
 
   private async executeAction(runtime: Runtime, action: ActionConfig): Promise<void> {
     this.throwIfCancelled(runtime.signal);
-    const resolvedAction = structuredClone(action);
+    let resolvedAction: ActionConfig;
+    try {
+      resolvedAction = structuredClone(action);
+    } catch {
+      resolvedAction = JSON.parse(JSON.stringify(action)) as ActionConfig;
+    }
     const { resolveDynamicOutputs } = await import("./variables.js");
     await resolveDynamicOutputs(runtime.outputs, resolvedAction.config);
     if (resolvedAction.type === "check_conditions") {

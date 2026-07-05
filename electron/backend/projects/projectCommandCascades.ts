@@ -62,7 +62,12 @@ export function duplicateProjectWorkflowSettings(
   created: Workflow,
   browserLaunch: WorkflowSettings["browser_launch"],
 ): WorkflowSettings {
-  const copied = structuredClone(sourceSettings);
+  let copied: WorkflowSettings;
+  try {
+    copied = structuredClone(sourceSettings);
+  } catch {
+    copied = JSON.parse(JSON.stringify(sourceSettings)) as WorkflowSettings;
+  }
   return {
     ...copied,
     workflow_id: created.id,

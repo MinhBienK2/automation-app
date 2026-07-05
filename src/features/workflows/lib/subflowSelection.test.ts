@@ -317,4 +317,47 @@ describe("subflow selection planning", () => {
       ),
     ).toBe(false);
   });
+
+  test("handles non-serializable value in node config gracefully by falling back to JSON serialization", () => {
+    const graphWithFn: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "step-1",
+          node_type: "action",
+          label: "Open",
+          position: { x: 220, y: 0 },
+          config: {
+            type: "navigate",
+            config: {
+              url: "https://example.test",
+              callback: () => {}, // non-clonable function
+            },
+          },
+          ports: [
+            { id: "in", label: "In", direction: "input" },
+            { id: "out", label: "Out", direction: "output" },
+          ],
+          group_id: null,
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    const plan = buildSelectedSubflowPlan(graphWithFn, {
+      nodeIds: ["step-1"],
+      edgeIds: [],
+    });
+
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.subflowGraph.nodes[1].config).toEqual({
+      type: "navigate",
+      config: {
+        url: "https://example.test",
+      },
+    });
+  });
 });
+

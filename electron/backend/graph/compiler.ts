@@ -761,7 +761,11 @@ function collectDomainAllowlist(config: ActionConfig, domains: Set<string>) {
 }
 
 function applyExecutionDefaults(config: ActionConfig): ActionConfig {
-  return structuredClone(config) as ActionConfig;
+  try {
+    return structuredClone(config) as ActionConfig;
+  } catch {
+    return JSON.parse(JSON.stringify(config)) as ActionConfig;
+  }
 }
 
 function applyNestedWaitBetweenNodes(

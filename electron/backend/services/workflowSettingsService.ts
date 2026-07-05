@@ -278,7 +278,12 @@ export class WorkflowSettingsService {
   }
 
   duplicateWorkflowSettings(sourceSettings: WorkflowSettings, created: Workflow): WorkflowSettings {
-    const copied = structuredClone(sourceSettings);
+    let copied: WorkflowSettings;
+    try {
+      copied = structuredClone(sourceSettings);
+    } catch {
+      copied = JSON.parse(JSON.stringify(sourceSettings)) as WorkflowSettings;
+    }
     const freshDefaults = this.defaultWorkflowSettings(created, { randomizeIdentity: true });
     const sourceBrowser = copied.browser_launch;
     const freshBrowser = freshDefaults.browser_launch;

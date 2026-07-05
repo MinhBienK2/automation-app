@@ -379,7 +379,11 @@ function cloneGraphEdge(edge: WorkflowGraph["edges"][number]): WorkflowGraph["ed
 
 function cloneStructuredValue<T>(value: T): T {
   if (typeof value === "undefined") return value;
-  if (typeof structuredClone === "function") return structuredClone(value);
+  try {
+    if (typeof structuredClone === "function") return structuredClone(value);
+  } catch (error) {
+    // fallback to JSON serialization if structuredClone throws
+  }
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
