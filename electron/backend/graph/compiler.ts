@@ -5,7 +5,6 @@ import type {
   CompiledWorkflowGraph,
   GraphEdge,
   GraphNode,
-  GraphNodeType,
   RouterGraphCase,
   RouterGraphConfig,
   VariableAssignment,
@@ -796,10 +795,6 @@ function forEachNestedActionArray(
   }
   const stepValue = record.step;
   if (isActionConfig(stepValue)) visit([stepValue]);
-}
-
-function nextTarget(graph: WorkflowGraph, sourceNodeId: string, sourcePort: string): string | null {
-  return nextTransition(graph, sourceNodeId, sourcePort)?.targetNodeId ?? null;
 }
 
 function nextTransition(
