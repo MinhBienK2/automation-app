@@ -2174,6 +2174,51 @@ describe("BrowserWorkflowRunner", () => {
     expect(result.current_step_id).toBeNull();
   });
 
+  test("completes run successfully when break_loop or continue_loop are executed at the top level", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const resultBreak = await runner.run({
+      graph: {
+        steps: [
+          {
+            node_id: "break-node",
+            label: "Break Node",
+            config: {
+              type: "break_loop",
+              config: {},
+            },
+          },
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(resultBreak.status).toBe("success");
+
+    const resultContinue = await runner.run({
+      graph: {
+        steps: [
+          {
+            node_id: "continue-node",
+            label: "Continue Node",
+            config: {
+              type: "continue_loop",
+              config: {},
+            },
+          },
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(resultContinue.status).toBe("success");
+  });
+
   test("evaluates browser-backed conditions and runs repeat-until timeout steps", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),

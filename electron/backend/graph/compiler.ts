@@ -117,10 +117,6 @@ export function compileWorkflowGraphFromNode(
     throw validationError("graph", blocking.message);
   }
 
-  if (!mainPathNodeIds(normalizedGraph).has(startNodeId)) {
-    throw validationError("startNodeId", "Run from selected is only supported for main path nodes");
-  }
-
   const node = normalizedGraph.nodes.find((candidate) => candidate.id === startNodeId);
   if (!node || node.node_type === "start" || node.node_type === "merge") {
     throw validationError("startNodeId", "Run from selected requires an executable graph node");

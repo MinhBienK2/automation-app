@@ -638,7 +638,7 @@ describe("TypeScript graph compiler parity", () => {
     ).toThrow("Referenced subflow has no executable steps");
   });
 
-  test("rejects selected nodes inside nested branch bodies", () => {
+  test("compiles selected nodes inside nested branch bodies", () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
@@ -653,9 +653,8 @@ describe("TypeScript graph compiler parity", () => {
       ],
     );
 
-    expect(() => compileWorkflowGraphFromNode(graph, "branch-step")).toThrow(
-      "Run from selected is only supported for main path nodes",
-    );
+    const plan = compileWorkflowGraphFromNode(graph, "branch-step");
+    expect(plan.steps.map((step) => step.node_id)).toEqual(["branch-step"]);
   });
 
   test("rejects Merge as a run-from-selected start", () => {

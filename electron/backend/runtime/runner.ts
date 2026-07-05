@@ -296,6 +296,8 @@ export class BrowserWorkflowRunner {
         }
       } else if (isAbortError(error)) {
         state.status = "stopped";
+      } else if (error instanceof LoopControl) {
+        state.status = "success";
       } else {
         state.status = "failed";
         const failedInfo = runtime.failedStepInfo;

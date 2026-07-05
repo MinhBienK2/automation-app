@@ -26,17 +26,10 @@ export function runFromSelectedState({
     };
   }
   if (isRunning) return { enabled: false, reason: "A workflow run is already active.", visible: true };
-  if (!selectedNodeId) return { enabled: false, reason: "Select one main-path node to run from.", visible: true };
+  if (!selectedNodeId) return { enabled: false, reason: "Select one node to run from.", visible: true };
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId);
-  if (!selectedNode || selectedNode.node_type === "start") {
+  if (!selectedNode || selectedNode.node_type === "start" || selectedNode.node_type === "merge") {
     return { enabled: false, reason: "Select an executable graph node.", visible: true };
-  }
-  if (!mainPathNodeIds(graph).has(selectedNodeId)) {
-    return {
-      enabled: false,
-      reason: "Run from selected only supports main-path nodes in this version.",
-      visible: true,
-    };
   }
   const retainedProfileKey = workflowBrowserProfileKey(settings);
   if (!retainedProfileKey) {

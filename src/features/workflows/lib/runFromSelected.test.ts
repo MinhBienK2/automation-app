@@ -136,7 +136,7 @@ describe("runFromSelectedState", () => {
   });
 
 
-  test("rejects selected nodes outside the workflow main path", () => {
+  test("enables selected nodes outside the workflow main path", () => {
     const settings = {
       ...defaultWorkflowSettings({ workflowId: "workflow-1", workflowName: "Login" }),
       run_policy: {
@@ -162,8 +162,56 @@ describe("runFromSelectedState", () => {
         isRunning: false,
       }),
     ).toEqual({
+      enabled: true,
+      reason: "Run from the selected node using the retained browser session.",
+      visible: true,
+    });
+  });
+
+  test("rejects merge nodes as run from selected start node", () => {
+    const settings = {
+      ...defaultWorkflowSettings({ workflowId: "workflow-1", workflowName: "Login" }),
+      run_policy: {
+        ...defaultWorkflowSettings({ workflowId: "workflow-1", workflowName: "Login" }).run_policy,
+        run_from_selected_enabled: true,
+        run_from_selected_mode: "from_selected" as const,
+        browser_retention: "retain" as const,
+      },
+      browser_launch: {
+        ...defaultWorkflowSettings({ workflowId: "workflow-1", workflowName: "Login" }).browser_launch,
+        session_mode: "persistent_profile" as const,
+        profile_dir: "profiles/login",
+        profile_name: "",
+      },
+    };
+
+    const graphWithMerge: WorkflowGraph = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        {
+          id: "merge-node",
+          node_type: "merge",
+          label: "Merge",
+          position: { x: 400, y: 0 },
+          config: {},
+          ports: nodePorts("merge"),
+          group_id: null,
+        },
+      ],
+    };
+
+    expect(
+      runFromSelectedState({
+        graph: graphWithMerge,
+        selectedNodeId: "merge-node",
+        settings,
+        runState: retainedRunState("profiles/login"),
+        isRunning: false,
+      }),
+    ).toEqual({
       enabled: false,
-      reason: "Run from selected only supports main-path nodes in this version.",
+      reason: "Select an executable graph node.",
       visible: true,
     });
   });
