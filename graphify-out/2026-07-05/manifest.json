@@ -585,8 +585,8 @@
     "semantic_hash": "d46b25e937853f741ca889dc1de31027"
   },
   "src/App.test.tsx": {
-    "mtime": 1783190910.8625486,
-    "ast_hash": "86449ca96880e2feff2dbf67bf11e820",
+    "mtime": 1783252127.9466443,
+    "ast_hash": "40c37c0864d0b733e14f26ffd8501679",
     "semantic_hash": ""
   },
   "src/App.tsx": {
@@ -835,8 +835,8 @@
     "semantic_hash": "cd7a68b0d123abe937f3994e68551c29"
   },
   "src/features/subflows/state/useSubflowWorkspace.ts": {
-    "mtime": 1782741097.9307923,
-    "ast_hash": "284e7175f2606c3fc5bd12e00ac0de88",
+    "mtime": 1783252093.9718971,
+    "ast_hash": "f55705298baf58009020558568db7923",
     "semantic_hash": ""
   },
   "src/features/workflows/components/ActionConfigAdvancedFields.tsx": {
@@ -1090,8 +1090,8 @@
     "semantic_hash": "2ab49241a95c798f262519965ca09bf7"
   },
   "src/features/workflows/components/WorkflowSettingsDialog.tsx": {
-    "mtime": 1783101946.9662976,
-    "ast_hash": "be2df8211354b13de0c161cfb69bfbcf",
+    "mtime": 1783252068.3855245,
+    "ast_hash": "b04a07dda2b2fe1a62ee390a125c94ca",
     "semantic_hash": ""
   },
   "src/features/workflows/components/useSelectionSubflowCreator.test.tsx": {
@@ -1305,8 +1305,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/pages/SubflowDetailPage.tsx": {
-    "mtime": 1782669300.3910775,
-    "ast_hash": "47d264db98e444d8ddb157d69698f638",
+    "mtime": 1783252101.0532682,
+    "ast_hash": "5d196cc89059b37b8f44cfcdd91f3d36",
     "semantic_hash": ""
   },
   "src/features/workflows/pages/SubflowListPage.test.tsx": {
@@ -1325,8 +1325,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/pages/WorkflowDetailPage.tsx": {
-    "mtime": 1783014072.433941,
-    "ast_hash": "18cabaf1b855ed4d5d1c49b583883bbd",
+    "mtime": 1783251302.7824974,
+    "ast_hash": "dd6640591666b733152d2fb229e97da5",
     "semantic_hash": ""
   },
   "src/features/workflows/pages/WorkflowListPage.test.tsx": {
@@ -1355,14 +1355,14 @@
     "semantic_hash": "215de5513882e977ede94940b6383e6d"
   },
   "src/features/workflows/state/useWorkflowSettingsState.ts": {
-    "mtime": 1782490583.4785159,
-    "ast_hash": "db96f06539876260ec399bf934fd06e9",
-    "semantic_hash": "db96f06539876260ec399bf934fd06e9"
+    "mtime": 1783252061.1611276,
+    "ast_hash": "470685300d1aee7e6bb2c983b61e6e19",
+    "semantic_hash": ""
   },
   "src/features/workflows/state/useWorkflowWorkspace.ts": {
-    "mtime": 1782490583.4785159,
-    "ast_hash": "f6988eb7c283c20541a905922484d810",
-    "semantic_hash": "f6988eb7c283c20541a905922484d810"
+    "mtime": 1783252107.1405842,
+    "ast_hash": "9885de20b1b7dc91d21c0b269c963287",
+    "semantic_hash": ""
   },
   "src/layouts/AppShell.test.tsx": {
     "mtime": 1783092388.9733849,
@@ -1455,8 +1455,8 @@
     "semantic_hash": "29425bc87312dae845525731673266c4"
   },
   "src/shared/types/workspaceContracts.ts": {
-    "mtime": 1783228841.6293442,
-    "ast_hash": "e11cc0625a6e18cf1da65b2e4955767a",
+    "mtime": 1783252086.230487,
+    "ast_hash": "66e56fb68dc930f3f781abd61845ec76",
     "semantic_hash": ""
   },
   "src/types/electron.ts": {

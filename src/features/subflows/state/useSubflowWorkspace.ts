@@ -83,36 +83,59 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
     backTarget: SubflowBackTarget = { type: "subflows" },
   ) => {
     setAppError("");
-    try {
-      const loadedSubflow = await getSubflow(subflowId);
-      if (!loadedSubflow) {
-        setAppError("Subflow not found");
-        setScreen("projects");
-        setProjectCollection("subflows");
-        return;
-      }
-      setSelectedSubflow(loadedSubflow);
-      setSelectedSubflowGraph(null);
-      setSelectedSubflowUsage(null);
-      setSubflowBackTarget(backTarget);
-      setSubflowGraphSaveStatus("saved");
-      setSidebarCollapsed(true);
-      setScreen("subflow-detail");
-
-      const graphPromise = Promise.resolve(getSubflowGraph(subflowId)).catch(() => null);
-      const usagePromise = Promise.resolve(getSubflowUsage(subflowId)).catch(() => null);
-
-      const [graph, usage] = await Promise.all([
-        graphPromise,
-        usagePromise,
-      ]);
-
-      setSelectedSubflowGraph(graph);
-      setSelectedSubflowUsage(usage ?? []);
-    } catch (error) {
-      setAppError(commandMessage(error));
+    
+    // Check cache first to enable immediate UI rendering of subflow title/metadata
+    const cachedSubflow = subflows.find((s) => s.id === subflowId);
+    if (cachedSubflow) {
+      setSelectedSubflow(cachedSubflow as any);
+    } else {
+      setSelectedSubflow(null);
     }
-  }, [setScreen, setProjectCollection, setSelectedSubflow, setSelectedSubflowGraph, setSelectedSubflowUsage, setSubflowBackTarget, setSubflowGraphSaveStatus, setSidebarCollapsed, setAppError]);
+    
+    setSelectedSubflowGraph(null);
+    setSelectedSubflowUsage(null);
+    setSubflowBackTarget(backTarget);
+    setSubflowGraphSaveStatus("saved");
+    setSidebarCollapsed(true);
+    setScreen("subflow-detail");
+
+    const subflowPromise = !cachedSubflow
+      ? Promise.resolve(getSubflow(subflowId)).catch(() => null)
+      : Promise.resolve(cachedSubflow);
+
+    const graphPromise = Promise.resolve(getSubflowGraph(subflowId)).catch(() => null);
+    const usagePromise = Promise.resolve(getSubflowUsage(subflowId)).catch(() => null);
+
+    const [subflowResult, graphResult, usageResult] = await Promise.all([
+      subflowPromise,
+      graphPromise,
+      usagePromise,
+    ]);
+
+    if (!cachedSubflow && !subflowResult) {
+      setAppError("Subflow not found");
+      setScreen("projects");
+      setProjectCollection("subflows");
+      return;
+    }
+
+    if (subflowResult) {
+      setSelectedSubflow(subflowResult);
+    }
+    setSelectedSubflowGraph(graphResult);
+    setSelectedSubflowUsage(usageResult ?? []);
+  }, [
+    subflows,
+    setScreen,
+    setProjectCollection,
+    setSelectedSubflow,
+    setSelectedSubflowGraph,
+    setSelectedSubflowUsage,
+    setSubflowBackTarget,
+    setSubflowGraphSaveStatus,
+    setSidebarCollapsed,
+    setAppError,
+  ]);
 
   const openSubflowDetail = useCallback(async (
     subflowId: string,

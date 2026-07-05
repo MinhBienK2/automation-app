@@ -1518,7 +1518,7 @@
       "source_location": "L221",
       "_origin": "ast",
       "id": "schemas_index_validateactionconfig",
-      "community": 39,
+      "community": 197,
       "norm_label": "validateactionconfig()"
     },
     {
@@ -3508,7 +3508,7 @@
       "source_location": "L116",
       "_origin": "ast",
       "id": "browser_sessionmanager_browserdriverframelocator",
-      "community": 25,
+      "community": 20,
       "norm_label": "browserdriverframelocator"
     },
     {
@@ -3518,7 +3518,7 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "browser_sessionmanager_browserdriverlocator",
-      "community": 58,
+      "community": 33,
       "norm_label": "browserdriverlocator"
     },
     {
@@ -3878,7 +3878,7 @@
       "source_location": "L627",
       "_origin": "ast",
       "id": "browser_sessionmanager_assertheadeddisplayavailable",
-      "community": 59,
+      "community": 16,
       "norm_label": "assertheadeddisplayavailable()"
     },
     {
@@ -5998,7 +5998,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "graph_migration_test",
-      "community": 39,
+      "community": 197,
       "norm_label": "migration.test.ts"
     },
     {
@@ -6008,7 +6008,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "graph_migration",
-      "community": 39,
+      "community": 197,
       "norm_label": "migration.ts"
     },
     {
@@ -6028,7 +6028,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "graph_migration_elementtargetfromxpath",
-      "community": 39,
+      "community": 197,
       "norm_label": "elementtargetfromxpath()"
     },
     {
@@ -6038,7 +6038,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "migrations_001_baseline",
-      "community": 39,
+      "community": 197,
       "norm_label": "001_baseline.ts"
     },
     {
@@ -6048,7 +6048,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "migrations_001_baseline_migration001baseline",
-      "community": 39,
+      "community": 197,
       "norm_label": "migration001baseline"
     },
     {
@@ -6058,7 +6058,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "migrations_002_rename_eval_nodes",
-      "community": 39,
+      "community": 197,
       "norm_label": "002_rename_eval_nodes.ts"
     },
     {
@@ -6068,7 +6068,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "migrations_002_rename_eval_nodes_migration002renameevalnodes",
-      "community": 39,
+      "community": 197,
       "norm_label": "migration002renameevalnodes"
     },
     {
@@ -6078,7 +6078,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "migrations_index_test",
-      "community": 39,
+      "community": 197,
       "norm_label": "index.test.ts"
     },
     {
@@ -6088,7 +6088,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "migrations_index_test_baselinegraph",
-      "community": 39,
+      "community": 197,
       "norm_label": "baselinegraph()"
     },
     {
@@ -6098,7 +6098,7 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "migrations_index_test_makerunner",
-      "community": 39,
+      "community": 197,
       "norm_label": "makerunner()"
     },
     {
@@ -6108,7 +6108,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "migrations_index",
-      "community": 39,
+      "community": 197,
       "norm_label": "index.ts"
     },
     {
@@ -6118,7 +6118,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "migrations_index_migrations",
-      "community": 39,
+      "community": 197,
       "norm_label": "migrations"
     },
     {
@@ -6128,7 +6128,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "migrations_index_assertmonotonic",
-      "community": 39,
+      "community": 197,
       "norm_label": "assertmonotonic()"
     },
     {
@@ -6138,7 +6138,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "migrations_index_runmigrations",
-      "community": 39,
+      "community": 197,
       "norm_label": "runmigrations()"
     },
     {
@@ -6148,7 +6148,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "migrations_types",
-      "community": 39,
+      "community": 197,
       "norm_label": "types.ts"
     },
     {
@@ -6158,7 +6158,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "migrations_types_migration",
-      "community": 39,
+      "community": 197,
       "norm_label": "migration"
     },
     {
@@ -6168,7 +6168,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "migrations_types_migrationresult",
-      "community": 39,
+      "community": 197,
       "norm_label": "migrationresult"
     },
     {
@@ -6238,7 +6238,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "graph_quarantine_quarantinenode",
-      "community": 39,
+      "community": 197,
       "norm_label": "quarantinenode()"
     },
     {
@@ -7748,7 +7748,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "persistence_graphloader",
-      "community": 39,
+      "community": 197,
       "norm_label": "graphloader.ts"
     },
     {
@@ -7758,7 +7758,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "persistence_graphloader_graphloadresult",
-      "community": 39,
+      "community": 197,
       "norm_label": "graphloadresult"
     },
     {
@@ -7768,7 +7768,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "persistence_graphloader_processgraphonload",
-      "community": 39,
+      "community": 197,
       "norm_label": "processgraphonload()"
     },
     {
@@ -7788,7 +7788,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "persistence_migrateallgraphs_test",
-      "community": 39,
+      "community": 197,
       "norm_label": "migrateallgraphs.test.ts"
     },
     {
@@ -7798,7 +7798,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "persistence_migrateallgraphs_test_baselinev1graph",
-      "community": 39,
+      "community": 197,
       "norm_label": "baselinev1graph()"
     },
     {
@@ -7808,7 +7808,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "persistence_migrateallgraphs",
-      "community": 39,
+      "community": 197,
       "norm_label": "migrateallgraphs.ts"
     },
     {
@@ -7818,7 +7818,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "persistence_migrateallgraphs_migrationreport",
-      "community": 39,
+      "community": 197,
       "norm_label": "migrationreport"
     },
     {
@@ -7828,7 +7828,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "persistence_migrateallgraphs_idrow",
-      "community": 39,
+      "community": 197,
       "norm_label": "idrow"
     },
     {
@@ -7838,7 +7838,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "persistence_migrateallgraphs_migrateallgraphs",
-      "community": 39,
+      "community": 197,
       "norm_label": "migrateallgraphs()"
     },
     {
@@ -7848,7 +7848,7 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "persistence_migrateallgraphs_assemblefn",
-      "community": 39,
+      "community": 197,
       "norm_label": "assemblefn"
     },
     {
@@ -7858,7 +7858,7 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "persistence_migrateallgraphs_rowmigrationresult",
-      "community": 39,
+      "community": 197,
       "norm_label": "rowmigrationresult"
     },
     {
@@ -7868,7 +7868,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "persistence_migrateallgraphs_migrategraphrow",
-      "community": 39,
+      "community": 197,
       "norm_label": "migrategraphrow()"
     },
     {
@@ -8788,7 +8788,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "persistence_subflowrepository_subflowrepository_getsubflowgraph",
-      "community": 39,
+      "community": 197,
       "norm_label": ".getsubflowgraph()"
     },
     {
@@ -8808,7 +8808,7 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "persistence_subflowrepository_subflowrepository_savesubflowgraph",
-      "community": 39,
+      "community": 197,
       "norm_label": ".savesubflowgraph()"
     },
     {
@@ -9028,7 +9028,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository",
-      "community": 3,
+      "community": 39,
       "norm_label": "workflowrepository"
     },
     {
@@ -9038,7 +9038,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_constructor",
-      "community": 3,
+      "community": 39,
       "norm_label": ".constructor()"
     },
     {
@@ -9088,7 +9088,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_deleteproject",
-      "community": 3,
+      "community": 39,
       "norm_label": ".deleteproject()"
     },
     {
@@ -9148,7 +9148,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_deletebrowserprofile",
-      "community": 3,
+      "community": 39,
       "norm_label": ".deletebrowserprofile()"
     },
     {
@@ -9168,7 +9168,7 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_createsubflow",
-      "community": 3,
+      "community": 39,
       "norm_label": ".createsubflow()"
     },
     {
@@ -9188,7 +9188,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_getsubflow",
-      "community": 3,
+      "community": 39,
       "norm_label": ".getsubflow()"
     },
     {
@@ -9198,7 +9198,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_getsubflowgraph",
-      "community": 3,
+      "community": 39,
       "norm_label": ".getsubflowgraph()"
     },
     {
@@ -9208,7 +9208,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_updatesubflow",
-      "community": 3,
+      "community": 39,
       "norm_label": ".updatesubflow()"
     },
     {
@@ -9218,7 +9218,7 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_savesubflowgraph",
-      "community": 3,
+      "community": 39,
       "norm_label": ".savesubflowgraph()"
     },
     {
@@ -9228,7 +9228,7 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_duplicatesubflow",
-      "community": 3,
+      "community": 39,
       "norm_label": ".duplicatesubflow()"
     },
     {
@@ -9238,7 +9238,7 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_deletesubflow",
-      "community": 3,
+      "community": 39,
       "norm_label": ".deletesubflow()"
     },
     {
@@ -9248,7 +9248,7 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_getsubflowusage",
-      "community": 3,
+      "community": 39,
       "norm_label": ".getsubflowusage()"
     },
     {
@@ -9278,7 +9278,7 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_getworkflow",
-      "community": 3,
+      "community": 39,
       "norm_label": ".getworkflow()"
     },
     {
@@ -9288,7 +9288,7 @@
       "source_location": "L183",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_getworkflowsummary",
-      "community": 3,
+      "community": 39,
       "norm_label": ".getworkflowsummary()"
     },
     {
@@ -9298,7 +9298,7 @@
       "source_location": "L188",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_renameworkflow",
-      "community": 3,
+      "community": 39,
       "norm_label": ".renameworkflow()"
     },
     {
@@ -9308,7 +9308,7 @@
       "source_location": "L195",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_assignworkflowproject",
-      "community": 3,
+      "community": 39,
       "norm_label": ".assignworkflowproject()"
     },
     {
@@ -9318,7 +9318,7 @@
       "source_location": "L206",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_assignworkflowbrowserprofile",
-      "community": 3,
+      "community": 39,
       "norm_label": ".assignworkflowbrowserprofile()"
     },
     {
@@ -9328,7 +9328,7 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_deleteworkflow",
-      "community": 3,
+      "community": 39,
       "norm_label": ".deleteworkflow()"
     },
     {
@@ -9338,7 +9338,7 @@
       "source_location": "L229",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_getworkflowgraph",
-      "community": 3,
+      "community": 39,
       "norm_label": ".getworkflowgraph()"
     },
     {
@@ -9348,7 +9348,7 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_saveworkflowgraph",
-      "community": 3,
+      "community": 39,
       "norm_label": ".saveworkflowgraph()"
     },
     {
@@ -9358,7 +9358,7 @@
       "source_location": "L258",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_getworkflowsettings",
-      "community": 3,
+      "community": 39,
       "norm_label": ".getworkflowsettings()"
     },
     {
@@ -9368,7 +9368,7 @@
       "source_location": "L264",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_saveworkflowsettings",
-      "community": 3,
+      "community": 39,
       "norm_label": ".saveworkflowsettings()"
     },
     {
@@ -9378,7 +9378,7 @@
       "source_location": "L282",
       "_origin": "ast",
       "id": "persistence_workflowrepository_workflowrepository_getworkflowrow",
-      "community": 3,
+      "community": 39,
       "norm_label": ".getworkflowrow()"
     },
     {
@@ -9388,7 +9388,7 @@
       "source_location": "L304",
       "_origin": "ast",
       "id": "persistence_workflowrepository_rowtoworkflow",
-      "community": 3,
+      "community": 39,
       "norm_label": "rowtoworkflow()"
     },
     {
@@ -9398,7 +9398,7 @@
       "source_location": "L315",
       "_origin": "ast",
       "id": "persistence_workflowrepository_rowtosummary",
-      "community": 3,
+      "community": 39,
       "norm_label": "rowtosummary()"
     },
     {
@@ -9408,7 +9408,7 @@
       "source_location": "L323",
       "_origin": "ast",
       "id": "persistence_workflowrepository_parsejson",
-      "community": 3,
+      "community": 39,
       "norm_label": "parsejson()"
     },
     {
@@ -12248,7 +12248,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "runtime_interactionprimitives_pointerbox",
-      "community": 25,
+      "community": 33,
       "norm_label": "pointerbox"
     },
     {
@@ -12268,7 +12268,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "runtime_interactionprimitives_centerpoint",
-      "community": 25,
+      "community": 33,
       "norm_label": "centerpoint()"
     },
     {
@@ -12278,7 +12278,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "runtime_interactionprimitives_dragtargetpoint",
-      "community": 25,
+      "community": 33,
       "norm_label": "dragtargetpoint()"
     },
     {
@@ -13018,7 +13018,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "runtime_runner_smoke_test",
-      "community": 197,
+      "community": 25,
       "norm_label": "runner.smoke.test.ts"
     },
     {
@@ -13028,7 +13028,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "runtime_runner_smoke_test_temproots",
-      "community": 197,
+      "community": 25,
       "norm_label": "temproots"
     },
     {
@@ -13038,7 +13038,7 @@
       "source_location": "L228",
       "_origin": "ast",
       "id": "runtime_runner_smoke_test_browserprobe",
-      "community": 197,
+      "community": 25,
       "norm_label": "browserprobe"
     },
     {
@@ -13048,7 +13048,7 @@
       "source_location": "L246",
       "_origin": "ast",
       "id": "runtime_runner_smoke_test_createfixtureserver",
-      "community": 197,
+      "community": 25,
       "norm_label": "createfixtureserver()"
     },
     {
@@ -13058,7 +13058,7 @@
       "source_location": "L259",
       "_origin": "ast",
       "id": "runtime_runner_smoke_test_closeserver",
-      "community": 197,
+      "community": 25,
       "norm_label": "closeserver()"
     },
     {
@@ -13068,7 +13068,7 @@
       "source_location": "L265",
       "_origin": "ast",
       "id": "runtime_runner_smoke_test_browserprobescript",
-      "community": 197,
+      "community": 25,
       "norm_label": "browserprobescript()"
     },
     {
@@ -14598,7 +14598,7 @@
       "source_location": "L203",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_run",
-      "community": 33,
+      "community": 15,
       "norm_label": ".run()"
     },
     {
@@ -14638,7 +14638,7 @@
       "source_location": "L353",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_getretainedsessionstate",
-      "community": 33,
+      "community": 15,
       "norm_label": ".getretainedsessionstate()"
     },
     {
@@ -14658,7 +14658,7 @@
       "source_location": "L361",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_applyenvironment",
-      "community": 33,
+      "community": 15,
       "norm_label": ".applyenvironment()"
     },
     {
@@ -14778,7 +14778,7 @@
       "source_location": "L760",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_locatorfordragendpoint",
-      "community": 20,
+      "community": 33,
       "norm_label": ".locatorfordragendpoint()"
     },
     {
@@ -14788,7 +14788,7 @@
       "source_location": "L792",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_locatorforcustomselecttrigger",
-      "community": 20,
+      "community": 33,
       "norm_label": ".locatorforcustomselecttrigger()"
     },
     {
@@ -14798,7 +14798,7 @@
       "source_location": "L816",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_executepositioneddraganddrop",
-      "community": 25,
+      "community": 33,
       "norm_label": ".executepositioneddraganddrop()"
     },
     {
@@ -14808,7 +14808,7 @@
       "source_location": "L850",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_locatorboundingbox",
-      "community": 25,
+      "community": 33,
       "norm_label": ".locatorboundingbox()"
     },
     {
@@ -14818,7 +14818,7 @@
       "source_location": "L864",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_locatorforaction",
-      "community": 20,
+      "community": 33,
       "norm_label": ".locatorforaction()"
     },
     {
@@ -14828,7 +14828,7 @@
       "source_location": "L906",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_geteffectiveiframexpath",
-      "community": 20,
+      "community": 33,
       "norm_label": ".geteffectiveiframexpath()"
     },
     {
@@ -14838,7 +14838,7 @@
       "source_location": "L910",
       "_origin": "ast",
       "id": "runtime_runner_browserworkflowrunner_executefindelement",
-      "community": 33,
+      "community": 20,
       "norm_label": ".executefindelement()"
     },
     {
@@ -14898,7 +14898,7 @@
       "source_location": "L1072",
       "_origin": "ast",
       "id": "runtime_runner_isaborterror",
-      "community": 33,
+      "community": 15,
       "norm_label": "isaborterror()"
     },
     {
@@ -14948,7 +14948,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "runtime_runneractionexecutors_runneractionruntime",
-      "community": 38,
+      "community": 25,
       "norm_label": "runneractionruntime"
     },
     {
@@ -14988,7 +14988,7 @@
       "source_location": "L1379",
       "_origin": "ast",
       "id": "runtime_runneractionexecutors_evaluaterulegroup",
-      "community": 20,
+      "community": 38,
       "norm_label": "evaluaterulegroup()"
     },
     {
@@ -14998,7 +14998,7 @@
       "source_location": "L1399",
       "_origin": "ast",
       "id": "runtime_runneractionexecutors_evaluatesinglerule",
-      "community": 20,
+      "community": 38,
       "norm_label": "evaluatesinglerule()"
     },
     {
@@ -15328,7 +15328,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "runtime_targetresolver_runtimeelementref",
-      "community": 25,
+      "community": 20,
       "norm_label": "runtimeelementref"
     },
     {
@@ -15378,7 +15378,7 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "runtime_targetresolver_locatorforruntimeelementref",
-      "community": 20,
+      "community": 38,
       "norm_label": "locatorforruntimeelementref()"
     },
     {
@@ -25775,7 +25775,7 @@
       "label": "WorkflowSettingsHelpButton()",
       "file_type": "code",
       "source_file": "src/features/workflows/components/WorkflowSettingsDialog.tsx",
-      "source_location": "L210",
+      "source_location": "L231",
       "_origin": "ast",
       "id": "components_workflowsettingsdialog_workflowsettingshelpbutton",
       "community": 175,
@@ -25785,7 +25785,7 @@
       "label": "WorkflowSettingsHelpItem()",
       "file_type": "code",
       "source_file": "src/features/workflows/components/WorkflowSettingsDialog.tsx",
-      "source_location": "L339",
+      "source_location": "L360",
       "_origin": "ast",
       "id": "components_workflowsettingsdialog_workflowsettingshelpitem",
       "community": 175,
@@ -25795,7 +25795,7 @@
       "label": "WorkflowSettingsHelpList()",
       "file_type": "code",
       "source_file": "src/features/workflows/components/WorkflowSettingsDialog.tsx",
-      "source_location": "L357",
+      "source_location": "L378",
       "_origin": "ast",
       "id": "components_workflowsettingsdialog_workflowsettingshelplist",
       "community": 175,
@@ -30445,7 +30445,7 @@
       "label": "mapRunStateToMainGraph()",
       "file_type": "code",
       "source_file": "src/features/workflows/pages/WorkflowDetailPage.tsx",
-      "source_location": "L491",
+      "source_location": "L521",
       "_origin": "ast",
       "id": "pages_workflowdetailpage_maprunstatetomaingraph",
       "community": 186,
@@ -30455,7 +30455,7 @@
       "label": "runtimeDiagnosticsFromStepId()",
       "file_type": "code",
       "source_file": "src/features/workflows/pages/WorkflowDetailPage.tsx",
-      "source_location": "L510",
+      "source_location": "L540",
       "_origin": "ast",
       "id": "pages_workflowdetailpage_runtimediagnosticsfromstepid",
       "community": 186,
@@ -30465,7 +30465,7 @@
       "label": "resolveMainGraphNodeId()",
       "file_type": "code",
       "source_file": "src/features/workflows/pages/WorkflowDetailPage.tsx",
-      "source_location": "L521",
+      "source_location": "L551",
       "_origin": "ast",
       "id": "pages_workflowdetailpage_resolvemaingraphnodeid",
       "community": 186,
@@ -33048,7 +33048,7 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "types_workflowcore_dragtargetposition",
-      "community": 25,
+      "community": 33,
       "norm_label": "dragtargetposition"
     },
     {
@@ -33478,7 +33478,7 @@
       "source_location": "L1099",
       "_origin": "ast",
       "id": "types_workflowcore_elementtarget",
-      "community": 15,
+      "community": 33,
       "norm_label": "elementtarget"
     },
     {
@@ -34268,7 +34268,7 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "types_workflowgraphops_workflowgraph",
-      "community": 39,
+      "community": 197,
       "norm_label": "workflowgraph"
     },
     {
@@ -50297,9 +50297,9 @@
       "source_file": "electron/backend/commands/backupCommands.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commands_backupcommands",
-      "target": "commands_backupcommands_createbackupcommands",
-      "confidence_score": 1.0
+      "target": "commands_backupcommands_createbackupcommands"
     },
     {
       "relation": "imports_from",
@@ -50308,9 +50308,9 @@
       "source_file": "electron/backend/commands/backupCommands.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commands_backupcommands",
-      "target": "commands_types",
-      "confidence_score": 1.0
+      "target": "commands_types"
     },
     {
       "relation": "imports",
@@ -50319,9 +50319,9 @@
       "source_file": "electron/backend/commands/backupCommands.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commands_backupcommands",
-      "target": "commands_types_commanddeps",
-      "confidence_score": 1.0
+      "target": "commands_types_commanddeps"
     },
     {
       "relation": "imports_from",
@@ -50330,9 +50330,9 @@
       "source_file": "electron/backend/commands/backupCommands.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commands_backupcommands",
-      "target": "persistence_backupservice",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice"
     },
     {
       "relation": "imports",
@@ -50341,9 +50341,9 @@
       "source_file": "electron/backend/commands/backupCommands.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commands_backupcommands",
-      "target": "persistence_backupservice_backupconfig",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupconfig"
     },
     {
       "relation": "imports",
@@ -50352,9 +50352,9 @@
       "source_file": "electron/backend/commands/backupCommands.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commands_backupcommands",
-      "target": "persistence_backupservice_backupfile",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupfile"
     },
     {
       "relation": "imports",
@@ -50363,9 +50363,9 @@
       "source_file": "electron/backend/commands/backupCommands.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commands_backupcommands",
-      "target": "persistence_backupservice_backupservice",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice"
     },
     {
       "relation": "imports_from",
@@ -50374,9 +50374,9 @@
       "source_file": "electron/backend/commands/index.ts",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commands_index",
-      "target": "commands_backupcommands",
-      "confidence_score": 1.0
+      "target": "commands_backupcommands"
     },
     {
       "relation": "imports",
@@ -50385,9 +50385,9 @@
       "source_file": "electron/backend/commands/index.ts",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commands_index",
-      "target": "commands_backupcommands_createbackupcommands",
-      "confidence_score": 1.0
+      "target": "commands_backupcommands_createbackupcommands"
     },
     {
       "relation": "calls",
@@ -53764,9 +53764,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts_test",
-      "target": "diagnostics_setupfonts",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts"
     },
     {
       "relation": "imports",
@@ -53775,9 +53775,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts_test",
-      "target": "diagnostics_setupfonts_arefontsalreadysetup",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_arefontsalreadysetup"
     },
     {
       "relation": "imports",
@@ -53786,9 +53786,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts_test",
-      "target": "diagnostics_setupfonts_setupcloakbrowserfonts",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_setupcloakbrowserfonts"
     },
     {
       "relation": "contains",
@@ -53796,9 +53796,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.test.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts_test",
-      "target": "diagnostics_setupfonts_test_temproots",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_test_temproots"
     },
     {
       "relation": "contains",
@@ -53806,9 +53806,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L147",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_arefontsalreadysetup",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_arefontsalreadysetup"
     },
     {
       "relation": "contains",
@@ -53816,9 +53816,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_buildcloakbrowserfontsetupplan",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_buildcloakbrowserfontsetupplan"
     },
     {
       "relation": "contains",
@@ -53826,9 +53826,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_cloakbrowser_font_packages",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_cloakbrowser_font_packages"
     },
     {
       "relation": "contains",
@@ -53836,9 +53836,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L71",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_commandavailable",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_commandavailable"
     },
     {
       "relation": "contains",
@@ -53846,9 +53846,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L103",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_copyfontfiles",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_copyfontfiles"
     },
     {
       "relation": "contains",
@@ -53856,9 +53856,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_font_extensions",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_font_extensions"
     },
     {
       "relation": "contains",
@@ -53866,9 +53866,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L87",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_listfilesrecursive",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_listfilesrecursive"
     },
     {
       "relation": "contains",
@@ -53876,9 +53876,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_runcommand",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_runcommand"
     },
     {
       "relation": "contains",
@@ -53886,9 +53886,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L163",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_setupcloakbrowserfonts",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_setupcloakbrowserfonts"
     },
     {
       "relation": "contains",
@@ -53896,9 +53896,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L123",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts",
-      "target": "diagnostics_setupfonts_writegeneratedreadme",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_writegeneratedreadme"
     },
     {
       "relation": "imports_from",
@@ -53907,9 +53907,9 @@
       "source_file": "electron/main.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "electron_main",
-      "target": "diagnostics_setupfonts",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts"
     },
     {
       "relation": "calls",
@@ -53918,9 +53918,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L176",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts_setupcloakbrowserfonts",
-      "target": "diagnostics_setupfonts_buildcloakbrowserfontsetupplan",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_buildcloakbrowserfontsetupplan"
     },
     {
       "relation": "calls",
@@ -53929,9 +53929,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L178",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts_setupcloakbrowserfonts",
-      "target": "diagnostics_setupfonts_commandavailable",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_commandavailable"
     },
     {
       "relation": "calls",
@@ -53940,9 +53940,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L111",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts_copyfontfiles",
-      "target": "diagnostics_setupfonts_listfilesrecursive",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_listfilesrecursive"
     },
     {
       "relation": "calls",
@@ -53951,9 +53951,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L211",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts_setupcloakbrowserfonts",
-      "target": "diagnostics_setupfonts_copyfontfiles",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_copyfontfiles"
     },
     {
       "relation": "calls",
@@ -53962,9 +53962,9 @@
       "source_file": "electron/backend/diagnostics/setupFonts.ts",
       "source_location": "L223",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "diagnostics_setupfonts_setupcloakbrowserfonts",
-      "target": "diagnostics_setupfonts_writegeneratedreadme",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_writegeneratedreadme"
     },
     {
       "relation": "imports",
@@ -53973,9 +53973,9 @@
       "source_file": "electron/main.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "electron_main",
-      "target": "diagnostics_setupfonts_arefontsalreadysetup",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_arefontsalreadysetup"
     },
     {
       "relation": "imports",
@@ -53984,9 +53984,9 @@
       "source_file": "electron/main.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "electron_main",
-      "target": "diagnostics_setupfonts_setupcloakbrowserfonts",
-      "confidence_score": 1.0
+      "target": "diagnostics_setupfonts_setupcloakbrowserfonts"
     },
     {
       "relation": "imports_from",
@@ -61414,9 +61414,9 @@
       "source_file": "electron/backend/persistence/backfillGraphTables.ts",
       "source_location": "L100",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backfillgraphtables",
-      "target": "persistence_backfillgraphtables_writelocks",
-      "confidence_score": 1.0
+      "target": "persistence_backfillgraphtables_writelocks"
     },
     {
       "relation": "imports_from",
@@ -61722,9 +61722,9 @@
       "source_file": "electron/backend/persistence/backupService.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_test",
-      "target": "persistence_backupservice",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice"
     },
     {
       "relation": "imports",
@@ -61733,9 +61733,9 @@
       "source_file": "electron/backend/persistence/backupService.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_test",
-      "target": "persistence_backupservice_backupservice",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice"
     },
     {
       "relation": "imports_from",
@@ -61744,9 +61744,9 @@
       "source_file": "electron/backend/persistence/backupService.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_test",
-      "target": "persistence_database",
-      "confidence_score": 1.0
+      "target": "persistence_database"
     },
     {
       "relation": "imports",
@@ -61755,9 +61755,9 @@
       "source_file": "electron/backend/persistence/backupService.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_test",
-      "target": "persistence_database_apppaths",
-      "confidence_score": 1.0
+      "target": "persistence_database_apppaths"
     },
     {
       "relation": "imports",
@@ -61766,9 +61766,9 @@
       "source_file": "electron/backend/persistence/backupService.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_test",
-      "target": "persistence_database_createapppaths",
-      "confidence_score": 1.0
+      "target": "persistence_database_createapppaths"
     },
     {
       "relation": "imports_from",
@@ -61777,9 +61777,9 @@
       "source_file": "electron/backend/persistence/backupService.test.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_test",
-      "target": "persistence_testdbadapter",
-      "confidence_score": 1.0
+      "target": "persistence_testdbadapter"
     },
     {
       "relation": "imports",
@@ -61788,9 +61788,9 @@
       "source_file": "electron/backend/persistence/backupService.test.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_test",
-      "target": "persistence_testdbadapter_testdbadapter",
-      "confidence_score": 1.0
+      "target": "persistence_testdbadapter_testdbadapter"
     },
     {
       "relation": "contains",
@@ -61798,9 +61798,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice",
-      "target": "persistence_backupservice_backupconfig",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupconfig"
     },
     {
       "relation": "contains",
@@ -61808,9 +61808,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice",
-      "target": "persistence_backupservice_backupfile",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupfile"
     },
     {
       "relation": "contains",
@@ -61818,9 +61818,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice",
-      "target": "persistence_backupservice_backupservice",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice"
     },
     {
       "relation": "contains",
@@ -61828,9 +61828,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice",
-      "target": "persistence_backupservice_execasync",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_execasync"
     },
     {
       "relation": "imports_from",
@@ -61839,9 +61839,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice",
-      "target": "persistence_database",
-      "confidence_score": 1.0
+      "target": "persistence_database"
     },
     {
       "relation": "imports",
@@ -61850,9 +61850,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice",
-      "target": "persistence_database_apppaths",
-      "confidence_score": 1.0
+      "target": "persistence_database_apppaths"
     },
     {
       "relation": "imports_from",
@@ -61861,9 +61861,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice",
-      "target": "persistence_dbadapter",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter"
     },
     {
       "relation": "imports",
@@ -61872,9 +61872,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice",
-      "target": "persistence_dbadapter_dbadapter",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter_dbadapter"
     },
     {
       "relation": "calls",
@@ -61883,9 +61883,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L98",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_createbackup",
-      "target": "persistence_backupservice_execasync",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_execasync"
     },
     {
       "relation": "method",
@@ -61893,9 +61893,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L270",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice",
-      "target": "persistence_backupservice_backupservice_checkandrunautomaticbackup",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_checkandrunautomaticbackup"
     },
     {
       "relation": "method",
@@ -61903,9 +61903,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice",
-      "target": "persistence_backupservice_backupservice_constructor",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_constructor"
     },
     {
       "relation": "method",
@@ -61913,9 +61913,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice",
-      "target": "persistence_backupservice_backupservice_createbackup",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_createbackup"
     },
     {
       "relation": "method",
@@ -61923,9 +61923,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L237",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice",
-      "target": "persistence_backupservice_backupservice_deletebackup",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_deletebackup"
     },
     {
       "relation": "method",
@@ -61933,9 +61933,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L244",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice",
-      "target": "persistence_backupservice_backupservice_getbackupconfig",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getbackupconfig"
     },
     {
       "relation": "method",
@@ -61943,9 +61943,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice",
-      "target": "persistence_backupservice_backupservice_getbackupsdir",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getbackupsdir"
     },
     {
       "relation": "method",
@@ -61953,9 +61953,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice",
-      "target": "persistence_backupservice_backupservice_getconfigpath",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getconfigpath"
     },
     {
       "relation": "method",
@@ -61963,9 +61963,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L39",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice",
-      "target": "persistence_backupservice_backupservice_listbackups",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_listbackups"
     },
     {
       "relation": "method",
@@ -61973,9 +61973,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L264",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice",
-      "target": "persistence_backupservice_backupservice_savebackupconfig",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_savebackupconfig"
     },
     {
       "relation": "references",
@@ -61984,9 +61984,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_constructor",
-      "target": "persistence_database_apppaths",
-      "confidence_score": 1.0
+      "target": "persistence_database_apppaths"
     },
     {
       "relation": "references",
@@ -61995,9 +61995,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_constructor",
-      "target": "persistence_dbadapter_dbadapter",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter_dbadapter"
     },
     {
       "relation": "calls",
@@ -62006,9 +62006,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L62",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_createbackup",
-      "target": "persistence_backupservice_backupservice_getbackupsdir",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getbackupsdir"
     },
     {
       "relation": "calls",
@@ -62017,9 +62017,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L238",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_deletebackup",
-      "target": "persistence_backupservice_backupservice_getbackupsdir",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getbackupsdir"
     },
     {
       "relation": "calls",
@@ -62028,9 +62028,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_listbackups",
-      "target": "persistence_backupservice_backupservice_getbackupsdir",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getbackupsdir"
     },
     {
       "relation": "calls",
@@ -62039,9 +62039,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L245",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_getbackupconfig",
-      "target": "persistence_backupservice_backupservice_getconfigpath",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getconfigpath"
     },
     {
       "relation": "calls",
@@ -62050,9 +62050,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L265",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_savebackupconfig",
-      "target": "persistence_backupservice_backupservice_getconfigpath",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getconfigpath"
     },
     {
       "relation": "calls",
@@ -62061,9 +62061,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L294",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_checkandrunautomaticbackup",
-      "target": "persistence_backupservice_backupservice_listbackups",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_listbackups"
     },
     {
       "relation": "calls",
@@ -62072,9 +62072,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L289",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_checkandrunautomaticbackup",
-      "target": "persistence_backupservice_backupservice_createbackup",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_createbackup"
     },
     {
       "relation": "calls",
@@ -62083,9 +62083,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L67",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_createbackup",
-      "target": "persistence_backupservice_backupservice_getbackupconfig",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getbackupconfig"
     },
     {
       "relation": "calls",
@@ -62094,9 +62094,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L300",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_checkandrunautomaticbackup",
-      "target": "persistence_backupservice_backupservice_deletebackup",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_deletebackup"
     },
     {
       "relation": "calls",
@@ -62105,9 +62105,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L271",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_checkandrunautomaticbackup",
-      "target": "persistence_backupservice_backupservice_getbackupconfig",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_getbackupconfig"
     },
     {
       "relation": "calls",
@@ -62116,9 +62116,9 @@
       "source_file": "electron/backend/persistence/backupService.ts",
       "source_location": "L291",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_backupservice_backupservice_checkandrunautomaticbackup",
-      "target": "persistence_backupservice_backupservice_savebackupconfig",
-      "confidence_score": 1.0
+      "target": "persistence_backupservice_backupservice_savebackupconfig"
     },
     {
       "relation": "imports_from",
@@ -62509,9 +62509,9 @@
       "source_file": "electron/backend/persistence/dbAdapter.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_dbadapter_test",
-      "target": "persistence_dbadapter",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter"
     },
     {
       "relation": "imports",
@@ -62520,9 +62520,9 @@
       "source_file": "electron/backend/persistence/dbAdapter.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_dbadapter_test",
-      "target": "persistence_dbadapter_pgdbadapter",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter_pgdbadapter"
     },
     {
       "relation": "contains",
@@ -62530,9 +62530,9 @@
       "source_file": "electron/backend/persistence/dbAdapter.test.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_dbadapter_test",
-      "target": "persistence_dbadapter_test_clientconnectmock",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter_test_clientconnectmock"
     },
     {
       "relation": "contains",
@@ -62540,9 +62540,9 @@
       "source_file": "electron/backend/persistence/dbAdapter.test.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_dbadapter_test",
-      "target": "persistence_dbadapter_test_clientmock",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter_test_clientmock"
     },
     {
       "relation": "contains",
@@ -62550,9 +62550,9 @@
       "source_file": "electron/backend/persistence/dbAdapter.test.ts",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_dbadapter_test",
-      "target": "persistence_dbadapter_test_connectmock",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter_test_connectmock"
     },
     {
       "relation": "contains",
@@ -62560,9 +62560,9 @@
       "source_file": "electron/backend/persistence/dbAdapter.test.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_dbadapter_test",
-      "target": "persistence_dbadapter_test_pool",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter_test_pool"
     },
     {
       "relation": "contains",
@@ -62570,9 +62570,9 @@
       "source_file": "electron/backend/persistence/dbAdapter.test.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_dbadapter_test",
-      "target": "persistence_dbadapter_test_querymock",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter_test_querymock"
     },
     {
       "relation": "contains",
@@ -62580,9 +62580,9 @@
       "source_file": "electron/backend/persistence/dbAdapter.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_dbadapter_test",
-      "target": "persistence_dbadapter_test_releasemock",
-      "confidence_score": 1.0
+      "target": "persistence_dbadapter_test_releasemock"
     },
     {
       "relation": "imports_from",
@@ -63532,9 +63532,9 @@
       "source_file": "electron/backend/persistence/migrationRunner.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_migrationrunner_test",
-      "target": "persistence_migrationrunner_checkmigrationspending",
-      "confidence_score": 1.0
+      "target": "persistence_migrationrunner_checkmigrationspending"
     },
     {
       "relation": "imports",
@@ -63597,9 +63597,9 @@
       "source_file": "electron/backend/persistence/migrationRunner.ts",
       "source_location": "L169",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_migrationrunner",
-      "target": "persistence_migrationrunner_checkmigrationspending",
-      "confidence_score": 1.0
+      "target": "persistence_migrationrunner_checkmigrationspending"
     },
     {
       "relation": "contains",
@@ -63838,9 +63838,9 @@
       "source_file": "electron/backend/persistence/migrationRunner.ts",
       "source_location": "L174",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "persistence_migrationrunner_checkmigrationspending",
-      "target": "persistence_migrationrunner_postgresdbconnection_query",
-      "confidence_score": 1.0
+      "target": "persistence_migrationrunner_postgresdbconnection_query"
     },
     {
       "relation": "calls",
@@ -64003,9 +64003,9 @@
       "source_file": "electron/main.ts",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "electron_main",
-      "target": "persistence_migrationrunner_checkmigrationspending",
-      "confidence_score": 1.0
+      "target": "persistence_migrationrunner_checkmigrationspending"
     },
     {
       "relation": "imports_from",
@@ -86530,9 +86530,9 @@
       "source_file": "electron/main.ts",
       "source_location": "L215",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "electron_main",
-      "target": "electron_main_openpath",
-      "confidence_score": 1.0
+      "target": "electron_main_openpath"
     },
     {
       "relation": "contains",
@@ -87747,9 +87747,9 @@
       "source_file": "package.json",
       "source_location": "L136",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "package_devdependencies",
-      "target": "package_devdependencies_node_pg_migrate",
-      "confidence_score": 1.0
+      "target": "package_devdependencies_node_pg_migrate"
     },
     {
       "relation": "contains",
@@ -89843,9 +89843,9 @@
       "source_file": "src/App.tsx",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_app",
-      "target": "lib_appstate_readgraphautosavedelayms",
-      "confidence_score": 1.0
+      "target": "lib_appstate_readgraphautosavedelayms"
     },
     {
       "relation": "imports",
@@ -89887,9 +89887,9 @@
       "source_file": "src/App.tsx",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_app",
-      "target": "lib_appstate_writegraphautosavedelayms",
-      "confidence_score": 1.0
+      "target": "lib_appstate_writegraphautosavedelayms"
     },
     {
       "relation": "imports",
@@ -90129,9 +90129,9 @@
       "source_file": "src/App.tsx",
       "source_location": "L81",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_app",
-      "target": "pages_adminbackupspanel",
-      "confidence_score": 1.0
+      "target": "pages_adminbackupspanel"
     },
     {
       "relation": "imports",
@@ -90140,9 +90140,9 @@
       "source_file": "src/App.tsx",
       "source_location": "L81",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_app",
-      "target": "pages_adminbackupspanel_adminbackupspanel",
-      "confidence_score": 1.0
+      "target": "pages_adminbackupspanel_adminbackupspanel"
     },
     {
       "relation": "imports_from",
@@ -92670,9 +92670,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "ui_button",
-      "confidence_score": 1.0
+      "target": "ui_button"
     },
     {
       "relation": "imports_from",
@@ -93185,9 +93185,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "ui_button_button",
-      "confidence_score": 1.0
+      "target": "ui_button_button"
     },
     {
       "relation": "imports",
@@ -93720,9 +93720,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "ui_dialog",
-      "confidence_score": 1.0
+      "target": "ui_dialog"
     },
     {
       "relation": "imports_from",
@@ -94063,9 +94063,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "ui_dialog_dialog",
-      "confidence_score": 1.0
+      "target": "ui_dialog_dialog"
     },
     {
       "relation": "imports",
@@ -94327,9 +94327,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "ui_dialog_dialogcontent",
-      "confidence_score": 1.0
+      "target": "ui_dialog_dialogcontent"
     },
     {
       "relation": "imports",
@@ -94569,9 +94569,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "ui_dialog_dialogheader",
-      "confidence_score": 1.0
+      "target": "ui_dialog_dialogheader"
     },
     {
       "relation": "imports",
@@ -94767,9 +94767,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "ui_dialog_dialogfooter",
-      "confidence_score": 1.0
+      "target": "ui_dialog_dialogfooter"
     },
     {
       "relation": "imports",
@@ -94987,9 +94987,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "ui_dialog_dialogtitle",
-      "confidence_score": 1.0
+      "target": "ui_dialog_dialogtitle"
     },
     {
       "relation": "imports",
@@ -95229,9 +95229,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "ui_dialog_dialogdescription",
-      "confidence_score": 1.0
+      "target": "ui_dialog_dialogdescription"
     },
     {
       "relation": "imports",
@@ -96254,9 +96254,9 @@
       "source_file": "src/features/settings/pages/SettingsPage.tsx",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_settingspage",
-      "target": "ui_input",
-      "confidence_score": 1.0
+      "target": "ui_input"
     },
     {
       "relation": "imports_from",
@@ -96759,9 +96759,9 @@
       "source_file": "src/features/settings/pages/SettingsPage.tsx",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_settingspage",
-      "target": "ui_input_input",
-      "confidence_score": 1.0
+      "target": "ui_input_input"
     },
     {
       "relation": "imports",
@@ -99212,9 +99212,9 @@
       "source_file": "src/features/settings/pages/SettingsPage.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_settingspage",
-      "target": "ui_switch_switch",
-      "confidence_score": 1.0
+      "target": "ui_switch_switch"
     },
     {
       "relation": "calls",
@@ -99623,9 +99623,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "lib_workflowapi",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi"
     },
     {
       "relation": "imports",
@@ -99634,9 +99634,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "lib_workflowapi_createbackup",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_createbackup"
     },
     {
       "relation": "imports",
@@ -99645,9 +99645,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "lib_workflowapi_deletebackup",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_deletebackup"
     },
     {
       "relation": "imports",
@@ -99656,9 +99656,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "lib_workflowapi_getbackupconfig",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_getbackupconfig"
     },
     {
       "relation": "imports",
@@ -99667,9 +99667,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "lib_workflowapi_listbackups",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_listbackups"
     },
     {
       "relation": "imports",
@@ -99678,9 +99678,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "lib_workflowapi_savebackupconfig",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_savebackupconfig"
     },
     {
       "relation": "imports_from",
@@ -99689,9 +99689,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "pages_adminbackupspanel",
-      "confidence_score": 1.0
+      "target": "pages_adminbackupspanel"
     },
     {
       "relation": "imports",
@@ -99700,9 +99700,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "pages_adminbackupspanel_adminbackupspanel",
-      "confidence_score": 1.0
+      "target": "pages_adminbackupspanel_adminbackupspanel"
     },
     {
       "relation": "contains",
@@ -99710,9 +99710,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "pages_adminbackupspanel_test_mockbackups",
-      "confidence_score": 1.0
+      "target": "pages_adminbackupspanel_test_mockbackups"
     },
     {
       "relation": "contains",
@@ -99720,9 +99720,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.test.tsx",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel_test",
-      "target": "pages_adminbackupspanel_test_mockconfig",
-      "confidence_score": 1.0
+      "target": "pages_adminbackupspanel_test_mockconfig"
     },
     {
       "relation": "imports_from",
@@ -99731,9 +99731,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "lib_workflowapi",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi"
     },
     {
       "relation": "imports",
@@ -99742,9 +99742,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "lib_workflowapi_createbackup",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_createbackup"
     },
     {
       "relation": "imports",
@@ -99753,9 +99753,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "lib_workflowapi_deletebackup",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_deletebackup"
     },
     {
       "relation": "imports",
@@ -99764,9 +99764,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "lib_workflowapi_getbackupconfig",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_getbackupconfig"
     },
     {
       "relation": "imports",
@@ -99775,9 +99775,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "lib_workflowapi_listbackups",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_listbackups"
     },
     {
       "relation": "imports",
@@ -99786,9 +99786,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "lib_workflowapi_openbackupsfolder",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_openbackupsfolder"
     },
     {
       "relation": "imports",
@@ -99797,9 +99797,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "lib_workflowapi_savebackupconfig",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_savebackupconfig"
     },
     {
       "relation": "contains",
@@ -99807,9 +99807,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "pages_adminbackupspanel_adminbackupspanel",
-      "confidence_score": 1.0
+      "target": "pages_adminbackupspanel_adminbackupspanel"
     },
     {
       "relation": "contains",
@@ -99817,9 +99817,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "pages_adminbackupspanel_backupconfig",
-      "confidence_score": 1.0
+      "target": "pages_adminbackupspanel_backupconfig"
     },
     {
       "relation": "contains",
@@ -99827,9 +99827,9 @@
       "source_file": "src/features/auth/pages/AdminBackupsPanel.tsx",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_adminbackupspanel",
-      "target": "pages_adminbackupspanel_backupfile",
-      "confidence_score": 1.0
+      "target": "pages_adminbackupspanel_backupfile"
     },
     {
       "relation": "imports_from",
@@ -128755,9 +128755,9 @@
       "source_file": "src/lib/appState.ts",
       "source_location": "L46",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_appstate",
-      "target": "lib_appstate_readgraphautosavedelayms",
-      "confidence_score": 1.0
+      "target": "lib_appstate_readgraphautosavedelayms"
     },
     {
       "relation": "contains",
@@ -128805,9 +128805,9 @@
       "source_file": "src/lib/appState.ts",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_appstate",
-      "target": "lib_appstate_writegraphautosavedelayms",
-      "confidence_score": 1.0
+      "target": "lib_appstate_writegraphautosavedelayms"
     },
     {
       "relation": "contains",
@@ -130698,9 +130698,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L515",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi",
-      "target": "lib_workflowapi_createbackup",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_createbackup"
     },
     {
       "relation": "contains",
@@ -130768,9 +130768,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L519",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi",
-      "target": "lib_workflowapi_deletebackup",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_deletebackup"
     },
     {
       "relation": "contains",
@@ -130988,9 +130988,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L523",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi",
-      "target": "lib_workflowapi_getbackupconfig",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_getbackupconfig"
     },
     {
       "relation": "contains",
@@ -131218,9 +131218,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L511",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi",
-      "target": "lib_workflowapi_listbackups",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_listbackups"
     },
     {
       "relation": "contains",
@@ -131368,9 +131368,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L531",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi",
-      "target": "lib_workflowapi_openbackupsfolder",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_openbackupsfolder"
     },
     {
       "relation": "contains",
@@ -131488,9 +131488,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L527",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi",
-      "target": "lib_workflowapi_savebackupconfig",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_savebackupconfig"
     },
     {
       "relation": "contains",
@@ -132068,9 +132068,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L516",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi_createbackup",
-      "target": "lib_workflowapi_bridge",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_bridge"
     },
     {
       "relation": "calls",
@@ -132145,9 +132145,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L520",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi_deletebackup",
-      "target": "lib_workflowapi_bridge",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_bridge"
     },
     {
       "relation": "calls",
@@ -132387,9 +132387,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L524",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi_getbackupconfig",
-      "target": "lib_workflowapi_bridge",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_bridge"
     },
     {
       "relation": "calls",
@@ -132640,9 +132640,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L512",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi_listbackups",
-      "target": "lib_workflowapi_bridge",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_bridge"
     },
     {
       "relation": "calls",
@@ -132805,9 +132805,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L532",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi_openbackupsfolder",
-      "target": "lib_workflowapi_bridge",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_bridge"
     },
     {
       "relation": "calls",
@@ -132937,9 +132937,9 @@
       "source_file": "src/lib/workflowApi.ts",
       "source_location": "L528",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_workflowapi_savebackupconfig",
-      "target": "lib_workflowapi_bridge",
-      "confidence_score": 1.0
+      "target": "lib_workflowapi_bridge"
     },
     {
       "relation": "calls",
@@ -134127,9 +134127,9 @@
       "source_file": "src/types/electron.ts",
       "source_location": "L259",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types_electron",
-      "target": "types_electron_backupconfig",
-      "confidence_score": 1.0
+      "target": "types_electron_backupconfig"
     },
     {
       "relation": "contains",
@@ -134137,9 +134137,9 @@
       "source_file": "src/types/electron.ts",
       "source_location": "L267",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types_electron",
-      "target": "types_electron_backupfile",
-      "confidence_score": 1.0
+      "target": "types_electron_backupfile"
     },
     {
       "relation": "contains",
@@ -140325,5 +140325,5 @@
       "source_file": "docs/architecture/overview.md"
     }
   ],
-  "built_at_commit": "64b5d325be0ad87c8d16916a864e8835a58dcdb9"
+  "built_at_commit": "df36cef92f3be27ba4129040059615e626e59f59"
 }

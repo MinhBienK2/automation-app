@@ -5,6 +5,7 @@ import { IconButton } from "../../../components/ui/icon-button";
 import { initialRunState } from "../../../lib/workflowUi";
 import type {
   Subflow,
+  SubflowSummary,
   SubflowUsage,
   WorkflowGraph,
 } from "../../../types/workflow";
@@ -12,7 +13,7 @@ import { SubflowSettingsDialog } from "../components/SubflowSettingsDialog";
 import { WorkflowGraphEditor } from "../components/WorkflowGraphEditor";
 
 type SubflowDetailPageProps = {
-  subflow: Subflow;
+  subflow: Subflow | SubflowSummary | null;
   projectName?: string | null;
   usage: SubflowUsage[] | null;
   graph: WorkflowGraph | null;
@@ -52,7 +53,7 @@ export function SubflowDetailPage({
 
   return (
     <section className="app-screen workflow-detail-screen">
-      <h1 className="sr-only">{subflow.name}</h1>
+      <h1 className="sr-only">{subflow?.name ?? "Subflow"}</h1>
       <PageHeader
         ariaLabel="Subflow detail header"
         backLabel={backLabel}
@@ -63,7 +64,7 @@ export function SubflowDetailPage({
           ...(projectName ? [`Project: ${projectName}`] : []),
           `Usage: ${usageLabel}`,
         ]}
-        title={subflow.name}
+        title={subflow?.name ?? "Loading..."}
         onBack={onBack}
         actions={
           <div className="run-actions">
@@ -73,6 +74,7 @@ export function SubflowDetailPage({
               type="button"
               label="Settings"
               onClick={() => setSettingsOpen(true)}
+              disabled={!subflow}
             >
               <Settings aria-hidden="true" />
             </IconButton>
@@ -82,7 +84,7 @@ export function SubflowDetailPage({
               type="button"
               label="Save"
               onClick={onSaveGraph}
-              disabled={!canSaveGraph || isSavingGraph}
+              disabled={!canSaveGraph || isSavingGraph || !subflow}
               loading={isSavingGraph}
             >
               <Save aria-hidden="true" />
@@ -91,7 +93,7 @@ export function SubflowDetailPage({
         }
       />
       <SubflowSettingsDialog
-        subflow={settingsOpen ? subflow : null}
+        subflow={settingsOpen && subflow ? subflow : null}
         onOpenChange={(open) => setSettingsOpen(open)}
         onSave={onUpdateSubflow}
       />
@@ -130,7 +132,7 @@ export function SubflowDetailPage({
         )}
       </section>
 
-      {graph ? (
+      {graph && subflow ? (
         <WorkflowGraphEditor
           graph={graph}
           graphKind="subflow"

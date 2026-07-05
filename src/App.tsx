@@ -924,7 +924,7 @@ function App() {
             />
           )}
         </ProjectsPage>
-      ) : nav.screen === "subflow-detail" && subflowsWorkspace.selectedSubflow ? (
+      ) : nav.screen === "subflow-detail" ? (
         <SubflowDetailPage
           subflow={subflowsWorkspace.selectedSubflow}
           projectName={selectedSubflowProjectName}
