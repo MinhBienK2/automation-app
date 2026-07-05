@@ -95,6 +95,9 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
 
   const persistCurrentGraph = useCallback(async (options?: { comment?: string; tag?: string }) => {
     if (!detail || !workflowGraph) return false;
+    if (graphRevisionRef.current === savedGraphRevisionRef.current) {
+      return true;
+    }
     setAppError("");
     setGraphSaveStatus("saving");
 
