@@ -813,61 +813,6 @@ function nextTransition(
   return edge ? { edge, targetNodeId: edge.target_node_id } : null;
 }
 
-function mainPathNodeIds(graph: WorkflowGraph) {
-  const nodeIds = new Set<string>();
-  let node = graph.nodes.find((candidate) => candidate.node_type === "start") ?? null;
-  const visited = new Set<string>();
-
-  while (node && !visited.has(node.id)) {
-    nodeIds.add(node.id);
-    visited.add(node.id);
-    const nextPort = mainContinuationPort(node.node_type);
-    if (!nextPort) break;
-    const nextNodeId = nextTarget(graph, node.id, nextPort);
-    node = nextNodeId
-      ? graph.nodes.find((candidate) => candidate.id === nextNodeId) ?? null
-      : null;
-  }
-
-  return nodeIds;
-}
-
-function mainContinuationPort(nodeType: GraphNodeType) {
-  switch (nodeType) {
-    case "start":
-    case "action":
-    case "set_variable":
-    case "set_json_variables":
-    case "update_number_variable":
-    case "update_text_variable":
-    case "update_flag_variable":
-    case "update_list_variable":
-    case "update_object_variable":
-    case "transform_variable":
-    case "assert_output":
-    case "domain_allowlist":
-    case "check_conditions":
-    case "calculate_value":
-    case "call_subflow":
-    case "merge":
-      return "out";
-    case "if":
-    case "switch":
-    case "router":
-    case "random_choice":
-    case "repeat_times":
-    case "repeat_for_each":
-    case "while":
-    case "repeat_until":
-    case "try_catch":
-    case "fallback":
-      return "done";
-    case "retry":
-      return "success";
-    default:
-      return null;
-  }
-}
 
 function routerGraphConfig(node: GraphNode): RouterGraphConfig {
   const router = routerGraphConfigOrNull(node);
