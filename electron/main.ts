@@ -17,6 +17,10 @@ import { migrations } from "./backend/persistence/migrations.js";
 import pkg from "electron-updater";
 const { autoUpdater } = pkg;
 import {
+  areFontsAlreadySetup,
+  setupCloakBrowserFonts,
+} from "./backend/diagnostics/setupFonts.js";
+import {
   workflowIpcChannels,
   type WorkflowIpcChannelName,
 } from "./ipc.js";
@@ -189,9 +193,25 @@ app.whenReady().then(async () => {
 
   const database = new PgDbAdapter(pool);
 
+  if (process.platform === "linux") {
+    try {
+      const alreadySetup = await areFontsAlreadySetup(appPaths.rootDir);
+      if (!alreadySetup) {
+        console.log("[startup] Fonts not found in config dir. Initializing download/setup...");
+        await setupCloakBrowserFonts({ repoRoot: appPaths.rootDir });
+        console.log("[startup] Fonts setup completed.");
+      } else {
+        console.log("[startup] Fonts already present in config dir.");
+      }
+    } catch (error) {
+      console.error("[startup] Failed to automatically setup fonts on startup:", error);
+    }
+  }
+
   const handlers = createWorkflowCommandHandlers({
     appPaths,
     database,
+    defaultFingerprintFontsDir: path.join(appPaths.rootDir, ".local", "cloakbrowser-fonts", "linux"),
     async openPath(targetPath) {
       await shell.openPath(targetPath);
     },

@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "electron/backend/commands/index.ts": {
-    "mtime": 1783191663.1628666,
-    "ast_hash": "9ff13e17bea229e772feb6a58beef3e4",
+    "mtime": 1783228809.1770601,
+    "ast_hash": "7ed865a067d92719ca2b7e8c98e0c61f",
     "semantic_hash": ""
   },
   "electron/backend/commands/packageCommands.test.ts": {
@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "electron/backend/commands/projectCommands.test.ts": {
-    "mtime": 1783190455.3343618,
-    "ast_hash": "988632d2bb2ddb16e38fa86c8f3eb361",
+    "mtime": 1783194203.1797955,
+    "ast_hash": "9073a96a3d8e794cd851eb2c1750a28a",
     "semantic_hash": ""
   },
   "electron/backend/commands/projectCommands.ts": {
@@ -130,8 +130,8 @@
     "semantic_hash": ""
   },
   "electron/backend/commands/types.ts": {
-    "mtime": 1783191224.720081,
-    "ast_hash": "63c03b30881393eaf86ec215a61ba12f",
+    "mtime": 1783230686.2499003,
+    "ast_hash": "fbb398b52d78e492ee5c6001383344d9",
     "semantic_hash": ""
   },
   "electron/backend/commands/workflowCommands.test.ts": {
@@ -185,12 +185,12 @@
     "semantic_hash": ""
   },
   "electron/backend/identity/identityRepository.ts": {
-    "mtime": 1783191649.0868812,
+    "mtime": 1783192230.424997,
     "ast_hash": "9db94b19e7b4d3a86c33bd101df5f1ab",
     "semantic_hash": ""
   },
   "electron/backend/operations/operationsRepository.ts": {
-    "mtime": 1783191652.5468776,
+    "mtime": 1783192230.424997,
     "ast_hash": "d439ea58e9dd63d3d5eecad78a0fbaaa",
     "semantic_hash": ""
   },
@@ -200,7 +200,7 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/workflowRepository.ts": {
-    "mtime": 1783191639.0758924,
+    "mtime": 1783192230.4259973,
     "ast_hash": "7b2a9d5faab4883a63cb5796c6a1efa0",
     "semantic_hash": ""
   },
@@ -345,7 +345,7 @@
     "semantic_hash": ""
   },
   "electron/backend/runtime/runManager.ts": {
-    "mtime": 1783191656.6178732,
+    "mtime": 1783192230.4269972,
     "ast_hash": "2d8b8a7c2cb935772ba4d863adb22920",
     "semantic_hash": ""
   },
@@ -440,7 +440,7 @@
     "semantic_hash": ""
   },
   "electron/backend/scheduling/workflowScheduleRepository.ts": {
-    "mtime": 1783191659.83387,
+    "mtime": 1783192230.4269972,
     "ast_hash": "df55e14768bc18d1ea1913c1b3d9ed2b",
     "semantic_hash": ""
   },
@@ -485,8 +485,8 @@
     "semantic_hash": "8d6052a133a73f34f16675a1ef366018"
   },
   "electron/ipc.ts": {
-    "mtime": 1783101125.203825,
-    "ast_hash": "3ad7089b25a449b27041297c0a9f2285",
+    "mtime": 1783230704.389992,
+    "ast_hash": "a9fbf9c82edf254c6bf03e89a54df743",
     "semantic_hash": ""
   },
   "electron/main.test.ts": {
@@ -495,8 +495,8 @@
     "semantic_hash": "1da15a27b8690ff60277c1d672802026"
   },
   "electron/main.ts": {
-    "mtime": 1783190874.0449796,
-    "ast_hash": "a777b179b69065dae88a8d65028121d8",
+    "mtime": 1783246093.899063,
+    "ast_hash": "2cdead62644017399c7aa67a9728b8b8",
     "semantic_hash": ""
   },
   "eslint.config.js": {
@@ -510,8 +510,8 @@
     "semantic_hash": "84a83ac551718f11f7d396f4e9f8f5f3"
   },
   "package.json": {
-    "mtime": 1783096519.4830332,
-    "ast_hash": "111e87ca7e3b4671af1d33ce5968dfcd",
+    "mtime": 1783192902.08051,
+    "ast_hash": "2a5e8feb71192f91219dce31009b0c99",
     "semantic_hash": ""
   },
   "playwright.config.ts": {
@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1783188782.9092035,
-    "ast_hash": "a4bcc21beb71127c71b9448c28bf2415",
+    "mtime": 1783239341.9746768,
+    "ast_hash": "601c3bb2aa2eb1cebdfabc2c808cf8ae",
     "semantic_hash": ""
   },
   "src/AppCss.test.ts": {
@@ -765,13 +765,13 @@
     "semantic_hash": ""
   },
   "src/features/projects/pages/ProjectsPage.test.tsx": {
-    "mtime": 1782585629.8811197,
-    "ast_hash": "03e900a69163f7d61b4ce919bf3a0716",
+    "mtime": 1783196731.639323,
+    "ast_hash": "6296c8df0b8b91ac78a84ce6dc24f75d",
     "semantic_hash": ""
   },
   "src/features/projects/pages/ProjectsPage.tsx": {
-    "mtime": 1782587030.143354,
-    "ast_hash": "dbfc1bc08b1ffb436131dde32a01b795",
+    "mtime": 1783196741.8883924,
+    "ast_hash": "9d056c5aa67d782a98f5457fd9fcee7f",
     "semantic_hash": ""
   },
   "src/features/projects/state/useProjectWorkspace.ts": {
@@ -820,8 +820,8 @@
     "semantic_hash": "ebcbf6a9f9f5557add44c2d821226958"
   },
   "src/features/settings/pages/SettingsPage.tsx": {
-    "mtime": 1783190865.3410869,
-    "ast_hash": "1a0add1ae1ef6d890472baea4e1c2916",
+    "mtime": 1783228909.670874,
+    "ast_hash": "93c071c66bdba55030732478af544eb0",
     "semantic_hash": ""
   },
   "src/features/settings/useSettingsDiagnostics.test.tsx": {
@@ -1370,13 +1370,13 @@
     "semantic_hash": ""
   },
   "src/layouts/AppShell.tsx": {
-    "mtime": 1783188757.2966344,
-    "ast_hash": "57791c21bbe3501a39ea7cabff5425f8",
+    "mtime": 1783228852.781437,
+    "ast_hash": "4408a6df3b31e95dd12f1077c74bbd21",
     "semantic_hash": ""
   },
   "src/layouts/AppSidebar.tsx": {
-    "mtime": 1783188764.899804,
-    "ast_hash": "6547a48fb0417bb78c6af4893950ccdd",
+    "mtime": 1783228847.829396,
+    "ast_hash": "34a2e29f48c8fa1759d7d00c40718b56",
     "semantic_hash": ""
   },
   "src/lib/actionCapabilities.test.ts": {
@@ -1395,9 +1395,9 @@
     "semantic_hash": "f5f80d0819183008e6f779592318e7e1"
   },
   "src/lib/appState.ts": {
-    "mtime": 1782490583.479516,
-    "ast_hash": "4d379967de0428842f41d61a3b02e86f",
-    "semantic_hash": "4d379967de0428842f41d61a3b02e86f"
+    "mtime": 1783196220.1818078,
+    "ast_hash": "36450958b950f7e2ab837b416e8849b3",
+    "semantic_hash": ""
   },
   "src/lib/personaCatalog.ts": {
     "mtime": 1781282239.415143,
@@ -1435,8 +1435,8 @@
     "semantic_hash": ""
   },
   "src/lib/workflowApi.ts": {
-    "mtime": 1783190940.2042305,
-    "ast_hash": "499def104519be1a416b4e014190d203",
+    "mtime": 1783238851.552647,
+    "ast_hash": "ef7ab7c41aec485f0131b4b06207b7c4",
     "semantic_hash": ""
   },
   "src/lib/workflowUi.test.ts": {
@@ -1455,13 +1455,13 @@
     "semantic_hash": "29425bc87312dae845525731673266c4"
   },
   "src/shared/types/workspaceContracts.ts": {
-    "mtime": 1783081034.0647995,
-    "ast_hash": "5056adbc86391f515c5874a9aa97938d",
+    "mtime": 1783228841.6293442,
+    "ast_hash": "e11cc0625a6e18cf1da65b2e4955767a",
     "semantic_hash": ""
   },
   "src/types/electron.ts": {
-    "mtime": 1783188788.1613195,
-    "ast_hash": "71a05294b247200bedf0c4c7d2db4f3c",
+    "mtime": 1783238845.8285105,
+    "ast_hash": "dceb4ba62766b66227ba260aac22abe9",
     "semantic_hash": ""
   },
   "src/types/workflow.ts": {
@@ -2190,13 +2190,13 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/backfillGraphTables.test.ts": {
-    "mtime": 1783188969.772169,
-    "ast_hash": "873ad3273eb2764653ffdedfd98b2494",
+    "mtime": 1783195817.45046,
+    "ast_hash": "f5abcc2f3b5030aaa3755b3d5566679f",
     "semantic_hash": ""
   },
   "electron/backend/persistence/backfillGraphTables.ts": {
-    "mtime": 1783191008.6265688,
-    "ast_hash": "669f0b8ef80b222c81c5f5ce05895bf6",
+    "mtime": 1783195910.8043609,
+    "ast_hash": "cbd252ccacee9b270f0c694e6d7adb5f",
     "semantic_hash": ""
   },
   "electron/backend/persistence/graphLoader.ts": {
@@ -2375,13 +2375,13 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/migrationRunner.test.ts": {
-    "mtime": 1783090962.4314985,
-    "ast_hash": "216f2a729b0dc0b5fb72d4afa58a63c8",
+    "mtime": 1783192987.6861327,
+    "ast_hash": "cbf9f01c291415a65eeea4ccf1cf56f2",
     "semantic_hash": ""
   },
   "electron/backend/persistence/migrationRunner.ts": {
-    "mtime": 1783091510.9285464,
-    "ast_hash": "16d23ebb6114cebd502f041b356f0303",
+    "mtime": 1783192993.346298,
+    "ast_hash": "6ea3cf1091b5de18e18b57d1163822a9",
     "semantic_hash": ""
   },
   "electron/backend/persistence/migrations.ts": {
@@ -2390,18 +2390,18 @@
     "semantic_hash": ""
   },
   "migrations/001_initial_schema.ts": {
-    "mtime": 1783188999.1747675,
-    "ast_hash": "e7183e59d374e912a1790aaf3cbb0fd8",
+    "mtime": 1783193002.1185522,
+    "ast_hash": "67a213c32ad06d3e15f39a086c0661a4",
     "semantic_hash": ""
   },
   "scripts/db-migrate.mjs": {
-    "mtime": 1783091004.7967427,
-    "ast_hash": "00ef0ad4762f431b39ec4eea1a43f7ef",
+    "mtime": 1783193317.4854658,
+    "ast_hash": "69b1314ab1709b3f3114865a921d9622",
     "semantic_hash": ""
   },
   "scripts/db-rollback.mjs": {
-    "mtime": 1783091006.387788,
-    "ast_hash": "597a9552862b058f3b4d687cfc34cf94",
+    "mtime": 1783193321.4155521,
+    "ast_hash": "ffa49c508f7c35342cb06b80c1a0bf9a",
     "semantic_hash": ""
   },
   "scripts/db-seed.mjs": {
@@ -2440,8 +2440,8 @@
     "semantic_hash": ""
   },
   "src/features/settings/pages/SettingsPage.test.tsx": {
-    "mtime": 1783190926.3883777,
-    "ast_hash": "e19fa0fe58edc3569977459cc69181e8",
+    "mtime": 1783196425.283545,
+    "ast_hash": "642a458076bbf328ac601ba8a8461459",
     "semantic_hash": ""
   },
   "src/features/workflows/components/VariableAutocompletePopover.tsx": {
@@ -2525,12 +2525,12 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/projectRepository.ts": {
-    "mtime": 1783191642.3438885,
+    "mtime": 1783192230.4259973,
     "ast_hash": "3a079202b790722c617dfa00c44733c2",
     "semantic_hash": ""
   },
   "electron/backend/persistence/subflowRepository.ts": {
-    "mtime": 1783191645.7438848,
+    "mtime": 1783192230.4259973,
     "ast_hash": "bd4a13e296e50567769579485ff009fd",
     "semantic_hash": ""
   },
@@ -2605,8 +2605,8 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/dbAdapter.ts": {
-    "mtime": 1783188671.073664,
-    "ast_hash": "b75572a52fe8da0a535166404154cc31",
+    "mtime": 1783194579.086348,
+    "ast_hash": "f6bce3b6c427f230d230315088d221ac",
     "semantic_hash": ""
   },
   "electron/backend/persistence/testDbAdapter.ts": {
@@ -2635,8 +2635,48 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/workflowRepository.test.ts": {
-    "mtime": 1783191630.792902,
+    "mtime": 1783192230.4259973,
     "ast_hash": "08785e708172d3b94f3ebfdbeb8b351e",
+    "semantic_hash": ""
+  },
+  "electron/backend/commands/backupCommands.ts": {
+    "mtime": 1783238856.0017533,
+    "ast_hash": "567ec7298b61d467a09ae061ceff3509",
+    "semantic_hash": ""
+  },
+  "electron/backend/diagnostics/setupFonts.test.ts": {
+    "mtime": 1783246066.0613515,
+    "ast_hash": "31104fd44b4b2e73cb4fda1516f31ed7",
+    "semantic_hash": ""
+  },
+  "electron/backend/diagnostics/setupFonts.ts": {
+    "mtime": 1783246071.8645017,
+    "ast_hash": "2640b3123009a554e1abd88b2abee2e4",
+    "semantic_hash": ""
+  },
+  "electron/backend/persistence/backupService.test.ts": {
+    "mtime": 1783238797.2323422,
+    "ast_hash": "28fc048f158ee49db6d45427a251aed5",
+    "semantic_hash": ""
+  },
+  "electron/backend/persistence/backupService.ts": {
+    "mtime": 1783242757.7455773,
+    "ast_hash": "83b01d50248badf0f90494c1a0fa3bee",
+    "semantic_hash": ""
+  },
+  "electron/backend/persistence/dbAdapter.test.ts": {
+    "mtime": 1783194567.0293188,
+    "ast_hash": "a4a81c03dafca454eec0a795c99643a6",
+    "semantic_hash": ""
+  },
+  "src/features/auth/pages/AdminBackupsPanel.test.tsx": {
+    "mtime": 1783239410.5391848,
+    "ast_hash": "0e24be0832e57b5af5f9a6d0a07f71b4",
+    "semantic_hash": ""
+  },
+  "src/features/auth/pages/AdminBackupsPanel.tsx": {
+    "mtime": 1783239419.1889012,
+    "ast_hash": "f8cf091fa15fa495dd0b64ce79aad0a0",
     "semantic_hash": ""
   }
 }
