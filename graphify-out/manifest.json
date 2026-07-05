@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "electron/backend/graph/compiler.ts": {
-    "mtime": 1783260391.5717926,
-    "ast_hash": "03c77f2848b65bb5cf36cb2b4912a939",
+    "mtime": 1783260749.1152785,
+    "ast_hash": "914f0bf0bd2f2c6455b0668f3aec3c6c",
     "semantic_hash": ""
   },
   "electron/backend/graph/migration.test.ts": {
@@ -585,13 +585,13 @@
     "semantic_hash": "d46b25e937853f741ca889dc1de31027"
   },
   "src/App.test.tsx": {
-    "mtime": 1783252127.9466443,
-    "ast_hash": "40c37c0864d0b733e14f26ffd8501679",
+    "mtime": 1783266553.9251502,
+    "ast_hash": "91444d504f9630364b06261b0eb63125",
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1783254681.4118893,
-    "ast_hash": "217676968e0c41eb0d5022c8e4663d02",
+    "mtime": 1783266536.7077394,
+    "ast_hash": "1119e4cad026b1b7b39fc021730142cd",
     "semantic_hash": ""
   },
   "src/AppCss.test.ts": {
@@ -835,8 +835,8 @@
     "semantic_hash": "cd7a68b0d123abe937f3994e68551c29"
   },
   "src/features/subflows/state/useSubflowWorkspace.ts": {
-    "mtime": 1783254685.4539478,
-    "ast_hash": "6d3f769776baa76725d2da98497a7606",
+    "mtime": 1783265011.6159809,
+    "ast_hash": "a63cf849b71670ac51cd9d3b37c7ade6",
     "semantic_hash": ""
   },
   "src/features/workflows/components/ActionConfigAdvancedFields.tsx": {
@@ -1030,8 +1030,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/components/WorkflowGraphEditor.tsx": {
-    "mtime": 1782995748.7963564,
-    "ast_hash": "4ed99eb8ff9972df79ff8bed8d85cf4f",
+    "mtime": 1783264246.9698853,
+    "ast_hash": "338d69912ca38ceb97360138ef9b239b",
     "semantic_hash": ""
   },
   "src/features/workflows/components/WorkflowGraphEditorDialogs.test.tsx": {
@@ -1200,8 +1200,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/lib/runFromSelected.ts": {
-    "mtime": 1783257655.5648472,
-    "ast_hash": "cdde282dbdd097cddb1a9e044fffe9f2",
+    "mtime": 1783265054.9369426,
+    "ast_hash": "72066f4dabc63df9c72361d93d153410",
     "semantic_hash": ""
   },
   "src/features/workflows/lib/stepHelpContent.test.ts": {
@@ -1345,8 +1345,8 @@
     "semantic_hash": "31d5db85df501673900d1a6279762e2a"
   },
   "src/features/workflows/state/useWorkflowGraphState.ts": {
-    "mtime": 1782741090.0765088,
-    "ast_hash": "342cb8bc1a97a5f1cb2914121c0f966e",
+    "mtime": 1783266497.5651326,
+    "ast_hash": "dab512d18c16d5aa3c5d0f61f0b64ec5",
     "semantic_hash": ""
   },
   "src/features/workflows/state/useWorkflowRunState.ts": {
@@ -1390,13 +1390,13 @@
     "semantic_hash": ""
   },
   "src/lib/appState.test.ts": {
-    "mtime": 1782490583.479516,
-    "ast_hash": "f5f80d0819183008e6f779592318e7e1",
-    "semantic_hash": "f5f80d0819183008e6f779592318e7e1"
+    "mtime": 1783266483.324659,
+    "ast_hash": "43c88f8891832fa82e02254c90648b3b",
+    "semantic_hash": ""
   },
   "src/lib/appState.ts": {
-    "mtime": 1783196220.1818078,
-    "ast_hash": "36450958b950f7e2ab837b416e8849b3",
+    "mtime": 1783266490.8043811,
+    "ast_hash": "5751db29e2fc0a6e5934bba676048301",
     "semantic_hash": ""
   },
   "src/lib/personaCatalog.ts": {
@@ -1415,14 +1415,14 @@
     "semantic_hash": ""
   },
   "src/lib/useGraphExitNavigation.test.tsx": {
-    "mtime": 1782490583.479516,
-    "ast_hash": "cd90362677e9ac482710c9077bf8c8a9",
-    "semantic_hash": "cd90362677e9ac482710c9077bf8c8a9"
+    "mtime": 1783264921.9831088,
+    "ast_hash": "447acd189f5173bd22c430cc021889af",
+    "semantic_hash": ""
   },
   "src/lib/useGraphExitNavigation.ts": {
-    "mtime": 1783254374.0404162,
-    "ast_hash": "1a6ac5a35400b80756d046da0f946d39",
-    "semantic_hash": "1a6ac5a35400b80756d046da0f946d39"
+    "mtime": 1783264928.7550967,
+    "ast_hash": "d6a5d6ca9c7dc384a15a244dfdb89619",
+    "semantic_hash": ""
   },
   "src/lib/utils.ts": {
     "mtime": 1781282239.415143,
@@ -2315,13 +2315,13 @@
     "semantic_hash": ""
   },
   "src/features/workflows/lib/workflowGraphPositions.test.ts": {
-    "mtime": 1782532043.5537384,
-    "ast_hash": "5306a3122f01480728ef55dce6b893d3",
+    "mtime": 1783264198.14667,
+    "ast_hash": "b20292dc45c1644a73fe92db8b2e223a",
     "semantic_hash": ""
   },
   "src/features/workflows/lib/workflowGraphPositions.ts": {
-    "mtime": 1782532053.593884,
-    "ast_hash": "0ed9063b9abcae73dfebf6ad102783dc",
+    "mtime": 1783264209.8144746,
+    "ast_hash": "bedddd8fcbc0194529f4bb6935f84743",
     "semantic_hash": ""
   },
   "src/features/workflows/pages/WorkflowListDeleteCancel.test.tsx": {

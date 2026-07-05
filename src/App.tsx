@@ -460,7 +460,8 @@ function App() {
       !graphAutosaveEnabled ||
       !workflowsWorkspace.detail ||
       !workflowGraph ||
-      graphRevision === savedGraphRevision
+      graphRevision === savedGraphRevision ||
+      graphExitDialogOpen
     ) {
       return;
     }
@@ -513,6 +514,7 @@ function App() {
     savedGraphRevision,
     workflowGraph,
     graphAutosaveDelayMs,
+    graphExitDialogOpen,
   ]);
 
   // --- Initial Data Load ---

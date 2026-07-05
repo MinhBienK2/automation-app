@@ -38,6 +38,7 @@ describe("appState helpers", () => {
 
   test("labels graph save states and hashes only editable graph content", () => {
     expect(graphSaveStatusLabel("failed")).toBe("Autosave failed");
+    expect(graphSaveStatusLabel("pending")).toBe("Pending");
     expect(graphEditableContentKey(graph)).toBe(
       JSON.stringify({
         version: 2,

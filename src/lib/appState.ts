@@ -9,7 +9,7 @@ import type {
 } from "../types/workflow";
 import { initialRunState } from "./workflowUi";
 
-export type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
+export type GraphSaveStatus = "saved" | "unsaved" | "pending" | "saving" | "failed" | "off";
 export type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
 
 const appSettingsStorageKey = "workflow-manager:settings:v1";
@@ -78,6 +78,8 @@ export function graphSaveStatusLabel(status: GraphSaveStatus) {
       return "Saved";
     case "unsaved":
       return "Unsaved changes";
+    case "pending":
+      return "Pending";
     case "saving":
       return "Saving...";
     case "failed":

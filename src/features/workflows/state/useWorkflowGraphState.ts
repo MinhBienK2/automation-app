@@ -90,7 +90,7 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
       graphRevisionRef.current = nextRevision;
       return nextRevision;
     });
-    setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
+    setGraphSaveStatus(graphAutosaveEnabled ? "pending" : "unsaved");
   }, [graphAutosaveEnabled, setWorkflowGraph, setGraphIssuesNeedRecheck, setGraphRevision, setGraphSaveStatus]);
 
   const persistCurrentGraph = useCallback(async (options?: { comment?: string; tag?: string }) => {

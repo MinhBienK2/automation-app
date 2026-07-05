@@ -1354,6 +1354,32 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByRole("heading", { name: "Setting" })).toBeInTheDocument();
   });
 
+  test("asks before leaving a workflow detail when autosave is pending, and discarding changes does not save the graph", async () => {
+    const saveGraph = vi.fn().mockResolvedValue(undefined);
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: saveGraph,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await addNavigateActionNode();
+
+    await userEvent.click(screen.getByRole("button", { name: "Setting" }));
+
+    const confirmDialog = await screen.findByRole("dialog", { name: "Unsaved changes" });
+    
+    // Wait for longer than the 1 second autosave delay to make sure the popup paused the timer
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: "Discard changes" }));
+
+    expect(await screen.findByRole("heading", { name: "Setting" })).toBeInTheDocument();
+    expect(saveGraph).not.toHaveBeenCalled();
+  });
+
   test("asks before leaving a subflow detail with unsaved graph changes", async () => {
     const graph = linearGraphFromSteps([]);
     const subflow: SubflowSummary = {
