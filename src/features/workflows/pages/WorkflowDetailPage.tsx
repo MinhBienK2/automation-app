@@ -482,7 +482,37 @@ export function WorkflowDetailPage({
             profileVariables={profileVariables}
           />
         </>
-      ) : null}
+      ) : (
+        <section
+          className="workflow-graph-editor panel is-loading-skeleton"
+          aria-label="Visual Graph Loading"
+        >
+          {/* Skeleton Graph Toolbar */}
+          <div
+            className="graph-toolbar animate-pulse"
+            style={{
+              height: 50,
+              opacity: 0.15,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              background: "var(--app-accent-bg, currentColor)"
+            }}
+          ></div>
+          <div className="workflow-graph-layout">
+            <div className="graph-canvas-wrap">
+              {/* Skeleton Canvas */}
+              <div
+                className="graph-canvas animate-pulse"
+                style={{
+                  opacity: 0.15,
+                  borderRadius: 8,
+                  background: "var(--app-accent-bg, currentColor)"
+                }}
+              ></div>
+            </div>
+          </div>
+        </section>
+      )}
 
     </section>
   );

@@ -136,34 +136,63 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
         return;
       }
 
+      // Transition screen and metadata immediately to avoid blocking list screen click feedback
       setSelectedWorkflowId(id);
       setDetail(loaded);
+      setWorkflowGraph(null);
+      setWorkflowSettings(null);
+      setSelectedGraphNodeId(null);
+      setGraphIssues([]);
+      setGraphIssuesNeedRecheck(false);
+      setSidebarCollapsed(true);
+      setScreen("detail");
+
       const workflowProjectId = loaded.workflow.project_id ?? currentProjectId();
-      let workflowBrowserProfiles = browserProfiles;
+
+      // Initiate independent IPC API queries in parallel
+      const profilesPromise = workflowProjectId
+        ? Promise.resolve(listBrowserProfiles(workflowProjectId)).catch(() => null)
+        : Promise.resolve(null);
+
+      const subflowsPromise = workflowProjectId
+        ? Promise.resolve(loadSubflowsForProject(workflowProjectId)).catch(() => null)
+        : Promise.resolve(null);
+
+      const graphPromise = Promise.resolve(getWorkflowGraph(id)).catch(() => null);
+
+      const settingsPromise = Promise.resolve(getWorkflowSettings(id)).catch(() => null);
+
       if (workflowProjectId) {
         setSelectedProjectId(workflowProjectId);
-        try {
-          workflowBrowserProfiles = await listBrowserProfiles(workflowProjectId);
-          setBrowserProfiles(workflowBrowserProfiles);
-        } catch {
-          // Keep the workflow detail usable even if project metadata is temporarily unavailable.
-        }
-        await loadSubflowsForProject(workflowProjectId);
       }
+
+      const [profilesResult, _subflowsResult, graphResult, settingsResult] = await Promise.all([
+        profilesPromise,
+        subflowsPromise,
+        graphPromise,
+        settingsPromise,
+      ]);
+
+      const workflowBrowserProfiles = profilesResult ?? browserProfiles;
+      if (profilesResult) {
+        setBrowserProfiles(profilesResult);
+      }
+
       const profileId = resolveWorkflowProfileId(
         loaded.workflow.browser_profile_id,
         workflowBrowserProfiles,
       );
       setWorkflowProfileDraftId(profileId);
       setWorkflowProfileSavedId(profileId);
-      try {
-        setWorkflowGraph(await getWorkflowGraph(id));
-      } catch {
+
+      if (graphResult) {
+        setWorkflowGraph(graphResult);
+      } else {
         setWorkflowGraph(linearGraphFromSteps(loaded.steps));
       }
-      try {
-        const loadedSettings = await getWorkflowSettings(id);
-        const normalizedSettings = withWorkflowSettingsDefaults(loadedSettings, {
+
+      if (settingsResult) {
+        const normalizedSettings = withWorkflowSettingsDefaults(settingsResult, {
           workflowId: id,
           workflowName: loaded.workflow.name,
           createdAt: loaded.workflow.created_at,
@@ -175,7 +204,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
           : normalizedSettings;
         setWorkflowSettings(nextSettings);
         setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(nextSettings));
-      } catch {
+      } else {
         const fallbackSettings = defaultWorkflowSettings({
           workflowId: id,
           workflowName: loaded.workflow.name,
@@ -189,21 +218,18 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
         setWorkflowSettings(nextSettings);
         setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(nextSettings));
       }
+
       setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
       setGraphRevision(0);
       setSavedGraphRevision(0);
       setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
-      setGraphIssues([]);
-      setGraphIssuesNeedRecheck(false);
+
       const workflowRun = latestRunForWorkflow(runSnapshots, id);
       setRunState((current: any) =>
         workflowRun
           ? workflowRun.state
           : idleRunStateWithRetainedSession(current),
       );
-      setSelectedGraphNodeId(null);
-      setSidebarCollapsed(true);
-      setScreen("detail");
     } catch (error) {
       setAppError(commandMessage(error));
     }

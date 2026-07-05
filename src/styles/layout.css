@@ -1143,3 +1143,16 @@
 .settings-panel .graph-shortcut-guide {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.animate-pulse {
+  animation: skeleton-pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

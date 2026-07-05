@@ -1571,4 +1571,39 @@ describe("App settings and graph autosave", () => {
     expect(isRouteAllowed("overview", "pending")).toBe(false);
     expect(isRouteAllowed("admin-users", "pending")).toBe(false);
   });
+
+  test("shows workflow detail with loading skeleton immediately when clicking view details", async () => {
+    let resolveGraphPromise: (value: any) => void = () => {};
+    const graphPromise = new Promise((resolve) => {
+      resolveGraphPromise = resolve;
+    });
+
+    const scenario = workflowDetailScenario([]);
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      get_workflow_graph: () => graphPromise,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+    
+    // Click View Details
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    // Verify we immediately transition to the detail page (header title should be "Login flow")
+    const headerTitle = await screen.findByText("Login flow", { selector: ".page-breadcrumb-current" });
+    expect(headerTitle).toBeInTheDocument();
+
+    // Verify loading skeleton is rendered instead of "Visual Graph"
+    expect(screen.getByLabelText("Visual Graph Loading")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Visual Graph" })).not.toBeInTheDocument();
+
+    // Resolve the graph loading
+    resolveGraphPromise(scenario.get_workflow_graph);
+
+    // Verify visual graph is rendered
+    expect(await screen.findByRole("region", { name: "Visual Graph" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Visual Graph Loading")).not.toBeInTheDocument();
+  });
 });
