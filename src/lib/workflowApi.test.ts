@@ -571,6 +571,89 @@ describe("workflow API settings commands", () => {
       "workflow-1",
     );
   });
+
+  test("cleans non-serializable properties (like functions) from graph and settings before calling bridge", async () => {
+    resetWorkflowBridge();
+    workflowBridgeMock.saveWorkflowGraph.mockResolvedValue(undefined);
+    workflowBridgeMock.validateWorkflowGraph.mockResolvedValue([]);
+    workflowBridgeMock.compileWorkflowGraph.mockResolvedValue({ steps: [] });
+    workflowBridgeMock.saveWorkflowSettings.mockResolvedValue(undefined);
+
+    const dirtyGraph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "step-1",
+          node_type: "action",
+          label: "Open",
+          position: { x: 220, y: 0 },
+          config: {
+            url: "https://example.test",
+            someCallback: () => {}, // function
+          },
+          ports: [],
+          group_id: null,
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    await saveWorkflowGraph("workflow-1", dirtyGraph);
+    await validateWorkflowGraph(dirtyGraph);
+    await compileWorkflowGraph(dirtyGraph);
+
+    // Verify callback was stripped
+    const expectedGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "step-1",
+          node_type: "action",
+          label: "Open",
+          position: { x: 220, y: 0 },
+          config: {
+            url: "https://example.test",
+          },
+          ports: [],
+          group_id: null,
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    expect(workflowBridgeMock.saveWorkflowGraph).toHaveBeenCalledWith(
+      "workflow-1",
+      expectedGraph,
+      undefined,
+    );
+    expect(workflowBridgeMock.validateWorkflowGraph).toHaveBeenCalledWith(expectedGraph);
+    expect(workflowBridgeMock.compileWorkflowGraph).toHaveBeenCalledWith(expectedGraph);
+
+    const settings = {
+      workflow_id: "workflow-1",
+      version: 2,
+      general: { name: "Dirty Workflow", tags: [], description: "", created_at: "", updated_at: "" },
+      run_policy: { browser_retention: "retain" as const, execute_js_enabled: true, run_from_selected_enabled: true, run_from_selected_mode: "from_selected" as const, batch_headless: true, batch_stop_on_first_failed_row: true },
+      browser_launch: browserLaunchSettings(),
+      graph_defaults: { live_run_enabled: true, live_run_follow_current: false, default_edge_delay: null },
+      environment: { initial_variables: [] },
+      migration_notes: [],
+    };
+
+    const dirtySettings = {
+      ...settings,
+      someFn: () => {}, // function
+    } as any;
+
+    await saveWorkflowSettings("workflow-1", dirtySettings);
+
+    expect(workflowBridgeMock.saveWorkflowSettings).toHaveBeenCalledWith(
+      "workflow-1",
+      settings,
+    );
+  });
 });
 
 function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {

@@ -34,6 +34,11 @@ function bridge() {
   return window.workflowApi;
 }
 
+function cleanForIpc<T>(value: T): T {
+  if (value === undefined) return undefined as any;
+  return JSON.parse(JSON.stringify(value));
+}
+
 export function listWorkflows() {
   return bridge().listWorkflows();
 }
@@ -133,7 +138,7 @@ export function getSubflowGraph(subflowId: string) {
 }
 
 export function saveSubflowGraph(subflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
-  return bridge().saveSubflowGraph(subflowId, graph, options);
+  return bridge().saveSubflowGraph(subflowId, cleanForIpc(graph), options);
 }
 
 export function duplicateSubflow(subflowId: string, name: string) {
@@ -175,7 +180,7 @@ export function saveWorkflowSettings(
   workflowId: string,
   settings: WorkflowSettings,
 ) {
-  return bridge().saveWorkflowSettings(workflowId, settings);
+  return bridge().saveWorkflowSettings(workflowId, cleanForIpc(settings));
 }
 
 export function saveWorkflowSettingsSection<
@@ -185,11 +190,11 @@ export function saveWorkflowSettingsSection<
   section: Section,
   sectionValue: WorkflowSettings[Section],
 ) {
-  return bridge().saveWorkflowSettingsSection(workflowId, section, sectionValue);
+  return bridge().saveWorkflowSettingsSection(workflowId, section, cleanForIpc(sectionValue));
 }
 
 export function validateWorkflowSettings(settings: WorkflowSettings) {
-  return bridge().validateWorkflowSettings(settings);
+  return bridge().validateWorkflowSettings(cleanForIpc(settings));
 }
 
 export function getCloakBrowserDiagnostics() {
@@ -229,15 +234,15 @@ export function getWorkflowGraph(workflowId: string) {
 }
 
 export function saveWorkflowGraph(workflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
-  return bridge().saveWorkflowGraph(workflowId, graph, options);
+  return bridge().saveWorkflowGraph(workflowId, cleanForIpc(graph), options);
 }
 
 export function validateWorkflowGraph(graph: WorkflowGraph) {
-  return bridge().validateWorkflowGraph(graph);
+  return bridge().validateWorkflowGraph(cleanForIpc(graph));
 }
 
 export function compileWorkflowGraph(graph: WorkflowGraph) {
-  return bridge().compileWorkflowGraph(graph);
+  return bridge().compileWorkflowGraph(cleanForIpc(graph));
 }
 
 export function runWorkflow(workflowId: string) {
