@@ -162,7 +162,7 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
         ...current,
         [section]: "saved",
       }));
-      await loadWorkflows();
+      void loadWorkflows();
       return true;
     } catch (error) {
       setWorkflowSettingsSaveStatuses((current) => ({

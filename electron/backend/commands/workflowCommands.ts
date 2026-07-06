@@ -196,7 +196,11 @@ export function createWorkflowCommands(deps: CommandDeps) {
       return getWorkflowGraph(workflowId);
     },
 
-    async saveWorkflowGraph(workflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
+    async saveWorkflowGraph(
+      workflowId: string,
+      graph: WorkflowGraph,
+      options?: { comment?: string; tag?: string; skipRevision?: boolean },
+    ) {
       await requireWorkflow(workflowId);
       const migrated = migrateWorkflowGraph(graph);
       assertNoUnsupportedGraphDiscriminants(migrated);

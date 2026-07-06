@@ -39,13 +39,14 @@ function cleanForIpc<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
-function cleanOptionsForIpc(options?: { comment?: string; tag?: string }) {
+function cleanOptionsForIpc(options?: { comment?: string; tag?: string; skipRevision?: boolean }) {
   if (!options || typeof options !== "object" || "nativeEvent" in options) {
     return undefined;
   }
   return {
     comment: options.comment,
     tag: options.tag,
+    skipRevision: options.skipRevision,
   };
 }
 
@@ -147,7 +148,11 @@ export function getSubflowGraph(subflowId: string) {
   return bridge().getSubflowGraph(subflowId);
 }
 
-export function saveSubflowGraph(subflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
+export function saveSubflowGraph(
+  subflowId: string,
+  graph: WorkflowGraph,
+  options?: { comment?: string; tag?: string; skipRevision?: boolean },
+) {
   return bridge().saveSubflowGraph(subflowId, cleanForIpc(graph), cleanOptionsForIpc(options));
 }
 
@@ -243,7 +248,11 @@ export function getWorkflowGraph(workflowId: string) {
   return bridge().getWorkflowGraph(workflowId);
 }
 
-export function saveWorkflowGraph(workflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
+export function saveWorkflowGraph(
+  workflowId: string,
+  graph: WorkflowGraph,
+  options?: { comment?: string; tag?: string; skipRevision?: boolean },
+) {
   return bridge().saveWorkflowGraph(workflowId, cleanForIpc(graph), cleanOptionsForIpc(options));
 }
 

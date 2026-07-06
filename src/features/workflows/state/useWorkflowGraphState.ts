@@ -106,7 +106,7 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
       setSavedGraphRevision(graphRevisionRef.current);
       savedGraphRevisionRef.current = graphRevisionRef.current;
       setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
-      await loadWorkflows();
+      void loadWorkflows();
       return true;
     } catch (error) {
       setGraphSaveStatus("failed");

@@ -85,7 +85,11 @@ export function createSubflowCommands(deps: CommandDeps) {
       return migrateWorkflowGraph(graph);
     },
 
-    async saveSubflowGraph(subflowId: string, graph: WorkflowGraph, options?: { comment?: string; tag?: string }) {
+    async saveSubflowGraph(
+      subflowId: string,
+      graph: WorkflowGraph,
+      options?: { comment?: string; tag?: string; skipRevision?: boolean },
+    ) {
       const subflow = await repository.getSubflow(subflowId);
       if (!subflow) throw commandError("Subflow not found", "subflowId");
       const migrated = migrateWorkflowGraph(graph);

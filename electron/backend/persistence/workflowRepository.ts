@@ -239,7 +239,7 @@ export class WorkflowRepository {
   async saveWorkflowGraph(
     id: string,
     graph: WorkflowGraph,
-    options: { comment?: string | null; tag?: string | null } = {},
+    options: { comment?: string | null; tag?: string | null; skipRevision?: boolean } = {},
     now = new Date(),
   ): Promise<void> {
     const timestamp = now.toISOString();
@@ -248,11 +248,13 @@ export class WorkflowRepository {
       [timestamp, id, this.database.ownerId],
     );
     await writeGraphToNormalizedTables(this.database, graph, "workflow", id, timestamp);
-    await snapshotRevision(this.database, "workflow", id, graph, {
-      createdAt: timestamp,
-      comment: options.comment,
-      tag: options.tag,
-    });
+    if (!options.skipRevision) {
+      await snapshotRevision(this.database, "workflow", id, graph, {
+        createdAt: timestamp,
+        comment: options.comment,
+        tag: options.tag,
+      });
+    }
   }
 
   async getWorkflowSettings(id: string): Promise<WorkflowSettings | null> {

@@ -467,7 +467,6 @@ function App() {
     }
 
     const workflowId = workflowsWorkspace.detail.workflow.id;
-    const revisionToSave = graphRevision;
 
     const timeoutId = window.setTimeout(() => {
       const executeSave = async () => {
@@ -484,7 +483,7 @@ function App() {
         try {
           const currentGraph = workflowGraphRef.current;
           if (currentGraph) {
-            await saveWorkflowGraph(workflowId, currentGraph);
+            await saveWorkflowGraph(workflowId, currentGraph, { skipRevision: true });
           }
           setSavedGraphRevision((current) => Math.max(current, revisionBeingSaved));
           if (graphRevisionRef.current === revisionBeingSaved) {

@@ -96,7 +96,6 @@ export function WorkflowDetailPage({
   profileVariables,
   isSavingGraph = false,
 }: WorkflowDetailPageProps) {
-  console.log("DEBUG: WorkflowDetailPage rendering", { isRunning, isSavingGraph });
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
   const [isRunFromSelectedOpen, setIsRunFromSelectedOpen] = useState(false);
