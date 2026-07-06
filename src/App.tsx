@@ -480,18 +480,21 @@ function App() {
         savePendingRef.current = false;
         setGraphSaveStatus("saving");
 
+        const revisionBeingSaved = graphRevisionRef.current;
         try {
           const currentGraph = workflowGraphRef.current;
           if (currentGraph) {
             await saveWorkflowGraph(workflowId, currentGraph);
           }
-          setSavedGraphRevision((current) => Math.max(current, revisionToSave));
-          if (graphRevisionRef.current === revisionToSave) {
+          setSavedGraphRevision((current) => Math.max(current, revisionBeingSaved));
+          if (graphRevisionRef.current === revisionBeingSaved) {
             setGraphSaveStatus("saved");
             setAppError("");
+          } else {
+            setGraphSaveStatus("unsaved");
           }
         } catch (error) {
-          if (graphRevisionRef.current === revisionToSave) {
+          if (graphRevisionRef.current === revisionBeingSaved) {
             setGraphSaveStatus("failed");
           }
           setAppError(commandMessage(error));

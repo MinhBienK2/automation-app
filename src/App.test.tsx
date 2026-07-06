@@ -1380,6 +1380,53 @@ describe("App settings and graph autosave", () => {
     expect(saveGraph).not.toHaveBeenCalled();
   });
 
+  test("handles queued autosave correctly when edits occur during an active save without infinite loops", async () => {
+    // 1. Configure a short autosave delay (50ms) to keep test fast
+    window.localStorage.setItem(
+      "workflow-manager:settings:v1",
+      JSON.stringify({ graphAutosaveEnabled: true, graphAutosaveDelayMs: 50 }),
+    );
+
+    // 2. Mock save_workflow_graph with a 100ms artificial delay to simulate slow database write
+    const saveGraph = vi.fn().mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: saveGraph,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    // Make first edit -> graphRevision = 1
+    await addNavigateActionNode();
+    
+    // Wait for the 50ms delay to elapse, so the first save starts (saving graphRevision = 1)
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    // While first save is still in progress (started at 80ms, finishes at 180ms), make second edit -> graphRevision = 2
+    await addNavigateActionNode();
+
+    // Now wait for all timers and saves to finish (e.g. 500ms is more than enough for 50ms delay + 100ms save + 50ms delay + 100ms save)
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    console.log("saveGraph mock calls count:", saveGraph.mock.calls.length);
+    saveGraph.mock.calls.forEach((call, index) => {
+      console.log(`Call ${index} graph nodes:`, call[0].graph.nodes.map((n: any) => n.id));
+    });
+
+    // We should end up in the "Saved" state
+    expect((await screen.findAllByText("Saved")).length).toBeGreaterThan(0);
+
+    // Verify it was only called exactly 2 times: once for first edit, once for second edit.
+    // Without the fix, the closure bug causes a 3rd redundant call to save the same state again.
+    expect(saveGraph).toHaveBeenCalledTimes(2);
+  });
+
   test("asks before leaving a subflow detail with unsaved graph changes", async () => {
     const graph = linearGraphFromSteps([]);
     const subflow: SubflowSummary = {
