@@ -196,4 +196,42 @@ describe("TemplateTextField", () => {
     const countToken = tokens.find((el) => el.tagName === "SPAN");
     expect(countToken).toHaveClass("template-token-highlight");
   });
+
+  test("inserts variable in JavaScript format when isJs is true", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    const handleChange = vi.fn();
+    const variableOptions = [
+      { name: "my_variable", source: "User source" },
+      { name: "system.loop.index", source: "System source" }
+    ];
+
+    render(
+      <TemplateTextareaField
+        label="JS Textarea"
+        value="hello "
+        onChange={handleChange}
+        variableOptions={variableOptions}
+        isJs={true}
+      />
+    );
+
+    const textarea = screen.getByRole("textbox", { name: "JS Textarea" }) as HTMLTextAreaElement;
+    textarea.focus();
+    textarea.setSelectionRange(6, 6);
+
+    // Click the Braces button to open popover
+    const trigger = screen.getByRole("button", { name: /Insert variable for JS Textarea/i });
+    await user.click(trigger);
+
+    // Verify option names are rendered with 'outputs.' prefix
+    expect(screen.getByRole("option", { name: /outputs\.my_variable/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /outputs\["system\.loop\.index"\]/i })).toBeInTheDocument();
+
+    // Click the standard variable option
+    const option = screen.getByRole("option", { name: /outputs\.my_variable/i });
+    await user.click(option);
+
+    // Should insert outputs.my_variable instead of {{my_variable}}
+    expect(handleChange).toHaveBeenCalledWith("hello outputs.my_variable");
+  });
 });

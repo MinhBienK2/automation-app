@@ -18,6 +18,7 @@ type VariableAutocompletePopoverProps = {
   onChange: (value: string) => void;
   variableOptions: VariableOption[];
   label: string;
+  isJs?: boolean;
 };
 
 export function VariableAutocompletePopover({
@@ -29,6 +30,7 @@ export function VariableAutocompletePopover({
   onChange,
   variableOptions,
   label,
+  isJs = false,
 }: VariableAutocompletePopoverProps) {
   const [query, setQuery] = useState("");
   const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0, width: 0 });
@@ -119,7 +121,14 @@ export function VariableAutocompletePopover({
   }, [open, onClose]);
 
   function insertVariable(name: string) {
-    const token = `{{${name}}}`;
+    let token = `{{${name}}}`;
+    if (isJs) {
+      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name)) {
+        token = `outputs.${name}`;
+      } else {
+        token = `outputs["${name}"]`;
+      }
+    }
     const input = inputRef.current;
     const start = input?.selectionStart ?? value.length;
     const end = input?.selectionEnd ?? value.length;
@@ -184,14 +193,26 @@ export function VariableAutocompletePopover({
       <div className="variable-picker-options max-h-48 overflow-y-auto flex flex-col gap-0.5">
         {options.map((option) => (
           <button
-            aria-label={`${option.name} ${option.source}`}
+            aria-label={`${
+              isJs
+                ? /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(option.name)
+                  ? `outputs.${option.name}`
+                  : `outputs["${option.name}"]`
+                : option.name
+            } ${option.source}`}
             key={`${option.source}:${option.name}`}
             role="option"
             type="button"
             className="w-full text-left px-2 py-1.5 hover:bg-[#121c26] text-xs text-[var(--app-text)] rounded flex justify-between items-center"
             onClick={() => insertVariable(option.name)}
           >
-            <span className="font-mono">{option.name}</span>
+            <span className="font-mono">
+              {isJs
+                ? /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(option.name)
+                  ? `outputs.${option.name}`
+                  : `outputs["${option.name}"]`
+                : option.name}
+            </span>
             <small className="text-[9px] text-[var(--app-text-muted)]">{option.source}</small>
           </button>
         ))}

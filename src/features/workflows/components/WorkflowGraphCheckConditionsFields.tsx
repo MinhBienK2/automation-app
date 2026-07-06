@@ -128,6 +128,7 @@ export function WorkflowGraphCheckConditionsFields({
             placeholder="outputs.counter > 5 && page.url().includes('login')"
             variableOptions={variableOptions}
             showMath={false}
+            isJs={true}
             onChange={(value) => updateConfig({ script: value })}
           />
           <div className="text-xs text-muted-foreground mt-1.5 space-y-1">

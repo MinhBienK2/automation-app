@@ -25,6 +25,7 @@ type TemplateTextFieldProps = {
   placeholder?: string;
   variableOptions?: VariableOption[];
   hideCompactButtons?: boolean;
+  isJs?: boolean;
 };
 
 export const TemplateTextField = forwardRef<TemplateTextFieldRef, TemplateTextFieldProps>(
@@ -37,6 +38,7 @@ export const TemplateTextField = forwardRef<TemplateTextFieldRef, TemplateTextFi
       placeholder,
       variableOptions = defaultVariableOptions,
       hideCompactButtons = false,
+      isJs = false,
     },
     ref,
   ) => {
@@ -181,6 +183,7 @@ export const TemplateTextField = forwardRef<TemplateTextFieldRef, TemplateTextFi
           onChange={onChange}
           variableOptions={variableOptions}
           label={label}
+          isJs={isJs}
         />
       </div>
     );
@@ -194,6 +197,7 @@ type TemplateTextareaFieldProps = {
   placeholder?: string;
   variableOptions?: VariableOption[];
   showMath?: boolean;
+  isJs?: boolean;
 };
 
 export function TemplateTextareaField({
@@ -203,6 +207,7 @@ export function TemplateTextareaField({
   placeholder,
   variableOptions = defaultVariableOptions,
   showMath = true,
+  isJs = false,
 }: TemplateTextareaFieldProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -311,6 +316,7 @@ export function TemplateTextareaField({
         onChange={onChange}
         variableOptions={variableOptions}
         label={label}
+        isJs={isJs}
       />
     </div>
   );

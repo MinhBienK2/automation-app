@@ -66,6 +66,7 @@ export function WorkflowGraphCalculateValueFields({
           placeholder="outputs.A + outputs.B"
           variableOptions={variableOptions}
           showMath={false}
+          isJs={true}
           onChange={(value) => updateConfig({ expression: value })}
         />
         <div className="text-xs text-muted-foreground mt-1.5 space-y-1">
