@@ -76,19 +76,7 @@ export async function finishRun(
       ? (state.outputs.__action_traces as Array<Record<string, unknown>>)
       : [];
 
-    const insertStep = `INSERT INTO run_steps (
-      id,
-      run_id,
-      node_id,
-      step_number,
-      action_type,
-      status,
-      started_at,
-      finished_at,
-      trace_json,
-      error_json,
-      owner_id
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`;
+    const stepsToInsert: any[][] = [];
 
     for (const [index, step] of graph.steps.entries()) {
       const trace = traces.find((candidate) =>
@@ -97,7 +85,7 @@ export async function finishRun(
       const failed = state.error?.step_id === step.node_id;
       const completed = state.completed_step_ids.includes(step.node_id);
 
-      await tx.execute(insertStep, [
+      stepsToInsert.push([
         randomUUID(),
         runId,
         step.node_id,
@@ -118,7 +106,7 @@ export async function finishRun(
       .sort((left, right) => traceOrder(left.trace, left.index) - traceOrder(right.trace, right.index));
 
     for (const [nestedIndex, { trace }] of nestedTraces.entries()) {
-      await tx.execute(insertStep, [
+      stepsToInsert.push([
         randomUUID(),
         runId,
         String(trace.node_id),
@@ -131,6 +119,34 @@ export async function finishRun(
         traceErrorJson(trace),
         tx.ownerId,
       ]);
+    }
+
+    if (stepsToInsert.length > 0) {
+      const placeholders = stepsToInsert
+        .map((_, rowIndex) => {
+          const base = rowIndex * 11;
+          const rowParams = Array.from({ length: 11 }, (_, colIndex) => `$${base + colIndex + 1}`);
+          return `(${rowParams.join(", ")})`;
+        })
+        .join(", ");
+
+      const values = stepsToInsert.flat();
+      await tx.execute(
+        `INSERT INTO run_steps (
+          id,
+          run_id,
+          node_id,
+          step_number,
+          action_type,
+          status,
+          started_at,
+          finished_at,
+          trace_json,
+          error_json,
+          owner_id
+        ) VALUES ${placeholders}`,
+        values,
+      );
     }
   });
 }
