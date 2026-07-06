@@ -45,9 +45,9 @@
     "semantic_hash": "062c9a08a216da5af7096a7bee68a1bc"
   },
   "electron/backend/browser/sessionManager.ts": {
-    "mtime": 1782625161.0217533,
-    "ast_hash": "dd61a8083a6d4f370d471e7a4d7f720f",
-    "semantic_hash": "dd61a8083a6d4f370d471e7a4d7f720f"
+    "mtime": 1783354666.86347,
+    "ast_hash": "c39a7b250a142e4956e5a1683d726972",
+    "semantic_hash": ""
   },
   "electron/backend/commandHelpers.test.ts": {
     "mtime": 1782490583.447516,
@@ -125,8 +125,8 @@
     "semantic_hash": ""
   },
   "electron/backend/commands/subflowCommands.ts": {
-    "mtime": 1783190298.8879566,
-    "ast_hash": "c5fffd2bb3143c869daeb1472c8bd509",
+    "mtime": 1783351816.1625047,
+    "ast_hash": "8bce95f8e474ecce064c61e1742bac01",
     "semantic_hash": ""
   },
   "electron/backend/commands/types.ts": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "electron/backend/commands/workflowCommands.ts": {
-    "mtime": 1783191003.363616,
-    "ast_hash": "729e9770cd7bfc4ef6eef748db85083f",
+    "mtime": 1783351816.1635046,
+    "ast_hash": "2d883bfdc6225a02389ae7e05ac157e2",
     "semantic_hash": ""
   },
   "electron/backend/diagnostics/cloakBrowserDiagnostics.test.ts": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/workflowRepository.ts": {
-    "mtime": 1783192230.4259973,
-    "ast_hash": "7b2a9d5faab4883a63cb5796c6a1efa0",
+    "mtime": 1783351816.1635046,
+    "ast_hash": "1256fc085173e2cf380f1919b2c75dce",
     "semantic_hash": ""
   },
   "electron/backend/projects/projectCommandCascades.test.ts": {
@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1783350258.330147,
-    "ast_hash": "822eb1a950d7726eb7da361d125f5a6a",
+    "mtime": 1783351843.0219724,
+    "ast_hash": "6dd531b433186f608f9fb84a048b8028",
     "semantic_hash": ""
   },
   "src/AppCss.test.ts": {
@@ -975,13 +975,13 @@
     "semantic_hash": ""
   },
   "src/features/workflows/components/TemplateTextField.test.tsx": {
-    "mtime": 1782490583.4685159,
-    "ast_hash": "0028e32cdd28290d56abe95232b038a7",
-    "semantic_hash": "0028e32cdd28290d56abe95232b038a7"
+    "mtime": 1783355573.5450213,
+    "ast_hash": "cf2125951a9cd706961327c11a788f1c",
+    "semantic_hash": ""
   },
   "src/features/workflows/components/TemplateTextField.tsx": {
-    "mtime": 1783102516.0458326,
-    "ast_hash": "6ae243f169e1f3e473f55860d0eecbac",
+    "mtime": 1783355547.0802402,
+    "ast_hash": "f9d134ed3292e841a8b3885ceeba571a",
     "semantic_hash": ""
   },
   "src/features/workflows/components/VariableConfigFields.test.tsx": {
@@ -1325,8 +1325,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/pages/WorkflowDetailPage.tsx": {
-    "mtime": 1783253341.736592,
-    "ast_hash": "c327a5a9e65107ba79df3d4be2c6b929",
+    "mtime": 1783351816.1645048,
+    "ast_hash": "385f6eca2d87512a17ef9b9bd08ddc23",
     "semantic_hash": ""
   },
   "src/features/workflows/pages/WorkflowListPage.test.tsx": {
@@ -1345,8 +1345,8 @@
     "semantic_hash": "31d5db85df501673900d1a6279762e2a"
   },
   "src/features/workflows/state/useWorkflowGraphState.ts": {
-    "mtime": 1783271974.3541284,
-    "ast_hash": "7f052349846980e6a98d20b1d10eda6b",
+    "mtime": 1783356177.0105538,
+    "ast_hash": "76fbd3e56652c2349e9a684f3ad214ec",
     "semantic_hash": ""
   },
   "src/features/workflows/state/useWorkflowRunState.ts": {
@@ -1355,8 +1355,8 @@
     "semantic_hash": "215de5513882e977ede94940b6383e6d"
   },
   "src/features/workflows/state/useWorkflowSettingsState.ts": {
-    "mtime": 1783252061.1611276,
-    "ast_hash": "470685300d1aee7e6bb2c983b61e6e19",
+    "mtime": 1783351816.1645048,
+    "ast_hash": "338bc774203c031fe432209ed551040c",
     "semantic_hash": ""
   },
   "src/features/workflows/state/useWorkflowWorkspace.ts": {
@@ -1435,8 +1435,8 @@
     "semantic_hash": ""
   },
   "src/lib/workflowApi.ts": {
-    "mtime": 1783269736.2859993,
-    "ast_hash": "f7ee1faf7181b460f378bd9c3edffd74",
+    "mtime": 1783351816.1645048,
+    "ast_hash": "3efaf4a228d1af5c17d68959bb6ce722",
     "semantic_hash": ""
   },
   "src/lib/workflowUi.test.ts": {
@@ -2195,8 +2195,8 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/backfillGraphTables.ts": {
-    "mtime": 1783195910.8043609,
-    "ast_hash": "cbd252ccacee9b270f0c694e6d7adb5f",
+    "mtime": 1783351816.1635046,
+    "ast_hash": "006e07eb83caed105859f15cc296055f",
     "semantic_hash": ""
   },
   "electron/backend/persistence/graphLoader.ts": {
@@ -2305,13 +2305,13 @@
     "semantic_hash": ""
   },
   "src/features/workflows/components/WorkflowGraphCalculateValueFields.tsx": {
-    "mtime": 1782996996.1682045,
-    "ast_hash": "e7ccb5a1170e0aba66bbdf63e4579960",
+    "mtime": 1783355552.5221941,
+    "ast_hash": "ac4e3d83ea284993f618212f178e3a36",
     "semantic_hash": ""
   },
   "src/features/workflows/components/WorkflowGraphCheckConditionsFields.tsx": {
-    "mtime": 1782997002.7739003,
-    "ast_hash": "aaac0482d3f45b799eec2ea0a3e094ec",
+    "mtime": 1783355549.0502236,
+    "ast_hash": "e7bd8e0936df5d969816751380c689df",
     "semantic_hash": ""
   },
   "src/features/workflows/lib/workflowGraphPositions.test.ts": {
@@ -2445,8 +2445,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/components/VariableAutocompletePopover.tsx": {
-    "mtime": 1783101910.4124973,
-    "ast_hash": "b6bd7a5af4a087825dd5ad943fcad73b",
+    "mtime": 1783355566.6530771,
+    "ast_hash": "037e9ab0ffab1b825d90d149aa1aaa7d",
     "semantic_hash": ""
   },
   "src/features/workflows/components/inspector/LoopNodeFields.tsx": {
@@ -2530,8 +2530,8 @@
     "semantic_hash": ""
   },
   "electron/backend/persistence/subflowRepository.ts": {
-    "mtime": 1783192230.4259973,
-    "ast_hash": "bd4a13e296e50567769579485ff009fd",
+    "mtime": 1783351816.1635046,
+    "ast_hash": "22ffb7ffaef85983b0ce909e501f8fb9",
     "semantic_hash": ""
   },
   "electron/backend/actions/schemas/crypto_operation.ts": {
@@ -2615,8 +2615,8 @@
     "semantic_hash": ""
   },
   "electron/backend/runtime/runDbHelpers.ts": {
-    "mtime": 1783191082.5249665,
-    "ast_hash": "d871b1cc6de733a5d50f5102848b828b",
+    "mtime": 1783354692.794091,
+    "ast_hash": "9d814a42c6efa7475c04cc24925c2b0c",
     "semantic_hash": ""
   },
   "scratch/fix_package_tests.js": {
@@ -2682,6 +2682,26 @@
   "src/components/ui/button.test.tsx": {
     "mtime": 1783253138.9398742,
     "ast_hash": "48b5754b4763828fef9ddeea0be3faa9",
+    "semantic_hash": ""
+  },
+  "electron/backend/browser/fonts.test.ts": {
+    "mtime": 1783354645.6166549,
+    "ast_hash": "858eb0920fc2997e96c574fd2242d5da",
+    "semantic_hash": ""
+  },
+  "electron/backend/browser/fonts.ts": {
+    "mtime": 1783354654.222169,
+    "ast_hash": "c345745fff9a3ebf2ca33610213f2e62",
+    "semantic_hash": ""
+  },
+  "electron/backend/runtime/runDbHelpers.test.ts": {
+    "mtime": 1783354683.9785519,
+    "ast_hash": "3d45ad7b6b93c3f29298c54479ee93e9",
+    "semantic_hash": ""
+  },
+  "src/features/workflows/state/useWorkflowGraphState.test.tsx": {
+    "mtime": 1783356171.7245615,
+    "ast_hash": "f81afb8d6613fff537d6dbdee28a506f",
     "semantic_hash": ""
   }
 }
