@@ -249,10 +249,15 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
     try {
       const snapshot = await stopRunCommand(runId);
       upsertRunSnapshot(snapshot);
+      // Wait for backend cleanup and refresh run states
+      setTimeout(() => {
+        void refreshRunStates();
+      }, 500);
     } catch (error) {
       setAppError(commandMessage(error));
     }
-  }, [upsertRunSnapshot, setAppError]);
+  }, [upsertRunSnapshot, refreshRunStates, setAppError]);
+
 
   return {
     runState,

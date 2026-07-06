@@ -532,11 +532,35 @@ export class RunManager {
     return this.sessionRunSnapshots.get(runId) ?? snapshot;
   }
 
-  private listRunSnapshots() {
-    return [...this.sessionRunSnapshots.values()].sort((left, right) =>
-      left.started_at.localeCompare(right.started_at),
-    );
+  private listRunSnapshots(): WorkflowRunSnapshot[] {
+    return [...this.sessionRunSnapshots.values()]
+      .map((snapshot) => {
+        const latestRetainedSession = snapshot.state.retained_session;
+        const profileName =
+          this.runEntries.get(snapshot.run_id)?.profileName ??
+          latestRetainedSession?.profile_name ??
+          null;
+        const refreshedRetainedSession = profileName
+          ? this.options.runner.getRetainedSessionState?.(
+              snapshot.workflow_id,
+              profileName,
+            )
+          : null;
+        return {
+          ...snapshot,
+          state: {
+            ...snapshot.state,
+            retained_session:
+              refreshedRetainedSession?.workflow_id === snapshot.workflow_id &&
+              refreshedRetainedSession.profile_name === profileName
+                ? refreshedRetainedSession
+                : latestRetainedSession,
+          },
+        };
+      })
+      .sort((left, right) => left.started_at.localeCompare(right.started_at));
   }
+
 
   private async executeRun({
     runId,

@@ -1962,8 +1962,18 @@ describe("Workflow detail integration", () => {
         },
       ],
       get_run_state: idleRunState,
-      list_run_states: [],
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: selectedWorkflow.id,
+          workflow_name: selectedWorkflow.name,
+          source: "manual",
+          started_at: "2026-05-27T09:00:00.000Z",
+          state: finishedState,
+        },
+      ],
     });
+
 
     // Exit workflow details
     await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));

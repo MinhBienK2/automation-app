@@ -377,7 +377,70 @@ describe("RunManager", () => {
       { name: "dont_persist_me", value_type: "text", value: "old-value", persist: false },
     ]);
   });
+
+  test("dynamically refreshes retained-session availability in listRunStates", async () => {
+    const database = await TestDbAdapter.create();
+    const workflow = workflowSummary("workflow-1", "Retained session workflow");
+    const graph = workflowGraph();
+    const settings = workflowSettings(workflow.id, "profile-1");
+
+    let isSessionAvailable = true;
+    const runner = {
+      run: vi.fn(() => new Promise<RunState>(() => {})),
+      getRetainedSessionState: vi.fn((_workflowId?: string | null, profileName?: string | null) => {
+        return {
+          available: isSessionAvailable,
+          workflow_id: workflow.id,
+          profile_name: profileName ?? null,
+          reason: isSessionAvailable ? null : "Browser session was closed",
+        };
+      }),
+    };
+    const manager = new RunManager({ database, runner });
+    const started = await manager.startWorkflowRun({
+      workflow,
+      source: "manual",
+      settings,
+      graphSnapshot: graph,
+      compiledGraph: compiledGraph(),
+    });
+
+    manager.updateLatestRetainedSession({
+      available: true,
+      workflow_id: workflow.id,
+      profile_name: "profile-1",
+      reason: null,
+    });
+
+    const activeEntry = (manager as any).runEntries.get(started.run_id);
+    if (activeEntry) {
+      activeEntry.snapshot.state.status = "success";
+    }
+
+    const runs = manager.listRunStates();
+    expect(runs).toEqual([
+      expect.objectContaining({
+        run_id: started.run_id,
+        state: expect.objectContaining({
+          retained_session: expect.objectContaining({ available: true }),
+        }),
+      }),
+    ]);
+
+    isSessionAvailable = false;
+
+    const refreshedRuns = manager.listRunStates();
+    expect(refreshedRuns).toEqual([
+      expect.objectContaining({
+        run_id: started.run_id,
+        state: expect.objectContaining({
+          retained_session: expect.objectContaining({ available: false }),
+        }),
+      }),
+    ]);
+  });
 });
+
 
 function workflowSummary(id: string, name: string): WorkflowSummary {
   return {
