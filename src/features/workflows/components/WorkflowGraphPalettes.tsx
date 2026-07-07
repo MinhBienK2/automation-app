@@ -139,6 +139,38 @@ export const variableNodeGroups = [
       "check_list_all_match",
     ],
   },
+  {
+    label: "Text: Create",
+    nodes: [
+      "set_text_variable",
+    ],
+  },
+  {
+    label: "Text: Update",
+    nodes: [
+      "append_text",
+      "prepend_text",
+      "replace_text",
+      "trim_text",
+      "change_text_case",
+    ],
+  },
+  {
+    label: "Text: Process",
+    nodes: [
+      "slice_text",
+      "regex_extract",
+      "get_text_length",
+    ],
+  },
+  {
+    label: "Text: Conditions",
+    nodes: [
+      "check_text_empty",
+      "check_text_contains",
+      "check_text_regex_matches",
+    ],
+  },
 ] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
 
 export const endNodeGroups = [

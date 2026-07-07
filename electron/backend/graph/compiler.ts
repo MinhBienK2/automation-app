@@ -426,6 +426,132 @@ function compilePath(
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     }
+    case "set_text_variable": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const value = stringField(node.config, "value");
+      steps.push(step(node, {
+        type: "set_text_variable",
+        config: { output_name, value },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "append_text": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const value = stringField(node.config, "value");
+      steps.push(step(node, {
+        type: "append_text",
+        config: { name, value },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "prepend_text": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const value = stringField(node.config, "value");
+      steps.push(step(node, {
+        type: "prepend_text",
+        config: { name, value },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "replace_text": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const search_pattern = requiredString(node.config, "search_pattern", "Search pattern is required");
+      const replacement = stringField(node.config, "replacement");
+      steps.push(step(node, {
+        type: "replace_text",
+        config: { name, search_pattern, replacement },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "trim_text": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      steps.push(step(node, {
+        type: "trim_text",
+        config: { name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "change_text_case": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const to_case = requiredString(node.config, "to_case", "Invalid text case option") as any;
+      steps.push(step(node, {
+        type: "change_text_case",
+        config: { name, to_case },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "slice_text": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const start = requiredString(String(node.config.start ?? ""), "start", "Start value is required");
+      const end = stringField(node.config, "end") ?? (typeof asRecord(node.config).end === "number" ? asRecord(node.config).end : null) as any;
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "slice_text",
+        config: { source, start, end, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "regex_extract": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const pattern = requiredString(node.config, "pattern", "Regex pattern is required");
+      const group_index = stringField(node.config, "group_index") ?? (typeof asRecord(node.config).group_index === "number" ? asRecord(node.config).group_index : null) as any;
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "regex_extract",
+        config: { source, pattern, group_index, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "get_text_length": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "get_text_length",
+        config: { source, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_text_empty": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "check_text_empty",
+        config: { source, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_text_contains": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const substring = requiredString(node.config, "substring", "Substring is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "check_text_contains",
+        config: { source, substring, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_text_regex_matches": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const pattern = requiredString(node.config, "pattern", "Regex pattern is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "check_text_regex_matches",
+        config: { source, pattern, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
     case "update_flag_variable": {
       const name = requiredString(node.config, "name", "Variable name is required");
       const operation = requiredString(node.config, "operation", "Operation must be toggle, set_true, or set_false") as any;

@@ -99,7 +99,7 @@ export class SubflowRepository {
     if (!fromTables) return null;
     const result = processGraphOnLoad(fromTables);
     if (result.migrationsApplied > 0 && !result.migrationFailed) {
-      await this.saveSubflowGraph(subflowId, result.graph);
+      await this.saveSubflowGraph(subflowId, result.graph, { skipRevision: true });
     }
     return result.graph;
   }

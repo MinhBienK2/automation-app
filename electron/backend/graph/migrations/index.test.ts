@@ -113,9 +113,9 @@ describe("migration runner", () => {
 
   test("baseline migration (real registry) upgrades v1 to v5 with migration_notes", () => {
     const result = runMigrations(baselineGraph(1));
-    expect(result.graph.version).toBe(5);
+    expect(result.graph.version).toBe(6);
     expect(result.graph.migration_notes).toEqual([]);
-    expect(result.applied).toHaveLength(4);
+    expect(result.applied).toHaveLength(5);
     expect(result.failed).toBeNull();
   });
 
@@ -154,14 +154,15 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(5);
+    expect(result.graph.version).toBe(6);
     expect(result.graph.nodes[0].node_type).toBe("check_conditions");
     expect(result.graph.nodes[1].node_type).toBe("calculate_value");
     expect(result.graph.nodes[2].node_type).toBe("start");
-    expect(result.applied).toHaveLength(3);
+    expect(result.applied).toHaveLength(4);
     expect(result.applied[0].version).toBe(3);
     expect(result.applied[1].version).toBe(4);
     expect(result.applied[2].version).toBe(5);
+    expect(result.applied[3].version).toBe(6);
   });
 
   test("migration 003 converts update_list_variable nodes to new granular list nodes", () => {
@@ -207,7 +208,7 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(5);
+    expect(result.graph.version).toBe(6);
     
     expect(result.graph.nodes[0].node_type).toBe("add_to_list");
     expect(result.graph.nodes[0].config).toEqual({
@@ -237,9 +238,10 @@ describe("migration runner", () => {
       unique: true,
     });
 
-    expect(result.applied).toHaveLength(2);
+    expect(result.applied).toHaveLength(3);
     expect(result.applied[0].version).toBe(4);
     expect(result.applied[1].version).toBe(5);
+    expect(result.applied[2].version).toBe(6);
   });
 
   test("migration 004 converts update_object_variable nodes to new granular object nodes", () => {
@@ -277,7 +279,7 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(5);
+    expect(result.graph.version).toBe(6);
 
     expect(result.graph.nodes[0].node_type).toBe("merge_objects");
     expect(result.graph.nodes[0].config).toEqual({
@@ -300,8 +302,92 @@ describe("migration runner", () => {
       property_key: "b.c",
     });
 
-    expect(result.applied).toHaveLength(1);
+    expect(result.applied).toHaveLength(2);
     expect(result.applied[0].version).toBe(5);
+    expect(result.applied[1].version).toBe(6);
+  });
+
+  test("migration 005 converts update_text_variable nodes to new granular text nodes", () => {
+    const legacyGraph: WorkflowGraph = {
+      version: 5,
+      nodes: [
+        {
+          id: "append-node",
+          node_type: "update_text_variable",
+          label: "Append Value",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myText", operation: "append", value: "hello" },
+        },
+        {
+          id: "prepend-node",
+          node_type: "update_text_variable",
+          label: "Prepend Value",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myText", operation: "prepend", value: "world" },
+        },
+        {
+          id: "replace-node",
+          node_type: "update_text_variable",
+          label: "Replace Value",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myText", operation: "replace", search_pattern: "foo", value: "bar" },
+        },
+        {
+          id: "uppercase-node",
+          node_type: "update_text_variable",
+          label: "To Uppercase",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myText", operation: "uppercase" },
+        },
+        {
+          id: "lowercase-node",
+          node_type: "update_text_variable",
+          label: "To Lowercase",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myText", operation: "lowercase" },
+        },
+        {
+          id: "trim-node",
+          node_type: "update_text_variable",
+          label: "Trim",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myText", operation: "trim" },
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      migration_notes: [],
+    };
+
+    const result = runMigrations(legacyGraph);
+    expect(result.graph.version).toBe(6);
+
+    expect(result.graph.nodes[0].node_type).toBe("append_text");
+    expect(result.graph.nodes[0].config).toEqual({ name: "myText", value: "hello" });
+
+    expect(result.graph.nodes[1].node_type).toBe("prepend_text");
+    expect(result.graph.nodes[1].config).toEqual({ name: "myText", value: "world" });
+
+    expect(result.graph.nodes[2].node_type).toBe("replace_text");
+    expect(result.graph.nodes[2].config).toEqual({ name: "myText", search_pattern: "foo", replacement: "bar" });
+
+    expect(result.graph.nodes[3].node_type).toBe("change_text_case");
+    expect(result.graph.nodes[3].config).toEqual({ name: "myText", to_case: "upper" });
+
+    expect(result.graph.nodes[4].node_type).toBe("change_text_case");
+    expect(result.graph.nodes[4].config).toEqual({ name: "myText", to_case: "lower" });
+
+    expect(result.graph.nodes[5].node_type).toBe("trim_text");
+    expect(result.graph.nodes[5].config).toEqual({ name: "myText" });
+
+    expect(result.applied).toHaveLength(1);
+    expect(result.applied[0].version).toBe(6);
   });
 
   test("real registry is monotonic", () => {

@@ -233,6 +233,66 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: { name: "", operation: "append", value: "", search_pattern: "" },
       };
+    case "set_text_variable":
+      return {
+        type: actionType,
+        config: { output_name: "my_text", value: "" },
+      };
+    case "append_text":
+      return {
+        type: actionType,
+        config: { name: "", value: "" },
+      };
+    case "prepend_text":
+      return {
+        type: actionType,
+        config: { name: "", value: "" },
+      };
+    case "replace_text":
+      return {
+        type: actionType,
+        config: { name: "", search_pattern: "", replacement: "" },
+      };
+    case "trim_text":
+      return {
+        type: actionType,
+        config: { name: "" },
+      };
+    case "change_text_case":
+      return {
+        type: actionType,
+        config: { name: "", to_case: "upper" },
+      };
+    case "slice_text":
+      return {
+        type: actionType,
+        config: { source: "", start: 0, end: null, output_name: "sliced_text" },
+      };
+    case "regex_extract":
+      return {
+        type: actionType,
+        config: { source: "", pattern: "", group_index: 1, output_name: "extracted_text" },
+      };
+    case "get_text_length":
+      return {
+        type: actionType,
+        config: { source: "", output_name: "text_length" },
+      };
+    case "check_text_empty":
+      return {
+        type: actionType,
+        config: { source: "", output_name: "is_empty" },
+      };
+    case "check_text_contains":
+      return {
+        type: actionType,
+        config: { source: "", substring: "", output_name: "contains_text" },
+      };
+    case "check_text_regex_matches":
+      return {
+        type: actionType,
+        config: { source: "", pattern: "", output_name: "matches_regex" },
+      };
     case "update_flag_variable":
       return {
         type: actionType,

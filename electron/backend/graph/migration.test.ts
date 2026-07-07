@@ -31,7 +31,7 @@ describe("workflow graph migration", () => {
 
     expect(migrateWorkflowGraph(graph)).toEqual({
       ...graph,
-      version: 4,
+      version: 6,
       migration_notes: [],
     });
   });
@@ -68,7 +68,7 @@ describe("workflow graph migration", () => {
     };
 
     expect(migrateWorkflowGraph(graph)).toEqual({
-      version: 4,
+      version: 6,
       nodes: [
         {
           id: "node-logic",
@@ -97,4 +97,93 @@ describe("workflow graph migration", () => {
       viewport: { x: 0, y: 0, zoom: 1 },
     });
   });
+
+  test("migrates update_text_variable to new granular text nodes", () => {
+    const graph: WorkflowGraph = {
+      version: 4,
+      nodes: [
+        {
+          id: "node-append",
+          node_type: "update_text_variable" as any,
+          label: "Update Text",
+          position: { x: 0, y: 0 },
+          config: {
+            name: "msg",
+            operation: "append",
+            value: " world",
+          },
+          ports: [],
+        },
+        {
+          id: "node-replace",
+          node_type: "update_text_variable" as any,
+          label: "Update Text",
+          position: { x: 0, y: 0 },
+          config: {
+            name: "msg",
+            operation: "replace",
+            value: "planet",
+            search_pattern: "world",
+          },
+          ports: [],
+        },
+        {
+          id: "node-case",
+          node_type: "update_text_variable" as any,
+          label: "Update Text",
+          position: { x: 0, y: 0 },
+          config: {
+            name: "msg",
+            operation: "uppercase",
+          },
+          ports: [],
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    expect(migrateWorkflowGraph(graph)).toEqual({
+      version: 6,
+      nodes: [
+        {
+          id: "node-append",
+          node_type: "append_text" as any,
+          label: "Update Text",
+          position: { x: 0, y: 0 },
+          config: {
+            name: "msg",
+            value: " world",
+          },
+          ports: [],
+        },
+        {
+          id: "node-replace",
+          node_type: "replace_text" as any,
+          label: "Update Text",
+          position: { x: 0, y: 0 },
+          config: {
+            name: "msg",
+            search_pattern: "world",
+            replacement: "planet",
+          },
+          ports: [],
+        },
+        {
+          id: "node-case",
+          node_type: "change_text_case" as any,
+          label: "Update Text",
+          position: { x: 0, y: 0 },
+          config: {
+            name: "msg",
+            to_case: "upper",
+          },
+          ports: [],
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    });
+  });
 });
+

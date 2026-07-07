@@ -49,6 +49,18 @@ export type ActionType =
   | "set_json_variables"
   | "update_number_variable"
   | "update_text_variable"
+  | "set_text_variable"
+  | "append_text"
+  | "prepend_text"
+  | "replace_text"
+  | "trim_text"
+  | "change_text_case"
+  | "slice_text"
+  | "regex_extract"
+  | "get_text_length"
+  | "check_text_empty"
+  | "check_text_contains"
+  | "check_text_regex_matches"
   | "update_flag_variable"
   | "update_list_variable"
   | "create_empty_list"
@@ -784,6 +796,96 @@ export type ActionConfig =
         operation: "append" | "prepend" | "replace" | "uppercase" | "lowercase" | "trim";
         value?: string | null;
         search_pattern?: string | null;
+      };
+    }
+  | {
+      type: "set_text_variable";
+      config: {
+        output_name: string;
+        value?: string | null;
+      };
+    }
+  | {
+      type: "append_text";
+      config: {
+        name: string;
+        value?: string | null;
+      };
+    }
+  | {
+      type: "prepend_text";
+      config: {
+        name: string;
+        value?: string | null;
+      };
+    }
+  | {
+      type: "replace_text";
+      config: {
+        name: string;
+        search_pattern: string;
+        replacement?: string | null;
+      };
+    }
+  | {
+      type: "trim_text";
+      config: {
+        name: string;
+      };
+    }
+  | {
+      type: "change_text_case";
+      config: {
+        name: string;
+        to_case: "upper" | "lower";
+      };
+    }
+  | {
+      type: "slice_text";
+      config: {
+        source: string;
+        start: number | string;
+        end?: number | string | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "regex_extract";
+      config: {
+        source: string;
+        pattern: string;
+        group_index?: number | string | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "get_text_length";
+      config: {
+        source: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_text_empty";
+      config: {
+        source: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_text_contains";
+      config: {
+        source: string;
+        substring: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_text_regex_matches";
+      config: {
+        source: string;
+        pattern: string;
+        output_name: string;
       };
     }
   | {

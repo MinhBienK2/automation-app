@@ -418,6 +418,18 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "transform_variable":
     case "update_number_variable":
     case "update_text_variable":
+    case "set_text_variable":
+    case "append_text":
+    case "prepend_text":
+    case "replace_text":
+    case "trim_text":
+    case "change_text_case":
+    case "slice_text":
+    case "regex_extract":
+    case "get_text_length":
+    case "check_text_empty":
+    case "check_text_contains":
+    case "check_text_regex_matches":
     case "update_flag_variable":
     case "update_list_variable":
     case "create_empty_list":

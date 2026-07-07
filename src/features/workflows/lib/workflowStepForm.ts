@@ -235,6 +235,18 @@ export function updateActionConfigField(
         return { type: "merge_objects", config: { ...config.config, deep: value === "true" } };
       }
       return { type: "merge_objects", config: { ...config.config, [field]: value } };
+    case "set_text_variable":
+    case "append_text":
+    case "prepend_text":
+    case "replace_text":
+    case "trim_text":
+    case "change_text_case":
+    case "slice_text":
+    case "regex_extract":
+    case "get_text_length":
+    case "check_text_empty":
+    case "check_text_contains":
+    case "check_text_regex_matches":
     case "create_empty_list":
     case "create_list_manual":
     case "split_text_to_list":

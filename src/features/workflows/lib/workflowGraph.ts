@@ -445,6 +445,18 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "calculate_value":
     case "update_number_variable":
     case "update_text_variable":
+    case "set_text_variable":
+    case "append_text":
+    case "prepend_text":
+    case "replace_text":
+    case "trim_text":
+    case "change_text_case":
+    case "slice_text":
+    case "regex_extract":
+    case "get_text_length":
+    case "check_text_empty":
+    case "check_text_contains":
+    case "check_text_regex_matches":
     case "update_flag_variable":
     case "update_list_variable":
     case "create_empty_list":
@@ -1118,6 +1130,30 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { name: "", operation: "increment", value: "" };
     case "update_text_variable":
       return { name: "", operation: "append", value: "", search_pattern: "" };
+    case "set_text_variable":
+      return { output_name: "my_text", value: "" };
+    case "append_text":
+      return { name: "", value: "" };
+    case "prepend_text":
+      return { name: "", value: "" };
+    case "replace_text":
+      return { name: "", search_pattern: "", replacement: "" };
+    case "trim_text":
+      return { name: "" };
+    case "change_text_case":
+      return { name: "", to_case: "upper" };
+    case "slice_text":
+      return { source: "", start: 0, end: null, output_name: "sliced_text" };
+    case "regex_extract":
+      return { source: "", pattern: "", group_index: 1, output_name: "extracted_text" };
+    case "get_text_length":
+      return { source: "", output_name: "text_length" };
+    case "check_text_empty":
+      return { source: "", output_name: "is_empty" };
+    case "check_text_contains":
+      return { source: "", substring: "", output_name: "contains_text" };
+    case "check_text_regex_matches":
+      return { source: "", pattern: "", output_name: "matches_regex" };
     case "update_flag_variable":
       return { name: "", operation: "toggle" };
     case "update_list_variable":

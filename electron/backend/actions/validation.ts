@@ -384,6 +384,62 @@ const actionValidators = createActionValidatorMap({
         : null,
     );
   },
+  set_text_variable: (config) =>
+    requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+  append_text: (config) =>
+    requiredActionString(config.config.name, "name", "Variable name is required"),
+  prepend_text: (config) =>
+    requiredActionString(config.config.name, "name", "Variable name is required"),
+  replace_text: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.search_pattern, "search_pattern", "Search pattern is required"),
+    ),
+  trim_text: (config) =>
+    requiredActionString(config.config.name, "name", "Variable name is required"),
+  change_text_case: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      validateRequiredEnumValue(
+        config.config.to_case,
+        ["upper", "lower"],
+        "to_case",
+        "Invalid text case option",
+      ),
+    ),
+  slice_text: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  regex_extract: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.pattern, "pattern", "Regex pattern is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  get_text_length: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_text_empty: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_text_contains: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.substring, "substring", "Substring is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_text_regex_matches: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.pattern, "pattern", "Regex pattern is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
   update_flag_variable: (config) => {
     return firstValidation(
       requiredActionString(config.config.name, "name", "Variable name is required"),

@@ -142,6 +142,21 @@ import {
   checkListAnyMatchSchema,
   checkListAllMatchSchema,
 } from "./list_actions.js";
+import {
+  setTextVariableSchema,
+  appendTextSchema,
+  prependTextSchema,
+  replaceTextSchema,
+  trimTextSchema,
+  changeTextCaseSchema,
+  sliceTextSchema,
+  regexExtractSchema,
+  getTextLengthSchema,
+  checkTextEmptySchema,
+  checkTextContainsSchema,
+  checkTextRegexMatchesSchema,
+} from "./text_actions.js";
+
 
 type ActionType = ActionConfig["type"];
 
@@ -217,6 +232,18 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   update_number_variable: updateNumberVariableSchema,
   update_text_variable: updateTextVariableSchema,
   update_flag_variable: updateFlagVariableSchema,
+  set_text_variable: setTextVariableSchema,
+  append_text: appendTextSchema,
+  prepend_text: prependTextSchema,
+  replace_text: replaceTextSchema,
+  trim_text: trimTextSchema,
+  change_text_case: changeTextCaseSchema,
+  slice_text: sliceTextSchema,
+  regex_extract: regexExtractSchema,
+  get_text_length: getTextLengthSchema,
+  check_text_empty: checkTextEmptySchema,
+  check_text_contains: checkTextContainsSchema,
+  check_text_regex_matches: checkTextRegexMatchesSchema,
   update_list_variable: updateListVariableSchema,
   create_empty_list: createEmptyListSchema,
   create_list_manual: createListManualSchema,

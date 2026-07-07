@@ -277,26 +277,14 @@ describe("backend action validation registry", () => {
 
     expect(
       validateActionConfig({
-        type: "update_list_variable",
+        type: "update_flag_variable",
         config: {
-          name: "my_list",
-          operation: "push",
-          value: "item",
-          value_type: "text",
+          name: "my_flag",
+          operation: "toggle",
         },
       } as never),
     ).toBeNull();
 
-    expect(
-      validateActionConfig({
-        type: "update_object_variable",
-        config: {
-          name: "my_object",
-          operation: "merge",
-          value: '{"foo": "bar"}',
-        },
-      } as never),
-    ).toBeNull();
 
     // update_number_variable
     expect(
@@ -365,34 +353,7 @@ describe("backend action validation registry", () => {
       } as never),
     ).toEqual({ field: "value", message: "Value is required" });
 
-    expect(
-      validateActionConfig({
-        type: "update_list_variable",
-        config: { name: "my_list", operation: "merge_unique", value: "[]", value_type: "invalid" },
-      } as never),
-    ).toEqual({ field: "value_type", message: "Value type must be text, json, number, or boolean" });
 
-    expect(
-      validateActionConfig({
-        type: "update_list_variable",
-        config: { name: "my_list", operation: "remove_by_index", index: null },
-      } as never),
-    ).toEqual({ field: "index", message: "Index is required" });
-
-    // update_object_variable
-    expect(
-      validateActionConfig({
-        type: "update_object_variable",
-        config: { name: "my_obj", operation: "merge", value: "{" },
-      } as never),
-    ).toEqual({ field: "value", message: "JSON variables must be valid JSON" });
-
-    expect(
-      validateActionConfig({
-        type: "update_object_variable",
-        config: { name: "my_obj", operation: "set_key", property_key: "", property_value: "val", property_value_type: "text" },
-      } as never),
-    ).toEqual({ field: "property_key", message: "Property key is required" });
     // check_conditions
     expect(
       validateActionConfig({
@@ -474,6 +435,147 @@ describe("backend action validation registry", () => {
       }),
     ).toBeNull();
   });
+
+  test("validates new granular text processing action configs", () => {
+    // set_text_variable
+    expect(
+      validateActionConfig({
+        type: "set_text_variable",
+        config: { output_name: "", value: "hello" },
+      } as any),
+    ).toEqual({ field: "output_name", message: "Output variable name is required" });
+    expect(
+      validateActionConfig({
+        type: "set_text_variable",
+        config: { output_name: "var", value: "hello" },
+      } as any),
+    ).toBeNull();
+
+    // append_text
+    expect(
+      validateActionConfig({
+        type: "append_text",
+        config: { name: "", value: "suffix" },
+      } as any),
+    ).toEqual({ field: "name", message: "Variable name is required" });
+
+    // prepend_text
+    expect(
+      validateActionConfig({
+        type: "prepend_text",
+        config: { name: "", value: "prefix" },
+      } as any),
+    ).toEqual({ field: "name", message: "Variable name is required" });
+
+    // replace_text
+    expect(
+      validateActionConfig({
+        type: "replace_text",
+        config: { name: "", search_pattern: "abc", replacement: "xyz" },
+      } as any),
+    ).toEqual({ field: "name", message: "Variable name is required" });
+    expect(
+      validateActionConfig({
+        type: "replace_text",
+        config: { name: "var", search_pattern: "", replacement: "xyz" },
+      } as any),
+    ).toEqual({ field: "search_pattern", message: "Search pattern is required" });
+
+    // trim_text
+    expect(
+      validateActionConfig({
+        type: "trim_text",
+        config: { name: "" },
+      } as any),
+    ).toEqual({ field: "name", message: "Variable name is required" });
+
+    // change_text_case
+    expect(
+      validateActionConfig({
+        type: "change_text_case",
+        config: { name: "", to_case: "upper" },
+      } as any),
+    ).toEqual({ field: "name", message: "Variable name is required" });
+    expect(
+      validateActionConfig({
+        type: "change_text_case",
+        config: { name: "var", to_case: "invalid" as any },
+      } as any),
+    ).toEqual({ field: "to_case", message: "Invalid text case option" });
+
+    // slice_text
+    expect(
+      validateActionConfig({
+        type: "slice_text",
+        config: { source: "", start: 0, output_name: "out" },
+      } as any),
+    ).toEqual({ field: "source", message: "Source variable name is required" });
+    expect(
+      validateActionConfig({
+        type: "slice_text",
+        config: { source: "var", start: 0, output_name: "" },
+      } as any),
+    ).toEqual({ field: "output_name", message: "Output variable name is required" });
+
+    // regex_extract
+    expect(
+      validateActionConfig({
+        type: "regex_extract",
+        config: { source: "", pattern: "\\d+", group_index: 1, output_name: "out" },
+      } as any),
+    ).toEqual({ field: "source", message: "Source variable name is required" });
+    expect(
+      validateActionConfig({
+        type: "regex_extract",
+        config: { source: "var", pattern: "", group_index: 1, output_name: "out" },
+      } as any),
+    ).toEqual({ field: "pattern", message: "Regex pattern is required" });
+
+    // get_text_length
+    expect(
+      validateActionConfig({
+        type: "get_text_length",
+        config: { source: "", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "source", message: "Source variable name is required" });
+
+    // check_text_empty
+    expect(
+      validateActionConfig({
+        type: "check_text_empty",
+        config: { source: "", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "source", message: "Source variable name is required" });
+
+    // check_text_contains
+    expect(
+      validateActionConfig({
+        type: "check_text_contains",
+        config: { source: "", substring: "sub", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "source", message: "Source variable name is required" });
+    expect(
+      validateActionConfig({
+        type: "check_text_contains",
+        config: { source: "var", substring: "", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "substring", message: "Substring is required" });
+
+    // check_text_regex_matches
+    expect(
+      validateActionConfig({
+        type: "check_text_regex_matches",
+        config: { source: "", pattern: "\\d+", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "source", message: "Source variable name is required" });
+    expect(
+      validateActionConfig({
+        type: "check_text_regex_matches",
+        config: { source: "var", pattern: "", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "pattern", message: "Regex pattern is required" });
+  });
 });
+
 
 

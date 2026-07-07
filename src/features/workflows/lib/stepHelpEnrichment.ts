@@ -325,6 +325,30 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Variable name", "Operation", "Value"];
     case "update_text_variable":
       return ["Variable name", "Operation", "Search pattern", "Value"];
+    case "set_text_variable":
+      return ["Output variable name", "Text value"];
+    case "append_text":
+      return ["Variable name", "Text to append"];
+    case "prepend_text":
+      return ["Variable name", "Text to prepend"];
+    case "replace_text":
+      return ["Variable name", "Search pattern", "Replacement text"];
+    case "trim_text":
+      return ["Variable name"];
+    case "change_text_case":
+      return ["Variable name", "Case mode"];
+    case "slice_text":
+      return ["Source variable", "Start index", "End index", "Result variable"];
+    case "regex_extract":
+      return ["Source variable", "Regex pattern", "Capture group index", "Result variable"];
+    case "get_text_length":
+      return ["Source variable", "Result variable"];
+    case "check_text_empty":
+      return ["Source variable", "Result variable"];
+    case "check_text_contains":
+      return ["Source variable", "Substring to search", "Result variable"];
+    case "check_text_regex_matches":
+      return ["Source variable", "Regex pattern", "Result variable"];
     case "update_flag_variable":
       return ["Variable name", "Operation"];
     case "update_list_variable":

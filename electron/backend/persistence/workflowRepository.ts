@@ -231,7 +231,7 @@ export class WorkflowRepository {
     if (!fromTables) return null;
     const result = processGraphOnLoad(fromTables);
     if (result.migrationsApplied > 0 && !result.migrationFailed) {
-      await this.saveWorkflowGraph(id, result.graph);
+      await this.saveWorkflowGraph(id, result.graph, { skipRevision: true });
     }
     return result.graph;
   }

@@ -53,6 +53,18 @@ const supportedGraphNodeTypes = new Set<string>([
   "calculate_value",
   "update_number_variable",
   "update_text_variable",
+  "set_text_variable",
+  "append_text",
+  "prepend_text",
+  "replace_text",
+  "trim_text",
+  "change_text_case",
+  "slice_text",
+  "regex_extract",
+  "get_text_length",
+  "check_text_empty",
+  "check_text_contains",
+  "check_text_regex_matches",
   "update_flag_variable",
   "update_list_variable",
   "create_empty_list",
@@ -318,6 +330,18 @@ export function pushNodeSemanticIssues(
       if (validation) issues.push(error(node.id, null, validation.message));
       break;
     }
+    case "set_text_variable":
+    case "append_text":
+    case "prepend_text":
+    case "replace_text":
+    case "trim_text":
+    case "change_text_case":
+    case "slice_text":
+    case "regex_extract":
+    case "get_text_length":
+    case "check_text_empty":
+    case "check_text_contains":
+    case "check_text_regex_matches":
     case "create_empty_list":
     case "create_list_manual":
     case "split_text_to_list":
