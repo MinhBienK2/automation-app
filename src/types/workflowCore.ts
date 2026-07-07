@@ -48,6 +48,15 @@ export type ActionType =
   | "set_variable"
   | "set_json_variables"
   | "update_number_variable"
+  | "set_number_variable"
+  | "generate_random_number"
+  | "parse_text_to_number"
+  | "math_operation"
+  | "round_number"
+  | "format_number"
+  | "compare_numbers"
+  | "check_number_range"
+  | "check_number_property"
   | "update_text_variable"
   | "set_text_variable"
   | "append_text"
@@ -787,6 +796,86 @@ export type ActionConfig =
         name: string;
         operation: "increment" | "decrement" | "add" | "subtract" | "multiply" | "divide";
         value?: string | null;
+      };
+    }
+  | {
+      type: "set_number_variable";
+      config: {
+        output_name: string;
+        value: string;
+      };
+    }
+  | {
+      type: "generate_random_number";
+      config: {
+        output_name: string;
+        min: string;
+        max: string;
+        integer: boolean;
+      };
+    }
+  | {
+      type: "parse_text_to_number";
+      config: {
+        source: string;
+        fallback?: string | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "math_operation";
+      config: {
+        operand1: string;
+        operation: "add" | "subtract" | "multiply" | "divide" | "modulo" | "power" | "abs" | "sqrt" | "min" | "max";
+        operand2?: string | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "round_number";
+      config: {
+        source: string;
+        mode: "round" | "floor" | "ceil";
+        decimals?: string | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "format_number";
+      config: {
+        source: string;
+        format: "decimal" | "currency" | "percent";
+        decimals?: string | null;
+        currency_code?: string | null;
+        locale?: string | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "compare_numbers";
+      config: {
+        operand1: string;
+        operator: "gt" | "gte" | "lt" | "lte" | "eq" | "neq";
+        operand2: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_number_range";
+      config: {
+        value: string;
+        min: string;
+        max: string;
+        inclusive: boolean;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_number_property";
+      config: {
+        value: string;
+        property: "even" | "odd" | "integer" | "positive" | "negative";
+        output_name: string;
       };
     }
   | {

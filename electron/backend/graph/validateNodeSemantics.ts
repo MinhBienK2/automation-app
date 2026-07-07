@@ -52,6 +52,15 @@ const supportedGraphNodeTypes = new Set<string>([
   "check_conditions",
   "calculate_value",
   "update_number_variable",
+  "set_number_variable",
+  "generate_random_number",
+  "parse_text_to_number",
+  "math_operation",
+  "round_number",
+  "format_number",
+  "compare_numbers",
+  "check_number_range",
+  "check_number_property",
   "update_text_variable",
   "set_text_variable",
   "append_text",
@@ -331,6 +340,15 @@ export function pushNodeSemanticIssues(
       break;
     }
     case "set_text_variable":
+    case "set_number_variable":
+    case "generate_random_number":
+    case "parse_text_to_number":
+    case "math_operation":
+    case "round_number":
+    case "format_number":
+    case "compare_numbers":
+    case "check_number_range":
+    case "check_number_property":
     case "append_text":
     case "prepend_text":
     case "replace_text":

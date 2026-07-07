@@ -228,6 +228,51 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: { name: "", operation: "increment", value: "" },
       };
+    case "set_number_variable":
+      return {
+        type: actionType,
+        config: { output_name: "my_number", value: "0" },
+      };
+    case "generate_random_number":
+      return {
+        type: actionType,
+        config: { output_name: "random_number", min: "1", max: "100", integer: true },
+      };
+    case "parse_text_to_number":
+      return {
+        type: actionType,
+        config: { source: "", fallback: "0", output_name: "parsed_number" },
+      };
+    case "math_operation":
+      return {
+        type: actionType,
+        config: { operand1: "", operation: "add", operand2: "1", output_name: "math_result" },
+      };
+    case "round_number":
+      return {
+        type: actionType,
+        config: { source: "", mode: "round", decimals: "0", output_name: "rounded_number" },
+      };
+    case "format_number":
+      return {
+        type: actionType,
+        config: { source: "", format: "decimal", decimals: "2", currency_code: "USD", locale: "en-US", output_name: "formatted_number" },
+      };
+    case "compare_numbers":
+      return {
+        type: actionType,
+        config: { operand1: "", operator: "gt", operand2: "", output_name: "is_greater" },
+      };
+    case "check_number_range":
+      return {
+        type: actionType,
+        config: { value: "", min: "0", max: "100", inclusive: true, output_name: "is_in_range" },
+      };
+    case "check_number_property":
+      return {
+        type: actionType,
+        config: { value: "", property: "even", output_name: "is_even" },
+      };
     case "update_text_variable":
       return {
         type: actionType,

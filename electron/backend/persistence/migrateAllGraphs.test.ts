@@ -50,12 +50,12 @@ describe("lazy migrate on read", () => {
     // First read: should migrate and persist
     const graph = await repo.getWorkflowGraph(workflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(6);
+    expect(graph!.version).toBe(7);
     expect(graph!.migration_notes).toEqual([]);
 
-    // Second read: should be a no-op (already v4)
+    // Second read: should be a no-op (already v7)
     const graph2 = await repo.getWorkflowGraph(workflow.id);
-    expect(graph2!.version).toBe(6);
+    expect(graph2!.version).toBe(7);
   });
 
   test("getSubflowGraph migrates v1 to v4 and persists back", async () => {
@@ -68,7 +68,7 @@ describe("lazy migrate on read", () => {
 
     const graph = await repo.getSubflowGraph(subflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(6);
+    expect(graph!.version).toBe(7);
   });
 });
 

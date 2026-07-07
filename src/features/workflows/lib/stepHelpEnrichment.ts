@@ -323,6 +323,24 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["JSON variables"];
     case "update_number_variable":
       return ["Variable name", "Operation", "Value"];
+    case "set_number_variable":
+      return ["Result variable", "Value"];
+    case "generate_random_number":
+      return ["Result variable", "Minimum value", "Maximum value", "Generate integer only"];
+    case "parse_text_to_number":
+      return ["Source text", "Fallback value", "Result variable"];
+    case "math_operation":
+      return ["Operand 1", "Operation", "Operand 2", "Result variable"];
+    case "round_number":
+      return ["Source number", "Rounding mode", "Decimal places", "Result variable"];
+    case "format_number":
+      return ["Source number", "Format style", "Decimal places", "Currency code", "Locale", "Result variable"];
+    case "compare_numbers":
+      return ["Operand 1", "Comparison operator", "Operand 2", "Result variable"];
+    case "check_number_range":
+      return ["Number value", "Minimum bound", "Maximum bound", "Inclusive bounds", "Result variable"];
+    case "check_number_property":
+      return ["Number value", "Property to check", "Result variable"];
     case "update_text_variable":
       return ["Variable name", "Operation", "Search pattern", "Value"];
     case "set_text_variable":

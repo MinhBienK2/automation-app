@@ -414,6 +414,113 @@ function compilePath(
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     }
+    case "set_number_variable": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const value = stringField(node.config, "value") ?? "";
+      steps.push(step(node, {
+        type: "set_number_variable",
+        config: { output_name, value },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "generate_random_number": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const min = stringField(node.config, "min") ?? "0";
+      const max = stringField(node.config, "max") ?? "100";
+      const integer = asRecord(node.config).integer !== false;
+      steps.push(step(node, {
+        type: "generate_random_number",
+        config: { output_name, min, max, integer },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "parse_text_to_number": {
+      const source = stringField(node.config, "source") ?? "";
+      const fallback = stringField(node.config, "fallback");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "parse_text_to_number",
+        config: { source, fallback, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "math_operation": {
+      const operand1 = stringField(node.config, "operand1") ?? "";
+      const operation = requiredString(node.config, "operation", "Operation is required") as any;
+      const operand2 = stringField(node.config, "operand2");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "math_operation",
+        config: { operand1, operation, operand2, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "round_number": {
+      const source = stringField(node.config, "source") ?? "";
+      const mode = requiredString(node.config, "mode", "Rounding mode is required") as any;
+      const decimals = stringField(node.config, "decimals") ?? "0";
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "round_number",
+        config: { source, mode, decimals, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "format_number": {
+      const source = stringField(node.config, "source") ?? "";
+      const format = requiredString(node.config, "format", "Format is required") as any;
+      const decimals = stringField(node.config, "decimals");
+      const currency_code = stringField(node.config, "currency_code");
+      const locale = stringField(node.config, "locale");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "format_number",
+        config: { source, format, decimals, currency_code, locale, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "compare_numbers": {
+      const operand1 = stringField(node.config, "operand1") ?? "";
+      const operator = requiredString(node.config, "operator", "Operator is required") as any;
+      const operand2 = stringField(node.config, "operand2") ?? "";
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "compare_numbers",
+        config: { operand1, operator, operand2, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_number_range": {
+      const value = stringField(node.config, "value") ?? "";
+      const min = stringField(node.config, "min") ?? "";
+      const max = stringField(node.config, "max") ?? "";
+      const inclusive = asRecord(node.config).inclusive !== false;
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "check_number_range",
+        config: { value, min, max, inclusive, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_number_property": {
+      const value = stringField(node.config, "value") ?? "";
+      const property = requiredString(node.config, "property", "Property is required") as any;
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "check_number_property",
+        config: { value, property, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
     case "update_text_variable": {
       const name = requiredString(node.config, "name", "Variable name is required");
       const operation = requiredString(node.config, "operation", "Operation must be append, prepend, replace, uppercase, lowercase, or trim") as any;
@@ -488,7 +595,7 @@ function compilePath(
     }
     case "slice_text": {
       const source = requiredString(node.config, "source", "Source variable name is required");
-      const start = requiredString(String(node.config.start ?? ""), "start", "Start value is required");
+      const start = requiredString(String(asRecord(node.config).start ?? ""), "start", "Start value is required");
       const end = stringField(node.config, "end") ?? (typeof asRecord(node.config).end === "number" ? asRecord(node.config).end : null) as any;
       const output_name = requiredString(node.config, "output_name", "Output variable name is required");
       steps.push(step(node, {

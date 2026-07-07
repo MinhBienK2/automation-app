@@ -91,7 +91,20 @@ export type ActionConfigField =
   | "new_key"
   | "fields"
   | "source_text"
-  | "source";
+  | "source"
+  | "operand1"
+  | "operand2"
+  | "min"
+  | "max"
+  | "integer"
+  | "fallback"
+  | "decimals"
+  | "format"
+  | "currency_code"
+  | "locale"
+  | "operator"
+  | "inclusive"
+  | "property";
 
 const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
 
@@ -230,12 +243,29 @@ export function updateActionConfigField(
     case "check_object_key_exists":
     case "check_object_empty":
       return { type: config.type, config: { ...config.config, [field]: value } } as ActionConfig;
+    case "generate_random_number":
+      if (field === "integer") {
+        return { type: "generate_random_number", config: { ...config.config, integer: value === "true" } };
+      }
+      return { type: "generate_random_number", config: { ...config.config, [field]: value } };
+    case "check_number_range":
+      if (field === "inclusive") {
+        return { type: "check_number_range", config: { ...config.config, inclusive: value === "true" } };
+      }
+      return { type: "check_number_range", config: { ...config.config, [field]: value } };
     case "merge_objects":
       if (field === "deep") {
         return { type: "merge_objects", config: { ...config.config, deep: value === "true" } };
       }
       return { type: "merge_objects", config: { ...config.config, [field]: value } };
     case "set_text_variable":
+    case "set_number_variable":
+    case "parse_text_to_number":
+    case "math_operation":
+    case "round_number":
+    case "format_number":
+    case "compare_numbers":
+    case "check_number_property":
     case "append_text":
     case "prepend_text":
     case "replace_text":

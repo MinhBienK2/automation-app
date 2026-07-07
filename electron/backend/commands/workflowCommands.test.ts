@@ -96,7 +96,7 @@ describe("Workflow commands integration", () => {
     await handlers.saveWorkflowGraph(created.id, graph);
     expect(await handlers.getWorkflowGraph(created.id)).toMatchObject({
       ...graph,
-      version: 6,
+      version: 7,
     });
 
     const settings = await handlers.getWorkflowSettings(created.id);
@@ -268,7 +268,7 @@ describe("Workflow commands integration", () => {
     const savedSourceSettings = await handlers.getWorkflowSettings(source.id);
 
     expect(await handlers.getWorkflowGraph(duplicated.id)).toMatchObject({
-      version: 6,
+      version: 7,
       nodes: runnableGraph().nodes,
       edges: runnableGraph().edges,
       viewport: runnableGraph().viewport,
@@ -411,7 +411,7 @@ describe("Workflow commands integration", () => {
     const migrated = await handlers.getWorkflowGraph(workflow.id);
 
     expect(migrated).toMatchObject({
-      version: 6,
+      version: 7,
       nodes: [
         expect.any(Object),
         expect.objectContaining({
@@ -432,7 +432,7 @@ describe("Workflow commands integration", () => {
         .prepare("SELECT graph_version FROM workflows WHERE id = ?")
         .get(workflow.id) as { graph_version: number }
     ).graph_version;
-    expect(persistedVersion).toBe(6);
+    expect(persistedVersion).toBe(7);
     const persistedNode = database
       .prepare("SELECT config_json FROM workflow_nodes WHERE workflow_id = ? AND id = ?")
       .get(workflow.id, "click-submit") as { config_json: string };

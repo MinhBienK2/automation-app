@@ -156,6 +156,18 @@ import {
   checkTextContainsSchema,
   checkTextRegexMatchesSchema,
 } from "./text_actions.js";
+import {
+  setNumberVariableSchema,
+  generateRandomNumberSchema,
+  parseTextToNumberSchema,
+  mathOperationSchema,
+  roundNumberSchema,
+  formatNumberSchema,
+  compareNumbersSchema,
+  checkNumberRangeSchema,
+  checkNumberPropertySchema,
+} from "./number_actions.js";
+
 
 
 type ActionType = ActionConfig["type"];
@@ -230,6 +242,15 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   stop_workflow: stopWorkflowSchema,
   transform_variable: transformVariableSchema,
   update_number_variable: updateNumberVariableSchema,
+  set_number_variable: setNumberVariableSchema,
+  generate_random_number: generateRandomNumberSchema,
+  parse_text_to_number: parseTextToNumberSchema,
+  math_operation: mathOperationSchema,
+  round_number: roundNumberSchema,
+  format_number: formatNumberSchema,
+  compare_numbers: compareNumbersSchema,
+  check_number_range: checkNumberRangeSchema,
+  check_number_property: checkNumberPropertySchema,
   update_text_variable: updateTextVariableSchema,
   update_flag_variable: updateFlagVariableSchema,
   set_text_variable: setTextVariableSchema,

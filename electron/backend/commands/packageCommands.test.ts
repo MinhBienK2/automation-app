@@ -201,7 +201,7 @@ describe("Package commands integration", () => {
     expect(importedSubflowId).not.toBe(subflow.id);
     expect(await projectHandlers.getSubflowGraph(importedSubflowId ?? "")).toEqual({
       ...subflowGraph,
-      version: 6,
+      version: 7,
       migration_notes: [],
     });
     expect(

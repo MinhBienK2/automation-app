@@ -864,11 +864,13 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByText("Succeeded Today")).toBeInTheDocument();
     expect(screen.getByText("Attention Needed")).toBeInTheDocument();
     expect(screen.getAllByText("Upcoming Schedules").length).toBeGreaterThan(0);
-    expect(screen.getByRole("region", { name: "Live Operations" })).toHaveTextContent("Login identity");
-    expect(screen.getByRole("region", { name: "Attention Queue" })).toHaveTextContent("Graph needs a start node");
+    await waitFor(() => {
+      expect(screen.getByRole("region", { name: "Live Operations" })).toHaveTextContent("Login identity");
+      expect(screen.getByRole("region", { name: "Attention Queue" })).toHaveTextContent("Graph needs a start node");
+      expect(screen.getByRole("region", { name: "Upcoming Schedules" })).toHaveTextContent("Daily audit");
+    });
     expect(screen.queryByRole("region", { name: "Execution Activity" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Recent Evidence" })).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Upcoming Schedules" })).toHaveTextContent("Daily audit");
 
     await userEvent.click(screen.getByRole("button", { name: "Refresh Overview" }));
 

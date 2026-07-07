@@ -2,7 +2,7 @@ import type {
   GraphValidationIssue,
   WorkflowGraph,
 } from "../../../src/types/workflow.js";
-import { migrateWorkflowGraph } from "./migration.js";
+import { migrateWorkflowGraph, CURRENT_WORKFLOW_GRAPH_VERSION } from "./migration.js";
 import {
   reachableNodeIds,
   unsupportedCycleNodeIds,
@@ -31,11 +31,11 @@ export function validateWorkflowGraph(
 ): GraphValidationIssue[] {
   const normalizedGraph = migrateWorkflowGraph(graph);
   const issues: GraphValidationIssue[] = [];
-  if (normalizedGraph.version !== 1 && normalizedGraph.version !== 2 && normalizedGraph.version !== 3 && normalizedGraph.version !== 4 && normalizedGraph.version !== 5 && normalizedGraph.version !== 6) {
+  if (normalizedGraph.version < 1 || normalizedGraph.version > CURRENT_WORKFLOW_GRAPH_VERSION) {
     issues.push(error(null, null, "Unsupported graph version"));
   }
 
-  const graphToValidate = normalizedGraph.version > 6 ? graph : normalizedGraph;
+  const graphToValidate = normalizedGraph.version > CURRENT_WORKFLOW_GRAPH_VERSION ? graph : normalizedGraph;
   const startCount = graphToValidate.nodes.filter((node) => node.node_type === "start").length;
   if (startCount !== 1) {
     issues.push(error(null, null, "Graph must contain exactly one start node"));

@@ -872,6 +872,7 @@ describe("Workflow list integration", () => {
 
   test("clears a previous workflow run error when creating a new workflow", async () => {
     mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
       list_workflows: [workflow],
       get_run_state: idleRunState,
       get_workflow: (args: unknown) => {
@@ -880,6 +881,7 @@ describe("Workflow list integration", () => {
           ? { workflow: newWorkflow, steps: [] }
           : { workflow, steps: [sleepStep] };
       },
+      get_workflow_graph: linearGraphFromSteps([sleepStep]),
       save_workflow_graph: undefined,
       run_workflow: {
         status: "failed",

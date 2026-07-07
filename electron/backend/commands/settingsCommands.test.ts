@@ -1039,8 +1039,12 @@ describe("Settings commands integration", () => {
     const { handlers, database } = await createTestHandlers();
     const workflow = await handlers.createWorkflow("Profile fallback test");
     
-    // Create a default project profile with a specific profile_dir
+     // Create a default project profile with a specific profile_dir
     const profileId = "profile-project-default";
+    await database.execute(
+      "UPDATE browser_profiles SET is_default = 0 WHERE project_id = $1 AND owner_id = $2",
+      [workflow.project_id, database.ownerId]
+    );
     await database.execute(
       `INSERT INTO browser_profiles (
         id, project_id, name, description, is_default, browser_launch_json, environment_json, created_at, updated_at, owner_id
