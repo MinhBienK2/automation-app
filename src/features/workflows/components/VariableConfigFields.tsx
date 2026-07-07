@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import type { VariableAssignment, VariableValueType } from "../../../types/workflow";
+import type { VariableAssignment, VariableValueType, ObjectFieldAssignment } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -14,15 +14,14 @@ type SetVariableConfig = {
   variables?: VariableAssignment[];
 };
 
-type SetVariablesConfigFieldsProps = {
-  config: SetVariableConfig;
-  onChange: (config: SetVariableConfig) => void;
-};
 
 export function SetVariablesConfigFields({
   config,
   onChange,
-}: SetVariablesConfigFieldsProps) {
+}: {
+  config: SetVariableConfig;
+  onChange: (config: SetVariableConfig) => void;
+}) {
   const rows = variableRowsFromConfig(config);
   const duplicateNames = duplicateVariableNames(rows);
   const itemRefs = useRef<(TemplateTextFieldRef | null)[]>([]);
@@ -181,6 +180,157 @@ function duplicateVariableNames(rows: VariableAssignment[]) {
     if (!name) continue;
     if (seen.has(name)) duplicates.add(name);
     seen.add(name);
+  }
+  return [...duplicates];
+}
+
+export function CreateObjectManualFields({
+  fields,
+  onChange,
+}: {
+  fields: ObjectFieldAssignment[];
+  onChange: (fields: ObjectFieldAssignment[]) => void;
+}) {
+  const rows = fields || [];
+  const duplicateKeys = duplicateFieldKeys(rows);
+  const itemRefs = useRef<(TemplateTextFieldRef | null)[]>([]);
+
+  function updateRow(index: number, patch: Partial<ObjectFieldAssignment>) {
+    onChange(
+      rows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, ...patch } : row,
+      ),
+    );
+  }
+
+  function removeRow(index: number) {
+    const nextRows = rows.filter((_, rowIndex) => rowIndex !== index);
+    onChange(nextRows.length ? nextRows : [emptyFieldRow()]);
+    itemRefs.current.splice(index, 1);
+  }
+
+  return (
+    <div className="variable-row-table-v2">
+      {rows.map((row, index) => {
+        const showMath = row.value_type !== "json" && row.value_type !== "boolean";
+        return (
+          <div className="variable-row-group-card" key={index}>
+            {/* Row 1: Key and Value */}
+            <div className="variable-row-line-one">
+              <div className="variable-row-field">
+                <Label htmlFor={`field-key-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Key Path</Label>
+                <Input
+                  id={`field-key-${index}`}
+                  aria-label={`Field ${index + 1} key`}
+                  placeholder="e.g. name or user.age"
+                  value={row.key}
+                  onChange={(event) => updateRow(index, { key: event.currentTarget.value })}
+                  className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
+                />
+              </div>
+              <div className="variable-row-field">
+                <Label htmlFor={`field-value-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Value</Label>
+                <TemplateTextField
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
+                  id={`field-value-${index}`}
+                  label=""
+                  value={row.value}
+                  onChange={(value) => updateRow(index, { value })}
+                  placeholder="Value"
+                  hideCompactButtons={true}
+                />
+              </div>
+            </div>
+
+            {/* Row 2: Type and Action Buttons */}
+            <div className="variable-row-line-two">
+              <div className="variable-row-type-select">
+                <span className="text-xs text-[var(--app-text-secondary)] font-medium">Type:</span>
+                <Select
+                  aria-label={`Field ${index + 1} type`}
+                  value={row.value_type}
+                  onChange={(event) =>
+                    updateRow(index, { value_type: event.currentTarget.value as VariableValueType })
+                  }
+                  className="h-7 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)] py-0"
+                >
+                  <option value="text">Text</option>
+                  <option value="json">JSON</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Boolean</option>
+                </Select>
+              </div>
+
+              <div className="variable-row-actions">
+                {showMath && (
+                  <Button
+                    aria-label={`Insert math for field ${index + 1}`}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => itemRefs.current[index]?.insertMath()}
+                    className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+                  >
+                    <Calculator className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button
+                  aria-label={`Insert variable for field ${index + 1}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => itemRefs.current[index]?.toggleBraces()}
+                  className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+                >
+                  <Braces className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  aria-label={`Remove field ${index + 1}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeRow(index)}
+                  className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {duplicateKeys.length ? (
+        <p className="variable-warning">
+          Duplicate keys overwrite earlier rows: {duplicateKeys.join(", ")}
+        </p>
+      ) : null}
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => onChange([...rows, emptyFieldRow()])}
+        className="mt-2 text-xs"
+      >
+        Add field row
+      </Button>
+    </div>
+  );
+}
+
+function emptyFieldRow(): ObjectFieldAssignment {
+  return { key: "", value_type: "text", value: "" };
+}
+
+function duplicateFieldKeys(rows: ObjectFieldAssignment[]) {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const row of rows) {
+    const key = row.key.trim();
+    if (!key) continue;
+    if (seen.has(key)) duplicates.add(key);
+    seen.add(key);
   }
   return [...duplicates];
 }

@@ -191,31 +191,154 @@ describe("runnerActionExecutors", () => {
     } as never);
     expect(runtime.outputs.list).toEqual([10, 20, 30]);
 
-    // 5. update_object_variable
+    // 5. granular object actions
+    // create_empty_object
     await executeRegisteredAction(executors, {
-      type: "update_object_variable",
-      config: { name: "obj", operation: "merge", value: '{"y": {"w": 3}}' },
-    } as never);
-    expect(runtime.outputs.obj).toEqual({ x: 1, y: { w: 3 } });
+      type: "create_empty_object",
+      config: { output_name: "obj" },
+    } as any);
+    expect(runtime.outputs.obj).toEqual({});
 
-    runtime.outputs.obj = { x: 1, y: { z: 2 } };
+    // create_object_manual
     await executeRegisteredAction(executors, {
-      type: "update_object_variable",
-      config: { name: "obj", operation: "deep_merge", value: '{"y": {"w": 3}}' },
-    } as never);
-    expect(runtime.outputs.obj).toEqual({ x: 1, y: { z: 2, w: 3 } });
+      type: "create_object_manual",
+      config: {
+        output_name: "obj_manual",
+        fields: [
+          { key: "a", value_type: "text", value: "hello" },
+          { key: "b", value_type: "number", value: "42" },
+          { key: "c", value_type: "boolean", value: "true" },
+        ],
+      },
+    } as any);
+    expect(runtime.outputs.obj_manual).toEqual({ a: "hello", b: 42, c: true });
+
+    // parse_json_to_object
+    await executeRegisteredAction(executors, {
+      type: "parse_json_to_object",
+      config: { source_text: '{"x": 10, "y": "test"}', output_name: "obj_parsed" },
+    } as any);
+    expect(runtime.outputs.obj_parsed).toEqual({ x: 10, y: "test" });
+
+    // set_object_property
+    runtime.outputs.obj = { profile: { age: 20 } };
+    await executeRegisteredAction(executors, {
+      type: "set_object_property",
+      config: { name: "obj", property_key: "profile.age", value_type: "number", value: "21" },
+    } as any);
+    expect(runtime.outputs.obj).toEqual({ profile: { age: 21 } });
+
+    // remove_object_property
+    runtime.outputs.obj = { profile: { age: 21, name: "bob" } };
+    await executeRegisteredAction(executors, {
+      type: "remove_object_property",
+      config: { name: "obj", property_key: "profile.name" },
+    } as any);
+    expect(runtime.outputs.obj).toEqual({ profile: { age: 21 } });
+
+    // merge_objects - shallow
+    runtime.outputs.obj = { a: 1, b: 2 };
+    await executeRegisteredAction(executors, {
+      type: "merge_objects",
+      config: { name: "obj", value: '{"b": 3, "c": 4}', deep: false },
+    } as any);
+    expect(runtime.outputs.obj).toEqual({ a: 1, b: 3, c: 4 });
+
+    // merge_objects - deep
+    runtime.outputs.obj = { a: 1, b: { x: 10 } };
+    await executeRegisteredAction(executors, {
+      type: "merge_objects",
+      config: { name: "obj", value: '{"b": {"y": 20}}', deep: true },
+    } as any);
+    expect(runtime.outputs.obj).toEqual({ a: 1, b: { x: 10, y: 20 } });
+
+    // rename_object_property
+    runtime.outputs.obj = { firstName: "John", lastName: "Doe" };
+    await executeRegisteredAction(executors, {
+      type: "rename_object_property",
+      config: { name: "obj", old_key: "firstName", new_key: "first_name" },
+    } as any);
+    expect(runtime.outputs.obj).toEqual({ first_name: "John", lastName: "Doe" });
+
+    // get_object_property
+    runtime.outputs.obj = { profile: { age: 21 } };
+    await executeRegisteredAction(executors, {
+      type: "get_object_property",
+      config: { source: "obj", property_key: "profile.age", output_name: "extracted_age" },
+    } as any);
+    expect(runtime.outputs.extracted_age).toBe(21);
+
+    // get_object_keys
+    runtime.outputs.obj = { name: "bob", age: 25 };
+    await executeRegisteredAction(executors, {
+      type: "get_object_keys",
+      config: { source: "obj", output_name: "keys_list" },
+    } as any);
+    expect(runtime.outputs.keys_list).toEqual(["name", "age"]);
+
+    // get_object_values
+    await executeRegisteredAction(executors, {
+      type: "get_object_values",
+      config: { source: "obj", output_name: "values_list" },
+    } as any);
+    expect(runtime.outputs.values_list).toEqual(["bob", 25]);
+
+    // stringify_object
+    await executeRegisteredAction(executors, {
+      type: "stringify_object",
+      config: { source: "obj", output_name: "stringified" },
+    } as any);
+    expect(runtime.outputs.stringified).toBe('{"name":"bob","age":25}');
+
+    // execute_object_script
+    let passedArgs: any = null;
+    const page = {
+      evaluate: async (fn: any, args: any) => {
+        passedArgs = args;
+        const parsedFn = new Function("obj", `return (${args.scriptText});`);
+        return parsedFn(args.obj);
+      },
+    } as any;
+    const runtimeWithPage = minimalRuntime({ page, outputs: { myObj: { age: 25 } } });
+    const executorsWithPage = createRunnerActionExecutors(runtimeWithPage, minimalDependencies());
+    await executeRegisteredAction(executorsWithPage, {
+      type: "execute_object_script",
+      config: { source: "myObj", script: "({ ...obj, age: obj.age + 1 })", output_name: "script_out" },
+    } as any);
+    expect(runtimeWithPage.outputs.script_out).toEqual({ age: 26 });
+    expect(passedArgs).toEqual({
+      scriptText: "({ ...obj, age: obj.age + 1 })",
+      obj: { age: 25 },
+    });
+
+    // check_object_key_exists
+    runtime.outputs.obj = { profile: { email: "test@example.com" } };
+    await executeRegisteredAction(executors, {
+      type: "check_object_key_exists",
+      config: { source: "obj", property_key: "profile.email", output_name: "email_exists" },
+    } as any);
+    expect(runtime.outputs.email_exists).toBe(true);
 
     await executeRegisteredAction(executors, {
-      type: "update_object_variable",
-      config: { name: "obj", operation: "set_key", property_key: "new_key", property_value: "42", property_value_type: "number" },
-    } as never);
-    expect((runtime.outputs.obj as any).new_key).toBe(42);
+      type: "check_object_key_exists",
+      config: { source: "obj", property_key: "profile.phone", output_name: "phone_exists" },
+    } as any);
+    expect(runtime.outputs.phone_exists).toBe(false);
 
+    // check_object_empty
+    runtime.outputs.obj = {};
     await executeRegisteredAction(executors, {
-      type: "update_object_variable",
-      config: { name: "obj", operation: "delete_key", property_key: "new_key" },
-    } as never);
-    expect((runtime.outputs.obj as any).new_key).toBeUndefined();
+      type: "check_object_empty",
+      config: { source: "obj", output_name: "is_empty" },
+    } as any);
+    expect(runtime.outputs.is_empty).toBe(true);
+
+    runtime.outputs.obj = { a: 1 };
+    await executeRegisteredAction(executors, {
+      type: "check_object_empty",
+      config: { source: "obj", output_name: "is_empty_2" },
+    } as any);
+    expect(runtime.outputs.is_empty_2).toBe(false);
   });
 
   test("updates list variable via merge and merge_unique operations", async () => {

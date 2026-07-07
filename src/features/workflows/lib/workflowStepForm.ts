@@ -85,7 +85,13 @@ export type ActionConfigField =
   | "method"
   | "format_pattern"
   | "offset_value"
-  | "offset_unit";
+  | "offset_unit"
+  | "deep"
+  | "old_key"
+  | "new_key"
+  | "fields"
+  | "source_text"
+  | "source";
 
 const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
 
@@ -210,8 +216,25 @@ export function updateActionConfigField(
         return { type: "update_list_variable", config: { ...config.config, index: value ? Number(value) : null } };
       }
       return { type: "update_list_variable", config: { ...config.config, [field]: value || null } };
-    case "update_object_variable":
-      return { type: "update_object_variable", config: { ...config.config, [field]: value || null } };
+    case "create_empty_object":
+    case "create_object_manual":
+    case "parse_json_to_object":
+    case "set_object_property":
+    case "remove_object_property":
+    case "rename_object_property":
+    case "get_object_property":
+    case "get_object_keys":
+    case "get_object_values":
+    case "stringify_object":
+    case "execute_object_script":
+    case "check_object_key_exists":
+    case "check_object_empty":
+      return { type: config.type, config: { ...config.config, [field]: value } } as ActionConfig;
+    case "merge_objects":
+      if (field === "deep") {
+        return { type: "merge_objects", config: { ...config.config, deep: value === "true" } };
+      }
+      return { type: "merge_objects", config: { ...config.config, [field]: value } };
     case "create_empty_list":
     case "create_list_manual":
     case "split_text_to_list":

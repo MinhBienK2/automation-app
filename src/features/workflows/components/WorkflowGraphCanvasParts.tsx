@@ -156,7 +156,20 @@ function graphNodeCategory(nodeType: GraphNodeType) {
     nodeType === "update_text_variable" ||
     nodeType === "update_flag_variable" ||
     nodeType === "update_list_variable" ||
-    nodeType === "update_object_variable" ||
+    nodeType === "create_empty_object" ||
+    nodeType === "create_object_manual" ||
+    nodeType === "parse_json_to_object" ||
+    nodeType === "set_object_property" ||
+    nodeType === "remove_object_property" ||
+    nodeType === "merge_objects" ||
+    nodeType === "rename_object_property" ||
+    nodeType === "get_object_property" ||
+    nodeType === "get_object_keys" ||
+    nodeType === "get_object_values" ||
+    nodeType === "stringify_object" ||
+    nodeType === "execute_object_script" ||
+    nodeType === "check_object_key_exists" ||
+    nodeType === "check_object_empty" ||
     nodeType === "transform_variable" ||
     nodeType === "assert_output" ||
     nodeType === "domain_allowlist" ||
@@ -266,7 +279,20 @@ function portUsageText(nodeType: GraphNodeType, port: GraphPort) {
     case "update_text_variable":
     case "update_flag_variable":
     case "update_list_variable":
-    case "update_object_variable":
+    case "create_empty_object":
+    case "create_object_manual":
+    case "parse_json_to_object":
+    case "set_object_property":
+    case "remove_object_property":
+    case "merge_objects":
+    case "rename_object_property":
+    case "get_object_property":
+    case "get_object_keys":
+    case "get_object_values":
+    case "stringify_object":
+    case "execute_object_script":
+    case "check_object_key_exists":
+    case "check_object_empty":
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
@@ -432,8 +458,34 @@ function utilityNodeVerb(nodeType: GraphNodeType) {
       return "cập nhật biến flag";
     case "update_list_variable":
       return "cập nhật biến danh sách";
-    case "update_object_variable":
-      return "cập nhật biến đối tượng";
+    case "create_empty_object":
+      return "tạo đối tượng rỗng";
+    case "create_object_manual":
+      return "tạo đối tượng thủ công";
+    case "parse_json_to_object":
+      return "phân tích JSON thành đối tượng";
+    case "set_object_property":
+      return "đặt thuộc tính đối tượng";
+    case "remove_object_property":
+      return "xóa thuộc tính đối tượng";
+    case "merge_objects":
+      return "gộp đối tượng";
+    case "rename_object_property":
+      return "đổi tên thuộc tính đối tượng";
+    case "get_object_property":
+      return "lấy thuộc tính đối tượng";
+    case "get_object_keys":
+      return "lấy danh sách khóa đối tượng";
+    case "get_object_values":
+      return "lấy danh sách giá trị đối tượng";
+    case "stringify_object":
+      return "chuyển đối tượng thành chuỗi JSON";
+    case "execute_object_script":
+      return "chạy script trên đối tượng";
+    case "check_object_key_exists":
+      return "kiểm tra khóa đối tượng tồn tại";
+    case "check_object_empty":
+      return "kiểm tra đối tượng rỗng";
     case "transform_variable":
       return "biến đổi biến";
     case "assert_output":

@@ -250,7 +250,6 @@ export const phaseOneEnglishStepHelpContent: Record<string, StepHelpContent> = {
   update_text_variable: variableHelpEn("Update Text Variable", "perform string operations on a text variable"),
   update_flag_variable: variableHelpEn("Update Flag Variable", "update boolean flag variable"),
   update_list_variable: variableHelpEn("Update List Variable", "perform array operations on a list variable"),
-  update_object_variable: variableHelpEn("Update Object Variable", "perform JSON object operations on an object variable"),
   assert_element: elementHelpEn("Assert Element", "require an element state", "assert"),
   assert_text: elementHelpEn("Assert Text", "require expected text", "assert"),
   graph_noop: elementHelpEn("Graph No-op", "mark internal graph flow progress", "logic"),

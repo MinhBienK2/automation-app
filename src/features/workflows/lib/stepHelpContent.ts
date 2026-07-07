@@ -43,6 +43,20 @@ const graphInternalActionTypes = [
   "check_list_contains",
   "check_list_any_match",
   "check_list_all_match",
+  "create_empty_object",
+  "create_object_manual",
+  "parse_json_to_object",
+  "set_object_property",
+  "remove_object_property",
+  "merge_objects",
+  "rename_object_property",
+  "get_object_property",
+  "get_object_keys",
+  "get_object_values",
+  "stringify_object",
+  "execute_object_script",
+  "check_object_key_exists",
+  "check_object_empty",
 ] as const satisfies readonly ActionType[];
 
 type GraphInternalActionType = (typeof graphInternalActionTypes)[number];

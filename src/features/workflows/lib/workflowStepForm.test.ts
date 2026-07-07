@@ -551,8 +551,8 @@ describe("workflow step form config helpers", () => {
       config: { name: "items", operation: "push", index: 1 },
     };
     const objConfig: ActionConfig = {
-      type: "update_object_variable",
-      config: { name: "user", operation: "set_key", property_key: "age" },
+      type: "set_object_property",
+      config: { name: "user", property_key: "age", value_type: "text", value: "" },
     };
 
     expect(updateActionConfigField(numConfig, "value", "10")).toEqual({
@@ -575,9 +575,9 @@ describe("workflow step form config helpers", () => {
       type: "update_list_variable",
       config: { name: "items", operation: "push", index: "{{my_idx}}" },
     });
-    expect(updateActionConfigField(objConfig, "property_value", "john")).toEqual({
-      type: "update_object_variable",
-      config: { name: "user", operation: "set_key", property_key: "age", property_value: "john" },
+    expect(updateActionConfigField(objConfig, "value", "john")).toEqual({
+      type: "set_object_property",
+      config: { name: "user", property_key: "age", value_type: "text", value: "john" },
     });
   });
 });

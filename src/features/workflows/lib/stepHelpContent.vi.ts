@@ -250,7 +250,6 @@ export const phaseOneVietnameseStepHelpContent: Record<string, StepHelpContent> 
   update_text_variable: variableHelpVi("Update Text Variable", "thực hiện xử lý chuỗi trên biến chữ"),
   update_flag_variable: variableHelpVi("Update Flag Variable", "cập nhật biến flag"),
   update_list_variable: variableHelpVi("Update List Variable", "thực hiện thao tác mảng trên biến danh sách"),
-  update_object_variable: variableHelpVi("Update Object Variable", "thực hiện thao tác đối tượng trên biến đối tượng"),
   assert_element: elementHelpVi("Assert Element", "kiểm tra element", "assert"),
   assert_text: elementHelpVi("Assert Text", "kiểm tra text", "assert"),
   graph_noop: elementHelpVi("Graph No-op", "đánh dấu luồng graph", "logic"),

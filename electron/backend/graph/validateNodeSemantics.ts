@@ -75,7 +75,20 @@ const supportedGraphNodeTypes = new Set<string>([
   "check_list_contains",
   "check_list_any_match",
   "check_list_all_match",
-  "update_object_variable",
+  "create_empty_object",
+  "create_object_manual",
+  "parse_json_to_object",
+  "set_object_property",
+  "remove_object_property",
+  "merge_objects",
+  "rename_object_property",
+  "get_object_property",
+  "get_object_keys",
+  "get_object_values",
+  "stringify_object",
+  "execute_object_script",
+  "check_object_key_exists",
+  "check_object_empty",
   "transform_variable",
   "assert_output",
   "domain_allowlist",
@@ -324,24 +337,24 @@ export function pushNodeSemanticIssues(
     case "check_list_empty":
     case "check_list_contains":
     case "check_list_any_match":
-    case "check_list_all_match": {
+    case "check_list_all_match":
+    case "create_empty_object":
+    case "create_object_manual":
+    case "parse_json_to_object":
+    case "set_object_property":
+    case "remove_object_property":
+    case "merge_objects":
+    case "rename_object_property":
+    case "get_object_property":
+    case "get_object_keys":
+    case "get_object_values":
+    case "stringify_object":
+    case "execute_object_script":
+    case "check_object_key_exists":
+    case "check_object_empty": {
       const validation = validateActionConfig({
         type: node.node_type as any,
         config: asRecord(node.config) as any,
-      });
-      if (validation) issues.push(error(node.id, null, validation.message));
-      break;
-    }
-    case "update_object_variable": {
-      const name = stringField(node.config, "name") ?? "";
-      const operation = stringField(node.config, "operation") ?? "";
-      const value = stringField(node.config, "value") ?? "";
-      const property_key = stringField(node.config, "property_key") ?? "";
-      const property_value = stringField(node.config, "property_value") ?? "";
-      const property_value_type = stringField(node.config, "property_value_type") ?? "";
-      const validation = validateActionConfig({
-        type: "update_object_variable",
-        config: { name, operation: operation as any, value, property_key, property_value, property_value_type: property_value_type as any },
       });
       if (validation) issues.push(error(node.id, null, validation.message));
       break;

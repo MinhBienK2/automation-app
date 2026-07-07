@@ -111,11 +111,11 @@ describe("migration runner", () => {
     expect(result2.applied).toEqual([]);
   });
 
-  test("baseline migration (real registry) upgrades v1 to v4 with migration_notes", () => {
+  test("baseline migration (real registry) upgrades v1 to v5 with migration_notes", () => {
     const result = runMigrations(baselineGraph(1));
-    expect(result.graph.version).toBe(4);
+    expect(result.graph.version).toBe(5);
     expect(result.graph.migration_notes).toEqual([]);
-    expect(result.applied).toHaveLength(3);
+    expect(result.applied).toHaveLength(4);
     expect(result.failed).toBeNull();
   });
 
@@ -154,13 +154,14 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(4);
+    expect(result.graph.version).toBe(5);
     expect(result.graph.nodes[0].node_type).toBe("check_conditions");
     expect(result.graph.nodes[1].node_type).toBe("calculate_value");
     expect(result.graph.nodes[2].node_type).toBe("start");
-    expect(result.applied).toHaveLength(2);
+    expect(result.applied).toHaveLength(3);
     expect(result.applied[0].version).toBe(3);
     expect(result.applied[1].version).toBe(4);
+    expect(result.applied[2].version).toBe(5);
   });
 
   test("migration 003 converts update_list_variable nodes to new granular list nodes", () => {
@@ -206,7 +207,7 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(4);
+    expect(result.graph.version).toBe(5);
     
     expect(result.graph.nodes[0].node_type).toBe("add_to_list");
     expect(result.graph.nodes[0].config).toEqual({
@@ -236,8 +237,71 @@ describe("migration runner", () => {
       unique: true,
     });
 
-    expect(result.applied).toHaveLength(1);
+    expect(result.applied).toHaveLength(2);
     expect(result.applied[0].version).toBe(4);
+    expect(result.applied[1].version).toBe(5);
+  });
+
+  test("migration 004 converts update_object_variable nodes to new granular object nodes", () => {
+    const legacyGraph: WorkflowGraph = {
+      version: 4,
+      nodes: [
+        {
+          id: "merge-node",
+          node_type: "update_object_variable",
+          label: "Merge Object",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myObj", operation: "merge", value: '{"a": 1}' },
+        },
+        {
+          id: "set-key-node",
+          node_type: "update_object_variable",
+          label: "Set Property",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myObj", operation: "set_key", property_key: "b.c", property_value: "hello", property_value_type: "text" },
+        },
+        {
+          id: "delete-key-node",
+          node_type: "update_object_variable",
+          label: "Remove Property",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myObj", operation: "delete_key", property_key: "b.c" },
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      migration_notes: [],
+    };
+
+    const result = runMigrations(legacyGraph);
+    expect(result.graph.version).toBe(5);
+
+    expect(result.graph.nodes[0].node_type).toBe("merge_objects");
+    expect(result.graph.nodes[0].config).toEqual({
+      name: "myObj",
+      value: '{"a": 1}',
+      deep: false,
+    });
+
+    expect(result.graph.nodes[1].node_type).toBe("set_object_property");
+    expect(result.graph.nodes[1].config).toEqual({
+      name: "myObj",
+      property_key: "b.c",
+      value_type: "text",
+      value: "hello",
+    });
+
+    expect(result.graph.nodes[2].node_type).toBe("remove_object_property");
+    expect(result.graph.nodes[2].config).toEqual({
+      name: "myObj",
+      property_key: "b.c",
+    });
+
+    expect(result.applied).toHaveLength(1);
+    expect(result.applied[0].version).toBe(5);
   });
 
   test("real registry is monotonic", () => {

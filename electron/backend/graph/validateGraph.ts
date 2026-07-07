@@ -31,11 +31,11 @@ export function validateWorkflowGraph(
 ): GraphValidationIssue[] {
   const normalizedGraph = migrateWorkflowGraph(graph);
   const issues: GraphValidationIssue[] = [];
-  if (normalizedGraph.version !== 1 && normalizedGraph.version !== 2 && normalizedGraph.version !== 3 && normalizedGraph.version !== 4) {
+  if (normalizedGraph.version !== 1 && normalizedGraph.version !== 2 && normalizedGraph.version !== 3 && normalizedGraph.version !== 4 && normalizedGraph.version !== 5) {
     issues.push(error(null, null, "Unsupported graph version"));
   }
 
-  const graphToValidate = normalizedGraph.version > 4 ? graph : normalizedGraph;
+  const graphToValidate = normalizedGraph.version > 5 ? graph : normalizedGraph;
   const startCount = graphToValidate.nodes.filter((node) => node.node_type === "start").length;
   if (startCount !== 1) {
     issues.push(error(null, null, "Graph must contain exactly one start node"));

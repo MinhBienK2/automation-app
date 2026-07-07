@@ -367,8 +367,34 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Source list variable name", "Result output variable name"];
     case "check_list_contains":
       return ["Source list variable name", "Value type to check", "Value to search for", "Result output variable name"];
-    case "update_object_variable":
-      return ["Variable name", "Operation", "Value", "Property key", "Property value type", "Property value"];
+    case "create_empty_object":
+      return ["Output variable name"];
+    case "create_object_manual":
+      return ["Output variable name", "Object fields list"];
+    case "parse_json_to_object":
+      return ["JSON source text", "Output variable name"];
+    case "set_object_property":
+      return ["Variable name", "Property path", "Value type", "Value"];
+    case "remove_object_property":
+      return ["Variable name", "Property path"];
+    case "merge_objects":
+      return ["Variable name", "Value to merge", "Deep merge"];
+    case "rename_object_property":
+      return ["Variable name", "Old key path", "New key path"];
+    case "get_object_property":
+      return ["Source object variable name", "Property path", "Result output variable name"];
+    case "get_object_keys":
+      return ["Source object variable name", "Result output variable name"];
+    case "get_object_values":
+      return ["Source object variable name", "Result output variable name"];
+    case "stringify_object":
+      return ["Source object variable name", "Result output variable name"];
+    case "execute_object_script":
+      return ["Source object variable name", "JavaScript Script", "Result output variable name"];
+    case "check_object_key_exists":
+      return ["Source object variable name", "Property path", "Result output variable name"];
+    case "check_object_empty":
+      return ["Source object variable name", "Result output variable name"];
     case "assert_element":
       return [...targetSourceFields, "State"];
     case "assert_text":

@@ -130,7 +130,20 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "check_list_contains":
     case "check_list_any_match":
     case "check_list_all_match":
-    case "update_object_variable":
+    case "create_empty_object":
+    case "create_object_manual":
+    case "parse_json_to_object":
+    case "set_object_property":
+    case "remove_object_property":
+    case "merge_objects":
+    case "rename_object_property":
+    case "get_object_property":
+    case "get_object_keys":
+    case "get_object_values":
+    case "stringify_object":
+    case "execute_object_script":
+    case "check_object_key_exists":
+    case "check_object_empty":
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":

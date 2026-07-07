@@ -49,6 +49,7 @@ import {
   withActionTimeout,
 } from "./runtimeHelpers.js";
 import { locatorFor, locatorForRuntimeElementRef, type RuntimeElementRef } from "./targetResolver.js";
+import { getPath, setPath, deletePath, hasPath } from "./objectHelpers.js";
 
 export type RunnerActionRuntime = {
   runId: string;
@@ -189,6 +190,27 @@ export function createRunnerActionExecutors(
   runtime: RunnerActionRuntime,
   deps: RunnerActionExecutorDependencies,
 ): ActionExecutorMap {
+  const cleanFlattenedKeys = (outputs: Record<string, unknown>, varName: string) => {
+    const prefix = varName + ".";
+    for (const key of Object.keys(outputs)) {
+      if (key.startsWith(prefix)) {
+        delete outputs[key];
+      }
+    }
+  };
+
+  const deepMerge = (target: Record<string, any>, source: Record<string, any>): Record<string, any> => {
+    const result = { ...target };
+    for (const [key, val] of Object.entries(source)) {
+      if (isPlainRecord(val) && isPlainRecord(result[key])) {
+        result[key] = deepMerge(result[key], val);
+      } else {
+        result[key] = val;
+      }
+    }
+    return result;
+  };
+
   return createActionExecutorMap({
     navigate: async (action) => {
       const url = renderTemplate(action.config.url, runtime.outputs);
@@ -1059,65 +1081,158 @@ export function createRunnerActionExecutors(
       }
       writeVariableValue(runtime.outputs, output_name, matches);
     },
-    update_object_variable: async (action) => {
-      const { name, operation, value, property_key, property_value, property_value_type } = action.config;
+    create_empty_object: async (action) => {
+      const { output_name } = action.config;
+      if (!output_name) return;
+      cleanFlattenedKeys(runtime.outputs, output_name);
+      writeVariableValue(runtime.outputs, output_name, {});
+    },
+    create_object_manual: async (action) => {
+      const { output_name, fields } = action.config;
+      if (!output_name) return;
+      const obj: Record<string, unknown> = {};
+      for (const field of fields || []) {
+        const parsedVal = parseVariableValue(field.value_type || "text", field.value || "", runtime.outputs);
+        obj[field.key] = parsedVal;
+      }
+      const evaluated = evaluateMathInObject(obj);
+      cleanFlattenedKeys(runtime.outputs, output_name);
+      writeVariableValue(runtime.outputs, output_name, evaluated);
+    },
+    parse_json_to_object: async (action) => {
+      const { source_text, output_name } = action.config;
+      if (!output_name) return;
+      const rendered = renderTemplate(source_text || "{}", runtime.outputs);
+      const parsedValue = JSON.parse(rendered);
+      if (!isPlainRecord(parsedValue)) {
+        throw new Error("Parsed value must be a JSON object");
+      }
+      cleanFlattenedKeys(runtime.outputs, output_name);
+      writeVariableValue(runtime.outputs, output_name, parsedValue);
+    },
+    set_object_property: async (action) => {
+      const { name, property_key, value_type, value } = action.config;
       if (!name) return;
-
       const existing = runtime.outputs[name];
       const obj = isPlainRecord(existing) ? { ...existing } : {};
-
-      const cleanFlattenedKeys = (outputs: Record<string, unknown>, varName: string) => {
-        const prefix = varName + ".";
-        for (const key of Object.keys(outputs)) {
-          if (key.startsWith(prefix)) {
-            delete outputs[key];
-          }
-        }
-      };
-
-      const deepMerge = (target: Record<string, any>, source: Record<string, any>): Record<string, any> => {
-        const result = { ...target };
-        for (const [key, val] of Object.entries(source)) {
-          if (isPlainRecord(val) && isPlainRecord(result[key])) {
-            result[key] = deepMerge(result[key], val);
-          } else {
-            result[key] = val;
-          }
-        }
-        return result;
-      };
-
-      if (operation === "merge" || operation === "deep_merge") {
-        const rendered = renderTemplate(value ?? "{}", runtime.outputs);
-        const parsedValue = JSON.parse(rendered);
-        if (!isPlainRecord(parsedValue)) {
-          throw new Error("Merged value must be a JSON object");
-        }
-        const newObj = operation === "deep_merge" ? deepMerge(obj, parsedValue) : { ...obj, ...parsedValue };
-        const evaluated = evaluateMathInObject(newObj);
+      const propKey = renderTemplate(property_key || "", runtime.outputs);
+      if (propKey) {
+        const parsedVal = parseVariableValue(value_type || "text", value || "", runtime.outputs);
+        setPath(obj, propKey, parsedVal);
+        const evaluated = evaluateMathInObject(obj);
         cleanFlattenedKeys(runtime.outputs, name);
         writeVariableValue(runtime.outputs, name, evaluated);
-      } else if (operation === "set_key") {
-        const propKey = renderTemplate(property_key ?? "", runtime.outputs);
+      }
+    },
+    remove_object_property: async (action) => {
+      const { name, property_key } = action.config;
+      if (!name) return;
+      const existing = runtime.outputs[name];
+      if (isPlainRecord(existing)) {
+        const obj = { ...existing };
+        const propKey = renderTemplate(property_key || "", runtime.outputs);
         if (propKey) {
-          const propVal = parseVariableValue(
-            property_value_type ?? "text",
-            property_value ?? "",
-            runtime.outputs,
-          );
-          const newObj = { ...obj, [propKey]: propVal };
-          const evaluated = evaluateMathInObject(newObj);
-          cleanFlattenedKeys(runtime.outputs, name);
-          writeVariableValue(runtime.outputs, name, evaluated);
-        }
-      } else if (operation === "delete_key") {
-        const propKey = renderTemplate(property_key ?? "", runtime.outputs);
-        if (propKey) {
-          delete obj[propKey];
+          deletePath(obj, propKey);
           cleanFlattenedKeys(runtime.outputs, name);
           writeVariableValue(runtime.outputs, name, obj);
         }
       }
+    },
+    merge_objects: async (action) => {
+      const { name, value, deep } = action.config;
+      if (!name) return;
+      const existing = runtime.outputs[name];
+      const obj = isPlainRecord(existing) ? { ...existing } : {};
+      const rendered = renderTemplate(value ?? "{}", runtime.outputs);
+      const parsedValue = JSON.parse(rendered);
+      if (!isPlainRecord(parsedValue)) {
+        throw new Error("Merged value must be a JSON object");
+      }
+      const newObj = deep ? deepMerge(obj, parsedValue) : { ...obj, ...parsedValue };
+      const evaluated = evaluateMathInObject(newObj);
+      cleanFlattenedKeys(runtime.outputs, name);
+      writeVariableValue(runtime.outputs, name, evaluated);
+    },
+    rename_object_property: async (action) => {
+      const { name, old_key, new_key } = action.config;
+      if (!name) return;
+      const existing = runtime.outputs[name];
+      if (isPlainRecord(existing)) {
+        const obj = { ...existing };
+        const oldKeyResolved = renderTemplate(old_key || "", runtime.outputs);
+        const newKeyResolved = renderTemplate(new_key || "", runtime.outputs);
+        if (oldKeyResolved && newKeyResolved && oldKeyResolved in obj) {
+          obj[newKeyResolved] = obj[oldKeyResolved];
+          delete obj[oldKeyResolved];
+          cleanFlattenedKeys(runtime.outputs, name);
+          writeVariableValue(runtime.outputs, name, obj);
+        }
+      }
+    },
+    get_object_property: async (action) => {
+      const { source, property_key, output_name } = action.config;
+      if (!output_name) return;
+      const existing = runtime.outputs[source];
+      const propKey = renderTemplate(property_key || "", runtime.outputs);
+      const val = getPath(existing, propKey);
+      writeVariableValue(runtime.outputs, output_name, val);
+    },
+    get_object_keys: async (action) => {
+      const { source, output_name } = action.config;
+      if (!output_name) return;
+      const existing = runtime.outputs[source];
+      const keys = isPlainRecord(existing) ? Object.keys(existing) : [];
+      writeVariableValue(runtime.outputs, output_name, keys);
+    },
+    get_object_values: async (action) => {
+      const { source, output_name } = action.config;
+      if (!output_name) return;
+      const existing = runtime.outputs[source];
+      const values = isPlainRecord(existing) ? Object.values(existing) : [];
+      writeVariableValue(runtime.outputs, output_name, values);
+    },
+    stringify_object: async (action) => {
+      const { source, output_name } = action.config;
+      if (!output_name) return;
+      const existing = runtime.outputs[source];
+      const stringified = isPlainRecord(existing) ? JSON.stringify(existing) : "{}";
+      writeVariableValue(runtime.outputs, output_name, stringified);
+    },
+    execute_object_script: async (action) => {
+      const { source, script, output_name } = action.config;
+      if (!output_name) return;
+      const existing = runtime.outputs[source];
+      if (!isPlainRecord(existing)) {
+        throw new Error(`Source variable "${source}" is not an object.`);
+      }
+      if (!script) throw new Error("Script is required");
+      
+      const result = await runtime.page.evaluate((args) => {
+        if (!args) throw new Error("Arguments are required");
+        const { scriptText, obj } = args;
+        try {
+          const fn = new Function("obj", `return (${scriptText});`);
+          return fn(obj);
+        } catch (err: any) {
+          throw new Error(`Failed to evaluate JS on object: ${err.message}`);
+        }
+      }, { scriptText: script, obj: existing });
+      writeVariableValue(runtime.outputs, output_name, result);
+    },
+    check_object_key_exists: async (action) => {
+      const { source, property_key, output_name } = action.config;
+      if (!output_name) return;
+      const existing = runtime.outputs[source];
+      const propKey = renderTemplate(property_key || "", runtime.outputs);
+      const exists = hasPath(existing, propKey);
+      writeVariableValue(runtime.outputs, output_name, exists);
+    },
+    check_object_empty: async (action) => {
+      const { source, output_name } = action.config;
+      if (!output_name) return;
+      const existing = runtime.outputs[source];
+      const isEmpty = isPlainRecord(existing) ? Object.keys(existing).length === 0 : true;
+      writeVariableValue(runtime.outputs, output_name, isEmpty);
     },
     assert_element: async (action) => {
       const locator = await deps.locatorForAction(runtime, action.config);

@@ -90,7 +90,22 @@ import { updateNumberVariableSchema } from "./update_number_variable.js";
 import { updateTextVariableSchema } from "./update_text_variable.js";
 import { updateFlagVariableSchema } from "./update_flag_variable.js";
 import { updateListVariableSchema } from "./update_list_variable.js";
-import { updateObjectVariableSchema } from "./update_object_variable.js";
+import {
+  createEmptyObjectSchema,
+  createObjectManualSchema,
+  parseJsonToObjectSchema,
+  setObjectPropertySchema,
+  removeObjectPropertySchema,
+  mergeObjectsSchema,
+  renameObjectPropertySchema,
+  getObjectPropertySchema,
+  getObjectKeysSchema,
+  getObjectValuesSchema,
+  stringifyObjectSchema,
+  executeObjectScriptSchema,
+  checkObjectKeyExistsSchema,
+  checkObjectEmptySchema,
+} from "./object_actions.js";
 import { assertOutputSchema } from "./assert_output.js";
 import { domainAllowlistSchema } from "./domain_allowlist.js";
 import { setJsonVariablesSchema } from "./set_json_variables.js";
@@ -223,7 +238,20 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   check_list_contains: checkListContainsSchema,
   check_list_any_match: checkListAnyMatchSchema,
   check_list_all_match: checkListAllMatchSchema,
-  update_object_variable: updateObjectVariableSchema,
+  create_empty_object: createEmptyObjectSchema,
+  create_object_manual: createObjectManualSchema,
+  parse_json_to_object: parseJsonToObjectSchema,
+  set_object_property: setObjectPropertySchema,
+  remove_object_property: removeObjectPropertySchema,
+  merge_objects: mergeObjectsSchema,
+  rename_object_property: renameObjectPropertySchema,
+  get_object_property: getObjectPropertySchema,
+  get_object_keys: getObjectKeysSchema,
+  get_object_values: getObjectValuesSchema,
+  stringify_object: stringifyObjectSchema,
+  execute_object_script: executeObjectScriptSchema,
+  check_object_key_exists: checkObjectKeyExistsSchema,
+  check_object_empty: checkObjectEmptySchema,
   assert_output: assertOutputSchema,
   domain_allowlist: domainAllowlistSchema,
   set_cookie: setCookieSchema,

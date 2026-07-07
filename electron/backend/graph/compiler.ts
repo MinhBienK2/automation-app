@@ -8,6 +8,7 @@ import type {
   RouterGraphCase,
   RouterGraphConfig,
   VariableAssignment,
+  ObjectFieldAssignment,
   ProfileEnvironment,
   WorkflowCondition,
   WorkflowGraph,
@@ -584,7 +585,7 @@ function compilePath(
     case "check_list_any_match":
     case "check_list_all_match": {
       const source = requiredString(node.config, "source", "Source list variable name is required");
-      const rules_group = asRecord(node.config).rules_group ?? null;
+      const rules_group = (asRecord(node.config).rules_group ?? null) as any;
       const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
       steps.push(step(node, {
         type: node.node_type as any,
@@ -649,16 +650,148 @@ function compilePath(
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     }
-    case "update_object_variable": {
-      const name = requiredString(node.config, "name", "Variable name is required");
-      const operation = requiredString(node.config, "operation", "Operation must be merge, deep_merge, set_key, or delete_key") as any;
-      const value = stringField(node.config, "value");
-      const property_key = stringField(node.config, "property_key");
-      const property_value = stringField(node.config, "property_value");
-      const property_value_type = stringField(node.config, "property_value_type") as any;
+    case "create_empty_object": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
       steps.push(step(node, {
-        type: "update_object_variable",
-        config: { name, operation, value, property_key, property_value, property_value_type },
+        type: "create_empty_object",
+        config: { output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "create_object_manual": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const fields = (asRecord(node.config).fields as ObjectFieldAssignment[]) ?? [];
+      steps.push(step(node, {
+        type: "create_object_manual",
+        config: { output_name, fields },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "parse_json_to_object": {
+      const source_text = stringField(node.config, "source_text") ?? "";
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "parse_json_to_object",
+        config: { source_text, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "set_object_property": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const property_key = requiredString(node.config, "property_key", "Property key is required");
+      const value_type = requiredString(node.config, "value_type", "Value type is required") as any;
+      const value = stringField(node.config, "value") ?? "";
+      steps.push(step(node, {
+        type: "set_object_property",
+        config: { name, property_key, value_type, value },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "remove_object_property": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const property_key = requiredString(node.config, "property_key", "Property key is required");
+      steps.push(step(node, {
+        type: "remove_object_property",
+        config: { name, property_key },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "merge_objects": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const value = stringField(node.config, "value") ?? "";
+      const deep = !!asRecord(node.config).deep;
+      steps.push(step(node, {
+        type: "merge_objects",
+        config: { name, value, deep },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "rename_object_property": {
+      const name = requiredString(node.config, "name", "Variable name is required");
+      const old_key = requiredString(node.config, "old_key", "Old key is required");
+      const new_key = requiredString(node.config, "new_key", "New key is required");
+      steps.push(step(node, {
+        type: "rename_object_property",
+        config: { name, old_key, new_key },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "get_object_property": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const property_key = requiredString(node.config, "property_key", "Property key is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "get_object_property",
+        config: { source, property_key, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "get_object_keys": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "get_object_keys",
+        config: { source, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "get_object_values": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "get_object_values",
+        config: { source, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "stringify_object": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "stringify_object",
+        config: { source, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "execute_object_script": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const script = stringField(node.config, "script") ?? "";
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "execute_object_script",
+        config: { source, script, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_object_key_exists": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const property_key = requiredString(node.config, "property_key", "Property key is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "check_object_key_exists",
+        config: { source, property_key, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_object_empty": {
+      const source = requiredString(node.config, "source", "Source variable name is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "check_object_empty",
+        config: { source, output_name },
       }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;

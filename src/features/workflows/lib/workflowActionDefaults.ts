@@ -343,10 +343,75 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: { source: "", rules_group: { operator: "and", rules: [] }, output_name: "all_match" },
       };
-    case "update_object_variable":
+    case "create_empty_object":
       return {
         type: actionType,
-        config: { name: "", operation: "merge", value: "{\n  \"key\": \"value\"\n}", property_key: "", property_value: "", property_value_type: "text" },
+        config: { output_name: "my_object" },
+      };
+    case "create_object_manual":
+      return {
+        type: actionType,
+        config: { output_name: "my_object", fields: [] },
+      };
+    case "parse_json_to_object":
+      return {
+        type: actionType,
+        config: { source_text: "{}", output_name: "my_object" },
+      };
+    case "set_object_property":
+      return {
+        type: actionType,
+        config: { name: "", property_key: "", value_type: "text", value: "" },
+      };
+    case "remove_object_property":
+      return {
+        type: actionType,
+        config: { name: "", property_key: "" },
+      };
+    case "merge_objects":
+      return {
+        type: actionType,
+        config: { name: "", value: "{}", deep: false },
+      };
+    case "rename_object_property":
+      return {
+        type: actionType,
+        config: { name: "", old_key: "", new_key: "" },
+      };
+    case "get_object_property":
+      return {
+        type: actionType,
+        config: { source: "", property_key: "", output_name: "property_value" },
+      };
+    case "get_object_keys":
+      return {
+        type: actionType,
+        config: { source: "", output_name: "object_keys" },
+      };
+    case "get_object_values":
+      return {
+        type: actionType,
+        config: { source: "", output_name: "object_values" },
+      };
+    case "stringify_object":
+      return {
+        type: actionType,
+        config: { source: "", output_name: "json_string" },
+      };
+    case "execute_object_script":
+      return {
+        type: actionType,
+        config: { source: "", script: "return obj;", output_name: "script_result" },
+      };
+    case "check_object_key_exists":
+      return {
+        type: actionType,
+        config: { source: "", property_key: "", output_name: "key_exists" },
+      };
+    case "check_object_empty":
+      return {
+        type: actionType,
+        config: { source: "", output_name: "is_empty" },
       };
     case "assert_element":
       return {

@@ -467,7 +467,20 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "check_list_contains":
     case "check_list_any_match":
     case "check_list_all_match":
-    case "update_object_variable":
+    case "create_empty_object":
+    case "create_object_manual":
+    case "parse_json_to_object":
+    case "set_object_property":
+    case "remove_object_property":
+    case "merge_objects":
+    case "rename_object_property":
+    case "get_object_property":
+    case "get_object_keys":
+    case "get_object_values":
+    case "stringify_object":
+    case "execute_object_script":
+    case "check_object_key_exists":
+    case "check_object_empty":
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
@@ -882,7 +895,20 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
   if (nodeType === "check_conditions") return "Check Conditions";
   if (nodeType === "calculate_value") return "Calculate Value";
   if (nodeType === "update_flag_variable") return "Update Flag Variable (Yes/No)";
-  if (nodeType === "update_object_variable") return "Update Object Variable (JSON)";
+  if (nodeType === "create_empty_object") return "Create Empty Object";
+  if (nodeType === "create_object_manual") return "Create Object (Manual)";
+  if (nodeType === "parse_json_to_object") return "Parse JSON to Object";
+  if (nodeType === "set_object_property") return "Set Object Property";
+  if (nodeType === "remove_object_property") return "Remove Object Property";
+  if (nodeType === "merge_objects") return "Merge Objects";
+  if (nodeType === "rename_object_property") return "Rename Object Property";
+  if (nodeType === "get_object_property") return "Get Object Property";
+  if (nodeType === "get_object_keys") return "Get Object Keys";
+  if (nodeType === "get_object_values") return "Get Object Values";
+  if (nodeType === "stringify_object") return "Stringify Object";
+  if (nodeType === "execute_object_script") return "Run Script on Object";
+  if (nodeType === "check_object_key_exists") return "Check Object Key Exists";
+  if (nodeType === "check_object_empty") return "Check Object Empty";
   if (nodeType === "create_empty_list") return "Create Empty List";
   if (nodeType === "create_list_manual") return "Create List Manual";
   if (nodeType === "split_text_to_list") return "Split Text to List";
@@ -1136,8 +1162,34 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { source: "", rules_group: { operator: "and", rules: [] }, output_name: "any_match" };
     case "check_list_all_match":
       return { source: "", rules_group: { operator: "and", rules: [] }, output_name: "all_match" };
-    case "update_object_variable":
-      return { name: "", operation: "merge", value: "{\n  \"key\": \"value\"\n}", property_key: "", property_value: "", property_value_type: "text" };
+    case "create_empty_object":
+      return { output_name: "my_object" };
+    case "create_object_manual":
+      return { output_name: "my_object", fields: [] };
+    case "parse_json_to_object":
+      return { source_text: "{}", output_name: "my_object" };
+    case "set_object_property":
+      return { name: "", property_key: "", value_type: "text", value: "" };
+    case "remove_object_property":
+      return { name: "", property_key: "" };
+    case "merge_objects":
+      return { name: "", value: "{}", deep: false };
+    case "rename_object_property":
+      return { name: "", old_key: "", new_key: "" };
+    case "get_object_property":
+      return { source: "", property_key: "", output_name: "property_value" };
+    case "get_object_keys":
+      return { source: "", output_name: "object_keys" };
+    case "get_object_values":
+      return { source: "", output_name: "object_values" };
+    case "stringify_object":
+      return { source: "", output_name: "json_string" };
+    case "execute_object_script":
+      return { source: "", script: "return obj;", output_name: "script_result" };
+    case "check_object_key_exists":
+      return { source: "", property_key: "", output_name: "key_exists" };
+    case "check_object_empty":
+      return { source: "", output_name: "is_empty" };
     case "transform_variable":
       return { source_name: "input", target_name: "output", expression: "" };
     case "assert_output":

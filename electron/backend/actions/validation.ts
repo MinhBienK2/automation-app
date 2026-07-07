@@ -574,49 +574,88 @@ const actionValidators = createActionValidatorMap({
       requiredActionString(config.config.source, "source", "Source list variable name is required"),
       requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
     ),
-  update_object_variable: (config) => {
-    const operation = config.config.operation;
-    const isMerge = ["merge", "deep_merge"].includes(operation);
-    const isSetKey = operation === "set_key";
-    const isDeleteKey = operation === "delete_key";
-    
-    if (isMerge) {
-      const valueErr = requiredActionString(config.config.value, "value", "Value is required");
-      if (valueErr) return valueErr;
-      try {
-        const parsed = JSON.parse(config.config.value || "{}");
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          return validationError("value", "JSON variables must be an object");
-        }
-      } catch {
-        return validationError("value", "JSON variables must be valid JSON");
-      }
-    }
-    
+  create_empty_object: (config) =>
+    requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+  create_object_manual: (config) => {
+    const fields = config.config.fields ?? [];
     return firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
-      validateRequiredEnumValue(
-        operation,
-        ["merge", "deep_merge", "set_key", "delete_key"],
-        "operation",
-        "Operation must be merge, deep_merge, set_key, or delete_key",
-      ),
-      (isSetKey || isDeleteKey)
-        ? requiredActionString(config.config.property_key, "property_key", "Property key is required")
-        : null,
-      isSetKey
-        ? firstValidation(
-            requiredActionString(config.config.property_value, "property_value", "Property value is required"),
-            validateRequiredEnumValue(
-              config.config.property_value_type,
-              ["text", "json", "number", "boolean"],
-              "property_value_type",
-              "Property value type must be text, json, number, or boolean",
-            ),
-          )
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      fields.some((row) => !row.key.trim())
+        ? validationError("fields", "Field key is required")
         : null,
     );
   },
+  parse_json_to_object: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source_text, "source_text", "Source text is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  set_object_property: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
+      validateRequiredEnumValue(
+        config.config.value_type,
+        ["text", "json", "number", "boolean"],
+        "value_type",
+        "Value type must be text, json, number, or boolean",
+      ),
+      requiredActionString(config.config.value, "value", "Value is required"),
+    ),
+  remove_object_property: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
+    ),
+  merge_objects: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.value, "value", "Value to merge is required"),
+    ),
+  rename_object_property: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.old_key, "old_key", "Old key is required"),
+      requiredActionString(config.config.new_key, "new_key", "New key is required"),
+    ),
+  get_object_property: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  get_object_keys: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  get_object_values: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  stringify_object: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  execute_object_script: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.script, "script", "Script code is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_object_key_exists: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_object_empty: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
   assert_element: (config) =>
     firstValidation(
       validateElementTargetSource(config.config),

@@ -71,7 +71,20 @@ export type ActionType =
   | "check_list_contains"
   | "check_list_any_match"
   | "check_list_all_match"
-  | "update_object_variable"
+  | "create_empty_object"
+  | "create_object_manual"
+  | "parse_json_to_object"
+  | "set_object_property"
+  | "remove_object_property"
+  | "merge_objects"
+  | "rename_object_property"
+  | "get_object_property"
+  | "get_object_keys"
+  | "get_object_values"
+  | "stringify_object"
+  | "execute_object_script"
+  | "check_object_key_exists"
+  | "check_object_empty"
   | "assert_element"
   | "assert_text"
   | "check_conditions"
@@ -123,6 +136,11 @@ export type RunMode = "none" | "run_workflow" | "test_step";
 export type VariableValueType = "text" | "json" | "number" | "boolean";
 export type VariableAssignment = {
   name: string;
+  value_type: VariableValueType;
+  value: string;
+};
+export type ObjectFieldAssignment = {
+  key: string;
   value_type: VariableValueType;
   value: string;
 };
@@ -947,14 +965,107 @@ export type ActionConfig =
       };
     }
   | {
-      type: "update_object_variable";
+      type: "create_empty_object";
+      config: {
+        output_name: string;
+      };
+    }
+  | {
+      type: "create_object_manual";
+      config: {
+        output_name: string;
+        fields: ObjectFieldAssignment[];
+      };
+    }
+  | {
+      type: "parse_json_to_object";
+      config: {
+        source_text: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "set_object_property";
       config: {
         name: string;
-        operation: "merge" | "deep_merge" | "set_key" | "delete_key";
-        value?: string | null;
-        property_key?: string | null;
-        property_value?: string | null;
-        property_value_type?: VariableValueType | null;
+        property_key: string;
+        value_type: VariableValueType;
+        value: string;
+      };
+    }
+  | {
+      type: "remove_object_property";
+      config: {
+        name: string;
+        property_key: string;
+      };
+    }
+  | {
+      type: "merge_objects";
+      config: {
+        name: string;
+        value: string;
+        deep: boolean;
+      };
+    }
+  | {
+      type: "rename_object_property";
+      config: {
+        name: string;
+        old_key: string;
+        new_key: string;
+      };
+    }
+  | {
+      type: "get_object_property";
+      config: {
+        source: string;
+        property_key: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "get_object_keys";
+      config: {
+        source: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "get_object_values";
+      config: {
+        source: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "stringify_object";
+      config: {
+        source: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "execute_object_script";
+      config: {
+        source: string;
+        script: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_object_key_exists";
+      config: {
+        source: string;
+        property_key: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_object_empty";
+      config: {
+        source: string;
+        output_name: string;
       };
     }
   | {

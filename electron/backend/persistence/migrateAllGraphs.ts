@@ -1,4 +1,5 @@
 import type { DbAdapter } from "./dbAdapter.js";
+import crypto from "node:crypto";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
 import { runMigrations } from "../graph/migrations/index.js";
 import { validateActionConfig } from "../actions/schemas/index.js";
@@ -54,20 +55,29 @@ export async function migrateAllGraphs(db: DbAdapter): Promise<MigrationReport> 
       if (result.failed) failed++;
       if (result.migrated || result.failed) {
         if (hasMigrationLog) {
-          await tx.execute(
-            `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [
-              "workflows",
-              row.id,
-              result.startedAt,
-              result.finishedAt,
-              result.fromVersion,
-              result.toVersion,
-              JSON.stringify(result.applied),
-              result.failure ? JSON.stringify(result.failure) : null,
-            ]
-          );
+          const params = [
+            "workflows",
+            row.id,
+            result.startedAt,
+            result.finishedAt,
+            result.fromVersion,
+            result.toVersion,
+            JSON.stringify(result.applied),
+            result.failure ? JSON.stringify(result.failure) : null,
+          ];
+          if (tx.ownerId) {
+            await tx.execute(
+              `INSERT INTO migration_log (id, target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+              [crypto.randomUUID(), ...params]
+            );
+          } else {
+            await tx.execute(
+              `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+              params
+            );
+          }
         } else {
           console.log(`[migrateAllGraphs] Workflow ${row.id} migrated from version ${result.fromVersion} to ${result.toVersion}`);
         }
@@ -81,20 +91,29 @@ export async function migrateAllGraphs(db: DbAdapter): Promise<MigrationReport> 
       if (result.failed) failed++;
       if (result.migrated || result.failed) {
         if (hasMigrationLog) {
-          await tx.execute(
-            `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [
-              "subflows",
-              row.id,
-              result.startedAt,
-              result.finishedAt,
-              result.fromVersion,
-              result.toVersion,
-              JSON.stringify(result.applied),
-              result.failure ? JSON.stringify(result.failure) : null,
-            ]
-          );
+          const params = [
+            "subflows",
+            row.id,
+            result.startedAt,
+            result.finishedAt,
+            result.fromVersion,
+            result.toVersion,
+            JSON.stringify(result.applied),
+            result.failure ? JSON.stringify(result.failure) : null,
+          ];
+          if (tx.ownerId) {
+            await tx.execute(
+              `INSERT INTO migration_log (id, target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+              [crypto.randomUUID(), ...params]
+            );
+          } else {
+            await tx.execute(
+              `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+              params
+            );
+          }
         } else {
           console.log(`[migrateAllGraphs] Subflow ${row.id} migrated from version ${result.fromVersion} to ${result.toVersion}`);
         }
