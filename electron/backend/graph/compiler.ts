@@ -448,6 +448,207 @@ function compilePath(
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     }
+    case "create_empty_list": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "create_empty_list",
+        config: { output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "create_list_manual": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const value_type = requiredString(node.config, "value_type", "Item value type is required") as any;
+      const items = (asRecord(node.config).items as string[]) ?? [];
+      steps.push(step(node, {
+        type: "create_list_manual",
+        config: { output_name, value_type, items },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "split_text_to_list": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source_text = stringField(node.config, "source_text") ?? "";
+      const delimiter = stringField(node.config, "delimiter") ?? "";
+      steps.push(step(node, {
+        type: "split_text_to_list",
+        config: { output_name, source_text, delimiter },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "generate_number_range": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const start = stringField(node.config, "start") ?? 0;
+      const end = stringField(node.config, "end") ?? 0;
+      const stepVal = stringField(node.config, "step") ?? null;
+      steps.push(step(node, {
+        type: "generate_number_range",
+        config: { output_name, start, end, step: stepVal },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "add_to_list": {
+      const name = requiredString(node.config, "name", "Target list variable name is required");
+      const position = requiredString(node.config, "position", "Position is required") as any;
+      const value_type = requiredString(node.config, "value_type", "Value type is required") as any;
+      const value = stringField(node.config, "value") ?? "";
+      steps.push(step(node, {
+        type: "add_to_list",
+        config: { name, position, value_type, value },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "remove_from_list_by_index": {
+      const name = requiredString(node.config, "name", "Target list variable name is required");
+      const index = stringField(node.config, "index") ?? (typeof asRecord(node.config).index === "number" ? asRecord(node.config).index : "") as any;
+      steps.push(step(node, {
+        type: "remove_from_list_by_index",
+        config: { name, index },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "remove_from_list_by_value": {
+      const name = requiredString(node.config, "name", "Target list variable name is required");
+      const value_type = requiredString(node.config, "value_type", "Value type is required") as any;
+      const value = stringField(node.config, "value") ?? "";
+      steps.push(step(node, {
+        type: "remove_from_list_by_value",
+        config: { name, value_type, value },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "merge_lists": {
+      const name = requiredString(node.config, "name", "Target list variable name is required");
+      const value = stringField(node.config, "value") ?? "";
+      const unique = !!asRecord(node.config).unique;
+      steps.push(step(node, {
+        type: "merge_lists",
+        config: { name, value, unique },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "get_list_item": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const position = requiredString(node.config, "position", "Position is required") as any;
+      const index = stringField(node.config, "index") ?? (typeof asRecord(node.config).index === "number" ? asRecord(node.config).index : null) as any;
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: "get_list_item",
+        config: { source, position, index, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "get_list_length": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: "get_list_length",
+        config: { source, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "slice_list": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const start = stringField(node.config, "start") ?? 0;
+      const end = stringField(node.config, "end") ?? null;
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: "slice_list",
+        config: { source, start, end, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "join_list": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const separator = stringField(node.config, "separator") ?? "";
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: "join_list",
+        config: { source, separator, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "filter_list":
+    case "check_list_any_match":
+    case "check_list_all_match": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const rules_group = asRecord(node.config).rules_group ?? null;
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: node.node_type as any,
+        config: { source, rules_group, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "map_list_property": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const property_key = stringField(node.config, "property_key") ?? "";
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: "map_list_property",
+        config: { source, property_key, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "sort_reverse_list": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const action = requiredString(node.config, "action", "Action is required") as any;
+      const sort_key = stringField(node.config, "sort_key") ?? null;
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: "sort_reverse_list",
+        config: { source, action, sort_key, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "execute_list_script": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const script = stringField(node.config, "script") ?? "";
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: "execute_list_script",
+        config: { source, script, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_list_empty": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: "check_list_empty",
+        config: { source, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_list_contains": {
+      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const value_type = requiredString(node.config, "value_type", "Value type is required") as any;
+      const value = stringField(node.config, "value") ?? "";
+      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      steps.push(step(node, {
+        type: "check_list_contains",
+        config: { source, value_type, value, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
     case "update_object_variable": {
       const name = requiredString(node.config, "name", "Variable name is required");
       const operation = requiredString(node.config, "operation", "Operation must be merge, deep_merge, set_key, or delete_key") as any;

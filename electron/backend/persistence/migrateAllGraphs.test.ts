@@ -36,7 +36,7 @@ function baselineV1Graph(): WorkflowGraph {
 }
 
 describe("lazy migrate on read", () => {
-  test("getWorkflowGraph migrates v1 to v3 and persists back", async () => {
+  test("getWorkflowGraph migrates v1 to v4 and persists back", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
 
@@ -50,15 +50,15 @@ describe("lazy migrate on read", () => {
     // First read: should migrate and persist
     const graph = await repo.getWorkflowGraph(workflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(3);
+    expect(graph!.version).toBe(4);
     expect(graph!.migration_notes).toEqual([]);
 
-    // Second read: should be a no-op (already v3)
+    // Second read: should be a no-op (already v4)
     const graph2 = await repo.getWorkflowGraph(workflow.id);
-    expect(graph2!.version).toBe(3);
+    expect(graph2!.version).toBe(4);
   });
 
-  test("getSubflowGraph migrates v1 to v3 and persists back", async () => {
+  test("getSubflowGraph migrates v1 to v4 and persists back", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
 
@@ -68,7 +68,7 @@ describe("lazy migrate on read", () => {
 
     const graph = await repo.getSubflowGraph(subflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(3);
+    expect(graph!.version).toBe(4);
   });
 });
 

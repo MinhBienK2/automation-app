@@ -2,12 +2,17 @@ import type { WorkflowGraph } from "../../../../src/types/workflow.js";
 import type { Migration, MigrationResult } from "./types.js";
 import { migration001Baseline } from "./001_baseline.js";
 import { migration002RenameEvalNodes } from "./002_rename_eval_nodes.js";
+import { migration003MigrateListNodes } from "./003_migrate_list_nodes.js";
 
 /**
  * Manually registered, ordered migration registry.
  * Each entry's `version` must be strictly greater than the previous one.
  */
-export const MIGRATIONS: Migration[] = [migration001Baseline, migration002RenameEvalNodes];
+export const MIGRATIONS: Migration[] = [
+  migration001Baseline,
+  migration002RenameEvalNodes,
+  migration003MigrateListNodes,
+];
 
 function assertMonotonic(migrations: Migration[]): void {
   for (let i = 1; i < migrations.length; i++) {

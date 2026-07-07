@@ -321,15 +321,14 @@ describe("TypeScript graph compiler parity", () => {
                 },
               },
               {
-                type: "update_list_variable",
+                type: "add_to_list",
                 graph_node_id: "update-var",
                 graph_label: "Loop > Update Var",
                 config: {
                   name: "row.tags",
-                  operation: "push",
+                  position: "end",
                   value: "completed",
                   value_type: "text",
-                  index: null,
                 },
               },
             ],

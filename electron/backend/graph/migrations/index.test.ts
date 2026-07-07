@@ -111,11 +111,11 @@ describe("migration runner", () => {
     expect(result2.applied).toEqual([]);
   });
 
-  test("baseline migration (real registry) upgrades v1 to v3 with migration_notes", () => {
+  test("baseline migration (real registry) upgrades v1 to v4 with migration_notes", () => {
     const result = runMigrations(baselineGraph(1));
-    expect(result.graph.version).toBe(3);
+    expect(result.graph.version).toBe(4);
     expect(result.graph.migration_notes).toEqual([]);
-    expect(result.applied).toHaveLength(2);
+    expect(result.applied).toHaveLength(3);
     expect(result.failed).toBeNull();
   });
 
@@ -154,12 +154,90 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(3);
+    expect(result.graph.version).toBe(4);
     expect(result.graph.nodes[0].node_type).toBe("check_conditions");
     expect(result.graph.nodes[1].node_type).toBe("calculate_value");
     expect(result.graph.nodes[2].node_type).toBe("start");
-    expect(result.applied).toHaveLength(1);
+    expect(result.applied).toHaveLength(2);
     expect(result.applied[0].version).toBe(3);
+    expect(result.applied[1].version).toBe(4);
+  });
+
+  test("migration 003 converts update_list_variable nodes to new granular list nodes", () => {
+    const legacyGraph: WorkflowGraph = {
+      version: 3,
+      nodes: [
+        {
+          id: "push-node",
+          node_type: "update_list_variable",
+          label: "Push Value",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myList", operation: "push", value: "hello", value_type: "text" },
+        },
+        {
+          id: "pop-node",
+          node_type: "update_list_variable",
+          label: "Pop Value",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myList", operation: "pop" },
+        },
+        {
+          id: "remove-val-node",
+          node_type: "update_list_variable",
+          label: "Remove Value",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myList", operation: "remove_by_value", value: "42", value_type: "number" },
+        },
+        {
+          id: "merge-unique-node",
+          node_type: "update_list_variable",
+          label: "Merge Unique",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myList", operation: "merge_unique", value: "otherList" },
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      migration_notes: [],
+    };
+
+    const result = runMigrations(legacyGraph);
+    expect(result.graph.version).toBe(4);
+    
+    expect(result.graph.nodes[0].node_type).toBe("add_to_list");
+    expect(result.graph.nodes[0].config).toEqual({
+      name: "myList",
+      position: "end",
+      value_type: "text",
+      value: "hello",
+    });
+
+    expect(result.graph.nodes[1].node_type).toBe("remove_from_list_by_index");
+    expect(result.graph.nodes[1].config).toEqual({
+      name: "myList",
+      index: "last",
+    });
+
+    expect(result.graph.nodes[2].node_type).toBe("remove_from_list_by_value");
+    expect(result.graph.nodes[2].config).toEqual({
+      name: "myList",
+      value_type: "number",
+      value: "42",
+    });
+
+    expect(result.graph.nodes[3].node_type).toBe("merge_lists");
+    expect(result.graph.nodes[3].config).toEqual({
+      name: "myList",
+      value: "otherList",
+      unique: true,
+    });
+
+    expect(result.applied).toHaveLength(1);
+    expect(result.applied[0].version).toBe(4);
   });
 
   test("real registry is monotonic", () => {
