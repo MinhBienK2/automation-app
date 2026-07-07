@@ -111,11 +111,11 @@ describe("migration runner", () => {
     expect(result2.applied).toEqual([]);
   });
 
-  test("baseline migration (real registry) upgrades v1 to v7 with migration_notes", () => {
+  test("baseline migration (real registry) upgrades v1 to v8 with migration_notes", () => {
     const result = runMigrations(baselineGraph(1));
-    expect(result.graph.version).toBe(7);
+    expect(result.graph.version).toBe(8);
     expect(result.graph.migration_notes).toEqual([]);
-    expect(result.applied).toHaveLength(6);
+    expect(result.applied).toHaveLength(7);
     expect(result.failed).toBeNull();
   });
 
@@ -154,16 +154,17 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(7);
+    expect(result.graph.version).toBe(8);
     expect(result.graph.nodes[0].node_type).toBe("check_conditions");
     expect(result.graph.nodes[1].node_type).toBe("calculate_value");
     expect(result.graph.nodes[2].node_type).toBe("start");
-    expect(result.applied).toHaveLength(5);
+    expect(result.applied).toHaveLength(6);
     expect(result.applied[0].version).toBe(3);
     expect(result.applied[1].version).toBe(4);
     expect(result.applied[2].version).toBe(5);
     expect(result.applied[3].version).toBe(6);
     expect(result.applied[4].version).toBe(7);
+    expect(result.applied[5].version).toBe(8);
   });
 
   test("migration 003 converts update_list_variable nodes to new granular list nodes", () => {
@@ -209,7 +210,7 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(7);
+    expect(result.graph.version).toBe(8);
     
     expect(result.graph.nodes[0].node_type).toBe("add_to_list");
     expect(result.graph.nodes[0].config).toEqual({
@@ -239,11 +240,12 @@ describe("migration runner", () => {
       unique: true,
     });
 
-    expect(result.applied).toHaveLength(4);
+    expect(result.applied).toHaveLength(5);
     expect(result.applied[0].version).toBe(4);
     expect(result.applied[1].version).toBe(5);
     expect(result.applied[2].version).toBe(6);
     expect(result.applied[3].version).toBe(7);
+    expect(result.applied[4].version).toBe(8);
   });
 
   test("migration 004 converts update_object_variable nodes to new granular object nodes", () => {
@@ -281,7 +283,7 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(7);
+    expect(result.graph.version).toBe(8);
 
     expect(result.graph.nodes[0].node_type).toBe("merge_objects");
     expect(result.graph.nodes[0].config).toEqual({
@@ -304,10 +306,11 @@ describe("migration runner", () => {
       property_key: "b.c",
     });
 
-    expect(result.applied).toHaveLength(3);
+    expect(result.applied).toHaveLength(4);
     expect(result.applied[0].version).toBe(5);
     expect(result.applied[1].version).toBe(6);
     expect(result.applied[2].version).toBe(7);
+    expect(result.applied[3].version).toBe(8);
   });
 
   test("migration 005 converts update_text_variable nodes to new granular text nodes", () => {
@@ -369,7 +372,7 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(7);
+    expect(result.graph.version).toBe(8);
 
     expect(result.graph.nodes[0].node_type).toBe("append_text");
     expect(result.graph.nodes[0].config).toEqual({ name: "myText", value: "hello" });
@@ -389,9 +392,10 @@ describe("migration runner", () => {
     expect(result.graph.nodes[5].node_type).toBe("trim_text");
     expect(result.graph.nodes[5].config).toEqual({ name: "myText" });
 
-    expect(result.applied).toHaveLength(2);
+    expect(result.applied).toHaveLength(3);
     expect(result.applied[0].version).toBe(6);
     expect(result.applied[1].version).toBe(7);
+    expect(result.applied[2].version).toBe(8);
   });
 
   test("real registry is monotonic", () => {
@@ -436,7 +440,7 @@ describe("migration runner", () => {
     };
 
     const result = runMigrations(legacyGraph);
-    expect(result.graph.version).toBe(7);
+    expect(result.graph.version).toBe(8);
 
     expect(result.graph.nodes[0].node_type).toBe("math_operation");
     expect(result.graph.nodes[0].config).toEqual({
@@ -462,8 +466,69 @@ describe("migration runner", () => {
       output_name: "balance",
     });
 
-    expect(result.applied).toHaveLength(1);
+    expect(result.applied).toHaveLength(2);
     expect(result.applied[0].version).toBe(7);
+    expect(result.applied[1].version).toBe(8);
+  });
+
+  test("migration 007 converts update_flag_variable nodes to new granular boolean nodes", () => {
+    const legacyGraph: WorkflowGraph = {
+      version: 7,
+      nodes: [
+        {
+          id: "node1",
+          node_type: "update_flag_variable" as any,
+          label: "Set Flag True",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myFlag", operation: "set_true" },
+        },
+        {
+          id: "node2",
+          node_type: "update_flag_variable" as any,
+          label: "Set Flag False",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myFlag", operation: "set_false" },
+        },
+        {
+          id: "node3",
+          node_type: "update_flag_variable" as any,
+          label: "Toggle Flag",
+          position: { x: 0, y: 0 },
+          ports: [],
+          config: { name: "myFlag", operation: "toggle" },
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      migration_notes: [],
+    };
+
+    const result = runMigrations(legacyGraph);
+    expect(result.graph.version).toBe(8);
+
+    expect(result.graph.nodes[0].node_type).toBe("set_boolean_variable");
+    expect(result.graph.nodes[0].config).toEqual({
+      output_name: "myFlag",
+      value: "true",
+    });
+
+    expect(result.graph.nodes[1].node_type).toBe("set_boolean_variable");
+    expect(result.graph.nodes[1].config).toEqual({
+      output_name: "myFlag",
+      value: "false",
+    });
+
+    expect(result.graph.nodes[2].node_type).toBe("boolean_logical_op");
+    expect(result.graph.nodes[2].config).toEqual({
+      operand1: "myFlag",
+      operation: "not",
+      output_name: "myFlag",
+    });
+
+    expect(result.applied).toHaveLength(1);
+    expect(result.applied[0].version).toBe(8);
   });
 });
 

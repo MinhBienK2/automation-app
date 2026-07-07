@@ -63,7 +63,7 @@ describe("Subflows integration", () => {
     });
     expect(await projectHandlers.getSubflowGraph(duplicated.id)).toEqual({
       ...subflowGraph,
-      version: 7,
+      version: 8,
       migration_notes: [],
     });
   });

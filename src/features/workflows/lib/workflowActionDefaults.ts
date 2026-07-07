@@ -343,6 +343,36 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: { name: "", operation: "toggle" },
       };
+    case "set_boolean_variable":
+      return {
+        type: actionType,
+        config: { output_name: "bool_var", value: "true" },
+      };
+    case "generate_random_boolean":
+      return {
+        type: actionType,
+        config: { output_name: "random_bool", probability: 0.5 },
+      };
+    case "parse_to_boolean":
+      return {
+        type: actionType,
+        config: { source: "", fallback: "false", output_name: "parsed_bool" },
+      };
+    case "boolean_logical_op":
+      return {
+        type: actionType,
+        config: { operand1: "", operation: "and", operand2: "", output_name: "logic_result" },
+      };
+    case "compare_booleans":
+      return {
+        type: actionType,
+        config: { operand1: "", operator: "eq", operand2: "", output_name: "compare_result" },
+      };
+    case "check_boolean_property":
+      return {
+        type: actionType,
+        config: { source: "", property: "is_true", output_name: "property_result" },
+      };
     case "update_list_variable":
       return {
         type: actionType,

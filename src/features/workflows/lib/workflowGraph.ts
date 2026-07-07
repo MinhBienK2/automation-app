@@ -458,6 +458,12 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "check_text_contains":
     case "check_text_regex_matches":
     case "update_flag_variable":
+    case "set_boolean_variable":
+    case "generate_random_boolean":
+    case "parse_to_boolean":
+    case "boolean_logical_op":
+    case "compare_booleans":
+    case "check_boolean_property":
     case "update_list_variable":
     case "create_empty_list":
     case "create_list_manual":
@@ -906,7 +912,13 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
   if (nodeType === "call_subflow") return "Call Subflow";
   if (nodeType === "check_conditions") return "Check Conditions";
   if (nodeType === "calculate_value") return "Calculate Value";
-  if (nodeType === "update_flag_variable") return "Update Flag Variable (Yes/No)";
+    if (nodeType === "update_flag_variable") return "Update Flag Variable (Yes/No)";
+    if (nodeType === "set_boolean_variable") return "Boolean: Set Value";
+    if (nodeType === "generate_random_boolean") return "Boolean: Random";
+    if (nodeType === "parse_to_boolean") return "Boolean: Convert Value";
+    if (nodeType === "boolean_logical_op") return "Boolean: Logical Op";
+    if (nodeType === "compare_booleans") return "Boolean: Compare";
+    if (nodeType === "check_boolean_property") return "Boolean: Check Property";
   if (nodeType === "create_empty_object") return "Create Empty Object";
   if (nodeType === "create_object_manual") return "Create Object (Manual)";
   if (nodeType === "parse_json_to_object") return "Parse JSON to Object";
@@ -1156,6 +1168,18 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { source: "", pattern: "", output_name: "matches_regex" };
     case "update_flag_variable":
       return { name: "", operation: "toggle" };
+    case "set_boolean_variable":
+      return { output_name: "bool_var", value: "true" };
+    case "generate_random_boolean":
+      return { output_name: "random_bool", probability: 0.5 };
+    case "parse_to_boolean":
+      return { source: "", fallback: "false", output_name: "parsed_bool" };
+    case "boolean_logical_op":
+      return { operand1: "", operation: "and", operand2: "", output_name: "logic_result" };
+    case "compare_booleans":
+      return { operand1: "", operator: "eq", operand2: "", output_name: "compare_result" };
+    case "check_boolean_property":
+      return { source: "", property: "is_true", output_name: "property_result" };
     case "update_list_variable":
       return { name: "", operation: "push", value: "", value_type: "text", index: null };
     case "create_empty_list":

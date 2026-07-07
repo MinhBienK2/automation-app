@@ -167,6 +167,14 @@ import {
   checkNumberRangeSchema,
   checkNumberPropertySchema,
 } from "./number_actions.js";
+import {
+  setBooleanVariableSchema,
+  generateRandomBooleanSchema,
+  parseToBooleanSchema,
+  booleanLogicalOpSchema,
+  compareBooleansSchema,
+  checkBooleanPropertySchema,
+} from "./boolean_actions.js";
 
 
 
@@ -253,6 +261,12 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   check_number_property: checkNumberPropertySchema,
   update_text_variable: updateTextVariableSchema,
   update_flag_variable: updateFlagVariableSchema,
+  set_boolean_variable: setBooleanVariableSchema,
+  generate_random_boolean: generateRandomBooleanSchema,
+  parse_to_boolean: parseToBooleanSchema,
+  boolean_logical_op: booleanLogicalOpSchema,
+  compare_booleans: compareBooleansSchema,
+  check_boolean_property: checkBooleanPropertySchema,
   set_text_variable: setTextVariableSchema,
   append_text: appendTextSchema,
   prepend_text: prependTextSchema,

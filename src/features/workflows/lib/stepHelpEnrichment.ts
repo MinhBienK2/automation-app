@@ -367,6 +367,18 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Source variable", "Substring to search", "Result variable"];
     case "check_text_regex_matches":
       return ["Source variable", "Regex pattern", "Result variable"];
+    case "set_boolean_variable":
+      return ["Result variable", "Value"];
+    case "generate_random_boolean":
+      return ["Result variable", "Probability"];
+    case "parse_to_boolean":
+      return ["Source value", "Fallback value", "Result variable"];
+    case "boolean_logical_op":
+      return ["First operand", "Logical Operation", "Second operand", "Result variable"];
+    case "compare_booleans":
+      return ["First operand", "Operator", "Second operand", "Result variable"];
+    case "check_boolean_property":
+      return ["Source value", "Property", "Result variable"];
     case "update_flag_variable":
       return ["Variable name", "Operation"];
     case "update_list_variable":

@@ -669,6 +669,72 @@ function compilePath(
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     }
+    case "set_boolean_variable": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const value = requiredString(node.config, "value", "Value is required");
+      steps.push(step(node, {
+        type: "set_boolean_variable",
+        config: { output_name, value },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "generate_random_boolean": {
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const probability = stringField(node.config, "probability") ?? (typeof asRecord(node.config).probability === "number" ? asRecord(node.config).probability : null) as any;
+      steps.push(step(node, {
+        type: "generate_random_boolean",
+        config: { output_name, probability },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "parse_to_boolean": {
+      const source = requiredString(node.config, "source", "Source is required");
+      const fallback = stringField(node.config, "fallback");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "parse_to_boolean",
+        config: { source, fallback, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "boolean_logical_op": {
+      const operand1 = requiredString(node.config, "operand1", "Operand 1 is required");
+      const operation = requiredString(node.config, "operation", "Operation is required") as any;
+      const operand2 = stringField(node.config, "operand2");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "boolean_logical_op",
+        config: { operand1, operation, operand2, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "compare_booleans": {
+      const operand1 = requiredString(node.config, "operand1", "Operand 1 is required");
+      const operator = requiredString(node.config, "operator", "Operator is required") as any;
+      const operand2 = requiredString(node.config, "operand2", "Operand 2 is required");
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "compare_booleans",
+        config: { operand1, operator, operand2, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
+    case "check_boolean_property": {
+      const source = requiredString(node.config, "source", "Source is required");
+      const property = requiredString(node.config, "property", "Property is required") as any;
+      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      steps.push(step(node, {
+        type: "check_boolean_property",
+        config: { source, property, output_name },
+      }, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    }
     case "update_list_variable": {
       const name = requiredString(node.config, "name", "Variable name is required");
       const operation = requiredString(node.config, "operation", "Operation must be push, unshift, push_unique, pop, shift, remove_by_index, or remove_by_value") as any;

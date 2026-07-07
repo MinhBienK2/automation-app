@@ -57,6 +57,12 @@ const graphInternalActionTypes = new Set<ActionType>([
   "compare_numbers",
   "check_number_range",
   "check_number_property",
+  "set_boolean_variable",
+  "generate_random_boolean",
+  "parse_to_boolean",
+  "boolean_logical_op",
+  "compare_booleans",
+  "check_boolean_property",
 ]);
 
 export const actionDefinitions: ActionDefinition[] = [
@@ -152,6 +158,12 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("check_text_contains", "graph_internal"),
   definition("check_text_regex_matches", "graph_internal"),
   definition("update_flag_variable", "graph_internal"),
+  definition("set_boolean_variable", "graph_internal"),
+  definition("generate_random_boolean", "graph_internal"),
+  definition("parse_to_boolean", "graph_internal"),
+  definition("boolean_logical_op", "graph_internal"),
+  definition("compare_booleans", "graph_internal"),
+  definition("check_boolean_property", "graph_internal"),
   definition("update_list_variable", "graph_internal"),
   definition("create_empty_list", "graph_internal"),
   definition("create_list_manual", "graph_internal"),

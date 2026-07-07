@@ -109,6 +109,12 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "update_number_variable":
     case "update_text_variable":
     case "update_flag_variable":
+    case "set_boolean_variable":
+    case "generate_random_boolean":
+    case "parse_to_boolean":
+    case "boolean_logical_op":
+    case "compare_booleans":
+    case "check_boolean_property":
     case "update_list_variable":
     case "create_empty_list":
     case "create_list_manual":

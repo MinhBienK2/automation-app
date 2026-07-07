@@ -104,7 +104,8 @@ export type ActionConfigField =
   | "locale"
   | "operator"
   | "inclusive"
-  | "property";
+  | "property"
+  | "probability";
 
 const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
 
@@ -223,7 +224,13 @@ export function updateActionConfigField(
     case "update_text_variable":
       return { type: "update_text_variable", config: { ...config.config, [field]: value || null } };
     case "update_flag_variable":
-      return { type: "update_flag_variable", config: { ...config.config, [field]: value } };
+    case "set_boolean_variable":
+    case "generate_random_boolean":
+    case "parse_to_boolean":
+    case "boolean_logical_op":
+    case "compare_booleans":
+    case "check_boolean_property":
+      return { type: config.type, config: { ...config.config, [field]: value } } as ActionConfig;
     case "update_list_variable":
       if (field === "index") {
         return { type: "update_list_variable", config: { ...config.config, index: value ? Number(value) : null } };

@@ -575,6 +575,68 @@ describe("backend action validation registry", () => {
       } as any),
     ).toEqual({ field: "pattern", message: "Regex pattern is required" });
   });
+
+  test("validates new granular boolean processing action configs", () => {
+    // set_boolean_variable
+    expect(
+      validateActionConfig({
+        type: "set_boolean_variable",
+        config: { output_name: "", value: "true" },
+      } as any),
+    ).toEqual({ field: "output_name", message: "Output variable name is required" });
+    expect(
+      validateActionConfig({
+        type: "set_boolean_variable",
+        config: { output_name: "var", value: "true" },
+      } as any),
+    ).toBeNull();
+
+    // generate_random_boolean
+    expect(
+      validateActionConfig({
+        type: "generate_random_boolean",
+        config: { output_name: "" },
+      } as any),
+    ).toEqual({ field: "output_name", message: "Output variable name is required" });
+
+    // parse_to_boolean
+    expect(
+      validateActionConfig({
+        type: "parse_to_boolean",
+        config: { source: "", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "source", message: "Source is required" });
+
+    // boolean_logical_op
+    expect(
+      validateActionConfig({
+        type: "boolean_logical_op",
+        config: { operand1: "", operation: "and", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "operand1", message: "Operand 1 is required" });
+    expect(
+      validateActionConfig({
+        type: "boolean_logical_op",
+        config: { operand1: "a", operation: "invalid" as any, output_name: "out" },
+      } as any),
+    ).toEqual({ field: "operation", message: "Invalid logic operation option" });
+
+    // compare_booleans
+    expect(
+      validateActionConfig({
+        type: "compare_booleans",
+        config: { operand1: "", operator: "eq", operand2: "b", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "operand1", message: "Operand 1 is required" });
+
+    // check_boolean_property
+    expect(
+      validateActionConfig({
+        type: "check_boolean_property",
+        config: { source: "", property: "is_true", output_name: "out" },
+      } as any),
+    ).toEqual({ field: "source", message: "Source is required" });
+  });
 });
 
 

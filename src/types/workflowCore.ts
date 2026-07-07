@@ -71,6 +71,12 @@ export type ActionType =
   | "check_text_contains"
   | "check_text_regex_matches"
   | "update_flag_variable"
+  | "set_boolean_variable"
+  | "generate_random_boolean"
+  | "parse_to_boolean"
+  | "boolean_logical_op"
+  | "compare_booleans"
+  | "check_boolean_property"
   | "update_list_variable"
   | "create_empty_list"
   | "create_list_manual"
@@ -982,6 +988,54 @@ export type ActionConfig =
       config: {
         name: string;
         operation: "toggle" | "set_true" | "set_false";
+      };
+    }
+  | {
+      type: "set_boolean_variable";
+      config: {
+        output_name: string;
+        value: string;
+      };
+    }
+  | {
+      type: "generate_random_boolean";
+      config: {
+        output_name: string;
+        probability?: string | number | null;
+      };
+    }
+  | {
+      type: "parse_to_boolean";
+      config: {
+        source: string;
+        fallback?: string | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "boolean_logical_op";
+      config: {
+        operand1: string;
+        operation: "and" | "or" | "not" | "xor";
+        operand2?: string | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "compare_booleans";
+      config: {
+        operand1: string;
+        operator: "eq" | "neq";
+        operand2: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_boolean_property";
+      config: {
+        source: string;
+        property: "is_true" | "is_false";
+        output_name: string;
       };
     }
   | {

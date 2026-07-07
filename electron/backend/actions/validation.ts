@@ -536,6 +536,58 @@ const actionValidators = createActionValidatorMap({
       ),
     );
   },
+  set_boolean_variable: (config) =>
+    firstValidation(
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.value, "value", "Value is required"),
+    ),
+  generate_random_boolean: (config) =>
+    requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+  parse_to_boolean: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  boolean_logical_op: (config) => {
+    const operation = config.config.operation;
+    const needsOperand2 = ["and", "or", "xor"].includes(operation);
+    return firstValidation(
+      requiredActionString(config.config.operand1, "operand1", "Operand 1 is required"),
+      validateRequiredEnumValue(
+        operation,
+        ["and", "or", "not", "xor"],
+        "operation",
+        "Invalid logic operation option",
+      ),
+      needsOperand2
+        ? requiredActionString(config.config.operand2, "operand2", "Operand 2 is required")
+        : null,
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    );
+  },
+  compare_booleans: (config) =>
+    firstValidation(
+      requiredActionString(config.config.operand1, "operand1", "Operand 1 is required"),
+      validateRequiredEnumValue(
+        config.config.operator,
+        ["eq", "neq"],
+        "operator",
+        "Operator is invalid",
+      ),
+      requiredActionString(config.config.operand2, "operand2", "Operand 2 is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_boolean_property: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source is required"),
+      validateRequiredEnumValue(
+        config.config.property,
+        ["is_true", "is_false"],
+        "property",
+        "Property is invalid",
+      ),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
   update_list_variable: (config) => {
     const operation = config.config.operation;
     const needsValue = ["push", "unshift", "push_unique", "remove_by_value", "merge", "merge_unique"].includes(operation);

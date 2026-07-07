@@ -31,7 +31,7 @@ describe("workflow graph migration", () => {
 
     expect(migrateWorkflowGraph(graph)).toEqual({
       ...graph,
-      version: 7,
+      version: 8,
       migration_notes: [],
     });
   });
@@ -68,7 +68,7 @@ describe("workflow graph migration", () => {
     };
 
     expect(migrateWorkflowGraph(graph)).toEqual({
-      version: 7,
+      version: 8,
       nodes: [
         {
           id: "node-logic",
@@ -144,7 +144,7 @@ describe("workflow graph migration", () => {
     };
 
     expect(migrateWorkflowGraph(graph)).toEqual({
-      version: 7,
+      version: 8,
       nodes: [
         {
           id: "node-append",

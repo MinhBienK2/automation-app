@@ -75,6 +75,12 @@ const supportedGraphNodeTypes = new Set<string>([
   "check_text_contains",
   "check_text_regex_matches",
   "update_flag_variable",
+  "set_boolean_variable",
+  "generate_random_boolean",
+  "parse_to_boolean",
+  "boolean_logical_op",
+  "compare_booleans",
+  "check_boolean_property",
   "update_list_variable",
   "create_empty_list",
   "create_list_manual",
@@ -340,6 +346,12 @@ export function pushNodeSemanticIssues(
       break;
     }
     case "set_text_variable":
+    case "set_boolean_variable":
+    case "generate_random_boolean":
+    case "parse_to_boolean":
+    case "boolean_logical_op":
+    case "compare_booleans":
+    case "check_boolean_property":
     case "set_number_variable":
     case "generate_random_number":
     case "parse_text_to_number":

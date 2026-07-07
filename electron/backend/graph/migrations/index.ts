@@ -6,6 +6,7 @@ import { migration003MigrateListNodes } from "./003_migrate_list_nodes.js";
 import { migration004MigrateObjectNodes } from "./004_migrate_object_nodes.js";
 import { migration005MigrateTextNodes } from "./005_migrate_text_nodes.js";
 import { migration006MigrateNumberNodes } from "./006_migrate_number_nodes.js";
+import { migration007MigrateBooleanNodes } from "./007_migrate_boolean_nodes.js";
 
 /**
  * Manually registered, ordered migration registry.
@@ -18,6 +19,7 @@ export const MIGRATIONS: Migration[] = [
   migration004MigrateObjectNodes,
   migration005MigrateTextNodes,
   migration006MigrateNumberNodes,
+  migration007MigrateBooleanNodes,
 ];
 
 function assertMonotonic(migrations: Migration[]): void {

@@ -579,6 +579,42 @@ describe("workflow step form config helpers", () => {
       type: "set_object_property",
       config: { name: "user", property_key: "age", value_type: "text", value: "john" },
     });
+
+    const setBool: ActionConfig = { type: "set_boolean_variable", config: { output_name: "a", value: "true" } };
+    expect(updateActionConfigField(setBool, "value", "false")).toEqual({
+      type: "set_boolean_variable",
+      config: { output_name: "a", value: "false" },
+    });
+
+    const randBool: ActionConfig = { type: "generate_random_boolean", config: { output_name: "a", probability: 0.5 } };
+    expect(updateActionConfigField(randBool, "probability", "0.8")).toEqual({
+      type: "generate_random_boolean",
+      config: { output_name: "a", probability: "0.8" },
+    });
+
+    const parseBool: ActionConfig = { type: "parse_to_boolean", config: { source: "yes", fallback: "false", output_name: "res" } };
+    expect(updateActionConfigField(parseBool, "fallback", "true")).toEqual({
+      type: "parse_to_boolean",
+      config: { source: "yes", fallback: "true", output_name: "res" },
+    });
+
+    const logicBool: ActionConfig = { type: "boolean_logical_op", config: { operand1: "t", operation: "and", operand2: "f", output_name: "res" } };
+    expect(updateActionConfigField(logicBool, "operation", "or")).toEqual({
+      type: "boolean_logical_op",
+      config: { operand1: "t", operation: "or", operand2: "f", output_name: "res" },
+    });
+
+    const compBool: ActionConfig = { type: "compare_booleans", config: { operand1: "t", operator: "eq", operand2: "f", output_name: "res" } };
+    expect(updateActionConfigField(compBool, "operator", "neq")).toEqual({
+      type: "compare_booleans",
+      config: { operand1: "t", operator: "neq", operand2: "f", output_name: "res" },
+    });
+
+    const propBool: ActionConfig = { type: "check_boolean_property", config: { source: "t", property: "is_true", output_name: "res" } };
+    expect(updateActionConfigField(propBool, "property", "is_false")).toEqual({
+      type: "check_boolean_property",
+      config: { source: "t", property: "is_false", output_name: "res" },
+    });
   });
 });
 
