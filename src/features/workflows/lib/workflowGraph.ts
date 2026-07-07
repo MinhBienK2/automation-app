@@ -447,6 +447,26 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "update_text_variable":
     case "update_flag_variable":
     case "update_list_variable":
+    case "create_empty_list":
+    case "create_list_manual":
+    case "split_text_to_list":
+    case "generate_number_range":
+    case "add_to_list":
+    case "remove_from_list_by_index":
+    case "remove_from_list_by_value":
+    case "merge_lists":
+    case "get_list_item":
+    case "get_list_length":
+    case "slice_list":
+    case "join_list":
+    case "filter_list":
+    case "map_list_property":
+    case "sort_reverse_list":
+    case "execute_list_script":
+    case "check_list_empty":
+    case "check_list_contains":
+    case "check_list_any_match":
+    case "check_list_all_match":
     case "update_object_variable":
     case "transform_variable":
     case "assert_output":
@@ -863,6 +883,26 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
   if (nodeType === "calculate_value") return "Calculate Value";
   if (nodeType === "update_flag_variable") return "Update Flag Variable (Yes/No)";
   if (nodeType === "update_object_variable") return "Update Object Variable (JSON)";
+  if (nodeType === "create_empty_list") return "Create Empty List";
+  if (nodeType === "create_list_manual") return "Create List Manual";
+  if (nodeType === "split_text_to_list") return "Split Text to List";
+  if (nodeType === "generate_number_range") return "Generate Number Range";
+  if (nodeType === "add_to_list") return "Add to List";
+  if (nodeType === "remove_from_list_by_index") return "Remove from List (Index)";
+  if (nodeType === "remove_from_list_by_value") return "Remove from List (Value)";
+  if (nodeType === "merge_lists") return "Merge Lists";
+  if (nodeType === "get_list_item") return "Get List Item";
+  if (nodeType === "get_list_length") return "Get List Length";
+  if (nodeType === "slice_list") return "Slice List";
+  if (nodeType === "join_list") return "Join List";
+  if (nodeType === "filter_list") return "Filter List";
+  if (nodeType === "map_list_property") return "Map List Property";
+  if (nodeType === "sort_reverse_list") return "Sort / Reverse List";
+  if (nodeType === "execute_list_script") return "Execute List Script";
+  if (nodeType === "check_list_empty") return "Check List Empty";
+  if (nodeType === "check_list_contains") return "Check List Contains";
+  if (nodeType === "check_list_any_match") return "Check List Any Match";
+  if (nodeType === "check_list_all_match") return "Check List All Match";
   if (nodeType === "get_current_url") return "Get Current URL";
 
   return nodeType
@@ -1056,6 +1096,46 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { name: "", operation: "toggle" };
     case "update_list_variable":
       return { name: "", operation: "push", value: "", value_type: "text", index: null };
+    case "create_empty_list":
+      return { output_name: "empty_list" };
+    case "create_list_manual":
+      return { output_name: "my_list", value_type: "text", items: [] };
+    case "split_text_to_list":
+      return { output_name: "split_list", source_text: "", delimiter: "," };
+    case "generate_number_range":
+      return { output_name: "range_list", start: 1, end: 10, step: 1 };
+    case "add_to_list":
+      return { name: "", position: "end", value_type: "text", value: "" };
+    case "remove_from_list_by_index":
+      return { name: "", index: 0 };
+    case "remove_from_list_by_value":
+      return { name: "", value_type: "text", value: "" };
+    case "merge_lists":
+      return { name: "", value: "", unique: false };
+    case "get_list_item":
+      return { source: "", position: "first", index: null, output_name: "list_item" };
+    case "get_list_length":
+      return { source: "", output_name: "list_length" };
+    case "slice_list":
+      return { source: "", start: 0, end: null, output_name: "sliced_list" };
+    case "join_list":
+      return { source: "", separator: ", ", output_name: "joined_string" };
+    case "filter_list":
+      return { source: "", rules_group: { operator: "and", rules: [] }, output_name: "filtered_list" };
+    case "map_list_property":
+      return { source: "", property_key: "", output_name: "mapped_list" };
+    case "sort_reverse_list":
+      return { source: "", action: "sort_asc", sort_key: "", output_name: "sorted_list" };
+    case "execute_list_script":
+      return { source: "", script: "return list.map(item => item);", output_name: "script_result" };
+    case "check_list_empty":
+      return { source: "", output_name: "is_empty" };
+    case "check_list_contains":
+      return { source: "", value_type: "text", value: "", output_name: "contains_item" };
+    case "check_list_any_match":
+      return { source: "", rules_group: { operator: "and", rules: [] }, output_name: "any_match" };
+    case "check_list_all_match":
+      return { source: "", rules_group: { operator: "and", rules: [] }, output_name: "all_match" };
     case "update_object_variable":
       return { name: "", operation: "merge", value: "{\n  \"key\": \"value\"\n}", property_key: "", property_value: "", property_value_type: "text" };
     case "transform_variable":

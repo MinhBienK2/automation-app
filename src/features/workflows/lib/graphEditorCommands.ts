@@ -420,6 +420,26 @@ function preferredOutputPortOrder(node: GraphNode) {
     case "update_text_variable":
     case "update_flag_variable":
     case "update_list_variable":
+    case "create_empty_list":
+    case "create_list_manual":
+    case "split_text_to_list":
+    case "generate_number_range":
+    case "add_to_list":
+    case "remove_from_list_by_index":
+    case "remove_from_list_by_value":
+    case "merge_lists":
+    case "get_list_item":
+    case "get_list_length":
+    case "slice_list":
+    case "join_list":
+    case "filter_list":
+    case "map_list_property":
+    case "sort_reverse_list":
+    case "execute_list_script":
+    case "check_list_empty":
+    case "check_list_contains":
+    case "check_list_any_match":
+    case "check_list_all_match":
     case "update_object_variable":
     case "assert_output":
     case "domain_allowlist":

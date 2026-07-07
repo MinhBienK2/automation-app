@@ -69,6 +69,26 @@ const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
   update_text_variable: true,
   update_flag_variable: true,
   update_list_variable: true,
+  create_empty_list: true,
+  create_list_manual: true,
+  split_text_to_list: true,
+  generate_number_range: true,
+  add_to_list: true,
+  remove_from_list_by_index: true,
+  remove_from_list_by_value: true,
+  merge_lists: true,
+  get_list_item: true,
+  get_list_length: true,
+  slice_list: true,
+  join_list: true,
+  filter_list: true,
+  map_list_property: true,
+  sort_reverse_list: true,
+  execute_list_script: true,
+  check_list_empty: true,
+  check_list_contains: true,
+  check_list_any_match: true,
+  check_list_all_match: true,
   update_object_variable: true,
   assert_output: true,
   domain_allowlist: true,
@@ -560,7 +580,7 @@ describe("Workflow graph editor integration", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Login Subflow" })).toBeInTheDocument();
-    expect(workflowCommandCallMock).toHaveBeenCalledWith("get_subflow", {
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("get_subflow_graph", {
       subflowId: "subflow-login",
     });
     await userEvent.click(screen.getByRole("button", { name: "Back to Workflow" }));
@@ -599,7 +619,7 @@ describe("Workflow graph editor integration", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Login Subflow" })).toBeInTheDocument();
-    expect(workflowCommandCallMock).toHaveBeenCalledWith("get_subflow", {
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("get_subflow_graph", {
       subflowId: "subflow-login",
     });
   });

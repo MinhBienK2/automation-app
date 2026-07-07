@@ -426,6 +426,154 @@ const actionValidators = createActionValidatorMap({
         : null,
     );
   },
+  create_empty_list: (config) =>
+    requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+  create_list_manual: (config) =>
+    firstValidation(
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      validateRequiredEnumValue(
+        config.config.value_type,
+        ["text", "json", "number", "boolean"],
+        "value_type",
+        "Value type must be text, json, number, or boolean",
+      ),
+    ),
+  split_text_to_list: (config) =>
+    firstValidation(
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source_text, "source_text", "Source text is required"),
+      requiredActionString(config.config.delimiter, "delimiter", "Delimiter is required"),
+    ),
+  generate_number_range: (config) =>
+    firstValidation(
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(String(config.config.start ?? ""), "start", "Start value is required"),
+      requiredActionString(String(config.config.end ?? ""), "end", "End value is required"),
+    ),
+  add_to_list: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      validateRequiredEnumValue(
+        config.config.position,
+        ["end", "start", "unique_end"],
+        "position",
+        "Position must be end, start, or unique_end",
+      ),
+      validateRequiredEnumValue(
+        config.config.value_type,
+        ["text", "json", "number", "boolean"],
+        "value_type",
+        "Value type must be text, json, number, or boolean",
+      ),
+      requiredActionString(config.config.value, "value", "Value is required"),
+    ),
+  remove_from_list_by_index: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(String(config.config.index ?? ""), "index", "Index is required"),
+    ),
+  remove_from_list_by_value: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      validateRequiredEnumValue(
+        config.config.value_type,
+        ["text", "json", "number", "boolean"],
+        "value_type",
+        "Value type must be text, json, number, or boolean",
+      ),
+      requiredActionString(config.config.value, "value", "Value is required"),
+    ),
+  merge_lists: (config) =>
+    firstValidation(
+      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.value, "value", "Value is required"),
+    ),
+  get_list_item: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      validateRequiredEnumValue(
+        config.config.position,
+        ["first", "last", "index"],
+        "position",
+        "Position must be first, last, or index",
+      ),
+      config.config.position === "index"
+        ? requiredActionString(String(config.config.index ?? ""), "index", "Index is required")
+        : null,
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  get_list_length: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  slice_list: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(String(config.config.start ?? ""), "start", "Start index is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  join_list: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.separator, "separator", "Separator is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  filter_list: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  map_list_property: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  sort_reverse_list: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      validateRequiredEnumValue(
+        config.config.action,
+        ["sort_asc", "sort_desc", "reverse"],
+        "action",
+        "Action must be sort_asc, sort_desc, or reverse",
+      ),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  execute_list_script: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.script, "script", "Script code is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_list_empty: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_list_contains: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      validateRequiredEnumValue(
+        config.config.value_type,
+        ["text", "json", "number", "boolean"],
+        "value_type",
+        "Value type must be text, json, number, or boolean",
+      ),
+      requiredActionString(config.config.value, "value", "Value to check is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_list_any_match: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
+  check_list_all_match: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    ),
   update_object_variable: (config) => {
     const operation = config.config.operation;
     const isMerge = ["merge", "deep_merge"].includes(operation);

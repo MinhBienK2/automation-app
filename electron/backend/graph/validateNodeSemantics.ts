@@ -55,6 +55,26 @@ const supportedGraphNodeTypes = new Set<string>([
   "update_text_variable",
   "update_flag_variable",
   "update_list_variable",
+  "create_empty_list",
+  "create_list_manual",
+  "split_text_to_list",
+  "generate_number_range",
+  "add_to_list",
+  "remove_from_list_by_index",
+  "remove_from_list_by_value",
+  "merge_lists",
+  "get_list_item",
+  "get_list_length",
+  "slice_list",
+  "join_list",
+  "filter_list",
+  "map_list_property",
+  "sort_reverse_list",
+  "execute_list_script",
+  "check_list_empty",
+  "check_list_contains",
+  "check_list_any_match",
+  "check_list_all_match",
   "update_object_variable",
   "transform_variable",
   "assert_output",
@@ -281,6 +301,33 @@ export function pushNodeSemanticIssues(
       const validation = validateActionConfig({
         type: "update_list_variable",
         config: { name, operation: operation as any, value, value_type: value_type as any, index },
+      });
+      if (validation) issues.push(error(node.id, null, validation.message));
+      break;
+    }
+    case "create_empty_list":
+    case "create_list_manual":
+    case "split_text_to_list":
+    case "generate_number_range":
+    case "add_to_list":
+    case "remove_from_list_by_index":
+    case "remove_from_list_by_value":
+    case "merge_lists":
+    case "get_list_item":
+    case "get_list_length":
+    case "slice_list":
+    case "join_list":
+    case "filter_list":
+    case "map_list_property":
+    case "sort_reverse_list":
+    case "execute_list_script":
+    case "check_list_empty":
+    case "check_list_contains":
+    case "check_list_any_match":
+    case "check_list_all_match": {
+      const validation = validateActionConfig({
+        type: node.node_type as any,
+        config: asRecord(node.config) as any,
       });
       if (validation) issues.push(error(node.id, null, validation.message));
       break;

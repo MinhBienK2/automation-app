@@ -51,6 +51,26 @@ export type ActionType =
   | "update_text_variable"
   | "update_flag_variable"
   | "update_list_variable"
+  | "create_empty_list"
+  | "create_list_manual"
+  | "split_text_to_list"
+  | "generate_number_range"
+  | "add_to_list"
+  | "remove_from_list_by_index"
+  | "remove_from_list_by_value"
+  | "merge_lists"
+  | "get_list_item"
+  | "get_list_length"
+  | "slice_list"
+  | "join_list"
+  | "filter_list"
+  | "map_list_property"
+  | "sort_reverse_list"
+  | "execute_list_script"
+  | "check_list_empty"
+  | "check_list_contains"
+  | "check_list_any_match"
+  | "check_list_all_match"
   | "update_object_variable"
   | "assert_element"
   | "assert_text"
@@ -763,6 +783,167 @@ export type ActionConfig =
         value?: string | null;
         value_type?: VariableValueType | null;
         index?: number | string | null;
+      };
+    }
+  | {
+      type: "create_empty_list";
+      config: {
+        output_name: string;
+      };
+    }
+  | {
+      type: "create_list_manual";
+      config: {
+        output_name: string;
+        value_type: VariableValueType;
+        items: string[];
+      };
+    }
+  | {
+      type: "split_text_to_list";
+      config: {
+        output_name: string;
+        source_text: string;
+        delimiter: string;
+      };
+    }
+  | {
+      type: "generate_number_range";
+      config: {
+        output_name: string;
+        start: string | number;
+        end: string | number;
+        step?: string | number | null;
+      };
+    }
+  | {
+      type: "add_to_list";
+      config: {
+        name: string;
+        position: "end" | "start" | "unique_end";
+        value_type: VariableValueType;
+        value: string;
+      };
+    }
+  | {
+      type: "remove_from_list_by_index";
+      config: {
+        name: string;
+        index: string | number;
+      };
+    }
+  | {
+      type: "remove_from_list_by_value";
+      config: {
+        name: string;
+        value_type: VariableValueType;
+        value: string;
+      };
+    }
+  | {
+      type: "merge_lists";
+      config: {
+        name: string;
+        value: string;
+        unique: boolean;
+      };
+    }
+  | {
+      type: "get_list_item";
+      config: {
+        source: string;
+        position: "first" | "last" | "index";
+        index?: string | number | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "get_list_length";
+      config: {
+        source: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "slice_list";
+      config: {
+        source: string;
+        start: string | number;
+        end?: string | number | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "join_list";
+      config: {
+        source: string;
+        separator: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "filter_list";
+      config: {
+        source: string;
+        rules_group?: LogicRuleGroup | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "map_list_property";
+      config: {
+        source: string;
+        property_key: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "sort_reverse_list";
+      config: {
+        source: string;
+        action: "sort_asc" | "sort_desc" | "reverse";
+        sort_key?: string | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "execute_list_script";
+      config: {
+        source: string;
+        script: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_list_empty";
+      config: {
+        source: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_list_contains";
+      config: {
+        source: string;
+        value_type: VariableValueType;
+        value: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_list_any_match";
+      config: {
+        source: string;
+        rules_group?: LogicRuleGroup | null;
+        output_name: string;
+      };
+    }
+  | {
+      type: "check_list_all_match";
+      config: {
+        source: string;
+        rules_group?: LogicRuleGroup | null;
+        output_name: string;
       };
     }
   | {

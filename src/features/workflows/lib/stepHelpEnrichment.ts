@@ -329,6 +329,44 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Variable name", "Operation"];
     case "update_list_variable":
       return ["Variable name", "Operation", "Value type", "Value", "Index"];
+    case "create_empty_list":
+      return ["Output variable name"];
+    case "create_list_manual":
+      return ["Output variable name", "Item value type", "List items"];
+    case "split_text_to_list":
+      return ["Output variable name", "Source text to split", "Delimiter"];
+    case "generate_number_range":
+      return ["Output variable name", "Start value", "End value", "Step size"];
+    case "add_to_list":
+      return ["Target list variable name", "Add position", "Value type", "Value to add"];
+    case "remove_from_list_by_index":
+      return ["Target list variable name", "Index"];
+    case "remove_from_list_by_value":
+      return ["Target list variable name", "Value type", "Value to match for removal"];
+    case "merge_lists":
+      return ["Target list variable name", "List to merge", "Merge unique items only"];
+    case "get_list_item":
+      return ["Source list variable name", "Position", "Index", "Result output variable name"];
+    case "get_list_length":
+      return ["Source list variable name", "Result output variable name"];
+    case "slice_list":
+      return ["Source list variable name", "Start index", "End index", "Result output variable name"];
+    case "join_list":
+      return ["Source list variable name", "Separator text", "Result output variable name"];
+    case "filter_list":
+    case "check_list_any_match":
+    case "check_list_all_match":
+      return ["Source list variable name", "Result output variable name", "Combine operator", "Filter rules"];
+    case "map_list_property":
+      return ["Source list", "Property key to extract", "Result output variable name"];
+    case "sort_reverse_list":
+      return ["Source list variable name", "Action", "Sort key", "Result output variable name"];
+    case "execute_list_script":
+      return ["Source list variable name", "JavaScript Script", "Result output variable name"];
+    case "check_list_empty":
+      return ["Source list variable name", "Result output variable name"];
+    case "check_list_contains":
+      return ["Source list variable name", "Value type to check", "Value to search for", "Result output variable name"];
     case "update_object_variable":
       return ["Variable name", "Operation", "Value", "Property key", "Property value type", "Property value"];
     case "assert_element":

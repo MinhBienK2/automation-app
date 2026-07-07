@@ -243,6 +243,106 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: { name: "", operation: "push", value: "", value_type: "text", index: null },
       };
+    case "create_empty_list":
+      return {
+        type: actionType,
+        config: { output_name: "empty_list" },
+      };
+    case "create_list_manual":
+      return {
+        type: actionType,
+        config: { output_name: "my_list", value_type: "text", items: [] },
+      };
+    case "split_text_to_list":
+      return {
+        type: actionType,
+        config: { output_name: "split_list", source_text: "", delimiter: "," },
+      };
+    case "generate_number_range":
+      return {
+        type: actionType,
+        config: { output_name: "range_list", start: 1, end: 10, step: 1 },
+      };
+    case "add_to_list":
+      return {
+        type: actionType,
+        config: { name: "", position: "end", value_type: "text", value: "" },
+      };
+    case "remove_from_list_by_index":
+      return {
+        type: actionType,
+        config: { name: "", index: 0 },
+      };
+    case "remove_from_list_by_value":
+      return {
+        type: actionType,
+        config: { name: "", value_type: "text", value: "" },
+      };
+    case "merge_lists":
+      return {
+        type: actionType,
+        config: { name: "", value: "", unique: false },
+      };
+    case "get_list_item":
+      return {
+        type: actionType,
+        config: { source: "", position: "first", index: null, output_name: "list_item" },
+      };
+    case "get_list_length":
+      return {
+        type: actionType,
+        config: { source: "", output_name: "list_length" },
+      };
+    case "slice_list":
+      return {
+        type: actionType,
+        config: { source: "", start: 0, end: null, output_name: "sliced_list" },
+      };
+    case "join_list":
+      return {
+        type: actionType,
+        config: { source: "", separator: ", ", output_name: "joined_string" },
+      };
+    case "filter_list":
+      return {
+        type: actionType,
+        config: { source: "", rules_group: { operator: "and", rules: [] }, output_name: "filtered_list" },
+      };
+    case "map_list_property":
+      return {
+        type: actionType,
+        config: { source: "", property_key: "", output_name: "mapped_list" },
+      };
+    case "sort_reverse_list":
+      return {
+        type: actionType,
+        config: { source: "", action: "sort_asc", sort_key: "", output_name: "sorted_list" },
+      };
+    case "execute_list_script":
+      return {
+        type: actionType,
+        config: { source: "", script: "return list.map(item => item);", output_name: "script_result" },
+      };
+    case "check_list_empty":
+      return {
+        type: actionType,
+        config: { source: "", output_name: "is_empty" },
+      };
+    case "check_list_contains":
+      return {
+        type: actionType,
+        config: { source: "", value_type: "text", value: "", output_name: "contains_item" },
+      };
+    case "check_list_any_match":
+      return {
+        type: actionType,
+        config: { source: "", rules_group: { operator: "and", rules: [] }, output_name: "any_match" },
+      };
+    case "check_list_all_match":
+      return {
+        type: actionType,
+        config: { source: "", rules_group: { operator: "and", rules: [] }, output_name: "all_match" },
+      };
     case "update_object_variable":
       return {
         type: actionType,
