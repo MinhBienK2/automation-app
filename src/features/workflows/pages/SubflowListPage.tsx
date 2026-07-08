@@ -1,4 +1,4 @@
-import { Copy, Eye, Plus, RefreshCw, Settings, Trash2, Download, Upload, Search } from "lucide-react";
+import { Copy, Eye, Plus, RefreshCw, Settings, Trash2, Download, Upload, Search, GitFork } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "../../../components/ui/button";
 import {
@@ -14,6 +14,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import type { SubflowSummary } from "../../../types/workflow";
 import { SubflowSettingsDialog } from "../components/SubflowSettingsDialog";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
 
 type SubflowListPageProps = {
   subflows: SubflowSummary[];
@@ -151,6 +152,7 @@ export function SubflowListPage({
         </div>
       </div>
 
+      {/* Subflow List */}
       <section className="card bg-base-200 border border-base-300 card-body p-5 flex flex-col" aria-label="Subflow list">
         {filteredSubflows.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center text-secondary">
@@ -158,85 +160,88 @@ export function SubflowListPage({
             <p className="text-xs">Create one to reuse graph paths across workflows.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="table table-sm table-zebra w-full">
-              <thead>
-                <tr>
-                  <th className="text-base-content/75 font-semibold">NAME</th>
-                  <th className="text-base-content/75 font-semibold">DESCRIPTION</th>
-                  <th className="text-base-content/75 font-semibold">USED BY</th>
-                  <th className="text-base-content/75 font-semibold text-right">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSubflows.map((subflow) => (
-                  <tr key={subflow.id} className="hover" data-slot="card">
-                    <td>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>NAME</TableHead>
+                <TableHead>DESCRIPTION</TableHead>
+                <TableHead>USED BY</TableHead>
+                <TableHead className="text-right">ACTIONS</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSubflows.map((subflow) => (
+                <TableRow key={subflow.id} data-slot="card">
+                  <TableCell>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                        <GitFork className="w-3.5 h-3.5" />
+                      </div>
                       <h2
-                        className="font-bold text-sm text-base-content cursor-pointer hover:underline"
+                        className="font-bold text-sm text-base-content cursor-pointer hover:underline hover:text-primary transition-colors"
                         onClick={() => onOpenSubflow(subflow.id)}
                       >
                         {subflow.name}
                       </h2>
-                    </td>
-                    <td className="text-secondary text-xs">{subflow.description || "No description"}</td>
-                    <td className="text-secondary text-xs font-semibold">
-                      {subflow.used_by_count}{" "}
-                      {subflow.used_by_count === 1 ? "workflow" : "workflows"}
-                    </td>
-                    <td className="text-right">
-                      <div className="flex gap-2 justify-end items-center">
-                        <IconButton
-                          label={`Open ${subflow.name}`}
-                          type="button"
-                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
-                          onClick={() => onOpenSubflow(subflow.id)}
-                        >
-                          <Eye aria-hidden="true" size={14} />
-                        </IconButton>
-                        <IconButton
-                          label={`Settings ${subflow.name}`}
-                          type="button"
-                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
-                          onClick={() => setSettingsSubflow(subflow)}
-                        >
-                          <Settings aria-hidden="true" size={14} />
-                        </IconButton>
-                        <IconButton
-                          label={`Duplicate ${subflow.name}`}
-                          type="button"
-                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
-                          onClick={() => {
-                            void onDuplicateSubflow(subflow);
-                          }}
-                        >
-                          <Copy aria-hidden="true" size={14} />
-                        </IconButton>
-                        <IconButton
-                          label={`Export ${subflow.name}`}
-                          type="button"
-                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
-                          onClick={() => onExportSubflow(subflow.id)}
-                        >
-                          <Download aria-hidden="true" size={14} />
-                        </IconButton>
-                        <IconButton
-                          label={`Delete ${subflow.name}`}
-                          type="button"
-                          className="btn-ghost btn-xs text-error hover:bg-error/10"
-                          onClick={() => {
-                            setDeleteSubflowCandidate(subflow);
-                          }}
-                        >
-                          <Trash2 aria-hidden="true" size={14} />
-                        </IconButton>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-secondary text-xs">{subflow.description || "No description"}</TableCell>
+                  <TableCell className="text-secondary text-xs font-semibold">
+                    {subflow.used_by_count}{" "}
+                    {subflow.used_by_count === 1 ? "workflow" : "workflows"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end items-center">
+                      <IconButton
+                        label={`Open ${subflow.name}`}
+                        type="button"
+                        className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                        onClick={() => onOpenSubflow(subflow.id)}
+                      >
+                        <Eye aria-hidden="true" size={15} />
+                      </IconButton>
+                      <IconButton
+                        label={`Settings ${subflow.name}`}
+                        type="button"
+                        className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                        onClick={() => setSettingsSubflow(subflow)}
+                      >
+                        <Settings aria-hidden="true" size={15} />
+                      </IconButton>
+                      <IconButton
+                        label={`Duplicate ${subflow.name}`}
+                        type="button"
+                        className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                        onClick={() => {
+                          void onDuplicateSubflow(subflow);
+                        }}
+                      >
+                        <Copy aria-hidden="true" size={15} />
+                      </IconButton>
+                      <IconButton
+                        label={`Export ${subflow.name}`}
+                        type="button"
+                        className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                        onClick={() => onExportSubflow(subflow.id)}
+                      >
+                        <Download aria-hidden="true" size={15} />
+                      </IconButton>
+                      <IconButton
+                        label={`Delete ${subflow.name}`}
+                        type="button"
+                        className="btn btn-ghost btn-xs text-error hover:bg-error/10 w-8 h-8 p-0"
+                        onClick={() => {
+                          setDeleteSubflowCandidate(subflow);
+                        }}
+                      >
+                        <Trash2 aria-hidden="true" size={15} />
+                      </IconButton>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </section>
 

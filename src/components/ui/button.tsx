@@ -14,7 +14,7 @@ export interface ButtonProps
 
 const variantClass: Record<ButtonVariant, string> = {
   default: "btn-primary",
-  secondary: "btn-ghost",
+  secondary: "btn-outline",
   ghost: "btn-ghost",
   destructive: "btn-error",
 };

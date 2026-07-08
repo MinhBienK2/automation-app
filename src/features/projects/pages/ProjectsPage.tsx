@@ -119,7 +119,6 @@ export function ProjectsPage({
   }
 
   function openCreateDialog() {
-    setBrowsing(false);
     setCreateDialogOpen(true);
   }
 
@@ -335,7 +334,7 @@ export function ProjectsPage({
           )}
         </div>
       ) : (
-        <section aria-label="Project detail" className="flex flex-col mt-4">
+        <section aria-label="Project detail" className="projects-detail-panel mt-4">
           <nav aria-label="Project sections" className="tabs tabs-bordered w-full mb-4">
             {projectCollections.map((collection) => {
               const count = collection.stat
@@ -362,7 +361,7 @@ export function ProjectsPage({
           </nav>
           <section
             aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
-            className="flex-grow min-h-0"
+            className="project-collection-panel"
           >
             {children}
           </section>

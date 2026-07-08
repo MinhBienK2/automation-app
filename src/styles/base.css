@@ -358,4 +358,84 @@ small {
   color: var(--accent);
 }
 
+/* Custom UI Border & Visual Hierarchies */
+.input-bordered {
+  border: 1px solid var(--border) !important;
+  background-color: var(--bg) !important;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.input-bordered:hover {
+  border-color: var(--border-emphasized) !important;
+}
+.input-bordered:focus,
+.input-bordered:focus-within {
+  border-color: var(--accent) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+
+/* Tabs customization */
+.tabs-bordered {
+  border-bottom: 1px solid var(--border) !important;
+}
+.tab {
+  border-bottom: 2px solid transparent !important;
+  transition: border-color var(--transition), color var(--transition);
+}
+.tab:hover:not(.tab-active) {
+  border-bottom-color: var(--border-emphasized) !important;
+  color: var(--fg-primary) !important;
+}
+.tab-active {
+  border-bottom-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+/* Buttons without background */
+.btn-ghost {
+  border-color: transparent !important;
+  background-color: transparent !important;
+}
+.btn-ghost:hover {
+  background-color: var(--surface-elevated) !important;
+  border-color: transparent !important;
+}
+.btn-outline {
+  border: 1px solid var(--border-emphasized) !important;
+  background-color: transparent !important;
+  color: var(--fg-secondary) !important;
+  transition: all var(--transition);
+}
+.btn-outline:hover {
+  border-color: var(--accent) !important;
+  background-color: var(--accent-bg) !important;
+  color: var(--accent) !important;
+}
+
+/* Table Hover Effect */
+.table tbody tr:hover {
+  background-color: var(--surface-elevated) !important;
+  transition: background-color 150ms ease;
+}
+
+/* Fix border colors matching backgrounds */
+.border-base-100,
+.border-base-200,
+.border-base-300,
+.border-border {
+  border-color: var(--border) !important;
+}
+
+.border-base-100:hover,
+.border-base-200:hover,
+.border-base-300:hover,
+.border-border:hover {
+  border-color: var(--border-hover) !important;
+}
+
+/* Hide scrollbar arrow buttons */
+::-webkit-scrollbar-button {
+  display: none !important;
+}
+
 @import "./auth.css";

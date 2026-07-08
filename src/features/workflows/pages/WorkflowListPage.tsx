@@ -35,6 +35,7 @@ import {
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { runStatusLabel } from "../../../lib/workflowUi";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
 
 type WorkflowListPageProps = {
   workflows: WorkflowSummary[];
@@ -160,113 +161,121 @@ export function WorkflowListPage({
             <p className="text-xs">Create one to begin building an automation graph.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="table table-sm table-zebra w-full">
-              <thead>
-                <tr>
-                  <th className="text-base-content/75 font-semibold">WORKFLOW</th>
-                  <th className="text-base-content/75 font-semibold text-right">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredWorkflows.map((workflow) => {
-                  const activeRun = activeRunsByWorkflow.get(workflow.id);
-                  const hasActiveRun = Boolean(activeRun);
-                  return (
-                    <tr key={workflow.id} className="hover" data-slot="card">
-                      <td>
-                        <div className="flex items-center gap-3">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>WORKFLOW</TableHead>
+                <TableHead className="text-right">ACTIONS</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredWorkflows.map((workflow) => {
+                const activeRun = activeRunsByWorkflow.get(workflow.id);
+                const hasActiveRun = Boolean(activeRun);
+                return (
+                  <TableRow key={workflow.id} data-slot="card">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                        </div>
+                        <div className="flex flex-col gap-0.5">
                           <h2
-                            className="font-bold text-sm text-base-content cursor-pointer hover:underline"
+                            className="font-bold text-sm text-base-content cursor-pointer hover:underline hover:text-primary transition-colors"
                             onClick={() => onOpenWorkflow(workflow.id)}
                           >
                             {workflow.name}
                           </h2>
-                          {activeRun ? (
-                            <Badge variant="running" className="badge-xs font-semibold uppercase tracking-wider gap-1.5 flex items-center">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary-content animate-ping" />
-                              <span>{runStatusLabel(activeRun.state)}</span>
-                            </Badge>
-                          ) : null}
+                          {workflow.browser_profile_name && (
+                            <span className="text-[11px] text-secondary">
+                              Profile: <span className="text-fg-primary/80 font-medium">{workflow.browser_profile_name}</span>
+                            </span>
+                          )}
                         </div>
-                      </td>
-                      <td className="text-right">
-                        <div className="flex gap-2 justify-end items-center">
+                        {activeRun ? (
+                          <Badge variant="running" className="badge-xs font-semibold uppercase tracking-wider gap-1.5 flex items-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary-content animate-ping" />
+                            <span>{runStatusLabel(activeRun.state)}</span>
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end items-center">
+                        <IconButton
+                          label="View Details"
+                          type="button"
+                          className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                          onClick={() => onOpenWorkflow(workflow.id)}
+                        >
+                          <Eye aria-hidden="true" size={15} />
+                        </IconButton>
+                        <IconButton
+                          label={`Run ${workflow.name}`}
+                          type="button"
+                          className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 w-8 h-8 p-0"
+                          disabled={hasActiveRun}
+                          onClick={() => onRunWorkflow(workflow)}
+                        >
+                          <Play aria-hidden="true" size={15} />
+                        </IconButton>
+                        {activeRun ? (
                           <IconButton
-                            label="View Details"
+                            label={`Stop ${workflow.name}`}
                             type="button"
-                            className="btn-ghost btn-xs text-base-content hover:bg-base-300"
-                            onClick={() => onOpenWorkflow(workflow.id)}
+                            className="btn btn-ghost btn-xs text-error hover:bg-error/10 w-8 h-8 p-0"
+                            onClick={() => onStopRun(activeRun.run_id)}
                           >
-                            <Eye aria-hidden="true" size={14} />
+                            <Square aria-hidden="true" size={15} />
                           </IconButton>
-                          <IconButton
-                            label={`Run ${workflow.name}`}
-                            type="button"
-                            className="btn-ghost btn-xs text-primary hover:bg-primary/10"
-                            disabled={hasActiveRun}
-                            onClick={() => onRunWorkflow(workflow)}
-                          >
-                            <Play aria-hidden="true" size={14} />
-                          </IconButton>
-                          {activeRun ? (
+                        ) : null}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
                             <IconButton
-                              label={`Stop ${workflow.name}`}
+                              label={`More actions for ${workflow.name}`}
                               type="button"
-                              className="btn-ghost btn-xs text-error hover:bg-error/10"
-                              onClick={() => onStopRun(activeRun.run_id)}
+                              className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
                             >
-                              <Square aria-hidden="true" size={14} />
+                              <MoreHorizontal aria-hidden="true" size={15} />
                             </IconButton>
-                          ) : null}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <IconButton
-                                label={`More actions for ${workflow.name}`}
-                                type="button"
-                                className="btn-ghost btn-xs text-base-content hover:bg-base-300"
-                              >
-                                <MoreHorizontal aria-hidden="true" size={14} />
-                              </IconButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem onSelect={() => setTimeout(() => onOpenEditWorkflow(workflow), 0)}>
-                                <Pencil aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
-                                <span>Edit</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={hasActiveRun}
-                                onSelect={() => setTimeout(() => onDuplicateWorkflow(workflow), 0)}
-                              >
-                                <Copy aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
-                                <span>Duplicate</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={hasActiveRun}
-                                onSelect={() => setTimeout(() => onOpenExportWorkflow(workflow), 0)}
-                              >
-                                <Download aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
-                                <span>Export</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                variant="destructive"
-                                disabled={hasActiveRun}
-                                onSelect={() => setTimeout(() => onDeleteWorkflow(workflow.id), 0)}
-                              >
-                                <Trash2 aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
-                                <span>Delete</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onSelect={() => setTimeout(() => onOpenEditWorkflow(workflow), 0)}>
+                              <Pencil aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
+                              <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={hasActiveRun}
+                              onSelect={() => setTimeout(() => onDuplicateWorkflow(workflow), 0)}
+                            >
+                              <Copy aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
+                              <span>Duplicate</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={hasActiveRun}
+                              onSelect={() => setTimeout(() => onOpenExportWorkflow(workflow), 0)}
+                            >
+                              <Download aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
+                              <span>Export</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              disabled={hasActiveRun}
+                              onSelect={() => setTimeout(() => onDeleteWorkflow(workflow.id), 0)}
+                            >
+                              <Trash2 aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
+                              <span>Delete</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
       </section>
 

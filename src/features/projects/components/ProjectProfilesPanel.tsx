@@ -13,6 +13,7 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
 import type {
   Project,
   BrowserProfile,
@@ -132,71 +133,71 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
               <p className="text-xs max-w-[280px]">Add a profile to start setting up browser configurations.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto w-full">
-              <table className="table table-sm table-zebra w-full">
-                <thead>
-                  <tr>
-                    <th className="text-base-content/75 font-semibold">PROFILE NAME</th>
-                    <th className="text-base-content/75 font-semibold">USAGE</th>
-                    <th className="text-base-content/75 font-semibold text-right">ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProfiles.map((env) => {
-                    const count = workflows.filter((w) => w.browser_profile_id === env.id).length;
-                    return (
-                      <tr key={env.id} className="hover" data-slot="card">
-                        <td>
-                          <div className="flex items-center gap-2.5">
-                            <Fingerprint aria-hidden="true" className="text-primary w-4.5 h-4.5 shrink-0" />
-                            <h2
-                              className="font-bold text-sm text-base-content cursor-pointer hover:underline"
-                              onClick={() => {
-                                setSelectedEnvId(env.id);
-                                setEditDialogOpen(true);
-                              }}
-                            >
-                              {env.name}
-                            </h2>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>PROFILE NAME</TableHead>
+                  <TableHead>USAGE</TableHead>
+                  <TableHead className="text-right">ACTIONS</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProfiles.map((env) => {
+                  const count = workflows.filter((w) => w.browser_profile_id === env.id).length;
+                  return (
+                    <TableRow key={env.id} data-slot="card">
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                            <Fingerprint aria-hidden="true" className="w-3.5 h-3.5" />
                           </div>
-                        </td>
-                        <td className="text-secondary text-xs font-medium">
-                          {count === 0 ? "Not used" : `Used by ${count} workflow${count === 1 ? "" : "s"}`}
-                        </td>
-                        <td className="text-right">
-                          <div className="flex gap-2 justify-end items-center">
-                            <IconButton
-                              label={`Configure profile ${env.name}`}
-                              type="button"
-                              className="btn-ghost btn-xs text-base-content hover:bg-base-300"
-                              onClick={() => {
-                                setSelectedEnvId(env.id);
-                                setEditDialogOpen(true);
-                              }}
-                            >
-                              <Pencil aria-hidden="true" size={14} />
-                            </IconButton>
-                            <IconButton
-                              label={`Delete profile ${env.name}`}
-                              type="button"
-                              className={`btn-ghost btn-xs hover:bg-error/10 ${count > 0 ? "text-base-content/30" : "text-error"}`}
-                              disabled={count > 0}
-                              tooltip={count > 0 ? "Profile is used by workflows" : `Delete profile ${env.name}`}
-                              onClick={() => {
-                                setSelectedEnvId(env.id);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 aria-hidden="true" size={14} />
-                            </IconButton>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <h2
+                            className="font-bold text-sm text-base-content cursor-pointer hover:underline hover:text-primary transition-colors"
+                            onClick={() => {
+                              setSelectedEnvId(env.id);
+                              setEditDialogOpen(true);
+                            }}
+                          >
+                            {env.name}
+                          </h2>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-secondary text-xs font-medium">
+                        {count === 0 ? "Not used" : `Used by ${count} workflow${count === 1 ? "" : "s"}`}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end items-center">
+                          <IconButton
+                            label={`Configure profile ${env.name}`}
+                            type="button"
+                            className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                            onClick={() => {
+                              setSelectedEnvId(env.id);
+                              setEditDialogOpen(true);
+                            }}
+                          >
+                            <Pencil aria-hidden="true" size={15} />
+                          </IconButton>
+                          <IconButton
+                            label={`Delete profile ${env.name}`}
+                            type="button"
+                            className={`btn btn-ghost btn-sm hover:bg-error/10 w-8 h-8 p-0 ${count > 0 ? "text-base-content/30" : "text-error"}`}
+                            disabled={count > 0}
+                            tooltip={count > 0 ? "Profile is used by workflows" : `Delete profile ${env.name}`}
+                            onClick={() => {
+                              setSelectedEnvId(env.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 aria-hidden="true" size={15} />
+                          </IconButton>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </section>
 
