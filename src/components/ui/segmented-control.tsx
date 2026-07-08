@@ -18,10 +18,17 @@ function SegmentedControl<Value extends string>({
   options: Array<SegmentedControlOption<Value>>;
   value: Value;
 }) {
+  const containerClasses = [
+    "join",
+    className
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div
       aria-label={ariaLabel}
-      className={`segmented-control ${className}`.trim()}
+      className={containerClasses}
       data-slot="segmented-control"
       role="group"
     >
@@ -31,7 +38,7 @@ function SegmentedControl<Value extends string>({
           <Button
             key={option.value}
             aria-pressed={active}
-            className="segmented-control-button"
+            className={`join-item ${active ? "btn-active" : ""}`}
             data-state={active ? "active" : "inactive"}
             size="sm"
             type="button"
@@ -48,3 +55,4 @@ function SegmentedControl<Value extends string>({
 
 export { SegmentedControl };
 export type { SegmentedControlOption };
+

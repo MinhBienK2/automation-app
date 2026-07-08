@@ -264,6 +264,7 @@ export function AppSidebar({
             {onLogout && (
               <Button
                 aria-label="Sign Out"
+                aria-hidden={isLogoutDialogOpen ? "true" : undefined}
                 className="sidebar-profile-logout"
                 variant="ghost"
                 size="icon"

@@ -648,25 +648,12 @@
 }
 
 /* ---------- Metric Summary Cards ---------- */
+/* `.metric-card` is defined in mission-workspaces.css (canonical KPI version);
+   duplicate definitions are removed here to avoid cascade conflicts. */
 .metric-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--space-sm);
-}
-
-.metric-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  transition: border-color 0.2s;
-}
-
-.metric-card:hover {
-  border-color: var(--border-emphasized);
 }
 
 .metric-card-text {
@@ -923,42 +910,9 @@
   letter-spacing: -0.01em;
 }
 
-/* Common Button style override */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: var(--transition);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--fg-primary);
-  outline: none;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-.btn:hover {
-  background: var(--surface-elevated);
-  border-color: var(--border-emphasized);
-}
-.btn-primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-  font-weight: 600;
-}
-.btn-primary:hover {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
-}
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+/* `button`/`.btn` and `input`/`.text-input` visual styling is owned by daisyUI
+   (`.btn` / `.input`); the legacy custom `.btn` / `.text-input` definitions are
+   removed to stop overriding daisyUI theming. */
 
 /* CONTENT FOR TAB: WORKFLOWS / STATS */
 .stats-summary {
@@ -966,33 +920,8 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--space-sm);
 }
-.metric-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-sm) var(--space-md);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  transition: border-color 0.2s;
-}
-.metric-card:hover {
-  border-color: var(--border-emphasized);
-}
-.metric-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--fg-muted);
-  font-weight: 600;
-  margin-bottom: 1px;
-}
-.metric-val {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
+/* `.metric-card` / `.metric-label` / `.metric-val` live in mission-workspaces.css
+   (canonical KPI version) — duplicated definitions removed here. */
 .metric-icon-box {
   width: 28px;
   height: 28px;
@@ -1024,20 +953,6 @@
   color: var(--fg-muted);
   width: 13px;
   height: 13px;
-}
-.text-input {
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--fg-primary);
-  padding: 6px 10px 6px 28px;
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  transition: var(--transition);
-  outline: none;
-}
-.text-input:focus {
-  border-color: var(--accent);
 }
 
 /* Breadcrumb link */
@@ -1112,20 +1027,9 @@
   line-height: 1.4;
 }
 
-/* Badges */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 6px;
-  border-radius: var(--radius-full);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-.badge-success { background: var(--success-bg); color: var(--success); }
+/* Badges — daisyUI owns the `.badge` base layout/theming; `.badge-attention`
+   and `.badge-running` are accent-overlay colors used directly in TSX. */
 .badge-attention { background: var(--attention-bg); color: var(--attention); }
-.badge-failure { background: var(--failure-bg); color: var(--failure); }
 .badge-running { background: var(--accent-bg); color: var(--accent); }
 
 .dot-pulse {
@@ -1140,35 +1044,8 @@
   50% { opacity: 1; }
 }
 
-/* Toggle Switch */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 28px;
-  height: 15px;
-  cursor: pointer;
-}
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider {
-  position: absolute;
-  inset: 0;
-  background-color: var(--border);
-  border-radius: var(--radius-full);
-  transition: .15s;
-}
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 11px;
-  width: 11px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  border-radius: 50%;
-  transition: .15s;
-}
-input:checked + .slider { background-color: var(--accent); }
-input:checked + .slider:before { transform: translateX(13px); }
+/* Toggle switch — daisyUI owns `.toggle` visual styling; the legacy custom
+   `.switch`/`.slider` definitions are removed (no TSX references them). */
 
 /* Action triggers */
 .btn-action-circle {

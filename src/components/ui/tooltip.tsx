@@ -1,50 +1,51 @@
 import * as React from "react";
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
-import { cn } from "@/lib/utils";
 
-function TooltipProvider({
-  delayDuration = 250,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+const TooltipContext = React.createContext<{
+  content: string;
+  setContent: (content: string) => void;
+} | null>(null);
+
+function TooltipProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}
+
+function Tooltip({ children }: { children: React.ReactNode }) {
+  const [content, setContent] = React.useState("");
   return (
-    <TooltipPrimitive.Provider
-      data-slot="tooltip-provider"
-      delayDuration={delayDuration}
-      {...props}
-    />
+    <TooltipContext.Provider value={{ content, setContent }}>
+      {children}
+    </TooltipContext.Provider>
   );
 }
 
-function Tooltip({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
-  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
-}
+function TooltipTrigger({ children }: { children: React.ReactNode; asChild?: boolean }) {
+  const context = React.useContext(TooltipContext);
+  const tipString = context?.content || "";
 
-function TooltipTrigger({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
-}
-
-function TooltipContent({
-  className,
-  sideOffset = 6,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
-    <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
-        data-slot="tooltip-content"
-        sideOffset={sideOffset}
-        className={cn(
-          "z-50 max-w-72 rounded-[var(--app-radius-sm)] border border-[var(--app-border-strong)] bg-[var(--app-surface)] px-3 py-1.5 text-xs leading-5 text-[var(--app-text)]",
-          className,
-        )}
-        {...props}
-      />
-    </TooltipPrimitive.Portal>
+    <div className="tooltip" data-tip={tipString}>
+      {children}
+    </div>
   );
+}
+
+function TooltipContent({ children }: { children: React.ReactNode }) {
+  const context = React.useContext(TooltipContext);
+
+  const textContent = React.useMemo(() => {
+    if (typeof children === "string") return children;
+    if (typeof children === "number") return String(children);
+    return "";
+  }, [children]);
+
+  React.useEffect(() => {
+    if (context && textContent) {
+      context.setContent(textContent);
+    }
+  }, [textContent, context]);
+
+  return null;
 }
 
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };
+

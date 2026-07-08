@@ -46,7 +46,9 @@ describe("App CSS", () => {
     expect(appCss).not.toContain('@import "./styles/monitor.css";');
     expect(appCss).toContain('@import "./styles/responsive.css";');
     expect(appCss).toContain('@import "./styles/mission-control.css";');
-    expect(appCss.split("\n").length).toBeLessThanOrEqual(13);
+    // App.css now also activates daisyUI via @plugin blocks (custom themes).
+    // The entrypoint stays a thin import + plugin shim — all real CSS lives in stylesheets.
+    expect(appCss.split("\n").length).toBeLessThanOrEqual(100);
   });
 
   test("keeps step help modal content scrollable on small screens", () => {
@@ -105,11 +107,13 @@ describe("App CSS", () => {
     expect(root).toContain("--app-bg: var(--bg)");
     expect(root).toContain("--app-accent: var(--accent)");
     expect(root).toContain("--app-radius-pill: var(--radius-lg)");
-    // Theme/accent/density switch blocks drive the token overrides
+    // Theme/accent/density switch blocks drive the token overrides (kept after
+    // the daisyUI migration). daisyUI primary/accent colors are sourced from
+    // these same tokens via App.css custom themes.
     expect(css).toContain('html[data-theme="light"]');
     expect(css).toContain('html[data-accent="teal"]');
     expect(css).toContain('html[data-density="compact"]');
-    expect(buttonSource).toContain("var(--app-accent-border)");
+    // Button is now a daisyUI wrapper; it should not embed hardcoded accents.
     expect(buttonSource).not.toContain("#32d3e6");
   });
 
@@ -147,6 +151,8 @@ describe("App CSS", () => {
     expect(toastAlert).toContain("position: fixed");
     expect(toastAlert).toContain("z-index: 70");
     expect(toastAlert).toContain("bottom: 24px");
+    // Dialog still exposes the same accessible close affordance for screen readers
+    // regardless of whether it is backed by Radix or daisyUI modal.
     expect(dialogSource).toContain('aria-label="Close dialog"');
     expect(dialogSource).not.toContain("bg-white");
   });
@@ -215,10 +221,11 @@ describe("App CSS", () => {
     expect(projectNameControl).toContain("gap: 6px");
   });
 
-  test("uses a filled red treatment for destructive buttons", () => {
-    expect(buttonSource).toContain("bg-[var(--app-danger)]");
-    expect(buttonSource).toContain("hover:bg-[var(--app-danger-hover)]");
-    expect(buttonSource).not.toContain("destructive:\n          \"border-[var(--app-danger-border)] bg-[var(--app-surface)]");
+  test("uses a daisyUI error treatment for destructive buttons", () => {
+    // Button wrapper maps destructive -> daisyUI btn-error; legacy custom CSS
+    // var based destructive styling is gone.
+    expect(buttonSource).toContain("btn-error");
+    expect(buttonSource).not.toContain("var(--app-danger)");
   });
 
   test("keeps Projects sidebar and collection content as independent scroll regions", () => {

@@ -90,19 +90,11 @@
     }
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.15",
-    "@radix-ui/react-dropdown-menu": "^2.1.18",
-    "@radix-ui/react-label": "^2.1.8",
-    "@radix-ui/react-scroll-area": "^1.2.10",
-    "@radix-ui/react-slot": "^1.2.4",
-    "@radix-ui/react-tooltip": "^1.2.8",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.20.0",
     "@xyflow/react": "^12.10.2",
     "bcryptjs": "^3.0.3",
-    "class-variance-authority": "^0.7.1",
     "cloakbrowser": "0.4.3",
-    "clsx": "^2.1.1",
     "daisyui": "^5.6.16",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.9",
@@ -114,7 +106,7 @@
     "playwright-core": "^1.59.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.3.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -136,7 +128,6 @@
     "js-yaml": "^4.1.1",
     "jsdom": "^29.0.2",
     "node-pg-migrate": "^8.0.4",
-    "tailwindcss": "^4.2.4",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
     "vitest": "^4.1.5"

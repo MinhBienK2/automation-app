@@ -1,21 +1,13 @@
 import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
-import { cn } from "@/lib/utils";
 
-function Label({
-  className,
-  ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
-  return (
-    <LabelPrimitive.Root
-      data-slot="label"
-      className={cn(
-        "grid gap-1.5 text-[13px] font-medium text-[var(--app-text-secondary)]",
-        className,
-      )}
-      {...props}
-    />
-  );
+function Label({ className, ...props }: React.ComponentProps<"label">) {
+  const classes = [
+    "grid gap-1.5 text-[13px] font-medium text-base-content/70",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return <label data-slot="label" className={classes} {...props} />;
 }
 
 export { Label };

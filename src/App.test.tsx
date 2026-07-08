@@ -914,7 +914,8 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     const attentionQueue = await screen.findByRole("region", { name: "Attention Queue" });
-    await userEvent.click(within(attentionQueue).getByRole("button", { name: /Launch blocked/i }));
+    const launchBlockedBtn = await within(attentionQueue).findByRole("button", { name: /Launch blocked/i });
+    await userEvent.click(launchBlockedBtn);
 
     const settingsDialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
     expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
@@ -1108,8 +1109,11 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    expect(await screen.findByRole("region", { name: "System Health" })).toHaveTextContent("CloakBrowser");
-    expect(screen.getByRole("region", { name: "System Health" })).toHaveTextContent("GeoIP available");
+    const systemHealth = await screen.findByRole("region", { name: "System Health" });
+    await waitFor(() => {
+      expect(systemHealth).toHaveTextContent("CloakBrowser");
+      expect(systemHealth).toHaveTextContent("GeoIP available");
+    });
 
     await userEvent.click(await screen.findByRole("button", { name: "Setting" }));
 

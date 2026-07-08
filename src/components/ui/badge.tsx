@@ -1,46 +1,35 @@
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/lib/utils";
 
-const badgeVariants = cva(
-  "inline-flex w-fit shrink-0 items-center rounded-full border px-2.5 py-1 text-xs font-medium",
-  {
-    variants: {
-      variant: {
-        default:
-          "border-[var(--app-accent-border)] bg-[var(--app-surface)] text-[var(--app-accent)]",
-        secondary: "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-secondary)]",
-        destructive:
-          "border-[var(--app-danger-border)] bg-[var(--app-surface)] text-[var(--app-danger-text)]",
-        outline: "border-[var(--app-border-strong)] bg-transparent text-[var(--app-text)]",
-        success:
-          "border-[var(--app-success)]/30 bg-[var(--app-success)]/10 text-[var(--app-success)]",
-        attention:
-          "border-[var(--app-warning)]/30 bg-[var(--app-warning)]/10 text-[var(--app-warning)]",
-        failure:
-          "border-[var(--app-danger-border)] bg-[var(--app-danger)]/10 text-[var(--app-danger-text)]",
-        running:
-          "border-[var(--app-accent-border)] bg-[var(--app-accent)]/10 text-[var(--app-accent)]",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  },
-);
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "success"
+  | "attention"
+  | "failure"
+  | "running";
 
-function Badge({
-  className,
-  variant,
-  ...props
-}: React.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
-  return (
-    <span
-      data-slot="badge"
-      className={cn(badgeVariants({ variant, className }))}
-      {...props}
-    />
-  );
+export interface BadgeProps extends React.ComponentProps<"span"> {
+  variant?: BadgeVariant;
+}
+
+const variantClass: Record<BadgeVariant, string> = {
+  default: "badge-primary badge-outline",
+  secondary: "badge-ghost",
+  destructive: "badge-error",
+  outline: "badge-outline",
+  success: "badge-success",
+  attention: "badge-warning",
+  failure: "badge-error",
+  running: "badge-primary",
+};
+
+function Badge({ className, variant = "default", ...props }: BadgeProps) {
+  const classes = ["badge", variantClass[variant], className]
+    .filter(Boolean)
+    .join(" ");
+  return <span data-slot="badge" className={classes} {...props} />;
 }
 
 export { Badge };

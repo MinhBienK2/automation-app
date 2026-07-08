@@ -1,4 +1,87 @@
 @import "tailwindcss";
+@plugin "daisyui" {
+  themes: automation-dark --default, automation-light --preferslight;
+  logs: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "automation-dark";
+  default: true;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: var(--bg);
+  --color-base-200: var(--surface);
+  --color-base-300: var(--surface-elevated);
+  --color-base-content: var(--fg-primary);
+
+  --color-primary: var(--accent);
+  --color-primary-content: var(--bg);
+  --color-secondary: var(--fg-secondary);
+  --color-secondary-content: var(--bg);
+  --color-accent: var(--accent);
+  --color-accent-content: var(--bg);
+  --color-neutral: var(--border-emphasized);
+  --color-neutral-content: var(--fg-secondary);
+
+  --color-info: var(--accent);
+  --color-info-content: var(--bg);
+  --color-success: var(--success);
+  --color-success-content: var(--bg);
+  --color-warning: var(--attention);
+  --color-warning-content: var(--bg);
+  --color-error: var(--failure);
+  --color-error-content: var(--bg);
+
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "automation-light";
+  default: false;
+  preferslight: true;
+  color-scheme: light;
+
+  --color-base-100: var(--bg);
+  --color-base-200: var(--surface);
+  --color-base-300: var(--surface-elevated);
+  --color-base-content: var(--fg-primary);
+
+  --color-primary: var(--accent);
+  --color-primary-content: var(--bg);
+  --color-secondary: var(--fg-secondary);
+  --color-secondary-content: var(--bg);
+  --color-accent: var(--accent);
+  --color-accent-content: var(--bg);
+  --color-neutral: var(--border-emphasized);
+  --color-neutral-content: var(--fg-secondary);
+
+  --color-info: var(--accent);
+  --color-info-content: var(--bg);
+  --color-success: var(--success);
+  --color-success-content: var(--bg);
+  --color-warning: var(--attention);
+  --color-warning-content: var(--bg);
+  --color-error: var(--failure);
+  --color-error-content: var(--bg);
+
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
 @import "./styles/base.css";
 @import "./styles/layout.css";
 @import "./styles/workflows.css";

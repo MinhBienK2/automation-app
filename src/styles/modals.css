@@ -1,11 +1,10 @@
+/* daisyUI `.modal-box` owns the dialog border/body/padding/box-shadow; we only
+   add the grid layout + width constraint here. `var(--*)` bridge remains available
+   but visual chrome is left to daisyUI so accent/density themes flow through. */
 .workflow-dialog {
   display: grid;
   gap: 18px;
   width: min(480px, 100%);
-  padding: 20px;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-md);
-  background: var(--app-bg);
 }
 
 .modal-header {

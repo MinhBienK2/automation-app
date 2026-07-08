@@ -34,6 +34,27 @@ describe("app shell static assets", () => {
     expect(packageJson.dependencies).not.toHaveProperty("@radix-ui/react-tabs");
   });
 
+  test("no Radix UI primitives or shadcn helpers remain in dependencies", () => {
+    const packageJson = JSON.parse(
+      readFileSync(join(process.cwd(), "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+
+    for (const pkg of [
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-label",
+      "@radix-ui/react-scroll-area",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-tooltip",
+      "class-variance-authority",
+      "clsx",
+      "tailwind-merge",
+      "@radix-ui/react-tabs",
+    ]) {
+      expect(packageJson.dependencies).not.toHaveProperty(pkg);
+    }
+  });
+
   test("keeps workflow package option controls out of App orchestration", () => {
     const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
     const dialogsSource = readFileSync(

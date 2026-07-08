@@ -8,34 +8,26 @@ describe("Button component", () => {
     const button = screen.getByRole("button", { name: "Click me" });
     expect(button).toBeInTheDocument();
     expect(button).not.toBeDisabled();
-    expect(button.querySelector("svg")).not.toBeInTheDocument();
+    expect(button.className).toContain("btn");
   });
 
-  test("renders loader and is disabled when loading", () => {
+  test("renders a daisyUI loading spinner and is disabled when loading", () => {
     render(<Button loading>Click me</Button>);
     const button = screen.getByRole("button", { name: "Click me" });
     expect(button).toBeInTheDocument();
     expect(button).toBeDisabled();
-    
-    // It should render the loader icon
-    const spinner = button.querySelector("svg");
-    expect(spinner).toBeInTheDocument();
-    expect(spinner).toHaveClass("animate-spin");
+
+    expect(button.querySelector(".loading")).toBeInTheDocument();
   });
 
-  test("renders only loader and hides children when loading and size is icon", () => {
+  test("renders only the spinner and hides children when loading and size is icon", () => {
     render(<Button loading size="icon">Click me</Button>);
-    // When size is icon and loading is true, we hide original children to prevent overflow,
-    // so the button text "Click me" should not be visible/accessible as the button name,
-    // or the name will just be the loader/empty if no label is provided.
     const button = screen.getByRole("button");
     expect(button).toBeInTheDocument();
     expect(button).toBeDisabled();
     expect(button).not.toHaveTextContent("Click me");
 
-    const spinner = button.querySelector("svg");
-    expect(spinner).toBeInTheDocument();
-    expect(spinner).toHaveClass("animate-spin");
+    expect(button.querySelector(".loading")).toBeInTheDocument();
   });
 
   test("is disabled when disabled prop is true", () => {

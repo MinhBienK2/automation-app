@@ -1,54 +1,37 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
 
-type SwitchProps = Omit<
-  React.ComponentProps<"button">,
-  "aria-checked" | "onChange" | "role"
-> & {
+type SwitchProps = React.ComponentPropsWithoutRef<"input"> & {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 };
 
 function Switch({
+  id,
   checked,
   className,
   disabled,
   onCheckedChange,
   ...props
 }: SwitchProps) {
+  const classes = [
+    "toggle toggle-primary",
+    className
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <button
-      {...props}
-      aria-checked={checked}
-      className={cn(
-        "inline-flex h-6 w-11 shrink-0 items-center rounded-[var(--app-radius-pill)] border p-0.5 outline-none transition-colors",
-        checked
-          ? "border-[var(--app-accent-border)] bg-[rgba(62,207,142,0.18)]"
-          : "border-[var(--app-border)] bg-[var(--app-surface)]",
-        "disabled:pointer-events-none disabled:opacity-50",
-        "focus-visible:border-[var(--app-accent-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]",
-        className,
-      )}
-      data-slot="switch"
-      data-state={checked ? "checked" : "unchecked"}
-      disabled={disabled}
+    <input
+      id={id}
+      type="checkbox"
       role="switch"
-      type="button"
-      onClick={(event) => {
-        props.onClick?.(event);
-        if (!event.defaultPrevented) onCheckedChange(!checked);
-      }}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "block size-4 rounded-[var(--app-radius-pill)] transition-transform",
-          checked
-            ? "translate-x-5 bg-[var(--app-accent)]"
-            : "translate-x-0 bg-[var(--app-text-secondary)]",
-        )}
-      />
-    </button>
+      aria-checked={checked}
+      className={classes}
+      checked={checked}
+      disabled={disabled}
+      onChange={(e) => onCheckedChange(e.target.checked)}
+      {...props}
+    />
   );
 }
 
@@ -74,22 +57,32 @@ function SwitchField({
   const labelId = `${switchId}-label`;
   const descriptionId = description ? `${switchId}-description` : undefined;
 
+  const containerClasses = [
+    "flex items-center gap-3",
+    className
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className={cn("switch-field", className)} data-slot="switch-field">
+    <div className={containerClasses} data-slot="switch-field">
       <Switch
         id={switchId}
-        aria-describedby={descriptionId}
         aria-labelledby={labelId}
+        aria-describedby={descriptionId}
         checked={checked}
         disabled={disabled}
         onCheckedChange={onCheckedChange}
       />
-      <span className="switch-field-copy">
-        <strong id={labelId}>{label}</strong>
-        {description ? <small id={descriptionId}>{description}</small> : null}
-      </span>
+      <label htmlFor={switchId} className="flex flex-col cursor-pointer select-none">
+        <strong id={labelId} className="text-sm font-semibold text-base-content">{label}</strong>
+        {description ? (
+          <span id={descriptionId} className="text-xs text-secondary">{description}</span>
+        ) : null}
+      </label>
     </div>
   );
 }
 
 export { Switch, SwitchField };
+

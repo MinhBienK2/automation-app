@@ -20,14 +20,18 @@ function IconButton({
   children,
   label,
   tooltip = label,
+  className,
   ...props
 }: IconButtonProps) {
+  const classes = ["btn-square", className].filter(Boolean).join(" ");
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             {...props}
+            className={classes}
             aria-label={label}
             data-tooltip={tooltip}
             size="icon"
@@ -43,3 +47,4 @@ function IconButton({
 }
 
 export { IconButton };
+

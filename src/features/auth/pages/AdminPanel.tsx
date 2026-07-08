@@ -14,7 +14,7 @@ interface AdminPanelProps {
   currentUser?: User | null;
 }
 
-export function AdminPanel({ currentUser }: AdminPanelProps) {
+export function AdminPanel(_props: AdminPanelProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

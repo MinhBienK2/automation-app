@@ -1,5 +1,4 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
 
 type SettingsFieldGroupProps = React.ComponentProps<"fieldset"> & {
   title: string;
@@ -26,23 +25,30 @@ function SettingsFieldGroup({
     .filter(Boolean)
     .join(" ") || undefined;
 
+  const fieldsetClasses = [
+    "fieldset bg-base-200 border border-base-300 rounded-box p-4 settings-field-group",
+    className
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <fieldset
       {...props}
-      className={cn("settings-field-group", className)}
+      className={fieldsetClasses}
       aria-describedby={describedBy}
     >
-      <legend>{title}</legend>
+      <legend className="fieldset-legend text-sm font-semibold">{title}</legend>
       {description ? (
-        <div className="settings-field-group-header">
-          <p id={descriptionId} className="settings-field-group-description">
+        <div className="mb-2">
+          <p id={descriptionId} className="text-xs text-secondary">
             {description}
           </p>
         </div>
       ) : null}
-      <div className="settings-field-group-grid">{children}</div>
+      <div className="grid gap-4 w-full">{children}</div>
       {footer ? (
-        <p id={footerId} className="settings-field-group-footer">
+        <p id={footerId} className="mt-2 text-xs text-secondary settings-field-group-footer">
           {footer}
         </p>
       ) : null}
@@ -51,3 +57,4 @@ function SettingsFieldGroup({
 }
 
 export { SettingsFieldGroup };
+
