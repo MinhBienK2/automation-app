@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
 import { Select } from "../../../components/ui/select";
+import { Badge } from "../../../components/ui/badge";
 import type { BrowserProfile, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
@@ -107,33 +108,32 @@ export function WorkflowListPage({
   }, [workflows, searchQuery]);
 
   return (
-    <div className="tab-content-area">
+    <div className="flex flex-col gap-4 mt-2">
       <h1 className="sr-only">Workflows</h1>
       {appError ? (
-        <p className="field-error" role="alert">
+        <div className="alert alert-error text-xs p-3" role="alert">
           {appError}
-        </p>
+        </div>
       ) : null}
 
       {/* Toolbar Filter */}
-      <div className="toolbar">
-        <div className="search-input-wrapper">
-          <Search aria-hidden="true" />
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-2">
+        <div className="relative max-w-xs flex-grow">
+          <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4" />
           <Input
-            className="text-input"
-            style={{ paddingLeft: 32 }}
             placeholder="Search workflows..."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.currentTarget.value)}
+            className="pl-9 input-sm border-base-300"
           />
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <label className="workflow-import-button">
-            <Upload aria-hidden="true" />
-            Import Workflow
+        <div className="flex items-center gap-3">
+          <label className="btn btn-secondary btn-sm rounded-full cursor-pointer relative inline-flex items-center gap-1.5">
+            <Upload aria-hidden="true" size={14} />
+            <span>Import Workflow</span>
             <input
               aria-label="Workflow package file"
-              className="workflow-package-file-input"
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
               type="file"
               accept="application/json,.json"
               onChange={(event) => {
@@ -142,132 +142,131 @@ export function WorkflowListPage({
               }}
             />
           </label>
-          <Button variant="secondary" shape="pill" type="button" onClick={onRecordWorkflow}>
-            <CircleDot aria-hidden="true" />
-            Record Workflow
+          <Button variant="secondary" onClick={onRecordWorkflow} className="btn-sm rounded-full flex items-center gap-1">
+            <CircleDot aria-hidden="true" size={14} className="text-error animate-pulse" />
+            <span>Record Workflow</span>
           </Button>
-          <Button shape="pill" type="button" onClick={onOpenCreateWorkflow}>
+          <Button onClick={onOpenCreateWorkflow} className="btn-primary btn-sm rounded-full">
             Create Workflow
           </Button>
         </div>
       </div>
 
       {/* Workflows Table */}
-      <section className="workflow-library data-table-card" aria-label="Workflow list">
+      <section className="card bg-base-200 border border-base-300 card-body p-5 flex flex-col" aria-label="Workflow list">
         {filteredWorkflows.length === 0 ? (
-          <div className="empty-state panel">
-            <h2>No workflows yet</h2>
-            <p className="muted">Create one to begin building an automation graph.</p>
+          <div className="flex flex-col items-center justify-center p-12 text-center text-secondary">
+            <h2 className="text-sm font-bold text-base-content mb-1">No workflows yet</h2>
+            <p className="text-xs">Create one to begin building an automation graph.</p>
           </div>
         ) : (
-          <table className="grid-table">
-            <thead>
-              <tr>
-                <th>WORKFLOW</th>
-                <th style={{ textAlign: "right" }}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredWorkflows.map((workflow) => {
-                const activeRun = activeRunsByWorkflow.get(workflow.id);
-                const hasActiveRun = Boolean(activeRun);
-                return (
-                  <tr key={workflow.id} className="grid-row" data-slot="card">
-                    <td>
-                      <div className="row-title-cell">
-                        <h2
-                          className="row-title"
-                          style={{ cursor: "pointer" }}
-                          onClick={() => onOpenWorkflow(workflow.id)}
-                        >
-                          {workflow.name}
-                        </h2>
-                        <span className="row-desc">
-                          {activeRun ? (
-                            <span className="badge badge-running">
-                              <span className="dot-pulse" />
-                              {runStatusLabel(activeRun.state)}
-                            </span>
-                          ) : null}
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <div style={{ display: "flex", gap: "3px", justifyContent: "flex-end", alignItems: "center" }}>
-                        <IconButton
-                          label="View Details"
-                          type="button"
-                          className="btn-action-circle"
-                          onClick={() => onOpenWorkflow(workflow.id)}
-                        >
-                          <Eye aria-hidden="true" />
-                        </IconButton>
-                        <IconButton
-                          label={`Run ${workflow.name}`}
-                          type="button"
-                          className="btn-action-circle"
-                          disabled={hasActiveRun}
-                          onClick={() => onRunWorkflow(workflow)}
-                        >
-                          <Play aria-hidden="true" />
-                        </IconButton>
-                        {activeRun ? (
-                          <IconButton
-                            label={`Stop ${workflow.name}`}
-                            type="button"
-                            className="btn-action-circle btn-destruct"
-                            onClick={() => onStopRun(activeRun.run_id)}
+          <div className="overflow-x-auto w-full">
+            <table className="table table-sm table-zebra w-full">
+              <thead>
+                <tr>
+                  <th className="text-base-content/75 font-semibold">WORKFLOW</th>
+                  <th className="text-base-content/75 font-semibold text-right">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredWorkflows.map((workflow) => {
+                  const activeRun = activeRunsByWorkflow.get(workflow.id);
+                  const hasActiveRun = Boolean(activeRun);
+                  return (
+                    <tr key={workflow.id} className="hover" data-slot="card">
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <h2
+                            className="font-bold text-sm text-base-content cursor-pointer hover:underline"
+                            onClick={() => onOpenWorkflow(workflow.id)}
                           >
-                            <Square aria-hidden="true" />
+                            {workflow.name}
+                          </h2>
+                          {activeRun ? (
+                            <Badge variant="running" className="badge-xs font-semibold uppercase tracking-wider gap-1.5 flex items-center">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary-content animate-ping" />
+                              <span>{runStatusLabel(activeRun.state)}</span>
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="text-right">
+                        <div className="flex gap-2 justify-end items-center">
+                          <IconButton
+                            label="View Details"
+                            type="button"
+                            className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                            onClick={() => onOpenWorkflow(workflow.id)}
+                          >
+                            <Eye aria-hidden="true" size={14} />
                           </IconButton>
-                        ) : null}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <IconButton
+                            label={`Run ${workflow.name}`}
+                            type="button"
+                            className="btn-ghost btn-xs text-primary hover:bg-primary/10"
+                            disabled={hasActiveRun}
+                            onClick={() => onRunWorkflow(workflow)}
+                          >
+                            <Play aria-hidden="true" size={14} />
+                          </IconButton>
+                          {activeRun ? (
                             <IconButton
-                              label={`More actions for ${workflow.name}`}
+                              label={`Stop ${workflow.name}`}
                               type="button"
-                              className="btn-action-circle"
+                              className="btn-ghost btn-xs text-error hover:bg-error/10"
+                              onClick={() => onStopRun(activeRun.run_id)}
                             >
-                              <MoreHorizontal aria-hidden="true" />
+                              <Square aria-hidden="true" size={14} />
                             </IconButton>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem onSelect={() => setTimeout(() => onOpenEditWorkflow(workflow), 0)}>
-                              <Pencil aria-hidden="true" size={16} />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={hasActiveRun}
-                              onSelect={() => setTimeout(() => onDuplicateWorkflow(workflow), 0)}
-                            >
-                              <Copy aria-hidden="true" size={16} />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={hasActiveRun}
-                              onSelect={() => setTimeout(() => onOpenExportWorkflow(workflow), 0)}
-                            >
-                              <Download aria-hidden="true" size={16} />
-                              Export
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              disabled={hasActiveRun}
-                              onSelect={() => setTimeout(() => onDeleteWorkflow(workflow.id), 0)}
-                            >
-                              <Trash2 aria-hidden="true" size={16} />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                          ) : null}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <IconButton
+                                label={`More actions for ${workflow.name}`}
+                                type="button"
+                                className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                              >
+                                <MoreHorizontal aria-hidden="true" size={14} />
+                              </IconButton>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem onSelect={() => setTimeout(() => onOpenEditWorkflow(workflow), 0)}>
+                                <Pencil aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
+                                <span>Edit</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={hasActiveRun}
+                                onSelect={() => setTimeout(() => onDuplicateWorkflow(workflow), 0)}
+                              >
+                                <Copy aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
+                                <span>Duplicate</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={hasActiveRun}
+                                onSelect={() => setTimeout(() => onOpenExportWorkflow(workflow), 0)}
+                              >
+                                <Download aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
+                                <span>Export</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                disabled={hasActiveRun}
+                                onSelect={() => setTimeout(() => onDeleteWorkflow(workflow.id), 0)}
+                              >
+                                <Trash2 aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
+                                <span>Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
@@ -277,7 +276,7 @@ export function WorkflowListPage({
           if (!open) onCloseWorkflowDialog();
         }}
       >
-        <DialogContent className="workflow-dialog">
+        <DialogContent className="workflow-dialog max-w-md">
           {workflowDialogMode ? (
             <>
               <DialogHeader>
@@ -286,21 +285,24 @@ export function WorkflowListPage({
                 <DialogDescription>{workflowDialogDescription}</DialogDescription>
               </DialogHeader>
 
-              <form className="workflow-dialog-form" onSubmit={onSubmitWorkflowDialog}>
-                <Label htmlFor="workflow-name">
-                  {workflowNameLabel}
-                </Label>
-                <Input
-                  autoFocus
-                  id="workflow-name"
-                  value={workflowNameDraft}
-                  onChange={(event) =>
-                    onWorkflowNameDraftChange(event.currentTarget.value)
-                  }
-                  placeholder="Login flow"
-                />
+              <form className="flex flex-col gap-4 mt-2" onSubmit={onSubmitWorkflowDialog}>
+                <div className="flex flex-col gap-1 w-full">
+                  <Label htmlFor="workflow-name">
+                    {workflowNameLabel}
+                  </Label>
+                  <Input
+                    autoFocus
+                    id="workflow-name"
+                    value={workflowNameDraft}
+                    onChange={(event) =>
+                      onWorkflowNameDraftChange(event.currentTarget.value)
+                    }
+                    placeholder="Login flow"
+                    className="input-sm border-base-300 w-full"
+                  />
+                </div>
                 {workflowDialogMode === "create" ? (
-                  <>
+                  <div className="flex flex-col gap-1 w-full">
                     <Label htmlFor="workflow-profile">
                       Browser Profile
                     </Label>
@@ -310,6 +312,7 @@ export function WorkflowListPage({
                       onChange={(event) =>
                         onSelectedProfileIdDraftChange(event.currentTarget.value || null)
                       }
+                      className="select-sm bg-base-100 border-base-300 w-full"
                     >
                       {browserProfiles.map((profile) => (
                         <option key={profile.id} value={profile.id}>
@@ -317,11 +320,11 @@ export function WorkflowListPage({
                         </option>
                       ))}
                     </Select>
-                  </>
+                  </div>
                 ) : null}
-                {appError ? <p className="field-error">{appError}</p> : null}
-                <DialogFooter className="form-actions">
-                  <Button shape="pill" type="submit" disabled={workflowDialogBusy} loading={workflowDialogBusy}>
+                {appError ? <div className="alert alert-error text-xs p-2.5 mt-2">{appError}</div> : null}
+                <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">
+                  <Button type="submit" disabled={workflowDialogBusy} loading={workflowDialogBusy} className="btn-primary">
                     {workflowDialogMode === "create" ? "Create" : "Save Changes"}
                   </Button>
                   <Button variant="secondary" type="button" disabled={workflowDialogBusy} onClick={onCloseWorkflowDialog}>

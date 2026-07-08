@@ -523,7 +523,8 @@ describe("WorkflowSettingsDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "Run Policy Settings Help" }));
 
     const help = await screen.findByRole("dialog", { name: "Run Policy Settings Help" });
-    expect(help).toHaveClass("workflow-settings-help-dialog");
+    const modalBox = help.querySelector(".modal-box");
+    expect(modalBox).toHaveClass("workflow-settings-help-dialog");
     expect(within(help).getAllByText(/Batch controls are paused until Batch Run UI is ready/i).length)
       .toBeGreaterThan(0);
     expect(within(help).getByTestId("workflow-settings-help-header"))

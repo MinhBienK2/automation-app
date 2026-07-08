@@ -97,42 +97,42 @@ export function SubflowListPage({
   }, [subflows, searchQuery]);
 
   return (
-    <div className="tab-content-area">
+    <div className="flex flex-col gap-4 mt-2">
       <h1 className="sr-only">Subflows</h1>
       {error ? (
-        <p className="field-error" role="alert">
+        <div className="alert alert-error text-xs p-3 animate-fade-in" role="alert">
           {error}
-        </p>
+        </div>
       ) : null}
 
       {/* Toolbar Filter */}
-      <div className="toolbar">
-        <div className="search-input-wrapper">
-          <Search aria-hidden="true" />
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-2">
+        <div className="relative max-w-xs flex-grow">
+          <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4" />
           <Input
-            className="text-input"
             placeholder="Search subflows..."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.currentTarget.value)}
+            className="pl-9 input-sm border-base-300"
           />
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div className="flex items-center gap-3">
           <Button
             variant="secondary"
-            shape="pill"
             type="button"
             disabled={loading}
             onClick={onRefresh}
+            className="btn-sm rounded-full"
           >
-            <RefreshCw aria-hidden="true" />
-            Refresh
+            <RefreshCw aria-hidden="true" size={14} className={loading ? "animate-spin" : ""} />
+            <span>Refresh</span>
           </Button>
-          <label className="workflow-import-button">
-            <Upload aria-hidden="true" />
-            Import Subflow
+          <label className="btn btn-secondary btn-sm rounded-full cursor-pointer relative inline-flex items-center gap-1.5">
+            <Upload aria-hidden="true" size={14} />
+            <span>Import Subflow</span>
             <input
               aria-label="Subflow package file"
-              className="workflow-package-file-input"
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
               type="file"
               accept="application/json,.json"
               onChange={(event) => {
@@ -142,95 +142,101 @@ export function SubflowListPage({
             />
           </label>
           <Button
-            shape="pill"
-            type="button"
             onClick={() => setCreateDialogOpen(true)}
+            className="btn-primary btn-sm rounded-full"
           >
-            <Plus aria-hidden="true" />
-            Create Subflow
+            <Plus aria-hidden="true" size={16} />
+            <span>Create Subflow</span>
           </Button>
         </div>
       </div>
 
-      <section className="workflow-library data-table-card" aria-label="Subflow list">
+      <section className="card bg-base-200 border border-base-300 card-body p-5 flex flex-col" aria-label="Subflow list">
         {filteredSubflows.length === 0 ? (
-          <div className="empty-state panel">
-            <h2>No subflows yet</h2>
-            <p className="muted">Create one to reuse graph paths across workflows.</p>
+          <div className="flex flex-col items-center justify-center p-12 text-center text-secondary">
+            <h2 className="text-sm font-bold text-base-content mb-1">No subflows yet</h2>
+            <p className="text-xs">Create one to reuse graph paths across workflows.</p>
           </div>
         ) : (
-          <table className="grid-table">
-            <thead>
-              <tr>
-                <th>NAME</th>
-                <th>DESCRIPTION</th>
-                <th>USED BY</th>
-                <th style={{ textAlign: "right" }}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSubflows.map((subflow) => (
-                <tr key={subflow.id} className="grid-row" data-slot="card">
-                  <td>
-                    <h2 className="row-title" style={{ cursor: "pointer" }} onClick={() => onOpenSubflow(subflow.id)}>{subflow.name}</h2>
-                  </td>
-                  <td style={{ color: "var(--fg-secondary)" }}>{subflow.description || "No description"}</td>
-                  <td style={{ fontWeight: 500 }}>
-                    {subflow.used_by_count}{" "}
-                    {subflow.used_by_count === 1 ? "workflow" : "workflows"}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <div style={{ display: "flex", gap: "3px", justifyContent: "flex-end", alignItems: "center" }}>
-                      <IconButton
-                        label={`Open ${subflow.name}`}
-                        type="button"
-                        className="btn-action-circle"
+          <div className="overflow-x-auto w-full">
+            <table className="table table-sm table-zebra w-full">
+              <thead>
+                <tr>
+                  <th className="text-base-content/75 font-semibold">NAME</th>
+                  <th className="text-base-content/75 font-semibold">DESCRIPTION</th>
+                  <th className="text-base-content/75 font-semibold">USED BY</th>
+                  <th className="text-base-content/75 font-semibold text-right">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSubflows.map((subflow) => (
+                  <tr key={subflow.id} className="hover" data-slot="card">
+                    <td>
+                      <h2
+                        className="font-bold text-sm text-base-content cursor-pointer hover:underline"
                         onClick={() => onOpenSubflow(subflow.id)}
                       >
-                        <Eye aria-hidden="true" />
-                      </IconButton>
-                      <IconButton
-                        label={`Settings ${subflow.name}`}
-                        type="button"
-                        className="btn-action-circle"
-                        onClick={() => setSettingsSubflow(subflow)}
-                      >
-                        <Settings aria-hidden="true" />
-                      </IconButton>
-                      <IconButton
-                        label={`Duplicate ${subflow.name}`}
-                        type="button"
-                        className="btn-action-circle"
-                        onClick={() => {
-                          void onDuplicateSubflow(subflow);
-                        }}
-                      >
-                        <Copy aria-hidden="true" />
-                      </IconButton>
-                      <IconButton
-                        label={`Export ${subflow.name}`}
-                        type="button"
-                        className="btn-action-circle"
-                        onClick={() => onExportSubflow(subflow.id)}
-                      >
-                        <Download aria-hidden="true" />
-                      </IconButton>
-                      <IconButton
-                        label={`Delete ${subflow.name}`}
-                        type="button"
-                        className="btn-action-circle btn-destruct"
-                        onClick={() => {
-                          setDeleteSubflowCandidate(subflow);
-                        }}
-                      >
-                        <Trash2 aria-hidden="true" />
-                      </IconButton>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        {subflow.name}
+                      </h2>
+                    </td>
+                    <td className="text-secondary text-xs">{subflow.description || "No description"}</td>
+                    <td className="text-secondary text-xs font-semibold">
+                      {subflow.used_by_count}{" "}
+                      {subflow.used_by_count === 1 ? "workflow" : "workflows"}
+                    </td>
+                    <td className="text-right">
+                      <div className="flex gap-2 justify-end items-center">
+                        <IconButton
+                          label={`Open ${subflow.name}`}
+                          type="button"
+                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                          onClick={() => onOpenSubflow(subflow.id)}
+                        >
+                          <Eye aria-hidden="true" size={14} />
+                        </IconButton>
+                        <IconButton
+                          label={`Settings ${subflow.name}`}
+                          type="button"
+                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                          onClick={() => setSettingsSubflow(subflow)}
+                        >
+                          <Settings aria-hidden="true" size={14} />
+                        </IconButton>
+                        <IconButton
+                          label={`Duplicate ${subflow.name}`}
+                          type="button"
+                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                          onClick={() => {
+                            void onDuplicateSubflow(subflow);
+                          }}
+                        >
+                          <Copy aria-hidden="true" size={14} />
+                        </IconButton>
+                        <IconButton
+                          label={`Export ${subflow.name}`}
+                          type="button"
+                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                          onClick={() => onExportSubflow(subflow.id)}
+                        >
+                          <Download aria-hidden="true" size={14} />
+                        </IconButton>
+                        <IconButton
+                          label={`Delete ${subflow.name}`}
+                          type="button"
+                          className="btn-ghost btn-xs text-error hover:bg-error/10"
+                          onClick={() => {
+                            setDeleteSubflowCandidate(subflow);
+                          }}
+                        >
+                          <Trash2 aria-hidden="true" size={14} />
+                        </IconButton>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
@@ -240,7 +246,7 @@ export function SubflowListPage({
           if (!open) closeCreateDialog();
         }}
       >
-        <DialogContent className="workflow-dialog">
+        <DialogContent className="workflow-dialog max-w-md">
           <DialogHeader>
             <p className="eyebrow">Subflow</p>
             <DialogTitle>Create Subflow</DialogTitle>
@@ -248,29 +254,31 @@ export function SubflowListPage({
               Name a reusable graph path for the current project.
             </DialogDescription>
           </DialogHeader>
-          <form className="workflow-dialog-form" onSubmit={submitCreateSubflow}>
-            <Label htmlFor="subflow-name">
-              Subflow name
-            </Label>
-            <Input
-              autoFocus
-              id="subflow-name"
-              value={nameDraft}
-              onChange={(event) => setNameDraft(event.currentTarget.value)}
-              placeholder="Login"
-            />
-            <Label htmlFor="subflow-description">
-              Description
-            </Label>
-            <Input
-              id="subflow-description"
-              value={descriptionDraft}
-              onChange={(event) => setDescriptionDraft(event.currentTarget.value)}
-              placeholder="Reusable login path"
-            />
-            {localError ? <p className="field-error">{localError}</p> : null}
-            <DialogFooter className="form-actions">
-              <Button shape="pill" type="submit" disabled={creating} loading={creating}>
+          <form className="flex flex-col gap-4 mt-2" onSubmit={submitCreateSubflow}>
+            <div className="flex flex-col gap-1 w-full">
+              <Label htmlFor="subflow-name">Subflow name</Label>
+              <Input
+                autoFocus
+                id="subflow-name"
+                value={nameDraft}
+                onChange={(event) => setNameDraft(event.currentTarget.value)}
+                placeholder="Login"
+                className="input-sm border-base-300 w-full"
+              />
+            </div>
+            <div className="flex flex-col gap-1 w-full">
+              <Label htmlFor="subflow-description">Description</Label>
+              <Input
+                id="subflow-description"
+                value={descriptionDraft}
+                onChange={(event) => setDescriptionDraft(event.currentTarget.value)}
+                placeholder="Reusable login path"
+                className="input-sm border-base-300 w-full"
+              />
+            </div>
+            {localError ? <div className="alert alert-error text-xs p-2.5 mt-2">{localError}</div> : null}
+            <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">
+              <Button type="submit" disabled={creating} loading={creating} className="btn-primary">
                 Create
               </Button>
               <Button variant="secondary" type="button" disabled={creating} onClick={closeCreateDialog}>
@@ -280,6 +288,7 @@ export function SubflowListPage({
           </form>
         </DialogContent>
       </Dialog>
+      
       <SubflowSettingsDialog
         subflow={settingsSubflow}
         onOpenChange={(open) => {
@@ -290,6 +299,7 @@ export function SubflowListPage({
           await onUpdateSubflow(settingsSubflow, input);
         }}
       />
+      
       <Dialog
         open={Boolean(deleteSubflowCandidate)}
         onOpenChange={(open) => {
@@ -297,9 +307,9 @@ export function SubflowListPage({
         }}
       >
         {deleteSubflowCandidate ? (
-          <DialogContent className="workflow-dialog">
+          <DialogContent className="workflow-dialog max-w-md">
             <DialogHeader>
-              <p className="eyebrow">Subflow</p>
+              <p className="eyebrow text-error">Subflow</p>
               <DialogTitle>Delete Subflow</DialogTitle>
               <DialogDescription>
                 This removes {deleteSubflowCandidate.name} from the app. This
@@ -307,8 +317,8 @@ export function SubflowListPage({
               </DialogDescription>
             </DialogHeader>
 
-            {error ? <p className="field-error">{error}</p> : null}
-            <DialogFooter className="form-actions">
+            {localError ? <div className="alert alert-error text-xs p-2.5 mt-2">{localError}</div> : null}
+            <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">
               <Button
                 type="button"
                 variant="destructive"

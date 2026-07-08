@@ -52,28 +52,28 @@ export function ObjectEditor({ value, onChange }: ObjectEditorProps) {
   };
 
   return (
-    <div className="flex flex-col gap-2 pl-4 border-l border-[var(--app-border)] mt-3">
-      <span className="text-[10px] text-[var(--app-text-muted)] uppercase tracking-wider font-semibold">Object Fields</span>
+    <div className="flex flex-col gap-2 pl-4 border-l border-base-300 mt-2">
+      <span className="text-[10px] text-secondary uppercase tracking-wider font-bold">Object Fields</span>
       {entries.map(([k, v], index) => (
         <div key={index} className="flex items-center gap-2">
           <Input
             value={k}
             onChange={(e) => updateEntryKey(index, e.currentTarget.value)}
             placeholder="Key"
-            className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)] w-1/3"
+            className="input-xs border-base-300 w-1/3"
           />
           <Input
             value={v}
             onChange={(e) => updateEntryValue(index, e.currentTarget.value)}
             placeholder="Value"
-            className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)] flex-1"
+            className="input-xs border-base-300 flex-1"
           />
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={() => removeField(k)}
-            className="h-8 w-8 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+            className="btn-xs btn-circle text-secondary hover:text-error hover:bg-error/10"
+            aria-label="Remove field"
           >
             <X className="h-3.5 w-3.5" />
           </Button>
@@ -82,9 +82,8 @@ export function ObjectEditor({ value, onChange }: ObjectEditorProps) {
       <Button
         type="button"
         variant="secondary"
-        size="sm"
         onClick={addField}
-        className="self-start text-[11px] h-7 px-3 mt-1"
+        className="self-start btn-xs mt-1"
       >
         + Add Field
       </Button>

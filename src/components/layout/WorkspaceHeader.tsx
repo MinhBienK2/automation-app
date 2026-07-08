@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ChevronDown, Folder, Plus, Search } from "lucide-react";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import type { Project } from "../../types/workflow";
 
 function useDismissOnOutside(open: boolean, onClose: () => void) {
@@ -27,6 +28,16 @@ function useDismissOnOutside(open: boolean, onClose: () => void) {
     };
   }, [open, onClose]);
   return containerRef;
+}
+
+function getVisibleProjects(projects: Project[], search: string): Project[] {
+  const normalized = search.trim().toLocaleLowerCase();
+  if (!normalized) return projects;
+  return projects.filter((project) =>
+    `${project.name} ${project.description ?? ""}`
+      .toLocaleLowerCase()
+      .includes(normalized),
+  );
 }
 
 type WorkspaceHeaderProps = {
@@ -55,65 +66,63 @@ export function WorkspaceHeader({
     setOpen(false);
   }
 
-  const normalizedSearch = search.trim().toLocaleLowerCase();
-  const visibleProjects = normalizedSearch
-    ? projects.filter((project) =>
-        `${project.name} ${project.description ?? ""}`
-          .toLocaleLowerCase()
-          .includes(normalizedSearch),
-      )
-    : projects;
+  const visibleProjects = getVisibleProjects(projects, search);
 
   return (
     <header className="workspace-header">
-      <nav aria-label="Breadcrumb" className="workspace-breadcrumb">
-        <button
-          className="workspace-breadcrumb-link"
-          type="button"
-          onClick={() => {
-            onViewAllProjects();
-          }}
-        >
-          Projects
-        </button>
-        <span className="workspace-breadcrumb-separator">/</span>
-        {selectedProject ? (
-          <div className="project-selector" ref={containerRef}>
-            <Button
-              aria-expanded={open}
-              aria-haspopup="listbox"
-              className="dropdown-trigger"
+      <nav aria-label="Breadcrumb" className="breadcrumbs text-sm workspace-breadcrumb">
+        <ul>
+          <li>
+            <button
+              className="workspace-breadcrumb-link text-base-content hover:underline"
               type="button"
-              variant="ghost"
-              onClick={() => setOpen((prev) => !prev)}
+              onClick={() => {
+                onViewAllProjects();
+              }}
             >
-              {selectedProject.name}
-              <ChevronDown aria-hidden="true" />
-            </Button>
-            {open ? (
-              <ProjectDropdownMenu
-                onCreateProject={() => {
-                  onCreateProject();
-                  close();
-                }}
-                onSelectProject={(id) => {
-                  onSelectProject(id);
-                  close();
-                }}
-                onViewAllProjects={() => {
-                  onViewAllProjects();
-                  close();
-                }}
-                projects={visibleProjects}
-                search={search}
-                selectedProjectId={selectedProject.id}
-                onSearchChange={setSearch}
-              />
-            ) : null}
-          </div>
-        ) : (
-          <span className="workspace-breadcrumb-current">All Projects</span>
-        )}
+              Projects
+            </button>
+          </li>
+          <li>
+            {selectedProject ? (
+              <div className="project-selector inline-block" ref={containerRef}>
+                <Button
+                  aria-expanded={open}
+                  aria-haspopup="listbox"
+                  className="dropdown-trigger"
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setOpen((prev) => !prev)}
+                >
+                  {selectedProject.name}
+                  <ChevronDown aria-hidden="true" />
+                </Button>
+                {open ? (
+                  <ProjectDropdownMenu
+                    onCreateProject={() => {
+                      onCreateProject();
+                      close();
+                    }}
+                    onSelectProject={(id) => {
+                      onSelectProject(id);
+                      close();
+                    }}
+                    onViewAllProjects={() => {
+                      onViewAllProjects();
+                      close();
+                    }}
+                    projects={visibleProjects}
+                    search={search}
+                    selectedProjectId={selectedProject.id}
+                    onSearchChange={setSearch}
+                  />
+                ) : null}
+              </div>
+            ) : (
+              <span className="workspace-breadcrumb-current font-medium text-primary">All Projects</span>
+            )}
+          </li>
+        </ul>
       </nav>
       {actions ? <div className="workspace-header-actions">{actions}</div> : null}
     </header>
@@ -143,12 +152,13 @@ function ProjectDropdownMenu({
     <div className="project-dropdown-menu" role="listbox" aria-label="Select project">
       <div className="dropdown-search">
         <Search aria-hidden="true" />
-        <input
+        <Input
           aria-label="Search projects"
           placeholder="Search projects"
           type="text"
           value={search}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
+          className="input-sm"
         />
       </div>
       <div className="dropdown-list">

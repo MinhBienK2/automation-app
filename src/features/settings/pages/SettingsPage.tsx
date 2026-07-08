@@ -12,6 +12,7 @@ import {
 import { Switch } from "../../../components/ui/switch";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import type { Accent, Density, Theme } from "../../../app/useThemePreferences";
 
 type SettingsPageProps = {
@@ -65,65 +66,50 @@ export function SettingsPage({
 
   return (
     <section className="app-screen settings-screen" aria-label="Settings">
-      <header className="app-header">
+      <header className="app-header flex justify-between items-center mb-4 border-b border-base-300 pb-3">
         <div>
           <p className="eyebrow">Application</p>
-          <h1>Setting</h1>
+          <h1 className="text-2xl font-bold">Setting</h1>
         </div>
-        <div style={{ alignSelf: "flex-end", paddingBottom: "4px" }}>
-          <span style={{ color: "#667d8d", fontSize: "0.875rem", fontWeight: 500 }}>
+        <div className="self-end pb-1">
+          <span className="text-secondary text-xs font-semibold">
             v{pkg.version}
           </span>
         </div>
       </header>
 
-      <section className="panel settings-panel" aria-label="Workflow editing settings">
-        <div className="panel-heading">
+      {/* Graph Persistence settings */}
+      <section className="card bg-base-200 border border-base-300 card-body p-6 mb-6" aria-label="Workflow editing settings">
+        <div className="panel-heading border-b border-base-300 pb-3 mb-4">
           <div>
             <p className="eyebrow">Workflow Editing</p>
-            <h2>Graph persistence</h2>
+            <h2 className="text-lg font-bold">Graph persistence</h2>
           </div>
         </div>
 
-        <div
-          className="switch-field"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "24px",
-            padding: "var(--space-md)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)", flexGrow: 1, minWidth: 0 }}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-4 bg-base-100 border border-base-300 rounded-lg">
+          <div className="flex items-start sm:items-center gap-3 flex-grow min-w-0">
             <Switch
               id="graph-autosave-enabled"
               aria-labelledby="graph-autosave-enabled-label"
               checked={graphAutosaveEnabled}
               onCheckedChange={onGraphAutosaveEnabledChange}
+              className="mt-1 sm:mt-0"
             />
-            <span className="switch-field-copy" style={{ gap: "2px" }}>
-              <strong id="graph-autosave-enabled-label" style={{ fontSize: "13.5px" }}>Autosave graph changes</strong>
-              <small style={{ color: "var(--fg-muted)" }}>
+            <div className="flex flex-col gap-0.5">
+              <strong id="graph-autosave-enabled-label" className="text-sm font-semibold text-base-content">Autosave graph changes</strong>
+              <span className="text-secondary text-xs">
                 Save graph edits after changes. Turn this off to use manual Save.
-              </small>
-            </span>
+              </span>
+            </div>
           </div>
 
           {graphAutosaveEnabled && (
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-              <span
-                style={{
-                  fontWeight: 500,
-                  fontSize: "11px",
-                  color: "var(--fg-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
+            <div className="flex items-center gap-3 flex-shrink-0 self-end sm:self-auto">
+              <span className="font-semibold text-[10px] text-secondary uppercase tracking-wider">
                 Delay
               </span>
-              <div style={{ width: "70px" }}>
+              <div className="w-[80px]">
                 <Input
                   type="number"
                   min={1}
@@ -142,26 +128,27 @@ export function SettingsPage({
                     setLocalDelaySec(sec.toString());
                     onGraphAutosaveDelayMsChange(sec * 1000);
                   }}
-                  style={{ height: "34px", textAlign: "center" }}
+                  className="input-sm text-center"
                 />
               </div>
-              <span style={{ fontSize: "13px", color: "var(--fg-secondary)" }}>s</span>
+              <span className="text-xs text-secondary font-medium">seconds</span>
             </div>
           )}
         </div>
       </section>
 
-      <section className="panel settings-panel" aria-label="Appearance settings">
-        <div className="panel-heading">
+      {/* Appearance settings */}
+      <section className="card bg-base-200 border border-base-300 card-body p-6 mb-6" aria-label="Appearance settings">
+        <div className="panel-heading border-b border-base-300 pb-3 mb-4">
           <div>
             <p className="eyebrow">Interface</p>
-            <h2>Appearance</h2>
+            <h2 className="text-lg font-bold">Appearance</h2>
           </div>
         </div>
 
-        <div className="settings-maintenance-actions" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "0" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <span className="tweak-label" style={{ fontWeight: 600 }}>Theme</span>
+        <div className="flex flex-col gap-5 py-2">
+          <div className="flex flex-col gap-2">
+            <Label className="font-bold text-xs uppercase tracking-wider text-secondary">Theme</Label>
             <SegmentedControl
               ariaLabel="Theme"
               onValueChange={onThemeChange}
@@ -173,9 +160,9 @@ export function SettingsPage({
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <span className="tweak-label" style={{ fontWeight: 600 }}>Accent</span>
-            <div className="tweak-swatches">
+          <div className="flex flex-col gap-2">
+            <Label className="font-bold text-xs uppercase tracking-wider text-secondary">Accent</Label>
+            <div className="flex items-center gap-2 flex-wrap">
               {(
                 [
                   { accent: "cyan", className: "tweak-swatch-cyan", label: "Cyan accent" },
@@ -202,8 +189,8 @@ export function SettingsPage({
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <span className="tweak-label" style={{ fontWeight: 600 }}>Density</span>
+          <div className="flex flex-col gap-2">
+            <Label className="font-bold text-xs uppercase tracking-wider text-secondary">Density</Label>
             <SegmentedControl
               ariaLabel="Density"
               onValueChange={onDensityChange}
@@ -218,21 +205,23 @@ export function SettingsPage({
         </div>
       </section>
 
-      <section className="panel settings-panel" aria-label="Maintenance">
-        <div className="panel-heading">
+      {/* Maintenance settings */}
+      <section className="card bg-base-200 border border-base-300 card-body p-6" aria-label="Maintenance">
+        <div className="panel-heading border-b border-base-300 pb-3 mb-4">
           <div>
             <p className="eyebrow">Runtime</p>
-            <h2>Maintenance</h2>
+            <h2 className="text-lg font-bold">Maintenance</h2>
           </div>
         </div>
 
-        <div className="settings-maintenance-actions">
+        <div className="flex flex-wrap gap-3 py-2 mb-2">
           <Button
             type="button"
             variant="secondary"
             onClick={() => {
               void onInstallBinary();
             }}
+            className="btn-sm"
           >
             Install CloakBrowser Binary
           </Button>
@@ -242,15 +231,20 @@ export function SettingsPage({
             onClick={() => {
               setCleanupDialogOpen(true);
             }}
+            className="btn-sm"
           >
             Cleanup Orphaned Profiles
           </Button>
         </div>
-        <p className="muted">
+        <p className="text-secondary text-xs mt-2 leading-relaxed">
           Maintenance commands only operate on the local lab runtime and orphaned
           inactive browser profiles.
         </p>
-        {maintenanceMessage ? <p role="status">{maintenanceMessage}</p> : null}
+        {maintenanceMessage ? (
+          <div className="alert alert-info text-xs p-3 mt-4" role="status">
+            {maintenanceMessage}
+          </div>
+        ) : null}
       </section>
 
       <Dialog
@@ -268,7 +262,7 @@ export function SettingsPage({
               longer referenced by a workflow or project browser profile.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="form-actions">
+          <DialogFooter className="form-actions flex gap-2">
             <Button
               type="button"
               variant="secondary"
@@ -290,7 +284,6 @@ export function SettingsPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </section>
   );
 }

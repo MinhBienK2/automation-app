@@ -23,58 +23,54 @@ function Breadcrumbs({ projectName, baseLabel, displayLabel, title, onBack }: {
   onBack?: () => void;
 }) {
   return (
-    <nav aria-label="Workflow breadcrumb" className="page-breadcrumb">
-      {projectName ? (
-        <>
-          <Button
-            className="page-breadcrumb-link"
-            variant="ghost"
-            type="button"
-            onClick={onBack}
-          >
-            {projectName}
-          </Button>
-          <span aria-hidden="true" className="page-breadcrumb-separator">
-            /
+    <nav aria-label="Workflow breadcrumb" className="breadcrumbs text-sm page-breadcrumb">
+      <ul>
+        {projectName ? (
+          <>
+            <li>
+              <Button
+                className="page-breadcrumb-link p-0 h-auto min-h-0 bg-transparent hover:bg-transparent hover:underline"
+                variant="ghost"
+                type="button"
+                onClick={onBack}
+              >
+                {projectName}
+              </Button>
+            </li>
+            <li>
+              <span className="text-secondary">{baseLabel}</span>
+            </li>
+          </>
+        ) : (
+          <li>
+            <Button
+              className="page-breadcrumb-link p-0 h-auto min-h-0 bg-transparent hover:bg-transparent hover:underline"
+              variant="ghost"
+              type="button"
+              onClick={onBack}
+            >
+              {baseLabel}
+            </Button>
+          </li>
+        )}
+        {displayLabel ? (
+          <li>
+            <Button
+              className="page-breadcrumb-link p-0 h-auto min-h-0 bg-transparent hover:bg-transparent hover:underline"
+              variant="ghost"
+              type="button"
+              onClick={onBack}
+            >
+              {displayLabel}
+            </Button>
+          </li>
+        ) : null}
+        <li>
+          <span aria-current="page" className="page-breadcrumb-current font-medium text-primary">
+            {title}
           </span>
-          <span>{baseLabel}</span>
-          <span aria-hidden="true" className="page-breadcrumb-separator">
-            /
-          </span>
-        </>
-      ) : (
-        <>
-          <Button
-            className="page-breadcrumb-link"
-            variant="ghost"
-            type="button"
-            onClick={onBack}
-          >
-            {baseLabel}
-          </Button>
-          <span aria-hidden="true" className="page-breadcrumb-separator">
-            /
-          </span>
-        </>
-      )}
-      {displayLabel ? (
-        <Button
-          className="page-breadcrumb-link"
-          variant="ghost"
-          type="button"
-          onClick={onBack}
-        >
-          {displayLabel}
-        </Button>
-      ) : null}
-      {displayLabel ? (
-        <span aria-hidden="true" className="page-breadcrumb-separator">
-          /
-        </span>
-      ) : null}
-      <span aria-current="page" className="page-breadcrumb-current">
-        {title}
-      </span>
+        </li>
+      </ul>
     </nav>
   );
 }

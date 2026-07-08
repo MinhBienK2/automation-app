@@ -1,6 +1,7 @@
 import { Copy, Download, MoreVertical, Search, Trash, Upload } from "lucide-react";
 import { useMemo, useState, useEffect, type FormEvent, type ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
+import { Badge } from "../../../components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -164,40 +165,31 @@ export function ProjectsPage({
       />
 
       {browsing || !selectedProject ? (
-        <div className="project-grid-view">
-          <div className="project-grid-header">
-            <div className="search-input-wrapper">
-              <Search aria-hidden="true" />
+        <div className="project-grid-view mt-4">
+          <div className="project-grid-header flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between mb-6">
+            <div className="search-input-wrapper relative flex-grow max-w-md">
+              <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4" />
               <Label className="sr-only" htmlFor="project-grid-search">
                 Search projects
               </Label>
               <Input
                 id="project-grid-search"
-                className="text-input"
                 placeholder="Search projects..."
                 value={gridSearchDraft}
                 onChange={(event) => setGridSearchDraft(event.currentTarget.value)}
+                className="pl-9 input-sm border-base-300"
               />
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className="flex items-center gap-3">
               <label
-                className="btn"
-                style={{
-                  position: "relative",
-                  cursor: "pointer",
-                  borderRadius: "9999px",
-                  padding: "5px 16px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
+                className="btn btn-secondary btn-sm rounded-full cursor-pointer relative inline-flex items-center gap-1.5"
               >
-                <Upload style={{ width: "12px", height: "12px" }} />
-                Import Project
+                <Upload className="w-3.5 h-3.5" />
+                <span>Import Project</span>
                 <input
                   aria-label="Project package file"
-                  className="workflow-package-file-input"
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
                   type="file"
                   accept="application/json,.json"
                   onChange={(event) => {
@@ -206,33 +198,27 @@ export function ProjectsPage({
                   }}
                 />
               </label>
-              <button
-                className="btn btn-primary"
-                style={{
-                  borderRadius: "9999px",
-                  padding: "5px 16px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                }}
+              <Button
                 type="button"
                 onClick={openCreateDialog}
+                className="btn-primary btn-sm rounded-full inline-flex items-center"
               >
                 Create Project
-              </button>
+              </Button>
             </div>
           </div>
           {projects.length === 0 ? (
-            <div className="empty-state panel">
-              <h2>No projects yet</h2>
-              <p className="muted">Create a project before authoring workflows.</p>
+            <div className="flex flex-col items-center justify-center p-12 text-center rounded-lg bg-base-200 border border-dashed border-base-300 text-secondary">
+              <h2 className="text-sm font-bold text-base-content mb-1">No projects yet</h2>
+              <p className="text-xs">Create a project before authoring workflows.</p>
             </div>
           ) : visibleProjects.length === 0 ? (
-            <div className="empty-state panel">
-              <h2>No matching projects</h2>
-              <p className="muted">Try a different project name or description.</p>
+            <div className="flex flex-col items-center justify-center p-12 text-center rounded-lg bg-base-200 border border-dashed border-base-300 text-secondary">
+              <h2 className="text-sm font-bold text-base-content mb-1">No matching projects</h2>
+              <p className="text-xs">Try a different project name or description.</p>
             </div>
           ) : (
-            <ul aria-label="Projects" className="project-grid-layout" role="list">
+            <ul aria-label="Projects" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" role="list">
               {visibleProjects.map((project) => {
                 const stat = projectStats?.[project.id] ?? {
                   workflows: 0,
@@ -243,7 +229,9 @@ export function ProjectsPage({
                 return (
                   <li key={project.id}>
                     <div
-                      className={`project-card${openActionMenuId === project.id ? " menu-open" : ""}`}
+                      className={`card bg-base-200 border border-base-300 card-body p-5 hover:border-primary transition-colors cursor-pointer relative group ${
+                        openActionMenuId === project.id ? "border-primary" : ""
+                      }`}
                       role="button"
                       tabIndex={0}
                       aria-label={project.name}
@@ -255,31 +243,33 @@ export function ProjectsPage({
                         }
                       }}
                     >
-                      <div className="project-card-top">
-                        <div className="project-card-icon">{initials}</div>
-                        <span className="project-card-name">{project.name}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-sm shrink-0">
+                          {initials}
+                        </div>
+                        <span className="font-bold text-base-content text-sm truncate">{project.name}</span>
                       </div>
-                      <p className="project-card-desc">
+                      <p className="text-secondary text-xs line-clamp-2 mt-2 flex-grow">
                         {project.description ?? "No description"}
                       </p>
-                      <div className="project-card-stats">
-                        <div className="project-card-stat">
-                          <span className="project-card-stat-num">{stat.workflows}</span>
-                          <span className="project-card-stat-label">Workflows</span>
+                      <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-base-300/60 text-center">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm text-base-content">{stat.workflows}</span>
+                          <span className="text-[10px] text-secondary font-medium uppercase tracking-wider">Workflows</span>
                         </div>
-                        <div className="project-card-stat">
-                          <span className="project-card-stat-num">{stat.subflows}</span>
-                          <span className="project-card-stat-label">Subflows</span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm text-base-content">{stat.subflows}</span>
+                          <span className="text-[10px] text-secondary font-medium uppercase tracking-wider">Subflows</span>
                         </div>
-                        <div className="project-card-stat">
-                          <span className="project-card-stat-num">{stat.profiles}</span>
-                          <span className="project-card-stat-label">Profiles</span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm text-base-content">{stat.profiles}</span>
+                          <span className="text-[10px] text-secondary font-medium uppercase tracking-wider">Profiles</span>
                         </div>
                       </div>
-                      <div className="project-card-footer">
-                        <div className="action-menu-wrapper">
+                      <div className="absolute top-4 right-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="action-menu-wrapper relative">
                           <button
-                            className="btn-action-circle"
+                            className="w-7 h-7 rounded-full flex items-center justify-center border border-base-300 bg-base-100 hover:bg-base-300 text-secondary hover:text-base-content transition-colors cursor-pointer"
                             type="button"
                             aria-label="More actions"
                             onClick={(e) => {
@@ -287,46 +277,49 @@ export function ProjectsPage({
                               setOpenActionMenuId(openActionMenuId === project.id ? null : project.id);
                             }}
                           >
-                            <MoreVertical />
+                            <MoreVertical size={14} />
                           </button>
                           {openActionMenuId === project.id && (
-                            <div className="action-dropdown" onClick={(e) => e.stopPropagation()}>
+                            <div className="absolute right-0 mt-1 p-1 bg-base-200 border border-base-300 rounded-lg shadow-lg w-32 z-50 flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
                               {onDuplicateProject && (
                                 <button
-                                  className="action-dropdown-item"
+                                  className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-base-content hover:bg-base-300 rounded-md text-left w-full cursor-pointer transition-colors"
                                   type="button"
                                   onClick={() => {
                                     onDuplicateProject(project.id);
                                     setOpenActionMenuId(null);
                                   }}
                                 >
-                                  <Copy className="h-4 w-4" /> Duplicate
+                                  <Copy className="h-3.5 w-3.5 shrink-0" />
+                                  <span>Duplicate</span>
                                 </button>
                               )}
                               {onExportProject && (
                                 <button
-                                  className="action-dropdown-item"
+                                  className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-base-content hover:bg-base-300 rounded-md text-left w-full cursor-pointer transition-colors"
                                   type="button"
                                   onClick={() => {
                                     onExportProject(project.id);
                                     setOpenActionMenuId(null);
                                   }}
                                 >
-                                  <Download className="h-4 w-4" /> Export
+                                  <Download className="h-3.5 w-3.5 shrink-0" />
+                                  <span>Export</span>
                                 </button>
                               )}
                               {onDeleteProject && (
                                 <>
-                                  <div className="action-dropdown-sep" />
+                                  <div className="divider my-0.5" />
                                   <button
-                                    className="action-dropdown-item destructive"
+                                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-error hover:bg-error/10 rounded-md text-left w-full cursor-pointer transition-colors"
                                     type="button"
                                     onClick={() => {
                                       setDeleteProjectCandidateId(project.id);
                                       setOpenActionMenuId(null);
                                     }}
                                   >
-                                    <Trash className="h-4 w-4" /> Delete
+                                    <Trash className="h-3.5 w-3.5 shrink-0" />
+                                    <span>Delete</span>
                                   </button>
                                 </>
                               )}
@@ -342,36 +335,34 @@ export function ProjectsPage({
           )}
         </div>
       ) : (
-        <section aria-label="Project detail" className="projects-detail-panel">
-          <div className="project-tabs-bar">
-            <nav aria-label="Project sections" className="horizontal-tabs">
-              {projectCollections.map((collection) => {
-                const count = collection.stat
-                  ? selectedStats?.[collection.stat] ?? 0
-                  : null;
-                const isActive = activeCollection === collection.id;
-                return (
-                  <button
-                    aria-current={isActive ? "page" : undefined}
-                    className={`h-tab ${isActive ? "active" : ""}`}
-                    key={collection.id}
-                    type="button"
-                    onClick={() => onCollectionChange(collection.id)}
-                  >
-                    {collection.label}
-                    {count !== null && count > 0 ? (
-                      <span aria-hidden="true" className="tab-badge">
-                        {count}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+        <section aria-label="Project detail" className="flex flex-col mt-4">
+          <nav aria-label="Project sections" className="tabs tabs-bordered w-full mb-4">
+            {projectCollections.map((collection) => {
+              const count = collection.stat
+                ? selectedStats?.[collection.stat] ?? 0
+                : null;
+              const isActive = activeCollection === collection.id;
+              return (
+                <button
+                  aria-current={isActive ? "page" : undefined}
+                  className={`tab font-semibold text-xs pb-3 ${isActive ? "tab-active text-primary border-primary" : "text-secondary"}`}
+                  key={collection.id}
+                  type="button"
+                  onClick={() => onCollectionChange(collection.id)}
+                >
+                  <span>{collection.label}</span>
+                  {count !== null && count > 0 ? (
+                    <Badge aria-hidden="true" variant="secondary" className="badge-sm ml-1.5 font-bold">
+                      {count}
+                    </Badge>
+                  ) : null}
+                </button>
+              );
+            })}
+          </nav>
           <section
             aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
-            className="project-collection-panel"
+            className="flex-grow min-h-0"
           >
             {children}
           </section>
@@ -379,9 +370,9 @@ export function ProjectsPage({
       )}
 
       {error ? (
-        <p className="field-error" role="alert">
+        <div className="alert alert-error text-xs p-3 mt-4" role="alert">
           {error}
-        </p>
+        </div>
       ) : null}
 
       <Dialog
@@ -398,25 +389,31 @@ export function ProjectsPage({
               Create a project to group workflows, subflows, and browser launch environments.
             </DialogDescription>
           </DialogHeader>
-          <form className="workflow-dialog-form" onSubmit={submitProject}>
-            <Label htmlFor="project-name">Project name</Label>
-            <Input
-              autoFocus
-              id="project-name"
-              value={projectNameDraft}
-              onChange={(event) => setProjectNameDraft(event.currentTarget.value)}
-              placeholder="Staging abuse lab"
-            />
-            <Label htmlFor="project-description">Description</Label>
-            <Input
-              id="project-description"
-              value={projectDescriptionDraft}
-              onChange={(event) => setProjectDescriptionDraft(event.currentTarget.value)}
-              placeholder="Owned staging workflows"
-            />
-            {projectError ? <p className="field-error">{projectError}</p> : null}
-            <DialogFooter className="form-actions">
-              <Button shape="pill" type="submit" disabled={creating} loading={creating}>
+          <form className="flex flex-col gap-4 mt-2" onSubmit={submitProject}>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="project-name">Project name</Label>
+              <Input
+                autoFocus
+                id="project-name"
+                value={projectNameDraft}
+                onChange={(event) => setProjectNameDraft(event.currentTarget.value)}
+                placeholder="Staging abuse lab"
+                className="input-sm border-base-300"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="project-description">Description</Label>
+              <Input
+                id="project-description"
+                value={projectDescriptionDraft}
+                onChange={(event) => setProjectDescriptionDraft(event.currentTarget.value)}
+                placeholder="Owned staging workflows"
+                className="input-sm border-base-300"
+              />
+            </div>
+            {projectError ? <p className="text-error text-xs font-semibold">{projectError}</p> : null}
+            <DialogFooter className="form-actions flex gap-2">
+              <Button type="submit" disabled={creating} loading={creating} className="btn-primary">
                 Create
               </Button>
               <Button variant="secondary" type="button" disabled={creating} onClick={closeProjectDialog}>
@@ -435,15 +432,14 @@ export function ProjectsPage({
       >
         <DialogContent className="workflow-dialog">
           <DialogHeader>
-            <p className="eyebrow" style={{ color: "var(--app-danger)" }}>Danger Zone</p>
+            <p className="eyebrow text-error">Danger Zone</p>
             <DialogTitle>Delete Project?</DialogTitle>
             <DialogDescription>
               This will permanently delete the project and all workflows, subflows, and browser profiles inside it. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="form-actions">
+          <DialogFooter className="form-actions flex gap-2">
             <Button
-              shape="pill"
               variant="destructive"
               type="button"
               onClick={() => {

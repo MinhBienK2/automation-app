@@ -2,6 +2,7 @@ import { CalendarClock, History, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
+import { Badge } from "../../../components/ui/badge";
 import type {
   WorkflowSchedule,
   WorkflowScheduleEvent,
@@ -94,47 +95,51 @@ export function SchedulesPage({
 
   return (
     <section className="app-screen schedules-screen" aria-label="Schedules">
-      <header className="app-header">
+      <header className="app-header flex justify-between items-center mb-4 border-b border-base-300 pb-3">
         <div>
           <p className="eyebrow">Automation</p>
-          <h1>Schedules</h1>
+          <h1 className="text-2xl font-bold">Schedules</h1>
         </div>
-        <div className="page-header-actions">
-          <div className="header-stats" aria-label="Schedule summary">
-            <span>{schedules.length} schedules</span>
-          </div>
-          <Button shape="pill" type="button" onClick={openCreateDialog}>
-            <Plus aria-hidden="true" />
-            New schedule
+        <div className="page-header-actions flex gap-3 items-center">
+          <Badge variant="secondary" className="badge-sm font-semibold uppercase tracking-wider">
+            {schedules.length} schedules
+          </Badge>
+          <Button type="button" onClick={openCreateDialog} className="btn-primary btn-sm rounded-full inline-flex items-center gap-1">
+            <Plus aria-hidden="true" size={16} />
+            <span>New schedule</span>
           </Button>
         </div>
-        {error ? (
-          <p className="field-error" role="alert">
-            {error}
-          </p>
-        ) : null}
       </header>
 
-      <section className="panel schedule-panel" aria-label="Schedule list">
+      {error ? (
+        <div className="alert alert-error text-xs p-3 mb-4 animate-fade-in" role="alert">
+          {error}
+        </div>
+      ) : null}
+
+      <section className="card bg-base-200 border border-base-300 card-body p-5 flex flex-col" aria-label="Schedule list">
         {loading ? (
-          <p className="muted">Loading schedules...</p>
+          <div className="flex items-center gap-2 text-secondary text-sm py-8 justify-center">
+            <span className="loading loading-spinner loading-sm" />
+            <span>Loading schedules...</span>
+          </div>
         ) : schedules.length === 0 ? (
-          <div className="empty-state">
-            <CalendarClock aria-hidden="true" />
-            <h2>No schedules yet</h2>
-            <p className="muted">Create a schedule to run a saved workflow automatically.</p>
+          <div className="flex flex-col items-center justify-center p-12 text-center text-secondary">
+            <CalendarClock aria-hidden="true" className="w-10 h-10 mb-2 stroke-[1.5]" />
+            <h2 className="text-sm font-bold text-base-content mb-1">No schedules yet</h2>
+            <p className="text-xs">Create a schedule to run a saved workflow automatically.</p>
           </div>
         ) : (
-          <div className="schedule-table-wrap">
-            <table className="schedule-table">
+          <div className="overflow-x-auto w-full">
+            <table className="table table-sm table-zebra w-full">
               <thead>
                 <tr>
-                  <th>Status</th>
-                  <th>Schedule</th>
-                  <th>Workflow</th>
-                  <th>Next run</th>
-                  <th>Last result</th>
-                  <th>Actions</th>
+                  <th className="text-base-content/75 font-semibold">Status</th>
+                  <th className="text-base-content/75 font-semibold">Schedule</th>
+                  <th className="text-base-content/75 font-semibold">Workflow</th>
+                  <th className="text-base-content/75 font-semibold">Next run</th>
+                  <th className="text-base-content/75 font-semibold">Last result</th>
+                  <th className="text-base-content/75 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -142,59 +147,72 @@ export function SchedulesPage({
                   <tr
                     key={schedule.id}
                     aria-label={`${schedule.name} ${schedule.workflow_name}`}
-                    className={focusedScheduleId === schedule.id ? "schedule-row-focused" : undefined}
+                    className={`hover ${focusedScheduleId === schedule.id ? "bg-primary/5 border-l-4 border-l-primary" : ""}`}
                   >
                     <td>
-                      <span className={schedule.enabled ? "status-pill status-pill-on" : "status-pill"}>
+                      <Badge variant={schedule.enabled ? "success" : "secondary"} className="badge-xs uppercase tracking-wider font-semibold">
                         {schedule.enabled ? "Enabled" : "Disabled"}
-                      </span>
+                      </Badge>
                     </td>
                     <td>
-                      <strong>{schedule.name}</strong>
-                      <small>{scheduleKindSummary(schedule.kind)}</small>
-                      {focusedScheduleId === schedule.id ? <small>Selected schedule target</small> : null}
+                      <div className="flex flex-col gap-0.5">
+                        <strong className="text-sm font-semibold text-base-content">{schedule.name}</strong>
+                        <span className="text-[11px] text-secondary">{scheduleKindSummary(schedule.kind)}</span>
+                        {focusedScheduleId === schedule.id ? (
+                          <span className="badge badge-primary badge-xs mt-1 font-semibold uppercase tracking-wider">Selected Target</span>
+                        ) : null}
+                      </div>
                     </td>
-                    <td>{schedule.workflow_name}</td>
-                    <td>{formatDateTime(schedule.next_run_at)}</td>
+                    <td className="text-xs">{schedule.workflow_name}</td>
+                    <td className="text-xs">{formatDateTime(schedule.next_run_at)}</td>
                     <td>
-                      <span>{statusLabel(schedule.last_status)}</span>
-                      {schedule.last_reason ? <small>{schedule.last_reason}</small> : null}
+                      <div className="flex flex-col gap-0.5">
+                        <Badge variant={schedule.last_status === "started" ? "success" : (schedule.last_status === "failed_to_start" || schedule.last_status === "missed") ? "failure" : "secondary"} className="badge-xs w-fit font-semibold uppercase tracking-wider">
+                          {statusLabel(schedule.last_status)}
+                        </Badge>
+                        {schedule.last_reason ? (
+                          <span className="text-[10px] text-error max-w-[180px] truncate" title={schedule.last_reason}>
+                            {schedule.last_reason}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
-                    <td>
-                      <div className="row-actions schedule-row-actions">
+                    <td className="text-right">
+                      <div className="flex gap-2 justify-end items-center">
                         <Button
                           size="sm"
                           variant="secondary"
                           type="button"
                           onClick={() => onToggleSchedule(schedule.id, !schedule.enabled)}
+                          className="btn-xs rounded-md"
                         >
                           {schedule.enabled ? `Disable ${schedule.name}` : `Enable ${schedule.name}`}
                         </Button>
                         <IconButton
                           label={`Edit ${schedule.name}`}
                           type="button"
-                          variant="secondary"
+                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
                           onClick={() => openEditDialog(schedule)}
                         >
-                          <Pencil aria-hidden="true" />
+                          <Pencil aria-hidden="true" size={14} />
                         </IconButton>
                         <IconButton
                           label={`View history for ${schedule.name}`}
                           type="button"
-                          variant="secondary"
+                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
                           onClick={() => {
                             void openHistory(schedule);
                           }}
                         >
-                          <History aria-hidden="true" />
+                          <History aria-hidden="true" size={14} />
                         </IconButton>
                         <IconButton
                           label={`Delete ${schedule.name}`}
                           type="button"
-                          variant="destructive"
+                          className="btn-ghost btn-xs text-error hover:bg-error/10"
                           onClick={() => onDeleteSchedule(schedule.id)}
                         >
-                          <Trash2 aria-hidden="true" />
+                          <Trash2 aria-hidden="true" size={14} />
                         </IconButton>
                       </div>
                     </td>

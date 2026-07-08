@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 
 interface LoginScreenProps {
   onLogin: (email: string, passwordPlain: string) => Promise<boolean>;
@@ -43,60 +45,63 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
 
   return (
     <div className="login-screen-container">
-      <div className="login-card">
+      <div className="login-card bg-base-200 border-base-300">
         <div className="login-header">
-          <div className="logo-placeholder">A</div>
-          <h2>Automation Lab</h2>
-          <p className="subtitle">Sign in to your workplace account</p>
+          <div className="logo-placeholder bg-gradient-to-br from-primary to-primary-hover">A</div>
+          <h2 className="text-base-content font-bold">Automation Lab</h2>
+          <p className="subtitle text-secondary">Sign in to your workplace account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
+            <Label htmlFor="email">Email Address</Label>
+            <Input
               id="email"
               type="email"
               placeholder="e.g. admin@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading || submitting}
+              className="bg-base-100 border-base-300"
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
+            <Label htmlFor="password">Password</Label>
+            <Input
               id="password"
               type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
+              className="bg-base-100 border-base-300"
               required
             />
           </div>
 
           <div className="remember-me-container">
-            <label className="checkbox-label">
+            <label className="checkbox-label flex items-center gap-2 cursor-pointer select-none">
               <input
                 id="rememberMe"
                 type="checkbox"
+                className="checkbox checkbox-primary checkbox-xs rounded"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 disabled={isLoading}
               />
-              <span>Remember credentials</span>
+              <span className="text-sm">Remember credentials</span>
             </label>
           </div>
 
           {authError && (
-            <div className="error-message" role="alert">
+            <div className="alert alert-error text-sm p-3 justify-center" role="alert">
               {authError}
             </div>
           )}
 
-          <Button type="submit" disabled={isLoading || submitting} loading={isLoading || submitting} className="login-submit-btn">
+          <Button type="submit" disabled={isLoading || submitting} loading={isLoading || submitting} className="btn-primary w-full">
             Sign In
           </Button>
         </form>

@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import type { Project } from "../../../types/workflow";
 
 type ProjectSettingsProps = {
@@ -104,39 +105,38 @@ export function ProjectSettings({
     savingProject || duplicatingProject || exportingProject || deletingProject;
 
   return (
-    <section
-      className="panel settings-panel settings-project-environments-panel"
-      aria-label="Project Settings"
-    >
+    <section className="flex flex-col gap-6" aria-label="Project Settings">
       <h2 className="sr-only">Project Settings</h2>
       {error ? (
-        <p className="field-error" role="alert">
+        <div className="alert alert-error text-xs p-3" role="alert">
           {error}
-        </p>
+        </div>
       ) : null}
       {localError ? (
-        <p className="field-error" role="alert">
+        <div className="alert alert-error text-xs p-3" role="alert">
           {localError}
-        </p>
+        </div>
       ) : null}
 
-      <div className="settings-grid">
-        <div className="settings-section">
-          <div className="settings-section-header">
-            <h3>Project Details</h3>
-            <p>Manage project details and backups</p>
-          </div>
-          <div className="settings-section-body">
-            <div className="project-name-control">
-              <label className="form-label" htmlFor="project-settings-name">Project name</label>
-              <div className="project-name-input-row">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Project Details section */}
+        <section className="card bg-base-200 border border-base-300 card-body p-6 flex flex-col justify-between" aria-label="Project details card">
+          <div>
+            <div className="border-b border-base-300 pb-3 mb-4">
+              <h3 className="text-sm font-bold text-base-content uppercase tracking-wider">Project Details</h3>
+              <p className="text-secondary text-xs mt-0.5">Manage project details and backups</p>
+            </div>
+            
+            <div className="flex flex-col gap-1.5 mt-2 project-name-control">
+              <Label htmlFor="project-settings-name">Project name</Label>
+              <div className="flex gap-2">
                 <Input
                   id="project-settings-name"
-                  className="text-input-full"
                   aria-label="Project name"
                   value={projectNameDraft}
                   disabled={!project || projectActionPending}
                   onChange={(event) => setProjectNameDraft(event.target.value)}
+                  className="input-sm border-base-300 flex-grow"
                 />
                 <Button
                   type="button"
@@ -145,64 +145,68 @@ export function ProjectSettings({
                   }}
                   disabled={!project || !projectNameChanged || projectActionPending}
                   loading={savingProject}
+                  className="btn-primary btn-sm"
                 >
                   Save
                 </Button>
               </div>
             </div>
-            <div className="project-details-actions">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  void duplicateProject();
-                }}
-                disabled={!project || projectActionPending}
-                loading={duplicatingProject}
-              >
-                Duplicate project
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  void exportProjectPackage();
-                }}
-                disabled={!project || projectActionPending}
-                loading={exportingProject}
-              >
-                <Download aria-hidden="true" style={{ width: "16px", height: "16px" }} />
-                Export project
-              </Button>
-            </div>
           </div>
-        </div>
 
-        <div className="settings-section" style={{ borderColor: "var(--destructive-border)" }}>
-          <div className="settings-section-header">
-            <h3 style={{ color: "var(--destructive)" }}>Danger Zone</h3>
-            <p>Irreversible actions for this project</p>
+          <div className="flex gap-2.5 mt-6">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                void duplicateProject();
+              }}
+              disabled={!project || projectActionPending}
+              loading={duplicatingProject}
+              className="btn-sm"
+            >
+              Duplicate project
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                void exportProjectPackage();
+              }}
+              disabled={!project || projectActionPending}
+              loading={exportingProject}
+              className="btn-sm flex items-center gap-1.5"
+            >
+              <Download aria-hidden="true" size={14} />
+              <span>Export project</span>
+            </Button>
           </div>
-          <div className="settings-section-body">
-            <p style={{ color: "var(--fg-secondary)", fontSize: "13px", marginBottom: "16px" }}>
+        </section>
+
+        {/* Danger Zone section */}
+        <section className="card bg-base-200 border border-error/25 card-body p-6 flex flex-col justify-between" aria-label="Danger zone card">
+          <div>
+            <div className="border-b border-error/20 pb-3 mb-4">
+              <h3 className="text-sm font-bold text-error uppercase tracking-wider">Danger Zone</h3>
+              <p className="text-secondary text-xs mt-0.5">Irreversible actions for this project</p>
+            </div>
+            <p className="text-secondary text-xs leading-relaxed mt-2">
               Once you delete a project, there is no going back. All workflows, subflows, and browser profiles will be permanently lost.
             </p>
+          </div>
+
+          <div className="mt-6 flex justify-start">
             <Button
               type="button"
               variant="destructive"
               onClick={() => setDeleteDialogOpen(true)}
               disabled={!project || projectActionPending}
-              style={{
-                backgroundColor: "#dc2626",
-                borderColor: "#dc2626",
-                color: "#ffffff",
-              }}
+              className="btn-sm flex items-center gap-1.5"
             >
-              <Trash2 />
-              Delete project
+              <Trash2 size={14} />
+              <span>Delete project</span>
             </Button>
           </div>
-        </div>
+        </section>
       </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -214,7 +218,7 @@ export function ProjectSettings({
               browser session inside it.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex gap-2">
             <Button
               type="button"
               variant="secondary"

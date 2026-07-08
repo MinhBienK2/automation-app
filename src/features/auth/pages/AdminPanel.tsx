@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Input } from "../../../components/ui/input";
+import { Select } from "../../../components/ui/select";
+import { Label } from "../../../components/ui/label";
+import { Badge } from "../../../components/ui/badge";
 import { listUsers, createUser, deleteUser } from "../../../lib/workflowApi";
 
 interface User {
@@ -86,120 +90,108 @@ export function AdminPanel(_props: AdminPanelProps) {
 
   return (
     <section className="app-screen admin-panel-screen" aria-label="Admin User Management">
-      <header className="app-header">
+      <header className="app-header mb-4">
         <div>
           <p className="eyebrow">Administration</p>
-          <h1>User Management</h1>
+          <h1 className="text-2xl font-bold">User Management</h1>
         </div>
       </header>
 
-      <div className="settings-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginTop: "1rem" }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
         {/* Create User Panel */}
-        <section className="panel" aria-label="Create User Account">
-          <div className="panel-heading">
+        <section className="card bg-base-200 border border-base-300 card-body p-6" aria-label="Create User Account">
+          <div className="panel-heading border-b border-base-300 pb-3 mb-4">
             <div>
               <p className="eyebrow">Account creation</p>
-              <h2>Add New User</h2>
+              <h2 className="text-lg font-bold">Add New User</h2>
             </div>
           </div>
 
-          <form onSubmit={handleCreateUser} className="settings-maintenance-actions" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem 0" }}>
-            <div className="form-group">
-              <label>Email Address</label>
-              <input
+          <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
+            <div className="form-group flex flex-col gap-1">
+              <Label htmlFor="create-email">Email Address</Label>
+              <Input
+                id="create-email"
                 type="email"
                 placeholder="user@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="bg-base-100 border-base-300 input-sm"
                 required
-                style={{ width: "100%" }}
               />
             </div>
 
-            <div className="form-group">
-              <label>Password</label>
-              <input
+            <div className="form-group flex flex-col gap-1">
+              <Label htmlFor="create-password">Password</Label>
+              <Input
+                id="create-password"
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="bg-base-100 border-base-300 input-sm"
                 required
-                style={{ width: "100%" }}
               />
             </div>
 
-            <div className="form-group">
-              <label>Role</label>
-              <select
+            <div className="form-group flex flex-col gap-1">
+              <Label htmlFor="create-role">Role</Label>
+              <Select
+                id="create-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value as "admin" | "user")}
-                style={{
-                  padding: "0.75rem 1rem",
-                  borderRadius: "8px",
-                  background: "rgba(2, 6, 17, 0.7)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  color: "#f8fafc",
-                }}
+                className="bg-base-100 border-base-300 select-sm"
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
-              </select>
+              </Select>
             </div>
 
-            {error && <p className="error-message">{error}</p>}
-            {success && <p style={{ color: "#4ade80", fontSize: "0.875rem", textAlign: "center" }}>{success}</p>}
+            {error && <p className="text-error text-xs font-medium mt-1">{error}</p>}
+            {success && <p className="text-success text-xs font-medium mt-1">{success}</p>}
 
-            <Button type="submit" disabled={loading} loading={loading} style={{ marginTop: "1rem" }}>
+            <Button type="submit" disabled={loading} loading={loading} className="btn-primary w-full mt-2">
               Create User
             </Button>
           </form>
         </section>
 
         {/* Users List Panel */}
-        <section className="panel" aria-label="Users List">
-          <div className="panel-heading">
+        <section className="card bg-base-200 border border-base-300 card-body p-6" aria-label="Users List">
+          <div className="panel-heading border-b border-base-300 pb-3 mb-4">
             <div>
               <p className="eyebrow">Registered Users</p>
-              <h2>Users Directory</h2>
+              <h2 className="text-lg font-bold">Users Directory</h2>
             </div>
           </div>
 
-          <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-            <table className="admin-users-table">
+          <div className="max-h-[400px] overflow-y-auto">
+            <table className="table table-sm table-zebra w-full">
               <thead>
                 <tr>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Actions</th>
+                  <th className="text-base-content/75 font-semibold">Email</th>
+                  <th className="text-base-content/75 font-semibold">Role</th>
+                  <th className="text-base-content/75 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id}>
-                    <td>{u.email}</td>
+                  <tr key={u.id} className="hover">
+                    <td className="font-mono text-xs">{u.email}</td>
                     <td>
-                      <span
-                        style={{
-                          padding: "2px 8px",
-                          borderRadius: "4px",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                          background: u.role === "admin" ? "rgba(59, 130, 246, 0.2)" : "rgba(148, 163, 184, 0.2)",
-                          color: u.role === "admin" ? "#60a5fa" : "#cbd5e1",
-                        }}
-                      >
+                      <Badge variant={u.role === "admin" ? "running" : "secondary"}>
                         {u.role.toUpperCase()}
-                      </span>
+                      </Badge>
                     </td>
                     <td>
                       {u.role === "admin" ? (
-                        <span style={{ color: "#64748b", fontSize: "0.75rem" }}>—</span>
+                        <span className="text-secondary/50 text-xs">—</span>
                       ) : (
                         <Button
                           type="button"
                           variant="ghost"
                           onClick={() => handleDeleteUser(u.id, u.email)}
-                          style={{ color: "#ef4444", padding: "4px 8px" }}
+                          className="btn-xs text-error hover:bg-error/10 hover:text-error"
                           disabled={deletingUserId !== null}
                           loading={deletingUserId === u.id}
                         >

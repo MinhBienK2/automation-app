@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import type {
   Project,
   BrowserProfile,
@@ -98,101 +99,104 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
   }, [browserProfiles, searchQuery]);
 
   return (
-    <section className="app-screen workflow-list-screen" aria-label="Profiles workspace">
-      <div role="group" aria-label="Browser Profiles" style={{ display: "contents" }}>
-        {error ? <p className="field-error" role="alert">{error}</p> : null}
+    <section className="flex flex-col gap-4" aria-label="Profiles workspace">
+      <div role="group" aria-label="Browser Profiles" className="contents">
+        {error ? (
+          <div className="alert alert-error text-xs p-3" role="alert">
+            {error}
+          </div>
+        ) : null}
 
         {/* Toolbar Filter */}
-        <div className="toolbar">
-          <div className="search-input-wrapper">
-            <Search aria-hidden="true" />
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-2">
+          <div className="relative max-w-xs flex-grow">
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4" />
             <Input
-              className="text-input"
               placeholder="Search profiles..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.currentTarget.value)}
+              className="pl-9 input-sm border-base-300"
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <Button shape="pill" type="button" onClick={() => setCreateDialogOpen(true)}>
-              <Plus aria-hidden="true" />
-              Add profile
-            </Button>
-          </div>
+          <Button type="button" onClick={() => setCreateDialogOpen(true)} className="btn-primary btn-sm rounded-full inline-flex items-center gap-1.5">
+            <Plus aria-hidden="true" size={16} />
+            <span>Add profile</span>
+          </Button>
         </div>
 
-        <section className="workflow-library data-table-card" aria-label="Browser profiles list">
+        <section className="card bg-base-200 border border-base-300 card-body p-5 flex flex-col" aria-label="Browser profiles list">
           {filteredProfiles.length === 0 ? (
-            <div className="empty-state panel profile-empty-state">
-              <Fingerprint aria-hidden="true" className="profile-empty-icon" />
-              <h2>No profiles configured</h2>
-              <p className="muted">Add a profile to start setting up browser configurations.</p>
+            <div className="flex flex-col items-center justify-center p-12 text-center rounded-lg bg-base-100/50 border border-dashed border-base-300 text-secondary">
+              <Fingerprint aria-hidden="true" className="w-10 h-10 mb-2 text-secondary stroke-[1.5]" />
+              <h2 className="text-sm font-bold text-base-content mb-1">No profiles configured</h2>
+              <p className="text-xs max-w-[280px]">Add a profile to start setting up browser configurations.</p>
             </div>
           ) : (
-            <table className="grid-table">
-              <thead>
-                <tr>
-                  <th>PROFILE NAME</th>
-                  <th>USAGE</th>
-                  <th style={{ textAlign: "right" }}>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProfiles.map((env) => {
-                  const count = workflows.filter((w) => w.browser_profile_id === env.id).length;
-                  return (
-                    <tr key={env.id} className="grid-row" data-slot="card">
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <Fingerprint aria-hidden="true" style={{ color: "var(--accent)", width: "16px", height: "16px" }} />
-                          <h2
-                            className="row-title"
-                            style={{ cursor: "pointer" }}
-                            onClick={() => {
-                              setSelectedEnvId(env.id);
-                              setEditDialogOpen(true);
-                            }}
-                          >
-                            {env.name}
-                          </h2>
-                        </div>
-                      </td>
-                      <td style={{ color: "var(--fg-secondary)", fontWeight: 500 }}>
-                        {count === 0 ? "Not used" : `Used by ${count} workflow${count === 1 ? "" : "s"}`}
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        <div style={{ display: "flex", gap: "3px", justifyContent: "flex-end", alignItems: "center" }}>
-                          <IconButton
-                            label={`Configure profile ${env.name}`}
-                            type="button"
-                            className="btn-action-circle"
-                            onClick={() => {
-                              setSelectedEnvId(env.id);
-                              setEditDialogOpen(true);
-                            }}
-                          >
-                            <Pencil aria-hidden="true" />
-                          </IconButton>
-                          <IconButton
-                            label={`Delete profile ${env.name}`}
-                            type="button"
-                            className="btn-action-circle btn-destruct"
-                            disabled={count > 0}
-                            tooltip={count > 0 ? "Profile is used by workflows" : `Delete profile ${env.name}`}
-                            onClick={() => {
-                              setSelectedEnvId(env.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 aria-hidden="true" />
-                          </IconButton>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto w-full">
+              <table className="table table-sm table-zebra w-full">
+                <thead>
+                  <tr>
+                    <th className="text-base-content/75 font-semibold">PROFILE NAME</th>
+                    <th className="text-base-content/75 font-semibold">USAGE</th>
+                    <th className="text-base-content/75 font-semibold text-right">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProfiles.map((env) => {
+                    const count = workflows.filter((w) => w.browser_profile_id === env.id).length;
+                    return (
+                      <tr key={env.id} className="hover" data-slot="card">
+                        <td>
+                          <div className="flex items-center gap-2.5">
+                            <Fingerprint aria-hidden="true" className="text-primary w-4.5 h-4.5 shrink-0" />
+                            <h2
+                              className="font-bold text-sm text-base-content cursor-pointer hover:underline"
+                              onClick={() => {
+                                setSelectedEnvId(env.id);
+                                setEditDialogOpen(true);
+                              }}
+                            >
+                              {env.name}
+                            </h2>
+                          </div>
+                        </td>
+                        <td className="text-secondary text-xs font-medium">
+                          {count === 0 ? "Not used" : `Used by ${count} workflow${count === 1 ? "" : "s"}`}
+                        </td>
+                        <td className="text-right">
+                          <div className="flex gap-2 justify-end items-center">
+                            <IconButton
+                              label={`Configure profile ${env.name}`}
+                              type="button"
+                              className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                              onClick={() => {
+                                setSelectedEnvId(env.id);
+                                setEditDialogOpen(true);
+                              }}
+                            >
+                              <Pencil aria-hidden="true" size={14} />
+                            </IconButton>
+                            <IconButton
+                              label={`Delete profile ${env.name}`}
+                              type="button"
+                              className={`btn-ghost btn-xs hover:bg-error/10 ${count > 0 ? "text-base-content/30" : "text-error"}`}
+                              disabled={count > 0}
+                              tooltip={count > 0 ? "Profile is used by workflows" : `Delete profile ${env.name}`}
+                              onClick={() => {
+                                setSelectedEnvId(env.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 aria-hidden="true" size={14} />
+                            </IconButton>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
 
@@ -211,20 +215,22 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
               <DialogTitle>Add browser profile</DialogTitle>
               <DialogDescription>Create a fresh browser profile for this project.</DialogDescription>
             </DialogHeader>
-            <label className="field">
-              <span>Profile name</span>
+            <div className="flex flex-col gap-1.5 mt-2">
+              <Label htmlFor="create-profile-name">Profile name</Label>
               <Input
+                id="create-profile-name"
                 aria-label="Profile name"
                 autoFocus
                 value={newProfileName}
                 onChange={(e) => setNewProfileName(e.target.value)}
+                className="input-sm border-base-300"
               />
-            </label>
-            <DialogFooter>
+            </div>
+            <DialogFooter className="flex gap-2">
               <Button type="button" variant="secondary" disabled={adding} onClick={() => setCreateDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="button" disabled={adding} loading={adding} onClick={handleAddProfile}>
+              <Button type="button" disabled={adding} loading={adding} onClick={handleAddProfile} className="btn-primary">
                 Create profile
               </Button>
             </DialogFooter>
@@ -237,7 +243,7 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
               <DialogTitle>Delete browser profile</DialogTitle>
               <DialogDescription>Do you want to delete this browser profile?</DialogDescription>
             </DialogHeader>
-            <DialogFooter>
+            <DialogFooter className="flex gap-2">
               <Button type="button" variant="secondary" disabled={deleting} onClick={() => setDeleteDialogOpen(false)}>
                 Cancel
               </Button>

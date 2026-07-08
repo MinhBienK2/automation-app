@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Select } from "../../../components/ui/select";
+import { Label } from "../../../components/ui/label";
 import {
   listBackups,
   createBackup,
@@ -8,7 +11,7 @@ import {
   saveBackupConfig,
   openBackupsFolder,
 } from "../../../lib/workflowApi";
-import { Database, Clock, RefreshCw, Trash2, Settings, AlertTriangle, FolderOpen } from "lucide-react";
+import { Database, Clock, Trash2, Settings, AlertTriangle, FolderOpen } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -131,30 +134,30 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
 
   return (
     <section className="app-screen admin-panel-screen" aria-label="Admin Database Backups">
-      <header className="app-header">
+      <header className="app-header mb-4">
         <div>
           <p className="eyebrow">Administration</p>
-          <h1>Database Backups</h1>
+          <h1 className="text-2xl font-bold">Database Backups</h1>
         </div>
       </header>
 
       {loading ? (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "300px", gap: "1rem" }}>
-          <RefreshCw className="animate-spin" size={32} style={{ color: "#3b82f6" }} />
-          <p style={{ color: "#94a3b8" }}>Loading backups metadata...</p>
+        <div className="flex flex-col items-center justify-center h-[300px] gap-4 text-secondary">
+          <span className="loading loading-spinner loading-lg text-primary" />
+          <p className="text-sm">Loading backups metadata...</p>
         </div>
       ) : (
-        <div className="settings-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "2rem", marginTop: "1rem" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
           {/* Backup Config & Manual Trigger */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-            <section className="panel" aria-label="Manual Backup">
-              <div className="panel-heading">
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            <section className="card bg-base-200 border border-base-300 card-body p-6" aria-label="Manual Backup">
+              <div className="panel-heading border-b border-base-300 pb-3 mb-4">
                 <div>
                   <p className="eyebrow">Database actions</p>
-                  <h2>Backup Database Now</h2>
+                  <h2 className="text-lg font-bold">Backup Database Now</h2>
                 </div>
               </div>
-              <p style={{ color: "#94a3b8", fontSize: "0.875rem", margin: "1rem 0" }}>
+              <p className="text-secondary text-sm mb-4">
                 Manually trigger a full backup of the database immediately. The backup file will be created and saved in local storage.
               </p>
               <Button
@@ -162,118 +165,108 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
                 onClick={handleManualBackup}
                 disabled={actionLoading !== null}
                 loading={actionLoading === "backup"}
-                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
+                className="btn-primary w-full flex items-center justify-center gap-2"
               >
                 <Database size={16} />
                 <span>Backup Now</span>
               </Button>
             </section>
 
-            <section className="panel" aria-label="Automatic Backup Configuration">
-              <div className="panel-heading">
+            <section className="card bg-base-200 border border-base-300 card-body p-6" aria-label="Automatic Backup Configuration">
+              <div className="panel-heading border-b border-base-300 pb-3 mb-4">
                 <div>
                   <p className="eyebrow">Automation settings</p>
-                  <h2>Backup Configuration</h2>
+                  <h2 className="text-lg font-bold">Backup Configuration</h2>
                 </div>
               </div>
 
-              <form onSubmit={handleSaveConfig} style={{ display: "flex", flexDirection: "column", gap: "1.25rem", padding: "1rem 0" }}>
-                <div className="form-group" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <label htmlFor="auto-backup-enabled" style={{ cursor: "pointer", fontWeight: 500 }}>
+              <form onSubmit={handleSaveConfig} className="flex flex-col gap-4">
+                <div className="form-group flex items-center justify-between">
+                  <Label htmlFor="auto-backup-enabled" className="cursor-pointer font-semibold text-sm">
                     Enable Automatic Backups
-                  </label>
+                  </Label>
                   <input
                     id="auto-backup-enabled"
                     type="checkbox"
+                    className="checkbox checkbox-primary checkbox-sm"
                     checked={config.enabled}
                     onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
-                    style={{ width: "1.25rem", height: "1.25rem", cursor: "pointer" }}
                   />
                 </div>
 
                 {config.enabled && (
                   <>
-                    <div className="form-group">
-                      <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <Clock size={15} style={{ color: "#94a3b8" }} />
+                    <div className="form-group flex flex-col gap-1">
+                      <Label className="flex items-center gap-2">
+                        <Clock size={15} className="text-secondary" />
                         <span>Backup Interval (hours)</span>
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         type="number"
                         min="1"
                         max="8760"
                         value={config.intervalHours}
                         onChange={(e) => setConfig({ ...config, intervalHours: parseInt(e.target.value) || 24 })}
+                        className="bg-base-100 border-base-300 input-sm"
                         required
-                        style={{ width: "100%" }}
                       />
-                      <p style={{ color: "#64748b", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+                      <p className="text-secondary/70 text-xs mt-0.5">
                         How often to run automatic backups (e.g. 24 for daily, 168 for weekly).
                       </p>
                     </div>
 
-                    <div className="form-group">
-                      <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <Settings size={15} style={{ color: "#94a3b8" }} />
+                    <div className="form-group flex flex-col gap-1">
+                      <Label className="flex items-center gap-2">
+                        <Settings size={15} className="text-secondary" />
                         <span>Maximum Retention Versions</span>
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         type="number"
                         min="1"
                         max="100"
                         value={config.maxKeepVersions}
                         onChange={(e) => setConfig({ ...config, maxKeepVersions: parseInt(e.target.value) || 10 })}
+                        className="bg-base-100 border-base-300 input-sm"
                         required
-                        style={{ width: "100%" }}
                       />
-                      <p style={{ color: "#64748b", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+                      <p className="text-secondary/70 text-xs mt-0.5">
                         Limits the total number of versions stored. Older backups will be automatically deleted when new ones are created.
                       </p>
                     </div>
                   </>
                 )}
 
-                <div className="form-group" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label htmlFor="backup-format" style={{ fontWeight: 500 }}>
-                    Backup Format
-                  </label>
-                  <select
+                <div className="form-group flex flex-col gap-1">
+                  <Label htmlFor="backup-format">Backup Format</Label>
+                  <Select
                     id="backup-format"
                     value={config.format}
                     onChange={(e) => setConfig({ ...config, format: e.target.value as "sql" | "custom" })}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      background: "rgba(30, 41, 59, 0.5)",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      color: "#f8fafc",
-                      fontSize: "0.875rem",
-                    }}
+                    className="bg-base-100 border-base-300 select-sm"
                   >
                     <option value="sql">Plain SQL Script (.sql)</option>
                     <option value="custom">Binary Archive (.dump)</option>
-                  </select>
-                  <p style={{ color: "#64748b", fontSize: "0.75rem" }}>
+                  </Select>
+                  <p className="text-secondary/70 text-xs mt-0.5">
                     {config.format === "sql"
                       ? "Natively generated SQL script. Runs on any DB editor without external tools."
                       : "Generated via pg_dump. Binary file, restorable via pg_restore / DBeaver 'Restore' menu."}
                   </p>
                   {config.format === "custom" && (
-                    <div style={{ display: "flex", gap: "0.5rem", padding: "0.75rem", background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "6px", color: "#fbbf24", fontSize: "0.75rem", marginTop: "0.25rem" }}>
-                      <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                    <div className="alert alert-warning text-xs p-3 flex gap-2 items-start mt-1">
+                      <AlertTriangle size={16} className="shrink-0" />
                       <span>Requires postgresql-client (pg_dump version 17+) installed on the host OS.</span>
                     </div>
                   )}
                 </div>
 
                 {config.lastBackupAt && (
-                  <p style={{ color: "#94a3b8", fontSize: "0.75rem" }}>
+                  <p className="text-secondary/80 text-xs italic">
                     Last automatic backup: {formatDate(config.lastBackupAt)}
                   </p>
                 )}
 
-                <Button type="submit" disabled={actionLoading !== null} loading={actionLoading === "config"} style={{ width: "100%" }}>
+                <Button type="submit" disabled={actionLoading !== null} loading={actionLoading === "config"} className="btn-primary w-full mt-2">
                   Save Configuration
                 </Button>
               </form>
@@ -281,55 +274,55 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
           </div>
 
           {/* Backups List */}
-          <section className="panel" aria-label="Backups List" style={{ display: "flex", flexDirection: "column" }}>
-            <div className="panel-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <section className="card bg-base-200 border border-base-300 card-body p-6 lg:col-span-2 flex flex-col" aria-label="Backups List">
+            <div className="panel-heading border-b border-base-300 pb-3 mb-4 flex justify-between items-center">
               <div>
                 <p className="eyebrow">Local storage history</p>
-                <h2>Backup Versions ({backups.length})</h2>
+                <h2 className="text-lg font-bold">Backup Versions ({backups.length})</h2>
               </div>
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => openBackupsFolder().catch(err => showToast(err.message || "Failed to open folder"))}
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#60a5fa" }}
+                className="flex items-center gap-2 text-primary hover:bg-primary/10 hover:text-primary btn-sm"
               >
                 <FolderOpen size={16} />
                 <span>Open Folder</span>
               </Button>
             </div>
 
-            <div style={{ flex: 1, maxHeight: "550px", overflowY: "auto", marginTop: "1rem" }}>
+            <div className="flex-1 max-h-[550px] overflow-y-auto mt-2">
               {backups.length === 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "200px", color: "#64748b" }}>
-                  <Database size={32} style={{ marginBottom: "0.5rem", strokeWidth: 1.5 }} />
-                  <p>No backups available locally.</p>
+                <div className="flex flex-col items-center justify-center h-[200px] text-secondary">
+                  <Database size={32} className="mb-2 stroke-[1.5]" />
+                  <p className="text-sm">No backups available locally.</p>
                 </div>
               ) : (
-                <table className="admin-users-table">
+                <table className="table table-sm table-zebra w-full">
                   <thead>
                     <tr>
-                      <th>Filename</th>
-                      <th>Created Time</th>
-                      <th>Size</th>
-                      <th style={{ textAlign: "right" }}>Actions</th>
+                      <th className="text-base-content/75 font-semibold">Filename</th>
+                      <th className="text-base-content/75 font-semibold">Created Time</th>
+                      <th className="text-base-content/75 font-semibold">Size</th>
+                      <th className="text-base-content/75 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {backups.map((b) => (
-                      <tr key={b.filename}>
-                        <td style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#cbd5e1" }}>
+                      <tr key={b.filename} className="hover">
+                        <td className="font-mono text-xs text-base-content font-medium">
                           {b.filename}
                         </td>
-                        <td>{formatDate(b.createdAt)}</td>
-                        <td style={{ color: "#94a3b8" }}>{formatBytes(b.size)}</td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="text-xs">{formatDate(b.createdAt)}</td>
+                        <td className="text-secondary text-xs">{formatBytes(b.size)}</td>
+                        <td className="text-right">
                           <Button
                             type="button"
                             variant="ghost"
                             onClick={() => handleDeleteBackup(b.filename)}
                             disabled={actionLoading !== null}
                             loading={actionLoading === `delete-${b.filename}`}
-                            style={{ color: "#ef4444", padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+                            className="btn-xs text-error hover:bg-error/10 hover:text-error inline-flex items-center gap-1"
                           >
                             <Trash2 size={14} />
                             <span>Delete</span>

@@ -52,7 +52,7 @@ export function SubflowDetailPage({
     : "...";
 
   return (
-    <section className="app-screen workflow-detail-screen">
+    <section className="app-screen workflow-detail-screen flex flex-col gap-4">
       <h1 className="sr-only">{subflow?.name ?? "Subflow"}</h1>
       <PageHeader
         ariaLabel="Subflow detail header"
@@ -67,19 +67,19 @@ export function SubflowDetailPage({
         title={subflow?.name ?? "Loading..."}
         onBack={onBack}
         actions={
-          <div className="run-actions">
+          <div className="flex gap-2">
             <IconButton
-              className="workflow-command-icon"
+              className="btn-ghost text-base-content hover:bg-base-300"
               variant="secondary"
               type="button"
               label="Settings"
               onClick={() => setSettingsOpen(true)}
               disabled={!subflow}
             >
-              <Settings aria-hidden="true" />
+              <Settings aria-hidden="true" size={16} />
             </IconButton>
             <IconButton
-              className="workflow-command-icon"
+              className="btn-ghost text-base-content hover:bg-base-300"
               variant="secondary"
               type="button"
               label="Save"
@@ -87,7 +87,7 @@ export function SubflowDetailPage({
               disabled={!canSaveGraph || isSavingGraph || !subflow}
               loading={isSavingGraph}
             >
-              <Save aria-hidden="true" />
+              <Save aria-hidden="true" size={16} />
             </IconButton>
           </div>
         }
@@ -99,36 +99,34 @@ export function SubflowDetailPage({
       />
 
       {appError ? (
-        <p className="field-error" role="alert">
+        <div className="alert alert-error text-xs p-3" role="alert">
           {appError}
-        </p>
+        </div>
       ) : null}
 
-      <section className="panel settings-panel" aria-label="Subflow usage">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Usage</p>
-            <h2>{usage ? `Used by ${usageLabel}` : "Loading usage..."}</h2>
-          </div>
+      <section className="card bg-base-200 border border-base-300 card-body p-5 flex flex-col mb-4" aria-label="Subflow usage">
+        <div className="border-b border-base-300 pb-2 mb-3">
+          <h3 className="text-secondary text-xs font-bold uppercase tracking-wider">Usage</h3>
+          <h2 className="text-sm font-bold text-base-content mt-0.5">{usage ? `Used by ${usageLabel}` : "Loading usage..."}</h2>
         </div>
         {usage === null ? (
-          <ul className="subflow-usage-list animate-pulse" aria-label="Subflow Usage Loading">
-            <li style={{ height: "16px", width: "120px", backgroundColor: "var(--app-border-light)", margin: "8px 0", borderRadius: "var(--app-radius-sm)" }} />
-            <li style={{ height: "16px", width: "160px", backgroundColor: "var(--app-border-light)", margin: "8px 0", borderRadius: "var(--app-radius-sm)" }} />
+          <ul className="flex flex-col gap-1.5 py-1" aria-label="Subflow Usage Loading">
+            <li className="skeleton h-4 w-32 rounded-md" />
+            <li className="skeleton h-4 w-40 rounded-md" />
           </ul>
         ) : usageCount > 0 ? (
-          <>
-            <p className="field-warning">
-              This subflow is used by {usageLabel}. Saving changes will affect their next run.
-            </p>
-            <ul className="subflow-usage-list">
+          <div className="flex flex-col gap-3">
+            <div className="alert alert-warning text-xs p-3">
+              <span>This subflow is used by {usageLabel}. Saving changes will affect their next run.</span>
+            </div>
+            <ul className="list-disc list-inside text-xs text-base-content/85 flex flex-col gap-1 pl-1">
               {usage.map((item) => (
-                <li key={item.workflow_id}>{item.workflow_name}</li>
+                <li key={item.workflow_id} className="font-medium">{item.workflow_name}</li>
               ))}
             </ul>
-          </>
+          </div>
         ) : (
-          <p className="muted">No workflows call this subflow yet.</p>
+          <p className="text-secondary text-xs italic">No workflows call this subflow yet.</p>
         )}
       </section>
 
@@ -143,25 +141,10 @@ export function SubflowDetailPage({
           onSaveGraph={onSaveGraph}
         />
       ) : (
-        <>
-          <div
-            className="graph-toolbar animate-pulse"
-            style={{
-              height: "48px",
-              backgroundColor: "var(--app-surface)",
-              borderBottom: "1px solid var(--app-border)",
-            }}
-          />
-          <div
-            className="graph-canvas animate-pulse"
-            aria-label="Subflow Graph Loading"
-            style={{
-              flex: 1,
-              backgroundColor: "var(--app-surface-hover)",
-              position: "relative",
-            }}
-          />
-        </>
+        <div className="flex flex-col gap-2 flex-grow min-h-[300px]">
+          <div className="skeleton h-12 w-full rounded-lg" />
+          <div className="skeleton flex-grow w-full rounded-lg mt-1" aria-label="Subflow Graph Loading" />
+        </div>
       )}
     </section>
   );

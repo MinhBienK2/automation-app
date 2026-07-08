@@ -35,22 +35,22 @@ export function ArrayEditor({ value, onChange }: ArrayEditorProps) {
   };
 
   return (
-    <div className="flex flex-col gap-2 pl-4 border-l border-[var(--app-border)] mt-3">
-      <span className="text-[10px] text-[var(--app-text-muted)] uppercase tracking-wider font-semibold">Array Elements</span>
+    <div className="flex flex-col gap-2 pl-4 border-l border-base-300 mt-2">
+      <span className="text-[10px] text-secondary uppercase tracking-wider font-bold">Array Elements</span>
       {arr.map((item, index) => (
         <div key={index} className="flex items-center gap-2">
           <Input
             value={item}
             onChange={(e) => updateItem(index, e.currentTarget.value)}
             placeholder={`Element ${index + 1}`}
-            className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
+            className="input-xs border-base-300 w-full"
           />
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={() => removeItem(index)}
-            className="h-8 w-8 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+            className="btn-xs btn-circle text-secondary hover:text-error hover:bg-error/10"
+            aria-label="Remove element"
           >
             <X className="h-3.5 w-3.5" />
           </Button>
@@ -59,9 +59,8 @@ export function ArrayEditor({ value, onChange }: ArrayEditorProps) {
       <Button
         type="button"
         variant="secondary"
-        size="sm"
         onClick={addItem}
-        className="self-start text-[11px] h-7 px-3 mt-1"
+        className="self-start btn-xs mt-1"
       >
         + Add Element
       </Button>

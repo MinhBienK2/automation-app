@@ -113,7 +113,7 @@ export function ScheduleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-      <DialogContent className="workflow-dialog schedule-dialog">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <p className="eyebrow">Schedule</p>
           <DialogTitle>
@@ -123,53 +123,62 @@ export function ScheduleFormDialog({
             Scheduled runs use the latest saved workflow and settings.
           </DialogDescription>
         </DialogHeader>
-        <form className="workflow-dialog-form" onSubmit={submitSchedule}>
-          <Label htmlFor="schedule-workflow">Workflow</Label>
-          <Select
-            id="schedule-workflow"
-            value={form.workflowId}
-            onChange={(event) => {
-              const value = event.currentTarget.value;
-              setForm((current) => ({
-                ...current,
-                workflowId: value,
-              }));
-            }}
-          >
-            {workflows.map((workflow) => (
-              <option key={workflow.id} value={workflow.id}>
-                {workflow.name}
-              </option>
-            ))}
-          </Select>
+        <form className="flex flex-col gap-4 mt-2" onSubmit={submitSchedule}>
+          <div className="flex flex-col gap-1 w-full">
+            <Label htmlFor="schedule-workflow">Workflow</Label>
+            <Select
+              id="schedule-workflow"
+              value={form.workflowId}
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                setForm((current) => ({
+                  ...current,
+                  workflowId: value,
+                }));
+              }}
+              className="select-sm bg-base-100 border-base-300 w-full"
+            >
+              {workflows.map((workflow) => (
+                <option key={workflow.id} value={workflow.id}>
+                  {workflow.name}
+                </option>
+              ))}
+            </Select>
+          </div>
 
-          <Label htmlFor="schedule-name">Schedule name</Label>
-          <Input
-            id="schedule-name"
-            value={form.name}
-            onChange={(event) => {
-              const value = event.currentTarget.value;
-              setForm((current) => ({ ...current, name: value }));
-            }}
-          />
+          <div className="flex flex-col gap-1 w-full">
+            <Label htmlFor="schedule-name">Schedule name</Label>
+            <Input
+              id="schedule-name"
+              value={form.name}
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                setForm((current) => ({ ...current, name: value }));
+              }}
+              placeholder="Daily health check"
+              className="input-sm border-base-300"
+            />
+          </div>
 
-          <SegmentedControl
-            ariaLabel="Schedule kind"
-            value={form.kind}
-            options={[
-              { label: "Once", value: "once_at" },
-              { label: "Interval", value: "interval" },
-              { label: "Daily", value: "calendar_daily" },
-              { label: "Weekly", value: "calendar_weekly" },
-              { label: "Monthly", value: "calendar_monthly" },
-            ]}
-            onValueChange={(value) =>
-              setForm((current) => ({ ...current, kind: value as ScheduleKindDraft }))
-            }
-          />
+          <div className="w-full my-1">
+            <SegmentedControl
+              ariaLabel="Schedule kind"
+              value={form.kind}
+              options={[
+                { label: "Once", value: "once_at" },
+                { label: "Interval", value: "interval" },
+                { label: "Daily", value: "calendar_daily" },
+                { label: "Weekly", value: "calendar_weekly" },
+                { label: "Monthly", value: "calendar_monthly" },
+              ]}
+              onValueChange={(value) =>
+                setForm((current) => ({ ...current, kind: value as ScheduleKindDraft }))
+              }
+            />
+          </div>
 
           {form.kind === "once_at" ? (
-            <>
+            <div className="flex flex-col gap-1 w-full">
               <Label htmlFor="schedule-once-at">Run at</Label>
               <Input
                 id="schedule-once-at"
@@ -182,13 +191,14 @@ export function ScheduleFormDialog({
                     onceAt: value,
                   }));
                 }}
+                className="input-sm border-base-300"
               />
-            </>
+            </div>
           ) : null}
 
           {form.kind === "interval" ? (
-            <div className="schedule-inline-fields">
-              <div>
+            <div className="grid grid-cols-2 gap-3 w-full">
+              <div className="flex flex-col gap-1">
                 <Label htmlFor="schedule-every">Every</Label>
                 <Input
                   id="schedule-every"
@@ -202,9 +212,10 @@ export function ScheduleFormDialog({
                       intervalEvery: value,
                     }));
                   }}
+                  className="input-sm border-base-300"
                 />
               </div>
-              <div>
+              <div className="flex flex-col gap-1">
                 <Label htmlFor="schedule-interval-unit">Unit</Label>
                 <Select
                   id="schedule-interval-unit"
@@ -216,6 +227,7 @@ export function ScheduleFormDialog({
                       intervalUnit: value,
                     }));
                   }}
+                  className="select-sm bg-base-100 border-base-300 w-full"
                 >
                   <option value="minutes">Minutes</option>
                   <option value="hours">Hours</option>
@@ -226,7 +238,7 @@ export function ScheduleFormDialog({
           ) : null}
 
           {form.kind.startsWith("calendar_") ? (
-            <>
+            <div className="flex flex-col gap-1 w-full">
               <Label htmlFor="schedule-calendar-time">Time</Label>
               <Input
                 id="schedule-calendar-time"
@@ -239,36 +251,40 @@ export function ScheduleFormDialog({
                     calendarTime: value,
                   }));
                 }}
+                className="input-sm border-base-300"
               />
-            </>
+            </div>
           ) : null}
 
           {form.kind === "calendar_weekly" ? (
-            <div className="weekday-toggle-list" aria-label="Weekdays">
-              {weekdayOptions.map((weekday) => (
-                <Button
-                  key={weekday.value}
-                  aria-pressed={form.weekdays.includes(weekday.value)}
-                  size="sm"
-                  type="button"
-                  variant={form.weekdays.includes(weekday.value) ? "default" : "secondary"}
-                  onClick={() =>
-                    setForm((current) => ({
-                      ...current,
-                      weekdays: current.weekdays.includes(weekday.value)
-                        ? current.weekdays.filter((value) => value !== weekday.value)
-                        : [...current.weekdays, weekday.value].sort(),
-                    }))
-                  }
-                >
-                  {weekday.label}
-                </Button>
-              ))}
+            <div className="flex flex-col gap-1.5 w-full">
+              <Label>Weekdays</Label>
+              <div className="flex flex-wrap gap-1.5" aria-label="Weekdays">
+                {weekdayOptions.map((weekday) => (
+                  <Button
+                    key={weekday.value}
+                    aria-pressed={form.weekdays.includes(weekday.value)}
+                    type="button"
+                    variant={form.weekdays.includes(weekday.value) ? "default" : "secondary"}
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        weekdays: current.weekdays.includes(weekday.value)
+                          ? current.weekdays.filter((value) => value !== weekday.value)
+                          : [...current.weekdays, weekday.value].sort(),
+                      }))
+                    }
+                    className="btn-xs rounded-md px-2.5"
+                  >
+                    {weekday.label}
+                  </Button>
+                ))}
+              </div>
             </div>
           ) : null}
 
           {form.kind === "calendar_monthly" ? (
-            <>
+            <div className="flex flex-col gap-1 w-full">
               <Label htmlFor="schedule-month-day">Day of month</Label>
               <Input
                 id="schedule-month-day"
@@ -283,21 +299,24 @@ export function ScheduleFormDialog({
                     monthDay: value,
                   }));
                 }}
+                className="input-sm border-base-300"
               />
-            </>
+            </div>
           ) : null}
 
-          <SwitchField
-            label="Enable schedule"
-            checked={form.enabled}
-            onCheckedChange={(enabled) =>
-              setForm((current) => ({ ...current, enabled }))
-            }
-          />
+          <div className="my-1.5">
+            <SwitchField
+              label="Enable schedule"
+              checked={form.enabled}
+              onCheckedChange={(enabled) =>
+                setForm((current) => ({ ...current, enabled }))
+              }
+            />
+          </div>
 
-          {formError ? <p className="field-error">{formError}</p> : null}
-          <DialogFooter className="form-actions">
-            <Button shape="pill" type="submit" disabled={saving} loading={saving}>
+          {formError ? <div className="alert alert-error text-xs p-2.5">{formError}</div> : null}
+          <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">
+            <Button type="submit" disabled={saving} loading={saving} className="btn-primary">
               {mode === "edit" ? "Save Schedule" : "Create Schedule"}
             </Button>
             <Button type="button" variant="secondary" disabled={saving} onClick={onClose}>

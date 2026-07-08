@@ -1,6 +1,7 @@
 import { Activity, AlertTriangle, CalendarClock, RefreshCw, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
+import { Badge } from "../../../components/ui/badge";
 import type {
   OperationsOverview,
   OperationsNavigationTarget,
@@ -41,48 +42,87 @@ export function OperationsOverviewPage({
 
   return (
     <section className="app-screen operations-overview-screen" aria-label="Overview">
-      <header className="app-header overview-header">
+      <header className="app-header overview-header mb-4">
         <div>
           <p className="eyebrow">Operations Dashboard</p>
-          <h1>Overview</h1>
-          <p className="muted">
+          <h1 className="text-2xl font-bold">Overview</h1>
+          <p className="text-secondary text-xs mt-1">
             {overview
               ? `Today in ${overview.range.timezone_label}. Last refreshed ${formatDateTime(overview.generated_at)}.`
               : "Loading durable operations state."}
           </p>
         </div>
-        <div className="page-header-actions">
-          <Button type="button" variant="secondary" onClick={onRefresh}>
-            <RefreshCw aria-hidden="true" />
+        <div className="page-header-actions flex gap-2">
+          <Button type="button" variant="secondary" onClick={onRefresh} className="btn-sm">
+            <RefreshCw aria-hidden="true" size={14} />
             Refresh Overview
           </Button>
-          <Button type="button" onClick={onOpenWorkflows}>
+          <Button type="button" onClick={onOpenWorkflows} className="btn-primary btn-sm">
             Open Projects
           </Button>
         </div>
       </header>
 
       {error ? (
-        <div className="panel overview-error" role="alert">
-          <strong>Overview unavailable</strong>
-          <p>{error}</p>
-          <Button type="button" variant="secondary" onClick={onRefresh}>
+        <div className="alert alert-error mb-4" role="alert">
+          <div>
+            <h3 className="font-bold">Overview unavailable</h3>
+            <div className="text-xs">{error}</div>
+          </div>
+          <Button type="button" variant="secondary" onClick={onRefresh} className="btn-xs">
             Retry
           </Button>
         </div>
       ) : null}
 
-      <section className="overview-kpi-grid" aria-label="Operations metrics">
-        <MetricCard label="Active Runs" value={metrics?.active_runs} tone="active" loading={loading} />
-        <MetricCard label="Succeeded Today" value={metrics?.succeeded_today} tone="success" loading={loading} />
-        <MetricCard label="Attention Needed" value={metrics?.attention_today} tone="attention" loading={loading} />
-        <MetricCard label="Upcoming Schedules" value={metrics?.upcoming_schedules} tone="neutral" loading={loading} />
+      {/* KPI Stats using daisyUI Stats component */}
+      <section className="stats stats-vertical lg:stats-horizontal shadow w-full bg-base-200 border border-base-300 mb-6" aria-label="Operations metrics">
+        <div className="stat p-4">
+          <div className="stat-title text-xs text-secondary font-medium uppercase tracking-wider">Active Runs</div>
+          <div className="stat-value text-xl font-bold text-primary mt-1">
+            {loading && metrics?.active_runs === undefined ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              metrics?.active_runs ?? 0
+            )}
+          </div>
+        </div>
+        <div className="stat p-4">
+          <div className="stat-title text-xs text-secondary font-medium uppercase tracking-wider">Succeeded Today</div>
+          <div className="stat-value text-xl font-bold text-success mt-1">
+            {loading && metrics?.succeeded_today === undefined ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              metrics?.succeeded_today ?? 0
+            )}
+          </div>
+        </div>
+        <div className="stat p-4">
+          <div className="stat-title text-xs text-secondary font-medium uppercase tracking-wider">Attention Needed</div>
+          <div className="stat-value text-xl font-bold text-error mt-1">
+            {loading && metrics?.attention_today === undefined ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              metrics?.attention_today ?? 0
+            )}
+          </div>
+        </div>
+        <div className="stat p-4">
+          <div className="stat-title text-xs text-secondary font-medium uppercase tracking-wider">Upcoming Schedules</div>
+          <div className="stat-value text-xl font-bold text-base-content/80 mt-1">
+            {loading && metrics?.upcoming_schedules === undefined ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              metrics?.upcoming_schedules ?? 0
+            )}
+          </div>
+        </div>
       </section>
 
-      <div className="overview-grid">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Panel title="Live Operations" icon={<Activity aria-hidden="true" />} count={overview?.live_runs.total}>
           {overview?.live_runs.items.length ? (
-            <div className="overview-list">
+            <div className="flex flex-col gap-2 mt-2">
               {overview.live_runs.items.map((run) => (
                 <LiveRunRow key={run.run_id} run={run} onNavigate={onNavigate} />
               ))}
@@ -94,10 +134,10 @@ export function OperationsOverviewPage({
 
         <Panel title="Attention Queue" icon={<AlertTriangle aria-hidden="true" />} count={overview?.attention.total}>
           {focus === "attention" ? (
-            <p className="overview-focus-note">Attention focus active</p>
+            <p className="text-warning text-xs mb-2">Attention focus active</p>
           ) : null}
           {overview?.attention.items.length ? (
-            <div className="overview-list">
+            <div className="flex flex-col gap-2 mt-2">
               {overview.attention.items.map((item) => (
                 <AttentionRow key={item.id} item={item} onNavigate={onNavigate} />
               ))}
@@ -107,11 +147,9 @@ export function OperationsOverviewPage({
           )}
         </Panel>
 
-
-
         <Panel title="Upcoming Schedules" icon={<CalendarClock aria-hidden="true" />} count={overview?.upcoming_schedules.total}>
           {overview?.upcoming_schedules.items.length ? (
-            <div className="overview-list">
+            <div className="flex flex-col gap-2 mt-2">
               {overview.upcoming_schedules.items.map((schedule) => (
                 <ScheduleRow key={schedule.schedule_id} schedule={schedule} onNavigate={onNavigate} />
               ))}
@@ -123,15 +161,18 @@ export function OperationsOverviewPage({
 
         <Panel title="System Health" icon={<ShieldCheck aria-hidden="true" />}>
           {diagnosticsError ? (
-            <p className="field-error" role="alert">
+            <div className="alert alert-error text-xs p-2 mb-2" role="alert">
               {diagnosticsError}
-            </p>
+            </div>
           ) : null}
           {diagnosticsLoading && !diagnostics ? (
-            <p className="muted">Loading system readiness...</p>
+            <div className="flex items-center gap-2 text-secondary text-xs">
+              <span className="loading loading-spinner loading-xs" />
+              <span>Loading system readiness...</span>
+            </div>
           ) : null}
           {diagnostics ? (
-            <div className="settings-readiness-grid" style={{ gridTemplateColumns: "1fr", gap: "8px" }}>
+            <div className="grid grid-cols-1 gap-2 mt-2">
               <ReadinessItem
                 label="CloakBrowser"
                 value={
@@ -158,7 +199,7 @@ export function OperationsOverviewPage({
               />
             </div>
           ) : null}
-          <div style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+          <div className="flex justify-end mt-4">
             <Button
               type="button"
               variant="secondary"
@@ -166,6 +207,7 @@ export function OperationsOverviewPage({
               onClick={() => {
                 void onRefreshDiagnostics();
               }}
+              className="btn-xs"
             >
               Refresh Health
             </Button>
@@ -173,25 +215,6 @@ export function OperationsOverviewPage({
         </Panel>
       </div>
     </section>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-  tone,
-  loading,
-}: {
-  label: string;
-  value?: number;
-  tone: "active" | "success" | "attention" | "neutral";
-  loading: boolean;
-}) {
-  return (
-    <article className={`metric-card metric-card-${tone}`}>
-      <span>{label}</span>
-      <strong>{loading && value === undefined ? "-" : value ?? 0}</strong>
-    </article>
   );
 }
 
@@ -207,10 +230,17 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="panel overview-panel" aria-label={title}>
-      <header className="overview-panel-header">
-        <h2>{icon}{title}</h2>
-        {count !== undefined ? <span className="status-pill">{count}</span> : null}
+    <section className="card bg-base-200 border border-base-300 card-body p-5" aria-label={title}>
+      <header className="flex justify-between items-center border-b border-base-300 pb-2 mb-3">
+        <h2 className="text-sm font-bold flex items-center gap-2 text-base-content">
+          {icon}
+          <span>{title}</span>
+        </h2>
+        {count !== undefined ? (
+          <Badge variant="secondary" className="badge-sm font-semibold">
+            {count}
+          </Badge>
+        ) : null}
       </header>
       {children}
     </section>
@@ -225,13 +255,21 @@ function LiveRunRow({
   onNavigate: (target: OperationsNavigationTarget) => void;
 }) {
   return (
-    <button className="overview-row" type="button" onClick={() => onNavigate(run.navigation_target)}>
-      <span>
-        <strong>{run.workflow_name}</strong>
-        <small>{run.identity_display_name ?? "Identity unavailable"}</small>
+    <button
+      className="flex justify-between items-center p-3 rounded-lg border border-base-300 bg-base-100 hover:bg-base-300 text-left w-full transition-colors cursor-pointer"
+      type="button"
+      onClick={() => onNavigate(run.navigation_target)}
+    >
+      <span className="flex flex-col gap-0.5">
+        <strong className="text-xs font-semibold text-base-content">{run.workflow_name}</strong>
+        <span className="text-[11px] text-secondary">{run.identity_display_name ?? "Identity unavailable"}</span>
       </span>
-      <span>Step {run.current_step_number ?? "-"}</span>
-      <span className="status-pill status-pill-on">{run.status}</span>
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-secondary font-mono">Step {run.current_step_number ?? "-"}</span>
+        <Badge variant="running" className="badge-xs uppercase tracking-wider font-semibold">
+          {run.status}
+        </Badge>
+      </div>
     </button>
   );
 }
@@ -244,19 +282,24 @@ function AttentionRow({
   onNavigate: (target: OperationsNavigationTarget) => void;
 }) {
   return (
-    <button className="overview-row" type="button" onClick={() => onNavigate(item.navigation_target)}>
-      <span>
-        <strong>{item.title}</strong>
-        <small>{item.workflow.name}</small>
+    <button
+      className="flex justify-between items-center p-3 rounded-lg border border-base-300 bg-base-100 hover:bg-base-300 text-left w-full transition-colors cursor-pointer"
+      type="button"
+      onClick={() => onNavigate(item.navigation_target)}
+    >
+      <span className="flex flex-col gap-0.5">
+        <strong className="text-xs font-semibold text-base-content">{item.title}</strong>
+        <span className="text-[11px] text-secondary">{item.workflow.name}</span>
       </span>
-      <span>{item.summary}</span>
-      <span className={`status-pill ${item.severity === "failure" ? "status-pill-danger" : ""}`}>
-        {item.severity}
-      </span>
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-secondary">{item.summary}</span>
+        <Badge variant={item.severity === "failure" ? "failure" : "attention"} className="badge-xs uppercase tracking-wider font-semibold">
+          {item.severity}
+        </Badge>
+      </div>
     </button>
   );
 }
-
 
 function ScheduleRow({
   schedule,
@@ -266,22 +309,30 @@ function ScheduleRow({
   onNavigate: (target: OperationsNavigationTarget) => void;
 }) {
   return (
-    <button className="overview-row" type="button" onClick={() => onNavigate(schedule.navigation_target)}>
-      <span>
-        <strong>{schedule.schedule_name}</strong>
-        <small>{schedule.workflow_name}</small>
+    <button
+      className="flex justify-between items-center p-3 rounded-lg border border-base-300 bg-base-100 hover:bg-base-300 text-left w-full transition-colors cursor-pointer"
+      type="button"
+      onClick={() => onNavigate(schedule.navigation_target)}
+    >
+      <span className="flex flex-col gap-0.5">
+        <strong className="text-xs font-semibold text-base-content">{schedule.schedule_name}</strong>
+        <span className="text-[11px] text-secondary">{schedule.workflow_name}</span>
       </span>
-      <span>{formatDateTime(schedule.next_run_at)}</span>
-      <span>{schedule.last_status ?? "ready"}</span>
+      <div className="flex items-center gap-3 text-xs text-secondary">
+        <span>{formatDateTime(schedule.next_run_at)}</span>
+        <Badge variant="secondary" className="badge-xs uppercase tracking-wider font-semibold">
+          {schedule.last_status ?? "ready"}
+        </Badge>
+      </div>
     </button>
   );
 }
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="empty-state empty-state-compact">
-      <h3>{title}</h3>
-      <p>{body}</p>
+    <div className="flex flex-col items-center justify-center py-6 px-4 rounded-lg bg-base-100/50 border border-dashed border-base-300 text-center text-secondary">
+      <h3 className="text-xs font-semibold text-base-content mb-1">{title}</h3>
+      <p className="text-[11px] max-w-[280px] leading-relaxed">{body}</p>
     </div>
   );
 }
@@ -292,7 +343,6 @@ function formatDateTime(value: string) {
   return date.toLocaleString();
 }
 
-
 function ReadinessItem({
   label,
   value,
@@ -302,10 +352,16 @@ function ReadinessItem({
   value: string;
   tone: "ready" | "attention" | "neutral";
 }) {
+  const badgeTone = {
+    ready: "badge-success",
+    attention: "badge-warning",
+    neutral: "badge-neutral",
+  }[tone];
+
   return (
-    <div className={`settings-readiness-item settings-readiness-item-${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className="flex items-center justify-between p-2.5 rounded-lg bg-base-100 border border-base-300">
+      <span className="text-secondary text-xs">{label}</span>
+      <span className={`badge ${badgeTone} badge-sm font-semibold`}>{value}</span>
     </div>
   );
 }

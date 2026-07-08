@@ -65,7 +65,7 @@ export function EnvironmentVariablesEditor({
       setJsonText(JSON.stringify(serialized, null, 2));
       setJsonError(null);
     }
-  }, [mode, showPersistOptions]);
+  }, [mode, showPersistOptions, variables]);
 
   const updateVariable = (index: number, patch: Partial<EditorVariable>) => {
     const next = variables.map((v, idx) => (idx === index ? { ...v, ...patch } : v));
@@ -152,44 +152,45 @@ export function EnvironmentVariablesEditor({
           ]}
         />
         {mode === "custom" && (
-          <Button type="button" onClick={addVariable} size="sm" aria-label="Add variable row">
-            <Plus className="h-4 w-4 mr-1" /> Add Variable
+          <Button type="button" onClick={addVariable} size="sm" aria-label="Add variable row" className="btn-sm flex items-center gap-1">
+            <Plus className="h-4 w-4" />
+            <span>Add Variable</span>
           </Button>
         )}
       </div>
 
       {mode === "custom" ? (
-        <div className="variable-row-table-v2">
+        <div className="flex flex-col gap-3">
           {variables.length === 0 ? (
-            <div className="text-center py-6 text-sm text-[var(--app-text-muted)] border border-dashed border-[var(--app-border)] rounded-lg">
+            <div className="text-center py-8 text-xs text-secondary border border-dashed border-base-300 rounded-lg">
               No environment variables defined.
             </div>
           ) : (
             variables.map((variable, index) => {
               const uiType = getUIValueType(variable.value_type, variable.value);
               return (
-                <div key={index} className="variable-row-group-card border border-[var(--app-border)] rounded-md p-3 bg-[var(--app-sidebar)]">
-                  <div className="variable-row-line-one grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="variable-row-field">
-                      <Label htmlFor={`var-name-${index}`}>Name</Label>
+                <div key={index} className="card bg-base-200 border border-base-300 card-body p-4 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor={`var-name-${index}`} className="text-xs">Name</Label>
                       <Input
                         id={`var-name-${index}`}
                         aria-label={`Variable ${index + 1} name`}
                         placeholder="VARIABLE_NAME"
                         value={variable.name}
                         onChange={(e) => updateVariable(index, { name: e.currentTarget.value })}
-                        className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
+                        className="input-sm border-base-300 w-full"
                       />
                     </div>
                     {uiType !== "array" && uiType !== "object" && (
-                      <div className="variable-row-field">
-                        <Label htmlFor={`var-val-${index}`}>Value</Label>
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor={`var-val-${index}`} className="text-xs">Value</Label>
                         {uiType === "boolean" ? (
                           <Select
                             id={`var-val-${index}`}
                             value={variable.value === "true" ? "true" : "false"}
                             onChange={(e) => updateVariable(index, { value: e.currentTarget.value })}
-                            className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
+                            className="select-sm border-base-300 bg-base-100 w-full"
                           >
                             <option value="false">false</option>
                             <option value="true">true</option>
@@ -200,7 +201,7 @@ export function EnvironmentVariablesEditor({
                             placeholder="Value"
                             value={variable.value}
                             onChange={(e) => updateVariable(index, { value: e.currentTarget.value })}
-                            className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
+                            className="input-sm border-base-300 w-full"
                           />
                         )}
                       </div>
@@ -221,9 +222,9 @@ export function EnvironmentVariablesEditor({
                     />
                   )}
 
-                  <div className="variable-row-line-two flex justify-between items-center mt-2 pt-2 border-t border-[var(--app-border)]">
-                    <div className="variable-row-type-select flex items-center gap-2">
-                      <span className="text-xs text-[var(--app-text-secondary)]">Type:</span>
+                  <div className="flex justify-between items-center mt-2 pt-3 border-t border-base-300 gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-secondary font-medium">Type:</span>
                       <Select
                         value={uiType}
                         onChange={(e) => {
@@ -247,7 +248,7 @@ export function EnvironmentVariablesEditor({
                           }
                           updateVariable(index, { value_type, value });
                         }}
-                        className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)] py-0"
+                        className="select-xs border-base-300 bg-base-100 py-0"
                       >
                         <option value="text">Text</option>
                         <option value="number">Number</option>
@@ -266,7 +267,7 @@ export function EnvironmentVariablesEditor({
                             checked={variable.persist}
                             onCheckedChange={(checked) => updateVariable(index, { persist: checked })}
                           />
-                          <Label htmlFor={`persist-${index}`} className="text-xs text-[var(--app-text-secondary)] cursor-pointer select-none">
+                          <Label htmlFor={`persist-${index}`} className="text-xs text-secondary cursor-pointer select-none">
                             Persist value after run
                           </Label>
                         </div>
@@ -274,11 +275,11 @@ export function EnvironmentVariablesEditor({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
                         onClick={() => removeVariable(index)}
-                        className="h-8 w-8 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+                        className="btn-xs btn-circle text-secondary hover:text-error hover:bg-error/10"
+                        aria-label="Remove variable"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -287,8 +288,8 @@ export function EnvironmentVariablesEditor({
             })
           )}
           {duplicateNames.length > 0 && (
-            <div className="flex items-center gap-2 text-sm text-[var(--app-attention)] mt-2">
-              <AlertTriangle className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-xs text-warning mt-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>Duplicate variables: {duplicateNames.join(", ")} (last one overrides)</span>
             </div>
           )}
@@ -300,10 +301,10 @@ export function EnvironmentVariablesEditor({
             onChange={(e) => handleJsonChange(e.currentTarget.value)}
             placeholder="[ { &quot;name&quot;: &quot;VAR&quot;, &quot;value_type&quot;: &quot;text&quot;, &quot;value&quot;: &quot;val&quot; } ]"
             rows={15}
-            className="font-mono text-xs bg-[var(--app-sidebar)] border-[var(--app-border)]"
+            className="font-mono text-xs bg-base-200 border-base-300 w-full"
           />
           {jsonError && (
-            <div className="text-xs text-[var(--app-failure)] bg-[var(--app-failure)]/10 p-2 rounded-md border border-[var(--app-failure)]/20">
+            <div className="alert alert-error text-xs p-2.5 mt-2">
               {jsonError}
             </div>
           )}
