@@ -498,15 +498,52 @@ export function GraphNodePalette({
 }: GraphNodePaletteProps) {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [activeSubCategory, setActiveSubCategory] = useState("All");
   const normalizedQuery = query.trim().toLowerCase();
   const groups = palette?.groups ?? [];
   const nodeOptions = groups.flatMap((group) => group.nodes);
 
+  const mainCategories = useMemo(() => {
+    const categories = new Set<string>();
+    groups.forEach((group) => {
+      const parts = group.label.split(":");
+      categories.add(parts[0].trim());
+    });
+    return Array.from(categories);
+  }, [groups]);
+
+  const matchingGroups = useMemo(() => {
+    if (activeCategory === "All") return groups;
+    return groups.filter((group) => {
+      const parts = group.label.split(":");
+      return parts[0].trim() === activeCategory;
+    });
+  }, [activeCategory, groups]);
+
+  const subCategories = useMemo(() => {
+    if (activeCategory === "All") return [];
+    const subcats: string[] = [];
+    matchingGroups.forEach((group) => {
+      const parts = group.label.split(":");
+      if (parts.length > 1) {
+        subcats.push(parts[1].trim());
+      }
+    });
+    return subcats;
+  }, [activeCategory, matchingGroups]);
+
   const visibleNodes = useMemo(() => {
-    const sourceNodes =
-      activeCategory === "All"
-        ? nodeOptions
-        : groups.find((group) => group.label === activeCategory)?.nodes ?? [];
+    let sourceNodes: GraphNodeType[] = [];
+    if (activeCategory === "All") {
+      sourceNodes = nodeOptions;
+    } else {
+      const filteredGroups = matchingGroups.filter((group) => {
+        if (activeSubCategory === "All") return true;
+        const parts = group.label.split(":");
+        return parts.length > 1 && parts[1].trim() === activeSubCategory;
+      });
+      sourceNodes = filteredGroups.flatMap((group) => group.nodes);
+    }
 
     if (!normalizedQuery) return sourceNodes;
 
@@ -515,11 +552,12 @@ export function GraphNodePalette({
       const description = (graphNodeDescriptions[nodeType] ?? "").toLowerCase();
       return label.includes(normalizedQuery) || description.includes(normalizedQuery);
     });
-  }, [activeCategory, groups, nodeOptions, normalizedQuery]);
+  }, [activeCategory, activeSubCategory, matchingGroups, nodeOptions, normalizedQuery]);
 
   function resetPalette() {
     setQuery("");
     setActiveCategory("All");
+    setActiveSubCategory("All");
   }
 
   return (
@@ -548,7 +586,7 @@ export function GraphNodePalette({
 
         <div className="add-step-palette-body">
           <div aria-label="Node categories" className="action-category-list">
-            {["All", ...groups.map((group) => group.label)].map((label) => (
+            {["All", ...mainCategories].map((label) => (
               <Button
                 aria-pressed={activeCategory === label && !normalizedQuery}
                 className={
@@ -561,6 +599,7 @@ export function GraphNodePalette({
                 variant="ghost"
                 onClick={() => {
                   setActiveCategory(label);
+                  setActiveSubCategory("All");
                   setQuery("");
                 }}
               >
@@ -569,27 +608,44 @@ export function GraphNodePalette({
             ))}
           </div>
 
-          <div aria-label="Node results" className="action-result-list">
-            {visibleNodes.length === 0 ? (
-              <p className="muted">No matching nodes</p>
-            ) : (
-              visibleNodes.map((nodeType) => (
-                <Button
-                  className="action-result"
-                  data-value={nodeType}
-                  key={nodeType}
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    onSelectNode(nodeType);
-                    resetPalette();
-                  }}
-                >
-                  <span>{graphNodeLabel(nodeType)}</span>
-                  <small>{graphNodeDescriptions[nodeType] ?? "Graph node"}</small>
-                </Button>
-              ))
-            )}
+          <div className="flex flex-col gap-3 min-h-0 w-full">
+            {!normalizedQuery && subCategories.length > 0 ? (
+              <SegmentedControl
+                ariaLabel="Subcategories"
+                value={activeSubCategory}
+                onValueChange={setActiveSubCategory}
+                options={[
+                  { label: "All", value: "All" },
+                  ...subCategories.map((subcat) => ({
+                    label: subcat,
+                    value: subcat,
+                  })),
+                ]}
+              />
+            ) : null}
+
+            <div aria-label="Node results" className="action-result-list">
+              {visibleNodes.length === 0 ? (
+                <p className="muted">No matching nodes</p>
+              ) : (
+                visibleNodes.map((nodeType) => (
+                  <Button
+                    className="action-result"
+                    data-value={nodeType}
+                    key={nodeType}
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      onSelectNode(nodeType);
+                      resetPalette();
+                    }}
+                  >
+                    <span>{graphNodeLabel(nodeType)}</span>
+                    <small>{graphNodeDescriptions[nodeType] ?? "Graph node"}</small>
+                  </Button>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
