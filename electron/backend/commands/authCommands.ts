@@ -7,6 +7,7 @@ import {
   deleteUser
 } from "../persistence/pgSync.js";
 import type { DbAdapter } from "../persistence/dbAdapter.js";
+import type { User } from "../persistence/pgSync.js";
 
 export function createAuthCommands(database: DbAdapter) {
   async function login(input: any) {
@@ -54,6 +55,14 @@ export function createAuthCommands(database: DbAdapter) {
 
   async function removeUser(input: { id: string }) {
     if (!input.id) throw commandError("User ID is required", "id");
+    
+    const users = await listUsers() as User[];
+    const targetUser = users.find(u => u.id === input.id);
+    
+    if (targetUser && targetUser.role === "admin") {
+      throw commandError("Cannot delete admin accounts", "role");
+    }
+    
     await deleteUser(input.id);
     return { ok: true };
   }

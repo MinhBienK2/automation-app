@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "../../../components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { listUsers, createUser, deleteUser } from "../../../lib/workflowApi";
 
 interface User {
@@ -9,7 +10,11 @@ interface User {
   created_at: string;
 }
 
-export function AdminPanel() {
+interface AdminPanelProps {
+  currentUser?: User | null;
+}
+
+export function AdminPanel({ currentUser }: AdminPanelProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,6 +23,7 @@ export function AdminPanel() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<{ id: string; email: string } | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -54,9 +60,15 @@ export function AdminPanel() {
     }
   };
 
-  const handleDeleteUser = async (id: string, userEmail: string) => {
-    if (!confirm(`Are you sure you want to delete user ${userEmail}?`)) return;
+  const handleDeleteUser = (id: string, userEmail: string) => {
+    setDeleteCandidate({ id, email: userEmail });
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteCandidate) return;
+
+    const { id, email: userEmail } = deleteCandidate;
+    setDeleteCandidate(null);
     setError(null);
     setSuccess(null);
     setDeletingUserId(id);
@@ -180,16 +192,20 @@ export function AdminPanel() {
                       </span>
                     </td>
                     <td>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => handleDeleteUser(u.id, u.email)}
-                        style={{ color: "#ef4444", padding: "4px 8px" }}
-                        disabled={deletingUserId !== null}
-                        loading={deletingUserId === u.id}
-                      >
-                        Delete
-                      </Button>
+                      {u.role === "admin" ? (
+                        <span style={{ color: "#64748b", fontSize: "0.75rem" }}>—</span>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => handleDeleteUser(u.id, u.email)}
+                          style={{ color: "#ef4444", padding: "4px 8px" }}
+                          disabled={deletingUserId !== null}
+                          loading={deletingUserId === u.id}
+                        >
+                          Delete
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -198,6 +214,36 @@ export function AdminPanel() {
           </div>
         </section>
       </div>
+
+      <Dialog open={!!deleteCandidate} onOpenChange={(o) => !o && setDeleteCandidate(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xóa người dùng?</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa người dùng <strong>{deleteCandidate?.email}</strong> không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setDeleteCandidate(null)}
+              disabled={deletingUserId !== null}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void handleConfirmDelete()}
+              disabled={deletingUserId !== null}
+              loading={deletingUserId !== null}
+            >
+              Xóa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
