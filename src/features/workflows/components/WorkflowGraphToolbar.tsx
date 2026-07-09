@@ -152,7 +152,7 @@ export function WorkflowGraphToolbar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-24">
-            {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((level) => (
+            {[0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((level) => (
               <DropdownMenuItem key={level} onClick={() => onZoomChange(level)}>
                 <span>{level * 100}%</span>
               </DropdownMenuItem>

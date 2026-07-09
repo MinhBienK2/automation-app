@@ -78,7 +78,7 @@ function DialogContent({
     .join(" ");
 
   const boxClasses = [
-    "modal-box border border-base-300 bg-base-100 p-6 relative max-w-lg w-full shadow-lg",
+    "modal-box border border-base-300 bg-base-200 p-6 relative max-w-lg w-full shadow-lg",
     className
   ]
     .filter(Boolean)

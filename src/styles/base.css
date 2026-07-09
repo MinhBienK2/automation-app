@@ -24,9 +24,9 @@
   --surface: #121c26;
   --surface-elevated: #172431;
   --surface-overlay: #1b2a39;
-  --border: #233240;
-  --border-emphasized: #314758;
-  --border-hover: #3e5668;
+  --border: #2c3b4c;
+  --border-emphasized: #3f566b;
+  --border-hover: #4e6b83;
 
   --fg-primary: #e7eef5;
   --fg-secondary: #9aaebd;
@@ -112,9 +112,9 @@ html[data-theme="light"] {
   --surface: #ffffff;
   --surface-elevated: #ebf1f6;
   --surface-overlay: #ffffff;
-  --border: #d1dfec;
-  --border-emphasized: #a5c0db;
-  --border-hover: #8aa6c2;
+  --border: #c0d2e5;
+  --border-emphasized: #9ab8d7;
+  --border-hover: #7ca1c8;
 
   --fg-primary: #111b24;
   --fg-secondary: #4a607a;
@@ -325,7 +325,7 @@ small {
   padding: var(--space-md);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .switch-field-copy {
@@ -347,7 +347,7 @@ small {
   padding: 2px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--bg);
+  background: var(--surface-elevated);
 }
 
 .segmented-control-button {
@@ -361,16 +361,24 @@ small {
 }
 
 /* Custom UI Border & Visual Hierarchies */
-.input-bordered {
-  border: 1px solid var(--border) !important;
-  background-color: var(--bg) !important;
+.input-bordered,
+.select-bordered,
+.textarea-bordered {
+  border: 1px solid var(--border-emphasized) !important;
+  background-color: var(--surface) !important;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
-.input-bordered:hover {
-  border-color: var(--border-emphasized) !important;
+.input-bordered:hover,
+.select-bordered:hover,
+.textarea-bordered:hover {
+  border-color: var(--border-hover) !important;
 }
 .input-bordered:focus,
-.input-bordered:focus-within {
+.input-bordered:focus-within,
+.select-bordered:focus,
+.select-bordered:focus-within,
+.textarea-bordered:focus,
+.textarea-bordered:focus-within {
   border-color: var(--accent) !important;
   outline: none !important;
   box-shadow: 0 0 0 2px var(--focus-ring) !important;
@@ -378,7 +386,7 @@ small {
 
 /* Tabs customization */
 .tabs-bordered {
-  border-bottom: 1px solid var(--border) !important;
+  border-bottom: 1px solid var(--border-emphasized) !important;
 }
 .tab {
   border-bottom: 2px solid transparent !important;
@@ -408,10 +416,33 @@ small {
   color: var(--fg-secondary) !important;
   transition: all var(--transition);
 }
-.btn-outline:hover {
+.btn-outline:hover:not(:disabled) {
   border-color: var(--accent) !important;
   background-color: var(--accent-bg) !important;
   color: var(--accent) !important;
+}
+.btn-outline:disabled {
+  border-color: var(--border) !important;
+  background-color: transparent !important;
+  color: var(--fg-muted) !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Toggle Switch Overrides */
+.toggle {
+  border: 1.5px solid var(--border-emphasized) !important;
+  background-color: var(--surface-elevated) !important;
+  --tglbg: var(--fg-secondary) !important;
+  transition: all var(--transition);
+}
+.toggle:hover {
+  border-color: var(--border-hover) !important;
+}
+.toggle:checked {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  --tglbg: var(--bg) !important;
 }
 
 /* Table Hover Effect */
@@ -425,7 +456,7 @@ small {
 .border-base-200,
 .border-base-300,
 .border-border {
-  border-color: var(--border) !important;
+  border-color: var(--border-emphasized) !important;
 }
 
 .border-base-100:hover,

@@ -19,7 +19,7 @@ function SegmentedControl<Value extends string>({
   value: Value;
 }) {
   const containerClasses = [
-    "join",
+    "join segmented-control",
     className
   ]
     .filter(Boolean)
@@ -38,7 +38,7 @@ function SegmentedControl<Value extends string>({
           <Button
             key={option.value}
             aria-pressed={active}
-            className={`join-item ${active ? "btn-active" : ""}`}
+            className={`join-item segmented-control-button ${active ? "btn-active" : ""}`}
             data-state={active ? "active" : "inactive"}
             size="sm"
             type="button"

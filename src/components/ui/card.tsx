@@ -1,7 +1,7 @@
 import * as React from "react";
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
-  const classes = ["card card-border bg-base-100 text-base-content", className]
+  const classes = ["card card-border bg-base-200 text-base-content", className]
     .filter(Boolean)
     .join(" ");
   return <div data-slot="card" className={classes} {...props} />;

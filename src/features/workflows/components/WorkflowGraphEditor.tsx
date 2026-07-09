@@ -977,6 +977,7 @@ function WorkflowGraphEditorInner({
             <ReactFlow<WorkflowFlowNode, WorkflowFlowEdge>
               colorMode="dark"
               defaultViewport={flowGraph.viewport}
+              minZoom={0.1}
               edges={reactFlowEdges}
               edgeTypes={workflowEdgeTypes}
               fitView
