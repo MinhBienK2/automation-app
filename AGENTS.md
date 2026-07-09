@@ -10,10 +10,6 @@ Adversarial browser automation lab simulating realistic client bypasses (fingerp
 - Database persistence, graph compiler, and runner live under `electron/backend/`.
 - Docs live under `docs/`; router is `docs/task-routes.md`.
 
-## Rules
-- Always prefix shell commands with `rtk` and wait up to 5 minutes instead of polling frequently.
-- Use TTD before implementing any feature, bug fix, refactor, or behavior change, MUST use `.agents/skills/test-driven-development`. **Exceptions:** docs-only, formatting-only, comment-only, generated code, trivial config updates, throwaway prototypes.
-
 ## File Size Limits
 - Each file should not exceed **500 lines**. 
 - If the file to be modified is too large, **you need to think about and decide whether or not to split the file.** before coding.
@@ -34,3 +30,32 @@ For complex, big changes and high-risk changes. The appropriate component will b
  
 ## After Changes
 - Update the relevant `docs/` detail doc only when the change affects contracts or observable behavior. **skip** with request if spec, plan, or verification only.
+
+# RTK - Rust Token Killer (Google Antigravity)
+
+**Usage**: Token-optimized CLI proxy for shell commands.
+
+## Rule
+
+Always prefix shell commands with `rtk` to minimize token consumption.
+
+Examples:
+
+```bash
+rtk git status
+rtk cargo test
+rtk ls src/
+rtk grep "pattern" src/
+rtk find "*.rs" .
+rtk docker ps
+rtk gh pr list
+```
+
+## Meta Commands
+
+```bash
+rtk gain              # Show token savings
+rtk gain --history    # Command history with savings
+rtk discover          # Find missed RTK opportunities
+rtk proxy <cmd>       # Run raw (no filtering, for debugging)
+```
