@@ -357,7 +357,7 @@ small {
 
 .segmented-control-button[data-state="active"] {
   border-color: var(--accent-border);
-  color: var(--accent);
+  color: var(--bg) !important;
 }
 
 /* Custom UI Border & Visual Hierarchies */

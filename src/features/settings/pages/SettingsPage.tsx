@@ -173,7 +173,7 @@ export function SettingsPage({
               ).map((swatch) => {
                 const active = swatch.accent === accent;
                 return (
-                  <Button
+                  <button
                     key={swatch.accent}
                     aria-label={swatch.label}
                     aria-pressed={active}
@@ -181,7 +181,6 @@ export function SettingsPage({
                       active ? "tweak-swatch-active" : ""
                     }`}
                     type="button"
-                    variant="ghost"
                     onClick={() => onAccentChange(swatch.accent)}
                   />
                 );
