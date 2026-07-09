@@ -75,7 +75,6 @@ import { SubflowNodePalette, type SubflowAddMode } from "./SubflowNodePalette";
 import { NodeContextMenu, LinkContextMenu } from "./WorkflowGraphContextMenus";
 import { NodeHelpDialog } from "./NodeHelpDialog";
 import { WorkflowGraphToolbar } from "./WorkflowGraphToolbar";
-import { WorkflowGraphPaletteSidebar } from "./WorkflowGraphPaletteSidebar";
 
 type WorkflowGraphEditorProps = {
   graph: WorkflowGraph;
@@ -164,7 +163,6 @@ export function WorkflowGraphEditor({
   );
 }
 
-// Palette sidebar is imported from WorkflowGraphPaletteSidebar
 
 function WorkflowGraphEditorInner({
   graph,
@@ -188,7 +186,6 @@ function WorkflowGraphEditorInner({
   profileVariables,
 }: WorkflowGraphEditorProps) {
   const [isActionPaletteOpen, setIsActionPaletteOpen] = useState(false);
-  const [isPaletteOpen, setIsPaletteOpen] = useState(true);
   const [isSubflowPaletteOpen, setIsSubflowPaletteOpen] = useState(false);
   const [nodePalette, setNodePalette] = useState<{
     title: string;
@@ -957,16 +954,11 @@ function WorkflowGraphEditorInner({
       <div className={
         [
           "workflow-graph-layout",
-          isPaletteOpen ? "palette-open" : "",
           inspectorOpen && !isInspectorCollapsed ? "inspector-open" : "",
         ]
           .filter(Boolean)
           .join(" ")
       }>
-        <WorkflowGraphPaletteSidebar
-          isOpen={isPaletteOpen}
-          onToggle={setIsPaletteOpen}
-        />
 
         <div
           className="graph-canvas-wrap"
