@@ -853,7 +853,7 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByRole("dialog", { name: "Workflow Settings" }))
       .not.toBeInTheDocument();
 
-    const header = await screen.findByRole("region", {
+    await screen.findByRole("region", {
       name: "Workflow detail header",
     });
     await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
@@ -1001,7 +1001,7 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await openWorkflowDetails();
-    const header = await screen.findByRole("region", {
+    await screen.findByRole("region", {
       name: "Workflow detail header",
     });
     await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
@@ -1044,7 +1044,7 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await openWorkflowDetails();
-    const header = await screen.findByRole("region", {
+    await screen.findByRole("region", {
       name: "Workflow detail header",
     });
     await userEvent.click(await screen.findByRole("button", { name: "More actions" }));

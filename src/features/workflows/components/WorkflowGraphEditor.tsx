@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Background,
   Controls,
@@ -9,6 +9,8 @@ import {
   SelectionMode,
   applyEdgeChanges,
   applyNodeChanges,
+  ReactFlowProvider,
+  useViewport,
 } from "@xyflow/react";
 import type {
   Connection,
@@ -144,7 +146,86 @@ export function WorkflowGraphEditor({
   initialVariables,
   profileVariables,
 }: WorkflowGraphEditorProps) {
+  return (
+    <ReactFlowProvider>
+      <WorkflowGraphEditorInner
+        graph={graph}
+        graphKind={graphKind}
+        runState={runState}
+        validationIssues={validationIssues}
+        subflowOptions={subflowOptions}
+        selectionRequest={selectionRequest}
+        defaultEdgeDelay={defaultEdgeDelay}
+        onChange={onChange}
+        onCreateSubflowFromSelection={onCreateSubflowFromSelection}
+        onLoadSubflowGraph={onLoadSubflowGraph}
+        onRunGraph={onRunGraph}
+        onSelectedNodeChange={onSelectedNodeChange}
+        onOpenSubflowDetail={onOpenSubflowDetail}
+        onSaveGraph={onSaveGraph}
+        onValidateGraph={onValidateGraph}
+        onRestoreRevision={onRestoreRevision}
+        ownerId={ownerId}
+        initialVariables={initialVariables}
+        profileVariables={profileVariables}
+      />
+    </ReactFlowProvider>
+  );
+}
+
+const PALETTE_ITEMS = [
+  {
+    category: "Action Nodes",
+    nodes: [
+      { type: "action", label: "Visit", actionType: "navigate" },
+      { type: "action", label: "Click", actionType: "click" },
+      { type: "action", label: "Input Text", actionType: "input_text" },
+      { type: "action", label: "Press Key", actionType: "press_key" },
+      { type: "action", label: "Wait", actionType: "wait" },
+      { type: "action", label: "Execute JS", actionType: "execute_js" },
+    ],
+  },
+  {
+    category: "Logic Nodes",
+    nodes: [
+      { type: "if_else", label: "If/Else" },
+      { type: "loop", label: "Loop" },
+      { type: "try_catch", label: "Try/Catch" },
+      { type: "call_subflow", label: "Call Subflow" },
+    ],
+  },
+  {
+    category: "Variables",
+    nodes: [
+      { type: "define_variables", label: "Define Variables" },
+      { type: "set_variable", label: "Set Variable" },
+    ],
+  },
+];
+
+function WorkflowGraphEditorInner({
+  graph,
+  graphKind = "workflow",
+  runState,
+  validationIssues,
+  subflowOptions = [],
+  selectionRequest,
+  defaultEdgeDelay = null,
+  onChange,
+  onCreateSubflowFromSelection,
+  onLoadSubflowGraph,
+  onRunGraph,
+  onSelectedNodeChange,
+  onOpenSubflowDetail,
+  onSaveGraph,
+  onValidateGraph,
+  onRestoreRevision,
+  ownerId,
+  initialVariables,
+  profileVariables,
+}: WorkflowGraphEditorProps) {
   const [isActionPaletteOpen, setIsActionPaletteOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(true);
   const [isSubflowPaletteOpen, setIsSubflowPaletteOpen] = useState(false);
   const [nodePalette, setNodePalette] = useState<{
     title: string;
@@ -180,6 +261,53 @@ export function WorkflowGraphEditor({
   const isPanMode = isToolbarPanMode || isSpacePanActive;
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null);
+  const handleZoomChange = useCallback((level: number) => {
+    reactFlowInstance?.zoomTo(level, { duration: 150 });
+  }, [reactFlowInstance]);
+  const { zoom } = useViewport();
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    const dataStr = event.dataTransfer.getData("application/reactflow");
+    if (!dataStr) return;
+
+    try {
+      const data = JSON.parse(dataStr);
+      if (!reactFlowInstance) return;
+
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      const currentGraph = graphRef.current;
+      let node: any;
+
+      if (data.type === "action" && data.actionType) {
+        node = {
+          ...createDefaultGraphNode("action", position),
+          label: actionLabels[data.actionType as ActionType] || data.label,
+          config: defaultActionConfig(data.actionType as ActionType),
+        };
+      } else {
+        node = createDefaultGraphNode(data.type, position);
+        if (data.label) {
+          node.label = data.label;
+        }
+      }
+
+      commitGraphChange(
+        { ...currentGraph, nodes: [...currentGraph.nodes, node] },
+        { nodeIds: [node.id], edgeIds: [] },
+      );
+    } catch (err) {
+      console.error("Drop failed:", err);
+    }
+  }, [reactFlowInstance]);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
   const editorRef = useRef<HTMLElement | null>(null);
   const graphCanvasRef = useRef<HTMLDivElement | null>(null);
@@ -864,14 +992,79 @@ export function WorkflowGraphEditor({
         nodeCount={graph.nodes.length}
         edgeCount={graph.edges.length}
         arrangeError={arrangeError}
+        zoom={zoom}
+        onZoomChange={handleZoomChange}
       />
 
       <div className={
-        inspectorOpen && !isInspectorCollapsed
-          ? "workflow-graph-layout inspector-open"
-          : "workflow-graph-layout"
+        [
+          "workflow-graph-layout",
+          isPaletteOpen ? "palette-open" : "",
+          inspectorOpen && !isInspectorCollapsed ? "inspector-open" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
       }>
-        <div className="graph-canvas-wrap">
+        <aside className={`graph-palette-sidebar ${isPaletteOpen ? "open" : "collapsed"}`} aria-label="Node Palette">
+          <div className="palette-header">
+            <h3>Node Palette</h3>
+            <button
+              type="button"
+              className="palette-toggle-btn"
+              onClick={() => setIsPaletteOpen(false)}
+              aria-label="Collapse palette"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="palette-content">
+            {PALETTE_ITEMS.map((group) => (
+              <div key={group.category} className="palette-group">
+                <h4>{group.category}</h4>
+                <div className="palette-grid">
+                  {group.nodes.map((node) => (
+                    <div
+                      key={node.label}
+                      className="palette-node-item"
+                      draggable
+                      onDragStart={(event) => {
+                        event.dataTransfer.setData(
+                          "application/reactflow",
+                          JSON.stringify({
+                            type: node.type,
+                            label: node.label,
+                            actionType: (node as any).actionType,
+                          })
+                        );
+                        event.dataTransfer.effectAllowed = "move";
+                      }}
+                    >
+                      <span className="palette-node-dot" />
+                      <span>{node.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {!isPaletteOpen && (
+          <button
+            type="button"
+            className="graph-palette-expand-trigger"
+            onClick={() => setIsPaletteOpen(true)}
+            aria-label="Expand palette"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        )}
+
+        <div
+          className="graph-canvas-wrap"
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+        >
           <div
             className={["graph-canvas", isPanMode ? "graph-canvas-pan-mode" : ""]
               .filter(Boolean)

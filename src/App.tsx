@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle, AlertCircle, Info, X as CloseIcon } from "lucide-react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { SettingsHelpPage } from "./features/settings/pages/SettingsHelpPage";
 import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnostics";
@@ -116,12 +117,19 @@ function App() {
 
   // --- States ---
   const [appError, setAppError] = useState("");
-  const [toastMessage, setToastMessage] = useState("");
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: "success" | "error" | "info" }>>([]);
 
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
-    window.setTimeout(() => setToastMessage(""), 2200);
+  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
   }, []);
+
+  const setToastMessage = useCallback((message: string) => {
+    showToast(message);
+  }, [showToast]);
 
   // Shared state references
   const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
@@ -1143,11 +1151,31 @@ function App() {
         onDiscardChanges={discardGraphExitChangesAndNavigate}
         onSaveAndClose={saveGraphExitChangesAndNavigate}
       />
-      {toastMessage ? (
-        <div className="toast-alert app-toast" role="status">
-          {toastMessage}
-        </div>
-      ) : null}
+      <div className="toast-container" role="region" aria-label="Notifications">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`toast-item toast-${t.type}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="toast-icon">
+              {t.type === "success" && <CheckCircle className="h-4 w-4" />}
+              {t.type === "error" && <AlertCircle className="h-4 w-4" />}
+              {t.type === "info" && <Info className="h-4 w-4" />}
+            </span>
+            <span className="toast-message">{t.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              aria-label="Close notification"
+              onClick={() => setToasts((prev) => prev.filter((toast) => toast.id !== t.id))}
+            >
+              <CloseIcon className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+      </div>
       <AppPackageDialogs
         appError={appError}
         workflowPackageSections={workflowPackageSections}

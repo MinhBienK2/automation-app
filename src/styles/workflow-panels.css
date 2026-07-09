@@ -1625,3 +1625,22 @@
 .pretty-var-showmore:hover {
   color: var(--success);
 }
+
+/* Step Duration Visualizer */
+.run-monitor-step-duration-bar-bg {
+  position: relative;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  margin-left: 56px; /* align with timeline marker */
+  margin-right: 12px;
+  margin-top: -6px;
+  margin-bottom: 8px;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.run-monitor-step-duration-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1px;
+}

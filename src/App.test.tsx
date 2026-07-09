@@ -1702,7 +1702,7 @@ describe("App settings and graph autosave", () => {
     await openWorkflows();
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
 
-    const header = await screen.findByRole("region", { name: "Workflow detail header" });
+    await screen.findByRole("region", { name: "Workflow detail header" });
     await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Workflow Settings" }));
 

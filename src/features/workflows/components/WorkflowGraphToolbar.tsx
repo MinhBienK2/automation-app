@@ -13,7 +13,14 @@ import {
   Variable,
   Workflow,
   Zap,
+  ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
 import type { GraphNodeType } from "../../../types/workflow";
 import { IconButton } from "../../../components/ui/icon-button";
 import {
@@ -49,6 +56,8 @@ type WorkflowGraphToolbarProps = {
   nodeCount: number;
   edgeCount: number;
   arrangeError: string | null;
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
 };
 
 export function WorkflowGraphToolbar({
@@ -71,6 +80,8 @@ export function WorkflowGraphToolbar({
   nodeCount,
   edgeCount,
   arrangeError,
+  zoom,
+  onZoomChange,
 }: WorkflowGraphToolbarProps) {
   const visibleLogicNodeGroups =
     graphKind === "subflow"
@@ -129,6 +140,28 @@ export function WorkflowGraphToolbar({
         >
           <Maximize aria-hidden="true" />
         </IconButton>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm text-xs font-semibold px-2 min-w-[64px] rounded-md h-9 border border-transparent hover:border-base-300 flex items-center justify-between gap-1"
+              title="Zoom Level"
+            >
+              <span>{Math.round(zoom * 100)}%</span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-24">
+            {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((level) => (
+              <DropdownMenuItem key={level} onClick={() => onZoomChange(level)}>
+                <span>{level * 100}%</span>
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuItem onClick={onFitView}>
+              <span>Fit View</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <IconButton
           label="Auto arrange graph"
           disabled={isArranging || isReadOnly}

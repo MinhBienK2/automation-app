@@ -159,6 +159,8 @@ describe("RunMonitorDrawer", () => {
             output_values: {
               var1: "value1",
             },
+            started_at: "2026-07-10T00:00:00.000Z",
+            finished_at: "2026-07-10T00:00:01.000Z",
           },
           {
             output_summary: {
@@ -170,6 +172,8 @@ describe("RunMonitorDrawer", () => {
               var2: "value2",
               var1: "newValue1",
             },
+            started_at: "2026-07-10T00:00:01.000Z",
+            finished_at: "2026-07-10T00:00:03.000Z",
           },
         ],
       },
@@ -233,6 +237,10 @@ describe("RunMonitorDrawer", () => {
     expect(screen.getByText("value2")).toBeInTheDocument();
     expect(screen.getAllByText("value1").length).toBeGreaterThan(1);
     expect(screen.getByText("newValue1")).toBeInTheDocument(); // new value of var1
+
+    // Verify step duration progress bar exists
+    expect(screen.getByTestId("duration-bar-1")).toBeInTheDocument();
+    expect(screen.getByTestId("duration-bar-2")).toBeInTheDocument();
   });
 
   test("correctly maps timeline items to traces when non-visual steps are present (no offset/shift)", async () => {

@@ -265,6 +265,18 @@ export function RunMonitorDrawer({
   const currentLabel =
     nodeLabel(nodeById, currentNodeId) ?? runState.error?.step_name ?? "No active node";
   const timeline = useMemo(() => buildTimeline(graph, runState), [graph, runState]);
+  const durations = useMemo(() => {
+    return timeline.map((item) => {
+      const trace = traces[item.traceIndex];
+      if (!trace || !trace.started_at || !trace.finished_at) return 0;
+      const ms = new Date(trace.finished_at).getTime() - new Date(trace.started_at).getTime();
+      return isNaN(ms) || ms < 0 ? 0 : ms;
+    });
+  }, [timeline, traces]);
+  const maxDuration = useMemo(() => {
+    const val = Math.max(...durations, 0);
+    return val > 0 ? val : 1;
+  }, [durations]);
   const hasError = runState.status === "failed" && Boolean(runState.error);
   const errorLocation = runState.error?.diagnostics?.label_path?.length
     ? runState.error.diagnostics.label_path.join(" > ")
@@ -360,6 +372,8 @@ export function RunMonitorDrawer({
                 const durationText = trace ? formatDuration(trace.started_at, trace.finished_at) : null;
                 const badgeEl = trace ? actionTypeBadge(trace.action_type) : null;
                 const mutationPreview = trace ? variableMutationPreview(trace) : null;
+                const itemDuration = durations[timeline.indexOf(item)] || 0;
+                const durationPercentage = (itemDuration / maxDuration) * 100;
 
                 return (
                   <li key={item.id} className="run-monitor-timeline-item">
@@ -426,6 +440,14 @@ export function RunMonitorDrawer({
                         <small>{monitorStatusLabel(item.status)}</small>
                       </span>
                     </button>
+                    {itemDuration > 0 && (
+                      <div className="run-monitor-step-duration-bar-bg" data-testid={`duration-bar-${item.eventNumber}`}>
+                        <div
+                          className="run-monitor-step-duration-bar"
+                          style={{ width: `${durationPercentage}%` }}
+                        />
+                      </div>
+                    )}
                     {isExpanded && (
                       <div style={{ padding: "0 12px 12px 12px" }}>
                         {trace && (

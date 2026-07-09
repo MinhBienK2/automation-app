@@ -2590,5 +2590,33 @@ describe("Workflow graph editor integration", () => {
     expect(within(editor).getByLabelText("Node name")).toBeDisabled();
     expect(within(editor).getByRole("button", { name: "Delete Node" })).toBeDisabled();
   });
+
+  test("renders the Left Sidebar Node Palette and supports collapsible toggles", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    // Verify left sidebar node palette exists and has header
+    const palette = within(editor).getByRole("complementary", { name: "Node Palette" });
+    expect(palette).toBeInTheDocument();
+    expect(within(palette).getByText("Action Nodes")).toBeInTheDocument();
+    expect(within(palette).getByText("Logic Nodes")).toBeInTheDocument();
+
+    // Verify individual items
+    expect(within(palette).getByText("Visit")).toBeInTheDocument();
+    expect(within(palette).getByText("If/Else")).toBeInTheDocument();
+
+    // Collapse the palette
+    await userEvent.click(within(palette).getByRole("button", { name: "Collapse palette" }));
+
+    // Expand button should now be visible
+    expect(within(editor).getByRole("button", { name: "Expand palette" })).toBeInTheDocument();
+  });
 });
 
