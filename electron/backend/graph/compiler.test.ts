@@ -450,6 +450,110 @@ describe("TypeScript graph compiler parity", () => {
     });
   });
 
+  test("initializes loop variables in prelude when running from a node inside repeat_for_each loop with items", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("loop", "repeat_for_each", {
+          config: { item_name: "row", items: ["val1", "val2"] },
+        }),
+        graphNode("body-step", "action", { config: waitAction(100) }),
+        graphNode("after", "action", { config: clickAction("//continue") }),
+      ],
+      [
+        edge("start", "out", "loop", "in"),
+        edge("loop", "loop", "body-step", "in"),
+        edge("loop", "done", "after", "in"),
+      ],
+    );
+
+    const plan = compileWorkflowGraphFromNode(graph, "body-step");
+    expect(plan.steps.map((step) => step.node_id)).toEqual([
+      "__prelude:loop_item:loop",
+      "__prelude:loop_indices:loop",
+      "body-step",
+    ]);
+
+    expect(plan.steps[0].config).toEqual({
+      type: "set_variable",
+      config: {
+        name: "row",
+        value: "val1",
+        value_type: "text",
+        variables: null,
+      },
+    });
+
+    expect(plan.steps[1].config).toEqual({
+      type: "set_variable",
+      config: {
+        name: null,
+        value: null,
+        value_type: null,
+        variables: [
+          { name: "system.loop.index", value_type: "number", value: "0" },
+          { name: "system.loop.number", value_type: "number", value: "1" },
+        ],
+      },
+    });
+  });
+
+  test("initializes loop variables in prelude when running from a node inside repeat_for_each loop with array_variable", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("loop", "repeat_for_each", {
+          config: { item_name: "user", array_variable: "usersList" },
+        }),
+        graphNode("body-step", "action", { config: waitAction(100) }),
+      ],
+      [
+        edge("start", "out", "loop", "in"),
+        edge("loop", "loop", "body-step", "in"),
+      ],
+    );
+
+    const plan = compileWorkflowGraphFromNode(graph, "body-step");
+    expect(plan.steps.map((step) => step.node_id)).toEqual([
+      "__prelude:loop_item:loop",
+      "__prelude:loop_indices:loop",
+      "body-step",
+    ]);
+
+    expect(plan.steps[0].config).toEqual({
+      type: "get_list_item",
+      config: {
+        source: "usersList",
+        position: "first",
+        index: null,
+        output_name: "user",
+      },
+    });
+  });
+
+  test("initializes multiple nested loop variables in prelude", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("outer-loop", "repeat_times", { config: { times: 5 } }),
+        graphNode("inner-loop", "repeat_for_each", { config: { item_name: "innerItem", items: ["hello"] } }),
+        graphNode("body-step", "action", { config: waitAction(100) }),
+      ],
+      [
+        edge("start", "out", "outer-loop", "in"),
+        edge("outer-loop", "loop", "inner-loop", "in"),
+        edge("inner-loop", "loop", "body-step", "in"),
+      ],
+    );
+
+    const plan = compileWorkflowGraphFromNode(graph, "body-step");
+    expect(plan.steps.map((step) => step.node_id)).toEqual([
+      "__prelude:loop_indices:outer-loop",
+      "__prelude:loop_item:inner-loop",
+      "__prelude:loop_indices:inner-loop",
+      "body-step",
+    ]);
+  });
 
   test("compiles a selected-only run plan for just the selected main-path node", () => {
     const graph = graphOf(

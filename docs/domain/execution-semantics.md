@@ -16,7 +16,7 @@
 - Merge: internal no-op step. No browser/output/session side effects.
 - Call Subflow: resolves same-project subflow, inlines steps with prefixed ids/labels. Shares caller's run/browser/output/evidence/domain policy. No nested Call Subflow (MVP). Empty subflow → blocking error.
 - Missing optional branches → empty steps. Missing continuation → successful end. Missing required body → validation error.
-- Run from selected: `selected_only` or `from_selected`. Same subflow resolver. Merge not selectable (no-op).
+- Run from selected: `selected_only` or `from_selected`. Same subflow resolver. Merge not selectable (no-op). If the selected node is inside one or more loop nodes (e.g., repeat_for_each, repeat_times, while, repeat_until), the compiler automatically injects prelude steps to initialize these ancestor loop variables (setting system loop indices to index 0 / number 1 and extracting the first item of list variables where applicable) to act as if the first iteration is active.
 
 ## Run State
 
