@@ -3,6 +3,7 @@ import { Plus, Trash2, Fingerprint, Pencil, Search } from "lucide-react";
 import { ProfileEditDialog } from "./ProfileEditDialog";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
+import { Alert } from "../../../components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -103,9 +104,9 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
     <section className="flex flex-col gap-4" aria-label="Profiles workspace">
       <div role="group" aria-label="Browser Profiles" className="contents">
         {error ? (
-          <div className="alert alert-error text-xs p-3" role="alert">
+          <Alert variant="error" className="text-xs p-3">
             {error}
-          </div>
+          </Alert>
         ) : null}
 
         {/* Toolbar Filter */}

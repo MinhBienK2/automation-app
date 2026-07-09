@@ -2,6 +2,7 @@ import { Save, Settings } from "lucide-react";
 import { useState } from "react";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { IconButton } from "../../../components/ui/icon-button";
+import { Alert } from "../../../components/ui/alert";
 import { initialRunState } from "../../../lib/workflowUi";
 import type {
   Subflow,
@@ -99,9 +100,9 @@ export function SubflowDetailPage({
       />
 
       {appError ? (
-        <div className="alert alert-error text-xs p-3" role="alert">
+        <Alert variant="error" className="text-xs p-3">
           {appError}
-        </div>
+        </Alert>
       ) : null}
 
       <section className="card bg-base-200 border border-base-300 card-body p-5 flex flex-col mb-4" aria-label="Subflow usage">
@@ -116,9 +117,9 @@ export function SubflowDetailPage({
           </ul>
         ) : usageCount > 0 ? (
           <div className="flex flex-col gap-3">
-            <div className="alert alert-warning text-xs p-3">
+            <Alert variant="warning" className="text-xs p-3">
               <span>This subflow is used by {usageLabel}. Saving changes will affect their next run.</span>
-            </div>
+            </Alert>
             <ul className="list-disc list-inside text-xs text-base-content/85 flex flex-col gap-1 pl-1">
               {usage.map((item) => (
                 <li key={item.workflow_id} className="font-medium">{item.workflow_name}</li>

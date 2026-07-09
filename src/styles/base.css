@@ -52,7 +52,11 @@
   --color-cyan: #32d3e6;
   --color-teal: #2bd5b3;
   --color-purple: #b07dfd;
+  --color-purple-bg: rgba(176, 125, 253, 0.12);
+  --color-purple-border: rgba(176, 125, 253, 0.56);
   --color-orange: #f48c42;
+  --color-orange-bg: rgba(244, 140, 66, 0.16);
+  --color-orange-border: rgba(244, 140, 66, 0.56);
 
   /* Radius */
   --radius-sm: 4px;
@@ -131,6 +135,16 @@ html[data-theme="light"] {
   --console-bg: #0b1016;
   --console-fg: rgba(255, 255, 255, 0.9);
   color-scheme: light;
+
+  /* Misc accent swatches overrides for light theme */
+  --color-cyan: #00a6b8;
+  --color-teal: #0e9f82;
+  --color-purple: #7d3ee8;
+  --color-purple-bg: rgba(125, 62, 232, 0.08);
+  --color-purple-border: rgba(125, 62, 232, 0.48);
+  --color-orange: #d15e10;
+  --color-orange-bg: rgba(209, 94, 16, 0.08);
+  --color-orange-border: rgba(209, 94, 16, 0.48);
 }
 
 /* ---------- ACCENT SWATCHES ---------- */

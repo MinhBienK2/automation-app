@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Save, Square, Trash2 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
+import { Alert } from "../../../components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -92,7 +93,7 @@ export function RecordingReviewDialog({
             </div>
 
             {draft.warnings.length > 0 ? (
-              <div className="alert alert-warning text-xs p-3 shrink-0 flex flex-col items-start gap-1">
+              <Alert variant="warning" className="text-xs p-3 shrink-0 flex flex-col items-start gap-1">
                 <span className="font-bold">Warnings:</span>
                 <ul className="list-disc list-inside pl-1 flex flex-col gap-0.5">
                   {draft.warnings.map((warning, index) => (
@@ -101,9 +102,9 @@ export function RecordingReviewDialog({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </Alert>
             ) : null}
-            {error ? <div className="alert alert-error text-xs p-2.5 shrink-0">{error}</div> : null}
+            {error ? <Alert variant="error" className="text-xs p-2.5 shrink-0">{error}</Alert> : null}
             <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-4 shrink-0">
               <Button type="submit" disabled={busy} className="btn-primary">
                 <Save aria-hidden="true" size={14} className="mr-1" />
@@ -138,7 +139,7 @@ export function RecordingReviewDialog({
                 </div>
               </div>
             </div>
-            {error ? <div className="alert alert-error text-xs p-2.5 my-3">{error}</div> : null}
+            {error ? <Alert variant="error" className="text-xs p-2.5 my-3">{error}</Alert> : null}
             <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-auto shrink-0">
               <Button type="button" disabled={busy} onClick={onStopRecording} className="btn-primary">
                 <Square aria-hidden="true" size={14} className="mr-1" />

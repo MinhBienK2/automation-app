@@ -2,6 +2,7 @@ import { Activity, AlertTriangle, CalendarClock, RefreshCw, ShieldCheck } from "
 import type { ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
+import { Alert } from "../../../components/ui/alert";
 import type {
   OperationsOverview,
   OperationsNavigationTarget,
@@ -64,7 +65,7 @@ export function OperationsOverviewPage({
       </header>
 
       {error ? (
-        <div className="alert alert-error mb-4" role="alert">
+        <Alert variant="error" className="mb-4">
           <div>
             <h3 className="font-bold">Overview unavailable</h3>
             <div className="text-xs">{error}</div>
@@ -72,7 +73,7 @@ export function OperationsOverviewPage({
           <Button type="button" variant="secondary" onClick={onRefresh} className="btn-xs">
             Retry
           </Button>
-        </div>
+        </Alert>
       ) : null}
 
       {/* KPI Stats using daisyUI Stats component */}
@@ -161,9 +162,9 @@ export function OperationsOverviewPage({
 
         <Panel title="System Health" icon={<ShieldCheck aria-hidden="true" />}>
           {diagnosticsError ? (
-            <div className="alert alert-error text-xs p-2 mb-2" role="alert">
+            <Alert variant="error" className="text-xs p-2 mb-2">
               {diagnosticsError}
-            </div>
+            </Alert>
           ) : null}
           {diagnosticsLoading && !diagnostics ? (
             <div className="flex items-center gap-2 text-secondary text-xs">

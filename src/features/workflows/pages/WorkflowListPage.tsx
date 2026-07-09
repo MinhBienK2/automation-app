@@ -23,6 +23,7 @@ import { Badge } from "../../../components/ui/badge";
 import type { BrowserProfile, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
+import { Alert } from "../../../components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -112,9 +113,9 @@ export function WorkflowListPage({
     <div className="flex flex-col gap-4 mt-2">
       <h1 className="sr-only">Workflows</h1>
       {appError ? (
-        <div className="alert alert-error text-xs p-3" role="alert">
+        <Alert variant="error" className="text-xs p-3">
           {appError}
-        </div>
+        </Alert>
       ) : null}
 
       {/* Toolbar Filter */}
@@ -323,7 +324,7 @@ export function WorkflowListPage({
                     </Select>
                   </FormField>
                 ) : null}
-                {appError ? <div className="alert alert-error text-xs p-2.5 mt-2">{appError}</div> : null}
+                {appError ? <Alert variant="error" className="text-xs p-2.5 mt-2">{appError}</Alert> : null}
                 <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">
                   <Button type="submit" disabled={workflowDialogBusy} loading={workflowDialogBusy} className="btn-primary">
                     {workflowDialogMode === "create" ? "Create" : "Save Changes"}

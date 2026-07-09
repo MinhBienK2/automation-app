@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
+import { Alert } from "../../../components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -109,14 +110,14 @@ export function ProjectSettings({
     <section className="flex flex-col gap-6" aria-label="Project Settings">
       <h2 className="sr-only">Project Settings</h2>
       {error ? (
-        <div className="alert alert-error text-xs p-3" role="alert">
+        <Alert variant="error" className="text-xs p-3">
           {error}
-        </div>
+        </Alert>
       ) : null}
       {localError ? (
-        <div className="alert alert-error text-xs p-3" role="alert">
+        <Alert variant="error" className="text-xs p-3">
           {localError}
-        </div>
+        </Alert>
       ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
