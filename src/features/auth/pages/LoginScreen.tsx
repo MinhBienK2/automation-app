@@ -3,6 +3,8 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 
+import { Alert } from "../../../components/ui/alert";
+
 interface LoginScreenProps {
   onLogin: (email: string, passwordPlain: string) => Promise<boolean>;
   authError: string | null;
@@ -105,9 +107,9 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
           </div>
 
           {authError && (
-            <div className="alert alert-error text-sm p-3 justify-center" role="alert">
+            <Alert variant="error" className="text-sm p-3 justify-center">
               {authError}
-            </div>
+            </Alert>
           )}
 
           <Button type="submit" disabled={isFieldsDisabled} loading={isFieldsDisabled} className="btn-primary w-full">

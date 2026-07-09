@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
 import { Badge } from "../../../components/ui/badge";
+import { Alert } from "../../../components/ui/alert";
 import type {
   WorkflowSchedule,
   WorkflowScheduleEvent,
@@ -114,9 +115,9 @@ export function SchedulesPage({
       </header>
 
       {error ? (
-        <div className="alert alert-error text-xs p-3 mb-4 animate-fade-in" role="alert">
+        <Alert variant="error" className="text-xs p-3 mb-4 animate-fade-in">
           {error}
-        </div>
+        </Alert>
       ) : null}
 
       <section className="card bg-base-200 border border-base-300 card-body p-5 flex flex-col" aria-label="Schedule list">

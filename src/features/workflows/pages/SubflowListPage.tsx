@@ -1,6 +1,7 @@
 import { Copy, Eye, Plus, RefreshCw, Settings, Trash2, Download, Upload, GitFork } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "../../../components/ui/button";
+import { Alert } from "../../../components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -103,9 +104,9 @@ export function SubflowListPage({
     <div className="flex flex-col gap-4 mt-2">
       <h1 className="sr-only">Subflows</h1>
       {error ? (
-        <div className="alert alert-error text-xs p-3 animate-fade-in" role="alert">
+        <Alert variant="error" className="text-xs p-3 animate-fade-in">
           {error}
-        </div>
+        </Alert>
       ) : null}
 
       {/* Toolbar Filter */}
@@ -279,7 +280,7 @@ export function SubflowListPage({
                 className="input-sm border-base-300 w-full"
               />
             </FormField>
-            {localError ? <div className="alert alert-error text-xs p-2.5 mt-2">{localError}</div> : null}
+            {localError ? <Alert variant="error" className="text-xs p-2.5 mt-2">{localError}</Alert> : null}
             <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">
               <Button type="submit" disabled={creating} loading={creating} className="btn-primary">
                 Create

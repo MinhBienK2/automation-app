@@ -167,8 +167,8 @@ describe("App CSS", () => {
     expect(css).not.toContain(".graph-node-subflow::before");
     expect(actionNode).toContain("--graph-node-accent: var(--accent)");
     expect(logicNode).toContain("--graph-node-accent: var(--attention)");
-    expect(subflowNode).toContain("--graph-node-accent: #ff8a3d");
-    expect(variableNode).toContain("--graph-node-accent: #b070ff");
+    expect(subflowNode).toContain("--graph-node-accent: var(--color-orange)");
+    expect(variableNode).toContain("--graph-node-accent: var(--color-purple)");
     expect(subflowNode).not.toContain("--graph-node-accent: var(--accent)");
     expect(subflowNode).not.toContain("--graph-node-accent: var(--attention)");
   });
@@ -358,7 +358,7 @@ describe("App CSS", () => {
     const issueEdge = cssRule(".graph-canvas .graph-edge-has-issue .react-flow__edge-path");
     const failedEdge = cssRule(".graph-canvas .graph-edge-failed .react-flow__edge-path");
 
-    expect(mainEdge).toContain("stroke: #4c6a7f");
+    expect(mainEdge).toContain("stroke: var(--border-hover)");
     expect(branchEdge).toContain("stroke-dasharray: 7 5");
     expect(continuationEdge).toContain("stroke-dasharray: 3 4");
     expect(loopRecoveryEdge).toContain("stroke-dasharray: 9 4 2 4");

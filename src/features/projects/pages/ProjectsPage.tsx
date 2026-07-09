@@ -2,6 +2,7 @@ import { Copy, Download, MoreVertical, Trash, Upload } from "lucide-react";
 import { useMemo, useState, useEffect, type FormEvent, type ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
+import { Alert } from "../../../components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -365,9 +366,9 @@ export function ProjectsPage({
       )}
 
       {error ? (
-        <div className="alert alert-error text-xs p-3 mt-4" role="alert">
+        <Alert variant="error" className="text-xs p-3 mt-4">
           {error}
-        </div>
+        </Alert>
       ) : null}
 
       <Dialog

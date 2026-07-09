@@ -134,7 +134,7 @@
 }
 
 .variable-warning {
-  color: #ffcc66;
+  color: var(--attention);
   font-size: 12px;
 }
 
@@ -242,9 +242,9 @@
   display: grid;
   gap: 6px;
   padding: 8px;
-  border: 1px solid rgba(244, 183, 64, 0.36);
+  border: 1px solid color-mix(in srgb, var(--attention) 36%, transparent);
   border-radius: 8px;
-  color: #facc15;
+  color: var(--attention);
   font-size: 12px;
 }
 
@@ -263,12 +263,12 @@
 
 .graph-issue-error {
   border-color: var(--failure);
-  color: #fca5a5;
+  color: var(--failure);
 }
 
 .graph-issue-warning {
-  border-color: rgba(244, 183, 64, 0.52);
-  color: #facc15;
+  border-color: color-mix(in srgb, var(--attention) 52%, transparent);
+  color: var(--attention);
 }
 
 .variable-row-table-v2 {

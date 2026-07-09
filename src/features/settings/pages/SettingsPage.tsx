@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "../../../components/ui/button";
+import { Alert } from "../../../components/ui/alert";
 import pkg from "../../../../package.json";
 import {
   Dialog,
@@ -240,9 +241,9 @@ export function SettingsPage({
           inactive browser profiles.
         </p>
         {maintenanceMessage ? (
-          <div className="alert alert-info text-xs p-3 mt-4" role="status">
+          <Alert variant="info" className="text-xs p-3 mt-4">
             {maintenanceMessage}
-          </div>
+          </Alert>
         ) : null}
       </section>
 

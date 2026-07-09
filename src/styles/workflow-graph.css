@@ -232,7 +232,7 @@
 }
 
 .graph-canvas .graph-edge-main .react-flow__edge-path {
-  stroke: #4c6a7f;
+  stroke: var(--border-hover);
 }
 
 .graph-canvas .graph-edge-branch .react-flow__edge-path {
@@ -241,7 +241,7 @@
 }
 
 .graph-canvas .graph-edge-continuation .react-flow__edge-path {
-  stroke: #5b7488;
+  stroke: var(--border-emphasized);
   stroke-dasharray: 3 4;
 }
 
@@ -428,25 +428,25 @@
 }
 
 .graph-node-subflow {
-  --graph-node-accent: #ff8a3d;
-  --graph-node-accent-bg: rgba(255, 138, 61, 0.16);
+  --graph-node-accent: var(--color-orange);
+  --graph-node-accent-bg: var(--color-orange-bg);
 
-  border-color: rgba(255, 138, 61, 0.56);
+  border-color: var(--color-orange-border);
   background:
     linear-gradient(90deg, var(--graph-node-accent-bg), transparent 36%),
     var(--bg);
-  box-shadow: 0 0 0 1px rgba(255, 138, 61, 0.13) inset;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-orange) 13%, transparent) inset;
 }
 
 .graph-node-variable {
-  --graph-node-accent: #b070ff;
-  --graph-node-accent-bg: rgba(176, 112, 255, 0.12);
+  --graph-node-accent: var(--color-purple);
+  --graph-node-accent-bg: var(--color-purple-bg);
 
-  border-color: rgba(176, 112, 255, 0.56);
+  border-color: var(--color-purple-border);
   background:
-    linear-gradient(90deg, var(--graph-node-accent-bg), transparent 34%),
+    linear-gradient(90deg, var(--graph-node-accent-bg), transparent 36%),
     var(--bg);
-  box-shadow: 0 0 0 1px rgba(176, 112, 255, 0.13) inset;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-purple) 13%, transparent) inset;
 }
 
 .graph-node-start,
@@ -568,7 +568,7 @@
 
 .graph-node-failed {
   border-color: var(--failure);
-  color: #fca5a5;
+  color: var(--failure);
 }
 
 .graph-node-failed.graph-node-selected {
@@ -665,7 +665,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: #a78bfa;
+  background: var(--color-purple);
   border: 1px solid var(--surface);
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
 }
@@ -688,7 +688,7 @@
   background: transparent;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
-  border-bottom: 14px solid #f59e0b;
+  border-bottom: 14px solid var(--color-orange);
   border-top: none;
 }
 
@@ -712,15 +712,15 @@
 }
 
 .graph-handle-square {
-  background: #34d399;
+  background: var(--success);
 }
 
 .graph-handle-triangle {
-  border-bottom-color: #f87171;
+  border-bottom-color: var(--failure);
 }
 
 .graph-handle-hexagon {
-  background: #60a5fa;
+  background: var(--accent);
 }
 
 .graph-canvas .react-flow__handle.connectingto.valid {
@@ -1131,7 +1131,7 @@
 }
 
 .revision-item.revision-tagged {
-  border-color: #3b82f6;
+  border-color: var(--accent);
 }
 
 .revision-item-header {
@@ -1149,8 +1149,8 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  background: #1e3a5f;
-  color: #93c5fd;
+  background: var(--accent-bg);
+  color: var(--accent);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -1158,7 +1158,7 @@
 .revision-size {
   margin-left: auto;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--fg-muted);
 }
 
 .revision-meta {
@@ -1167,17 +1167,17 @@
   gap: 6px;
   margin-top: 4px;
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--fg-secondary);
 }
 
 .revision-author {
-  color: #6b7280;
+  color: var(--fg-muted);
 }
 
 .revision-comment {
   margin: 6px 0 0;
   font-size: 0.85rem;
-  color: #d1d5db;
+  color: var(--fg-secondary);
   overflow-wrap: anywhere;
 }
 
@@ -1201,21 +1201,21 @@
   border: 1px solid var(--border-emphasized);
   border-radius: 4px;
   background: var(--bg);
-  color: #e5e7eb;
+  color: var(--fg-primary);
   font-size: 0.8rem;
 }
 
 .revision-history-empty {
   padding: 16px 0;
   text-align: center;
-  color: #6b7280;
+  color: var(--fg-muted);
 }
 
 .revision-history-error {
   padding: 8px 12px;
   border-radius: 6px;
-  background: #3b1219;
-  color: #fca5a5;
+  background: var(--failure-bg);
+  color: var(--failure);
   font-size: 0.85rem;
 }
 
@@ -1231,7 +1231,7 @@
   padding: 12px;
   border-radius: 6px;
   background: var(--bg);
-  color: #d1d5db;
+  color: var(--fg-secondary);
   font-size: 0.8rem;
   font-family: monospace;
   white-space: pre-wrap;

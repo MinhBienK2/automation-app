@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import { Button } from "../../../components/ui/button";
+import { Alert } from "../../../components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -314,7 +315,7 @@ export function ScheduleFormDialog({
             />
           </div>
 
-          {formError ? <div className="alert alert-error text-xs p-2.5">{formError}</div> : null}
+          {formError ? <Alert variant="error" className="text-xs p-2.5">{formError}</Alert> : null}
           <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">
             <Button type="submit" disabled={saving} loading={saving} className="btn-primary">
               {mode === "edit" ? "Save Schedule" : "Create Schedule"}

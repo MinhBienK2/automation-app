@@ -7,6 +7,7 @@ import type {
 } from "../../../types/workflow";
 import type { WorkflowSettingsSaveStatus } from "../../../lib/appState";
 import { Button } from "../../../components/ui/button";
+import { Alert } from "../../../components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -164,9 +165,9 @@ export function WorkflowSettingsDialog({
                     </div>
 
                     {error ? (
-                      <div className="alert alert-error text-xs p-3 mb-4" role="alert">
+                      <Alert variant="error" className="text-xs p-3 mb-4">
                         {error}
-                      </div>
+                      </Alert>
                     ) : null}
 
                     {activeSection === "general" ? (

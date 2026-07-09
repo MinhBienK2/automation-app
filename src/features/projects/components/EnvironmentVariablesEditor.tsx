@@ -4,6 +4,7 @@ import type { VariableValueType } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { Alert } from "../../../components/ui/alert";
 import { Select } from "../../../components/ui/select";
 import { Switch } from "../../../components/ui/switch";
 import { Textarea } from "../../../components/ui/textarea";
@@ -304,9 +305,9 @@ export function EnvironmentVariablesEditor({
             className="font-mono text-xs bg-base-200 border-base-300 w-full"
           />
           {jsonError && (
-            <div className="alert alert-error text-xs p-2.5 mt-2">
+            <Alert variant="error" className="text-xs p-2.5 mt-2">
               {jsonError}
-            </div>
+            </Alert>
           )}
         </div>
       )}
