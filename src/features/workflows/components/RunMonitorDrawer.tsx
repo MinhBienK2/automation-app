@@ -83,12 +83,18 @@ function resolveMainGraphNodeId(
   graphNodeIds: Set<string>,
 ): string | null {
   if (!nodeId) return null;
-  if (graphNodeIds.has(nodeId)) return nodeId;
-  const subflowCallerNodeId = nodeId.split("::", 1)[0];
+  let cleanNodeId = nodeId;
+  if (cleanNodeId.startsWith("__prelude:loop_item:")) {
+    cleanNodeId = cleanNodeId.slice("__prelude:loop_item:".length);
+  } else if (cleanNodeId.startsWith("__prelude:loop_indices:")) {
+    cleanNodeId = cleanNodeId.slice("__prelude:loop_indices:".length);
+  }
+  if (graphNodeIds.has(cleanNodeId)) return cleanNodeId;
+  const subflowCallerNodeId = cleanNodeId.split("::", 1)[0];
   if (subflowCallerNodeId && graphNodeIds.has(subflowCallerNodeId)) {
     return subflowCallerNodeId;
   }
-  return nodeId;
+  return cleanNodeId;
 }
 
 function buildTimeline(graph: WorkflowGraph, runState: RunState) {
