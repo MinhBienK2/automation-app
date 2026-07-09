@@ -44,3 +44,5 @@ CLAUDE.md
 docs/superpowers/
 
 .env
+
+graphify-out/

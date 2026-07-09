@@ -30,6 +30,7 @@ import {
   stringField,
   validationError,
 } from "../shared/records.js";
+import { generateLoopPreludeSteps } from "./loopAnalysis.js";
 
 export { validateActionConfig } from "../actions/validation.js";
 export { validateWorkflowGraph } from "./validateGraph.js";
@@ -138,12 +139,13 @@ export function compileWorkflowGraphFromNode(
   }));
   const fullWithWaits = insertWaitBetweenGraphNodes(fullCompiled);
 
+  const loopPrelude = generateLoopPreludeSteps(normalizedGraph, startNodeId);
   const prelude = options.settings
     ? settingsPreludeSteps(options.settings, options.profileEnvironment)
     : [];
 
   return {
-    steps: [...prelude, ...withWaits],
+    steps: [...prelude, ...loopPrelude, ...withWaits],
     domain_policy: domainPolicyFromSteps(fullWithWaits),
   };
 }
