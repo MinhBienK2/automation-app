@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/button";
 import { PrettyVariableViewer } from "./PrettyVariableViewer";
 
 type RunVariablesDrawerProps = {
+  open: boolean;
   variables: Record<string, unknown>;
   onClose: () => void;
   isSnapshot?: boolean;
@@ -13,6 +14,7 @@ type RunVariablesDrawerProps = {
 };
 
 export function RunVariablesDrawer({
+  open,
   variables,
   onClose,
   isSnapshot = false,
@@ -34,7 +36,7 @@ export function RunVariablesDrawer({
   }, [variables, searchQuery]);
 
   return (
-    <aside className="run-variables-drawer" aria-label="Variables">
+    <aside className={open ? "run-variables-drawer open" : "run-variables-drawer"} aria-label="Variables">
       <header className="run-variables-header">
         <div>
           <h2>Variables</h2>
@@ -45,7 +47,7 @@ export function RunVariablesDrawer({
                 {snapshotNodeName && <span style={{ color: "#9aaebd", fontSize: "11px" }}>({snapshotNodeName})</span>}
               </>
             ) : (
-              <span style={{ color: "#39d98a", fontWeight: "bold" }}>● Live (Mới nhất)</span>
+              <span style={{ color: "#39d98a", fontWeight: "bold" }}>● Live (Latest)</span>
             )}
           </div>
         </div>
@@ -65,7 +67,7 @@ export function RunVariablesDrawer({
         <input
           type="text"
           className="run-variables-search-input"
-          placeholder="Tìm kiếm biến..."
+          placeholder="Search variables..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -76,7 +78,7 @@ export function RunVariablesDrawer({
             onClick={onBackToLive}
           >
             <RotateCcw className="h-3 w-3" />
-            Quay lại Live
+            Back to Live
           </button>
         )}
       </div>
@@ -89,7 +91,7 @@ export function RunVariablesDrawer({
           />
         ) : (
           <p className="pretty-var-empty" style={{ padding: "8px" }}>
-            {searchQuery ? "Không tìm thấy biến phù hợp." : "Chưa có biến nào."}
+            {searchQuery ? "No matching variables found." : "No variables available."}
           </p>
         )}
       </div>

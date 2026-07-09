@@ -29,7 +29,7 @@ const css = cssFiles
 
 function cssRule(selector: string) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+  const match = css.match(new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`));
   return match?.[1] ?? "";
 }
 

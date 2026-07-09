@@ -129,12 +129,8 @@ describe("Workflow detail integration", () => {
       "data-slot",
       "badge",
     );
-    expect(within(controlsRow).getByRole("button", { name: "Settings" }))
-      .toHaveClass("workflow-command-icon");
-    expect(within(controlsRow).getByRole("button", { name: "Settings" }))
-      .toHaveAttribute("data-tooltip", "Settings");
-    expect(within(controlsRow).getByRole("button", { name: "Validate" }))
-      .toHaveClass("workflow-command-icon");
+    expect(within(controlsRow).getByRole("button", { name: "More actions" }))
+      .toBeInTheDocument();
     expect(within(controlsRow).getByRole("button", { name: "Save" }))
       .toHaveClass("workflow-command-icon");
     expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
@@ -279,13 +275,11 @@ describe("Workflow detail integration", () => {
       .toBeInTheDocument();
 
     await userEvent.click(within(monitor).getByRole("button", { name: "Close monitor" }));
-    expect(screen.queryByRole("complementary", { name: "Run Monitor" }))
-      .not.toBeInTheDocument();
+    expect(monitor).not.toHaveClass("open");
     expect(editor).toBeInTheDocument();
 
     await userEvent.click(within(controlsRow).getByRole("button", { name: "Monitor" }));
-    expect(await screen.findByRole("complementary", { name: "Run Monitor" }))
-      .toBeInTheDocument();
+    expect(monitor).toHaveClass("open");
   });
 
   test("shows terminal monitor status without the Run prefix", async () => {
@@ -862,7 +856,8 @@ describe("Workflow detail integration", () => {
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
-    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Workflow Settings" }));
     const settingsDialog = await screen.findByRole("dialog", {
       name: "Workflow Settings",
     });
@@ -973,7 +968,8 @@ describe("Workflow detail integration", () => {
       name: "Workflow detail header",
     });
     expect(within(header).queryByText(/Environment:/)).not.toBeInTheDocument();
-    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Workflow Settings" }));
     const settingsDialog = await screen.findByRole("dialog", {
       name: "Workflow Settings",
     });
@@ -1008,7 +1004,8 @@ describe("Workflow detail integration", () => {
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
-    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Workflow Settings" }));
     const settingsDialog = await screen.findByRole("dialog", {
       name: "Workflow Settings",
     });
@@ -1050,7 +1047,8 @@ describe("Workflow detail integration", () => {
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
-    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Workflow Settings" }));
     const settingsDialog = await screen.findByRole("dialog", {
       name: "Workflow Settings",
     });
@@ -1085,7 +1083,8 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await openWorkflowDetails();
-    await userEvent.click(screen.getByRole("button", { name: "Validate" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Validate Graph" }));
 
     const panel = await screen.findByRole("region", { name: "Run issues" });
     expect(within(panel).getByText("Run blocked")).toBeInTheDocument();
@@ -1114,7 +1113,8 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await openWorkflowDetails();
-    await userEvent.click(screen.getByRole("button", { name: "Validate" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Validate Graph" }));
     const panel = await screen.findByRole("region", { name: "Run issues" });
 
     await userEvent.click(screen.getByRole("button", { name: "New node" }));
@@ -1500,15 +1500,15 @@ describe("Workflow detail integration", () => {
     const variablesDrawer = await screen.findByRole("complementary", {
       name: "Variables",
     });
-    expect(variablesDrawer).toBeInTheDocument();
+    expect(variablesDrawer).toHaveClass("open");
 
     // Click close button on drawer
     await userEvent.click(within(variablesDrawer).getByRole("button", { name: "Close variables" }));
-    expect(screen.queryByRole("complementary", { name: "Variables" })).not.toBeInTheDocument();
+    expect(variablesDrawer).not.toHaveClass("open");
 
     // Toggle open again via header button
     await userEvent.click(variablesBtn);
-    expect(await screen.findByRole("complementary", { name: "Variables" })).toBeInTheDocument();
+    expect(variablesDrawer).toHaveClass("open");
   });
 
   test("displays combined initial and profile variables in variables drawer before run starts", async () => {

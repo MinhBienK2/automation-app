@@ -1942,7 +1942,8 @@ describe("Workflow graph editor integration", () => {
       (await screen.findByRole("dialog", { name: "Choose a logic node" }))
         .querySelector('[data-value="if"]') as HTMLElement,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Validate" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Validate Graph" }));
 
     await waitFor(() => {
       expect(workflowCommandCallMock).toHaveBeenCalledWith(

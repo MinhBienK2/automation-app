@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/button";
 import { RunMonitorEnvironmentPanel } from "./RunMonitorEnvironment";
 
 type RunMonitorDrawerProps = {
+  open: boolean;
   graph: WorkflowGraph;
   runState: RunState;
   onFocusNode: (nodeId: string) => void;
@@ -240,6 +241,7 @@ function variableMutationPreview(trace: any): string | null {
 }
 
 export function RunMonitorDrawer({
+  open,
   graph,
   runState,
   onFocusNode,
@@ -279,7 +281,7 @@ export function RunMonitorDrawer({
   }, [timeline.length, isRunning]);
 
   return (
-    <aside className="run-monitor-drawer" aria-label="Run Monitor">
+    <aside className={open ? "run-monitor-drawer open" : "run-monitor-drawer"} aria-label="Run Monitor">
       <header className="run-monitor-header">
         <div>
           <p className="eyebrow">Run Monitor</p>

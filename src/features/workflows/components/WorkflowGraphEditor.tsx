@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { ChevronLeft } from "lucide-react";
 import {
   Background,
   Controls,
@@ -248,6 +249,14 @@ export function WorkflowGraphEditor({
     validationIssues,
   });
   const showGraphMiniMap = graph.nodes.length <= graphMiniMapNodeLimit;
+
+  const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (selectedNodeId || selection.edgeIds.length > 0 || selection.nodeIds.length > 0) {
+      setIsInspectorCollapsed(false);
+    }
+  }, [selectedNodeId, selection.edgeIds.length, selection.nodeIds.length]);
 
   useEffect(() => {
     onSelectedNodeChange?.(selectedNodeId);
@@ -857,7 +866,11 @@ export function WorkflowGraphEditor({
         arrangeError={arrangeError}
       />
 
-      <div className="workflow-graph-layout">
+      <div className={
+        inspectorOpen && !isInspectorCollapsed
+          ? "workflow-graph-layout inspector-open"
+          : "workflow-graph-layout"
+      }>
         <div className="graph-canvas-wrap">
           <div
             className={["graph-canvas", isPanMode ? "graph-canvas-pan-mode" : ""]
@@ -969,7 +982,7 @@ export function WorkflowGraphEditor({
           </div>
         </div>
 
-        {inspectorOpen ? (
+        {inspectorOpen && !isInspectorCollapsed ? (
           <aside
             className="graph-inspector-drawer"
             aria-label="Graph inspector drawer"
@@ -1001,8 +1014,19 @@ export function WorkflowGraphEditor({
               onClose={closeInspector}
               onUpdateEdge={updateEdge}
               onUpdateNode={updateNode}
+              onToggleCollapse={() => setIsInspectorCollapsed(true)}
             />
           </aside>
+        ) : null}
+        {inspectorOpen && isInspectorCollapsed ? (
+          <button
+            type="button"
+            className="graph-inspector-expand-trigger"
+            title="Expand inspector"
+            onClick={() => setIsInspectorCollapsed(false)}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
         ) : null}
       </div>
 

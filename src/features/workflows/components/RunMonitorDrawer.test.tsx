@@ -68,6 +68,7 @@ describe("RunMonitorDrawer", () => {
 
     const { rerender } = render(
       <RunMonitorDrawer
+        open={true}
         graph={graph}
         runState={baseRunState}
         onClose={vi.fn()}
@@ -80,6 +81,7 @@ describe("RunMonitorDrawer", () => {
 
     rerender(
       <RunMonitorDrawer
+        open={true}
         graph={graph}
         runState={{
           ...baseRunState,
@@ -100,6 +102,7 @@ describe("RunMonitorDrawer", () => {
   test("shows runtime failure action context", () => {
     render(
       <RunMonitorDrawer
+        open={true}
         graph={graph}
         runState={{
           ...baseRunState,
@@ -174,6 +177,7 @@ describe("RunMonitorDrawer", () => {
 
     render(
       <RunMonitorDrawer
+        open={true}
         graph={graph}
         runState={runStateWithTraces}
         initialVariables={[{ name: "initVar", value: "initVal" }]}
@@ -265,6 +269,7 @@ describe("RunMonitorDrawer", () => {
 
     render(
       <RunMonitorDrawer
+        open={true}
         graph={graph}
         runState={runStateWithPrelude}
         onClose={vi.fn()}
@@ -324,6 +329,7 @@ describe("RunMonitorDrawer", () => {
 
     render(
       <RunMonitorDrawer
+        open={true}
         graph={graph}
         runState={runStateWithParentContext}
         onClose={vi.fn()}
@@ -358,6 +364,7 @@ describe("RunMonitorDrawer", () => {
 
     render(
       <RunMonitorDrawer
+        open={true}
         graph={graph}
         runState={runStateWithFilteredSteps}
         onClose={vi.fn()}
@@ -407,6 +414,7 @@ describe("RunMonitorDrawer", () => {
 
     render(
       <RunMonitorDrawer
+        open={true}
         graph={graph}
         runState={runStateWithRichMetadata}
         onClose={vi.fn()}

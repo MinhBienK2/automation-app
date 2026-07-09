@@ -9,8 +9,9 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
 import type { Subflow, SubflowSummary } from "../../../types/workflow";
+
+import { FormField } from "../../../components/ui/form-field";
 
 type EditableSubflow = Pick<Subflow | SubflowSummary, "id" | "name">;
 
@@ -72,18 +73,18 @@ export function SubflowSettingsDialog({
           </DialogDescription>
         </DialogHeader>
         <form className="workflow-dialog-form" onSubmit={submitSettings}>
-          <Label htmlFor="subflow-settings-name">Subflow name</Label>
-          <Input
-            autoFocus
-            id="subflow-settings-name"
-            value={nameDraft}
-            onChange={(event) => setNameDraft(event.currentTarget.value)}
-          />
-          {localError ? (
-            <p className="field-error" role="alert">
-              {localError}
-            </p>
-          ) : null}
+          <FormField
+            label="Subflow name"
+            htmlFor="subflow-settings-name"
+            error={localError ?? undefined}
+          >
+            <Input
+              autoFocus
+              id="subflow-settings-name"
+              value={nameDraft}
+              onChange={(event) => setNameDraft(event.currentTarget.value)}
+            />
+          </FormField>
           <DialogFooter className="form-actions">
             <Button shape="pill" type="submit" disabled={saving} loading={saving}>
               Save Settings

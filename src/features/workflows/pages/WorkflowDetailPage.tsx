@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivitySquare, CheckCircle2, Save, Settings, Sliders } from "lucide-react";
+import { ActivitySquare, CheckCircle2, Save, Settings, Sliders, MoreHorizontal } from "lucide-react";
 import type {
   GraphValidationIssue,
   GraphEdgeDelay,
@@ -21,6 +21,12 @@ import {
   WorkflowGraphEditor,
   type GraphSelectionRequest,
 } from "../components/WorkflowGraphEditor";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
 
 type WorkflowDetailPageProps = {
   detail: WorkflowDetail;
@@ -303,24 +309,27 @@ export function WorkflowDetailPage({
         onBack={onBack}
         actions={
           <div className={isRunning ? "run-actions run-actions-with-stop" : "run-actions"}>
-            <IconButton
-              className="workflow-command-icon"
-              variant="secondary"
-              type="button"
-              label="Settings"
-              onClick={onOpenWorkflowSettings}
-            >
-              <Settings aria-hidden="true" />
-            </IconButton>
-            <IconButton
-              className="workflow-command-icon"
-              variant="secondary"
-              type="button"
-              label="Validate"
-              onClick={onValidateGraph}
-            >
-              <CheckCircle2 aria-hidden="true" />
-            </IconButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <IconButton
+                  variant="secondary"
+                  label="More actions"
+                  type="button"
+                >
+                  <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                </IconButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onOpenWorkflowSettings}>
+                  <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
+                  Workflow Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onValidateGraph}>
+                  <CheckCircle2 className="h-4 w-4 mr-2" aria-hidden="true" />
+                  Validate Graph
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <IconButton
               className="workflow-command-icon"
               variant="secondary"
@@ -442,26 +451,24 @@ export function WorkflowDetailPage({
         <>
           {liveRunEnabled && (
             <>
-              <div style={{ display: monitorOpen ? "" : "none" }}>
-                <RunMonitorDrawer
-                  graph={workflowGraph}
-                  runState={graphRunState}
-                  initialVariables={initialVariables}
-                  profileVariables={profileVariables}
-                  onFocusNode={requestNodeSelection}
-                  onClose={closeMonitor}
-                />
-              </div>
-              <div style={{ display: variablesOpen ? "" : "none" }}>
-                <RunVariablesDrawer
-                  variables={resolvedVariablesInfo.variables}
-                  isSnapshot={resolvedVariablesInfo.isSnapshot}
-                  snapshotNodeName={resolvedVariablesInfo.snapshotNodeName}
-                  onBackToLive={handleBackToLive}
-                  highlightedKeys={resolvedVariablesInfo.highlightedKeys}
-                  onClose={closeVariables}
-                />
-              </div>
+              <RunMonitorDrawer
+                open={monitorOpen}
+                graph={workflowGraph}
+                runState={graphRunState}
+                initialVariables={initialVariables}
+                profileVariables={profileVariables}
+                onFocusNode={requestNodeSelection}
+                onClose={closeMonitor}
+              />
+              <RunVariablesDrawer
+                open={variablesOpen}
+                variables={resolvedVariablesInfo.variables}
+                isSnapshot={resolvedVariablesInfo.isSnapshot}
+                snapshotNodeName={resolvedVariablesInfo.snapshotNodeName}
+                onBackToLive={handleBackToLive}
+                highlightedKeys={resolvedVariablesInfo.highlightedKeys}
+                onClose={closeVariables}
+              />
             </>
           )}
           <WorkflowGraphEditor

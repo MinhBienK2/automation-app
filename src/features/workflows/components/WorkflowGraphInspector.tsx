@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClipboardCopy, ExternalLink, X } from "lucide-react";
+import { ClipboardCopy, ExternalLink, X, ChevronRight } from "lucide-react";
 import type {
   GraphEdge,
   GraphNode,
@@ -47,6 +47,7 @@ type WorkflowGraphInspectorProps = {
   onUpdateNode: (node: GraphNode) => void;
   initialVariables?: Array<{ name: string; value: string }> | null;
   profileVariables?: Array<{ name: string; value: string }> | null;
+  onToggleCollapse?: () => void;
 };
 
 export function WorkflowGraphInspector({
@@ -72,6 +73,7 @@ export function WorkflowGraphInspector({
   onUpdateNode,
   initialVariables,
   profileVariables,
+  onToggleCollapse,
 }: WorkflowGraphInspectorProps) {
   const variableOptions = collectVariableOptions(graph, selectedNode, initialVariables, profileVariables);
   const [runErrorDetailsVisible, setRunErrorDetailsVisible] = useState(false);
@@ -90,15 +92,27 @@ export function WorkflowGraphInspector({
       <div className="graph-inspector" aria-label="Graph inspector">
       <div className="graph-inspector-shell-header">
         <p className="eyebrow">Inspector</p>
-        <IconButton
-          className="graph-inspector-close"
-          variant="ghost"
-          type="button"
-          label="Close inspector"
-          onClick={onClose}
-        >
-          <X aria-hidden="true" />
-        </IconButton>
+        <div style={{ display: "flex", gap: "4px" }}>
+          {onToggleCollapse && (
+            <IconButton
+              variant="ghost"
+              type="button"
+              label="Collapse"
+              onClick={onToggleCollapse}
+            >
+              <ChevronRight aria-hidden="true" />
+            </IconButton>
+          )}
+          <IconButton
+            className="graph-inspector-close"
+            variant="ghost"
+            type="button"
+            label="Close inspector"
+            onClick={onClose}
+          >
+            <X aria-hidden="true" />
+          </IconButton>
+        </div>
       </div>
       {selectionSummary ? (
         <section className="graph-selected-edge" aria-label="Graph selection summary">

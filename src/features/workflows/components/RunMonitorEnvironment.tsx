@@ -400,7 +400,7 @@ function ChangeTreeNodeView({
     const shortName = segments[segments.length - 1];
 
     return (
-      <div className={itemClass} style={indent}>
+      <div className={itemClass} style={indent} role="treeitem">
         {badge}
         <code className="env-key">{shortName}</code>
         <span className="env-separator">:</span>
@@ -434,6 +434,7 @@ function ChangeTreeNodeView({
         type="button"
         className="run-monitor-env-tree-toggle"
         style={indent}
+        role="treeitem"
         aria-expanded={isExpanded}
         onClick={(e) => {
           e.stopPropagation();
@@ -453,7 +454,7 @@ function ChangeTreeNodeView({
         </span>
       </button>
       {isExpanded && (
-        <div className="run-monitor-env-tree-children">
+        <div className="run-monitor-env-tree-children" role="group">
           {node.children.map((child) => (
             <ChangeTreeNodeView
               key={child.path}
@@ -503,7 +504,7 @@ function TreeNodeView({
       itemClass += " env-changed";
     }
     return (
-      <div className={itemClass} style={indent}>
+      <div className={itemClass} style={indent} role="treeitem">
         {badge}
         <code className="env-key">{node.name}</code>
         <span className="env-separator">:</span>
@@ -520,6 +521,7 @@ function TreeNodeView({
         type="button"
         className="run-monitor-env-tree-toggle"
         style={indent}
+        role="treeitem"
         aria-expanded={isExpanded}
         onClick={(e) => {
           e.stopPropagation();
@@ -539,7 +541,7 @@ function TreeNodeView({
         </span>
       </button>
       {isExpanded && (
-        <div className="run-monitor-env-tree-children">
+        <div className="run-monitor-env-tree-children" role="group">
           {node.children.map((child) => (
             <TreeNodeView
               key={child.path}
@@ -600,7 +602,7 @@ export function RunMonitorEnvironmentPanel({
       <div className="run-monitor-env-section-title">Environment changes</div>
 
       {hasChanges ? (
-        <div className="run-monitor-env-changes-list">
+        <div className="run-monitor-env-changes-list" role="tree" aria-label="Environment changes">
           {changeTree.map((node) => (
             <ChangeTreeNodeView
               key={node.path}
@@ -642,7 +644,7 @@ export function RunMonitorEnvironmentPanel({
               );
             }
             return (
-              <div className="run-monitor-env-all-list">
+              <div className="run-monitor-env-all-list" role="tree" aria-label="Active Variables">
                 {tree.map((node) => (
                   <TreeNodeView
                     key={node.path}

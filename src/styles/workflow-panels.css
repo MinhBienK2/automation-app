@@ -944,7 +944,7 @@
 }
 
 .run-issue-header .run-issue-stale-note {
-  color: #facc15;
+  color: var(--attention);
 }
 
 .run-issue-list {
@@ -1171,7 +1171,7 @@
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 8px 16px;
-  background: #0b1118;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 14px;
@@ -1202,33 +1202,33 @@
 }
 
 .run-monitor-badge-wait {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid rgba(57, 217, 138, 0.3);
 }
 
 .run-monitor-badge-click {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
 }
 
 .run-monitor-badge-input {
-  background: rgba(99, 102, 241, 0.15);
-  color: #6366f1;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(176, 125, 253, 0.15);
+  color: var(--color-purple);
+  border: 1px solid rgba(176, 125, 253, 0.3);
 }
 
 .run-monitor-badge-variable {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--attention-bg);
+  color: var(--attention);
+  border: 1px solid rgba(244, 183, 64, 0.3);
 }
 
 .run-monitor-badge-js {
-  background: rgba(168, 85, 247, 0.15);
-  color: #a855f7;
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  background: rgba(176, 125, 253, 0.15);
+  color: var(--color-purple);
+  border: 1px solid rgba(176, 125, 253, 0.3);
 }
 
 .run-monitor-badge-neutral {
@@ -1471,7 +1471,7 @@
 
 .pretty-var-copy-btn:hover {
   background-color: var(--border);
-  color: #ffffff;
+  color: var(--fg-primary);
 }
 
 .pretty-var-row-highlight {

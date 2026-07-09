@@ -11,6 +11,8 @@ import { Input } from "../../../components/ui/input";
 import { GraphShortcutGuide } from "./GraphShortcutGuide";
 import type { SelectionSubflowMode } from "./useSelectionSubflowCreator";
 
+import { FormField } from "../../../components/ui/form-field";
+
 type WorkflowGraphEditorDialogsProps = {
   isShortcutGuideOpen: boolean;
   isSelectionSubflowDialogOpen: boolean;
@@ -75,20 +77,19 @@ export function WorkflowGraphEditorDialogs({
               </DialogDescription>
             </div>
           </DialogHeader>
-          <label className="field">
-            <span>Subflow name</span>
+          <FormField
+            label="Subflow name"
+            htmlFor="subflow-name-input"
+            error={selectionSubflowError ?? undefined}
+          >
             <Input
+              id="subflow-name-input"
               autoFocus
               value={selectionSubflowName}
               onChange={(event) => onSelectionSubflowNameChange(event.currentTarget.value)}
               placeholder="Login block"
             />
-          </label>
-          {selectionSubflowError ? (
-            <p className="graph-subflow-create-error" role="alert">
-              {selectionSubflowError}
-            </p>
-          ) : null}
+          </FormField>
           <DialogFooter>
             <Button
               type="button"

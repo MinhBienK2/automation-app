@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1783512969.7430446,
-    "ast_hash": "a9c1ef4f4d05cd7b7bb61ed3992bf262",
+    "mtime": 1783612589.2885246,
+    "ast_hash": "7ed6230a2fb37c18f8fc7fe2653762e7",
     "semantic_hash": ""
   },
   "src/AppCss.test.ts": {
@@ -615,8 +615,8 @@
     "semantic_hash": ""
   },
   "src/app/useAppNavigation.ts": {
-    "mtime": 1782587067.9109182,
-    "ast_hash": "936c7f2ac26042232838c231aff4670a",
+    "mtime": 1783612585.227407,
+    "ast_hash": "00b624674e0be465c1a952c2bea84377",
     "semantic_hash": ""
   },
   "src/components/layout/PageHeader.tsx": {
@@ -630,8 +630,8 @@
     "semantic_hash": ""
   },
   "src/components/ui/button.tsx": {
-    "mtime": 1783532786.060294,
-    "ast_hash": "f55f38dd1347c721675ea87a72da3a90",
+    "mtime": 1783536175.1179986,
+    "ast_hash": "f295b6d24a6f476e980e25b7ad9f26b0",
     "semantic_hash": ""
   },
   "src/components/ui/card.tsx": {
@@ -750,8 +750,8 @@
     "semantic_hash": "1244de8e9264b4f3f1c4e2f50f6a84e1"
   },
   "src/features/projects/components/ProjectProfilesPanel.tsx": {
-    "mtime": 1783533478.6632633,
-    "ast_hash": "6ddb1135426537efa6704595f715136f",
+    "mtime": 1783535610.883388,
+    "ast_hash": "2fb96394d2f6376216d0c3b61630312e",
     "semantic_hash": ""
   },
   "src/features/projects/components/ProjectSettings.test.tsx": {
@@ -770,8 +770,8 @@
     "semantic_hash": ""
   },
   "src/features/projects/pages/ProjectsPage.tsx": {
-    "mtime": 1783533465.1050055,
-    "ast_hash": "88a0a37f28e7ff7bc912f8377e71f102",
+    "mtime": 1783612721.5143263,
+    "ast_hash": "69525df5a276af693c08fa57e61648d7",
     "semantic_hash": ""
   },
   "src/features/projects/state/useProjectWorkspace.ts": {
@@ -795,8 +795,8 @@
     "semantic_hash": "24e4aa9d756555297c553f9bf4e67452"
   },
   "src/features/schedules/pages/SchedulesPage.tsx": {
-    "mtime": 1783533631.853036,
-    "ast_hash": "45eb17bc5ef23bfd8340904faf1f78a6",
+    "mtime": 1783612679.9821377,
+    "ast_hash": "09b9bca4858e1794a46e263ef9c74772",
     "semantic_hash": ""
   },
   "src/features/schedules/useSchedulesWorkspace.test.tsx": {
@@ -1015,8 +1015,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/components/WorkflowGraphCanvasParts.tsx": {
-    "mtime": 1783443562.6771863,
-    "ast_hash": "0e91b940db6718c20395af77badb2048",
+    "mtime": 1783612569.8039598,
+    "ast_hash": "9fd714efe5d1487ee0551f79763c9852",
     "semantic_hash": ""
   },
   "src/features/workflows/components/WorkflowGraphConditionFields.tsx": {
@@ -1040,9 +1040,9 @@
     "semantic_hash": "5ee40a6b3f46976164bf4eaafae3dbf4"
   },
   "src/features/workflows/components/WorkflowGraphEditorDialogs.tsx": {
-    "mtime": 1782490583.470516,
-    "ast_hash": "2e0e51f98561acd38b4f35de62e20e8e",
-    "semantic_hash": "2e0e51f98561acd38b4f35de62e20e8e"
+    "mtime": 1783612574.018082,
+    "ast_hash": "aeb7d6569f4ad5eede31e9a0705bdb66",
+    "semantic_hash": ""
   },
   "src/features/workflows/components/WorkflowGraphInspector.test.tsx": {
     "mtime": 1782490583.470516,
@@ -1315,8 +1315,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/pages/SubflowListPage.tsx": {
-    "mtime": 1783533669.5066824,
-    "ast_hash": "3266119b867358aed804603d056907c4",
+    "mtime": 1783612725.9514532,
+    "ast_hash": "2be96216ec7ad1fde4a6c28d906f2fca",
     "semantic_hash": ""
   },
   "src/features/workflows/pages/WorkflowDetailPage.test.tsx": {
@@ -1335,8 +1335,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/pages/WorkflowListPage.tsx": {
-    "mtime": 1783533661.9925544,
-    "ast_hash": "25420a086a0b86e91e1c015d416bd608",
+    "mtime": 1783612729.240547,
+    "ast_hash": "48cf57800711a640051d1cf87f9ec3f5",
     "semantic_hash": ""
   },
   "src/features/workflows/state/useRecordingWorkspace.ts": {
@@ -1450,8 +1450,8 @@
     "semantic_hash": "29425bc87312dae845525731673266c4"
   },
   "src/shared/types/workspaceContracts.ts": {
-    "mtime": 1783252798.2116156,
-    "ast_hash": "910ecb5012a7b2f3ad4bf980ac61179f",
+    "mtime": 1783612580.2052615,
+    "ast_hash": "e64efa8964ffcea887e309928ece8a86",
     "semantic_hash": ""
   },
   "src/types/electron.ts": {
@@ -1535,8 +1535,8 @@
     "semantic_hash": "d465ac7b5797daf7ecba46f500a108ee"
   },
   "AGENTS.md": {
-    "mtime": 1782490583.4425159,
-    "ast_hash": "edec2dddd6fbbda55f158c0df3f09101",
+    "mtime": 1783607471.219071,
+    "ast_hash": "64b1101d4354a8ac8ab918e730c1aa0f",
     "semantic_hash": ""
   },
   "DESIGN.md": {
@@ -2265,8 +2265,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/components/PrettyVariableViewer.tsx": {
-    "mtime": 1783015205.7350383,
-    "ast_hash": "1d0ca79de64daaa9c8f263df76f7349e",
+    "mtime": 1783612550.6594036,
+    "ast_hash": "c64da91e7002b0a3bec402e313bfc0be",
     "semantic_hash": ""
   },
   "src/features/workflows/components/RevisionHistoryDrawer.test.tsx": {
@@ -2275,8 +2275,8 @@
     "semantic_hash": ""
   },
   "src/features/workflows/components/RevisionHistoryDrawer.tsx": {
-    "mtime": 1783101154.973355,
-    "ast_hash": "64e4b79e31bd5ad296c176b59451aeae",
+    "mtime": 1783612537.0290067,
+    "ast_hash": "dfacf6e74216bf3551978725c05f65cb",
     "semantic_hash": ""
   },
   "src/features/workflows/components/RunMonitorEnvironment.test.tsx": {
@@ -2340,13 +2340,13 @@
     "semantic_hash": ""
   },
   "src/features/auth/pages/AdminPanel.tsx": {
-    "mtime": 1783533282.8132858,
-    "ast_hash": "fc37fb054512a08e4b54ec49b512144c",
+    "mtime": 1783612523.7406192,
+    "ast_hash": "bebf4caec1f4fd40d3eb90b8ec30f18a",
     "semantic_hash": ""
   },
   "src/features/auth/pages/LoginScreen.tsx": {
-    "mtime": 1783533264.8618906,
-    "ast_hash": "8726e613d5905b6725b6bb3ab7d84708",
+    "mtime": 1783612613.0142105,
+    "ast_hash": "3c35545a65edb08c7b2dbc2a08d5545a",
     "semantic_hash": ""
   },
   "src/features/auth/state/useAuthState.ts": {
@@ -2665,8 +2665,8 @@
     "semantic_hash": ""
   },
   "src/features/auth/pages/AdminBackupsPanel.tsx": {
-    "mtime": 1783533375.4862392,
-    "ast_hash": "5c0a436b68afff6d8872659dba6ae634",
+    "mtime": 1783612529.623791,
+    "ast_hash": "01a1103387487d040af9818884488d8b",
     "semantic_hash": ""
   },
   "src/components/ui/button.test.tsx": {
@@ -2767,6 +2767,51 @@
   "src/components/ui/daisyui-contracts.test.ts": {
     "mtime": 1783532786.060294,
     "ast_hash": "9143e76f4af8bb5c483fb6dd1cff09c6",
+    "semantic_hash": ""
+  },
+  "src/components/ui/confirm-dialog.tsx": {
+    "mtime": 1783612732.3016346,
+    "ast_hash": "0a5455b39d44cac7913f2be21b6eb467",
+    "semantic_hash": ""
+  },
+  "src/components/ui/data-table.tsx": {
+    "mtime": 1783612500.7689478,
+    "ast_hash": "89a9f7f4f7e4ae3ecebbf7573f2dd880",
+    "semantic_hash": ""
+  },
+  "src/components/ui/empty-state.tsx": {
+    "mtime": 1783612493.0267212,
+    "ast_hash": "2b656f44ce978964a7dc5cc2a342c741",
+    "semantic_hash": ""
+  },
+  "src/components/ui/form-field.tsx": {
+    "mtime": 1783612502.4259963,
+    "ast_hash": "b2ca05b88e0e2bfb1cbf8eba0a877991",
+    "semantic_hash": ""
+  },
+  "src/components/ui/page-header.tsx": {
+    "mtime": 1783612489.5336187,
+    "ast_hash": "f866a7a70b615849d3b4407b2a098aed",
+    "semantic_hash": ""
+  },
+  "src/components/ui/search-input.tsx": {
+    "mtime": 1783612498.5088818,
+    "ast_hash": "20faf04d085a04a4e3da06dce64c8cb8",
+    "semantic_hash": ""
+  },
+  "src/components/ui/section-card.tsx": {
+    "mtime": 1783612491.2186682,
+    "ast_hash": "52b69840fddb2039d2c1740dcd6e5e38",
+    "semantic_hash": ""
+  },
+  "src/components/ui/status-badge.tsx": {
+    "mtime": 1783612494.932777,
+    "ast_hash": "4a375a926a25d4c32527b715ab5e9391",
+    "semantic_hash": ""
+  },
+  "src/components/ui/table.tsx": {
+    "mtime": 1783535566.5968127,
+    "ast_hash": "7caac860b94da7ea1ae8ca7cac994f39",
     "semantic_hash": ""
   }
 }

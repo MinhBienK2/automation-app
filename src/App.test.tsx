@@ -1483,7 +1483,7 @@ describe("App settings and graph autosave", () => {
     const header = await screen.findByRole("region", { name: "Workflow detail header" });
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
-    expect(within(header).getByRole("button", { name: "Validate" })).toBeInTheDocument();
+    expect(within(header).getByRole("button", { name: "More actions" })).toBeInTheDocument();
     expect(within(header).getByRole("button", { name: "Run" })).toBeInTheDocument();
     expect(within(header).getByRole("button", { name: "Save" })).toBeInTheDocument();
     expect(within(editor).queryByRole("button", { name: "Validate Graph" }))
@@ -1703,7 +1703,8 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
 
     const header = await screen.findByRole("region", { name: "Workflow detail header" });
-    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Workflow Settings" }));
 
     // Verify dialog opens immediately
     const dialog = await screen.findByRole("dialog", { name: "Workflow Settings" });

@@ -10,8 +10,9 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
 import type { Project } from "../../../types/workflow";
+
+import { FormField } from "../../../components/ui/form-field";
 
 type ProjectSettingsProps = {
   project: Project | null;
@@ -127,29 +128,33 @@ export function ProjectSettings({
               <p className="text-secondary text-xs mt-0.5">Manage project details and backups</p>
             </div>
             
-            <div className="flex flex-col gap-1.5 mt-2 project-name-control">
-              <Label htmlFor="project-settings-name">Project name</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="project-settings-name"
-                  aria-label="Project name"
-                  value={projectNameDraft}
-                  disabled={!project || projectActionPending}
-                  onChange={(event) => setProjectNameDraft(event.target.value)}
-                  className="input-sm border-base-300 flex-grow"
-                />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    void saveProjectName();
-                  }}
-                  disabled={!project || !projectNameChanged || projectActionPending}
-                  loading={savingProject}
-                  className="btn-primary btn-sm"
-                >
-                  Save
-                </Button>
-              </div>
+            <div className="mt-2 project-name-control">
+              <FormField
+                label="Project name"
+                htmlFor="project-settings-name"
+              >
+                <div className="flex gap-2">
+                  <Input
+                    id="project-settings-name"
+                    aria-label="Project name"
+                    value={projectNameDraft}
+                    disabled={!project || projectActionPending}
+                    onChange={(event) => setProjectNameDraft(event.target.value)}
+                    className="input-sm border-base-300 flex-grow"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      void saveProjectName();
+                    }}
+                    disabled={!project || !projectNameChanged || projectActionPending}
+                    loading={savingProject}
+                    className="btn-primary btn-sm"
+                  >
+                    Save
+                  </Button>
+                </div>
+              </FormField>
             </div>
           </div>
 
