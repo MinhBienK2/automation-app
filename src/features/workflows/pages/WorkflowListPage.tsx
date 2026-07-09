@@ -128,7 +128,7 @@ export function WorkflowListPage({
           className="max-w-xs"
         />
         <div className="flex items-center gap-3">
-          <label className="btn btn-secondary btn-sm rounded-full cursor-pointer relative inline-flex items-center gap-1.5">
+          <label className="btn btn-secondary btn-sm cursor-pointer relative inline-flex items-center gap-1.5">
             <Upload aria-hidden="true" size={14} />
             <span>Import Workflow</span>
             <input
@@ -142,11 +142,11 @@ export function WorkflowListPage({
               }}
             />
           </label>
-          <Button variant="secondary" onClick={onRecordWorkflow} className="btn-sm rounded-full flex items-center gap-1">
+          <Button variant="secondary" onClick={onRecordWorkflow} className="btn-sm flex items-center gap-1">
             <CircleDot aria-hidden="true" size={14} className="text-error animate-pulse" />
             <span>Record Workflow</span>
           </Button>
-          <Button onClick={onOpenCreateWorkflow} className="btn-primary btn-sm rounded-full">
+          <Button onClick={onOpenCreateWorkflow} className="btn-primary btn-sm">
             Create Workflow
           </Button>
         </div>

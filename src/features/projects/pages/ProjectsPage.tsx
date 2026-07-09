@@ -179,7 +179,7 @@ export function ProjectsPage({
 
             <div className="flex items-center gap-3">
               <label
-                className="btn btn-secondary btn-sm rounded-full cursor-pointer relative inline-flex items-center gap-1.5"
+                className="btn btn-secondary btn-sm cursor-pointer relative inline-flex items-center gap-1.5"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span>Import Project</span>
@@ -197,7 +197,7 @@ export function ProjectsPage({
               <Button
                 type="button"
                 onClick={openCreateDialog}
-                className="btn-primary btn-sm rounded-full inline-flex items-center"
+                className="btn-primary btn-sm inline-flex items-center"
               >
                 Create Project
               </Button>

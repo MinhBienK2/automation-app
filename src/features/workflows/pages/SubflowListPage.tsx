@@ -124,12 +124,12 @@ export function SubflowListPage({
             type="button"
             disabled={loading}
             onClick={onRefresh}
-            className="btn-sm rounded-full"
+            className="btn-sm"
           >
             <RefreshCw aria-hidden="true" size={14} className={loading ? "animate-spin" : ""} />
             <span>Refresh</span>
           </Button>
-          <label className="btn btn-secondary btn-sm rounded-full cursor-pointer relative inline-flex items-center gap-1.5">
+          <label className="btn btn-secondary btn-sm cursor-pointer relative inline-flex items-center gap-1.5">
             <Upload aria-hidden="true" size={14} />
             <span>Import Subflow</span>
             <input
@@ -145,7 +145,7 @@ export function SubflowListPage({
           </label>
           <Button
             onClick={() => setCreateDialogOpen(true)}
-            className="btn-primary btn-sm rounded-full"
+            className="btn-primary btn-sm"
           >
             <Plus aria-hidden="true" size={16} />
             <span>Create Subflow</span>

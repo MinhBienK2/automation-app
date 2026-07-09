@@ -120,7 +120,7 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
               className="pl-9 input-sm border-base-300"
             />
           </div>
-          <Button type="button" onClick={() => setCreateDialogOpen(true)} className="btn-primary btn-sm rounded-full inline-flex items-center gap-1.5">
+          <Button type="button" onClick={() => setCreateDialogOpen(true)} className="btn-primary btn-sm inline-flex items-center gap-1.5">
             <Plus aria-hidden="true" size={16} />
             <span>Add profile</span>
           </Button>

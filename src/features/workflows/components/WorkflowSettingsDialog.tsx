@@ -115,7 +115,7 @@ export function WorkflowSettingsDialog({
                 }}
                 disabled={!settings || Object.values(saveStatuses).some((status) => status === "saving")}
                 loading={Object.values(saveStatuses).some((status) => status === "saving")}
-                className="btn-primary btn-sm rounded-full flex items-center gap-1.5"
+                className="btn-primary btn-sm flex items-center gap-1.5"
               >
                 <Save aria-hidden="true" size={14} />
                 <span>Save Settings</span>

@@ -107,7 +107,7 @@ export function SchedulesPage({
           <Badge variant="secondary" className="badge-sm font-semibold uppercase tracking-wider">
             {schedules.length} schedules
           </Badge>
-          <Button type="button" onClick={openCreateDialog} className="btn-primary btn-sm rounded-full inline-flex items-center gap-1">
+          <Button type="button" onClick={openCreateDialog} className="btn-primary btn-sm inline-flex items-center gap-1">
             <Plus aria-hidden="true" size={16} />
             <span>New schedule</span>
           </Button>
