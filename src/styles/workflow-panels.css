@@ -4,7 +4,7 @@
   left: 16px;
   bottom: 16px;
   z-index: 46;
-  display: grid;
+  display: none;
   align-content: start;
   width: min(540px, calc(100vw - 32px));
   min-width: 0;
@@ -15,6 +15,10 @@
   border-radius: 8px;
   background: var(--surface);
   box-shadow: 18px 0 36px rgba(0, 0, 0, 0.36);
+}
+
+.run-monitor-drawer.open {
+  display: grid;
   animation: run-monitor-slide-in 160ms ease-out;
 }
 
@@ -1306,7 +1310,7 @@
   right: 16px;
   bottom: 16px;
   z-index: 46;
-  display: grid;
+  display: none;
   grid-template-rows: auto auto minmax(0, 1fr);
   width: min(540px, calc(100vw - 32px));
   min-width: 0;
@@ -1317,6 +1321,10 @@
   border-radius: 8px;
   background: var(--surface);
   box-shadow: -18px 0 36px rgba(0, 0, 0, 0.36);
+}
+
+.run-variables-drawer.open {
+  display: grid;
   animation: run-variables-slide-in 160ms ease-out;
 }
 
