@@ -108,7 +108,7 @@
   width: 38px;
   min-height: 38px;
   padding: 0;
-  border-color: rgba(50, 211, 230, 0.36);
+  border-color: var(--accent-border);
   border-radius: 8px;
   color: var(--accent);
 }

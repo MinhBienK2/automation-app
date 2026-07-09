@@ -75,7 +75,7 @@
 }
 
 .variable-picker-options button:hover {
-  border-color: rgba(50, 211, 230, 0.3);
+  border-color: var(--accent-border);
   background: var(--bg);
 }
 
@@ -203,7 +203,7 @@
 
 .action-type-option:hover,
 .action-type-option[aria-selected="true"] {
-  border-color: rgba(50, 211, 230, 0.3);
+  border-color: var(--accent-border);
   background: var(--bg);
 }
 

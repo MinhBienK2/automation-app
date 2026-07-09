@@ -290,18 +290,18 @@
 }
 
 .env-added {
-  border-color: rgba(57, 217, 138, 0.18);
-  background: rgba(57, 217, 138, 0.04);
+  border-color: var(--success);
+  background: var(--success-bg);
 }
 
 .env-changed {
   border-color: var(--focus-ring);
-  background: rgba(50, 211, 230, 0.04);
+  background: var(--accent-bg);
 }
 
 .env-removed {
-  border-color: rgba(240, 100, 103, 0.18);
-  background: rgba(240, 100, 103, 0.04);
+  border-color: var(--failure);
+  background: var(--failure-bg);
 }
 
 .env-badge {
@@ -549,7 +549,7 @@
 }
 
 .workflow-settings-help-trigger {
-  border-color: rgba(50, 211, 230, 0.36);
+  border-color: var(--accent-border);
   color: var(--accent);
 }
 
@@ -709,9 +709,9 @@
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px solid rgba(50, 211, 230, 0.3);
+  border: 1px solid var(--accent-border);
   border-radius: 8px;
-  background: rgba(41, 41, 41, 0.84);
+  background: var(--surface-elevated);
 }
 
 .workflow-settings-planned-panel p {
@@ -843,7 +843,7 @@
 .workflow-settings-help-fields .workflow-settings-help-item-summary strong {
   width: fit-content;
   padding: 2px 7px;
-  border: 1px solid rgba(50, 211, 230, 0.36);
+  border: 1px solid var(--accent-border);
   border-radius: 6px;
   color: var(--accent);
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
@@ -1283,8 +1283,8 @@
   gap: 8px;
   margin-top: 10px;
   padding: 10px;
-  background: rgba(50, 211, 230, 0.05);
-  border: 1px dashed rgba(50, 211, 230, 0.2);
+  background: var(--accent-bg);
+  border: 1px dashed var(--focus-ring);
   border-radius: 6px;
 }
 
@@ -1407,7 +1407,7 @@
   font-size: 12px;
   color: var(--accent);
   background: var(--focus-ring);
-  border: 1px solid rgba(50, 211, 230, 0.3);
+  border: 1px solid var(--accent-border);
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -1415,7 +1415,7 @@
 }
 
 .run-variables-back-live:hover {
-  background: rgba(50, 211, 230, 0.2);
+  background: var(--focus-ring);
   border-color: var(--accent);
 }
 
@@ -1483,15 +1483,15 @@
 }
 
 .pretty-var-row-highlight {
-  border-color: rgba(50, 211, 230, 0.4);
-  background: rgba(50, 211, 230, 0.05);
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
   animation: pretty-var-pulse 2s infinite ease-in-out;
 }
 
 @keyframes pretty-var-pulse {
-  0% { border-color: rgba(50, 211, 230, 0.4); }
-  50% { border-color: rgba(50, 211, 230, 0.8); }
-  100% { border-color: rgba(50, 211, 230, 0.4); }
+  0% { border-color: var(--accent-border); }
+  50% { border-color: var(--accent-border-strong); }
+  100% { border-color: var(--accent-border); }
 }
 
 .pretty-var-toggle {

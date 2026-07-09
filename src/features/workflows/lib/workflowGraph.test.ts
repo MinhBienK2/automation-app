@@ -321,10 +321,10 @@ describe("workflow graph helpers", () => {
           interactionWidth: 20,
           markerEnd: expect.objectContaining({
             type: "arrowclosed",
-            color: "#f4b740",
+            color: "var(--attention)",
           }),
           style: expect.objectContaining({
-            stroke: "#f4b740",
+            stroke: "var(--attention)",
             strokeWidth: 2.75,
           }),
           data: expect.objectContaining({
@@ -518,10 +518,10 @@ describe("workflow graph helpers", () => {
           selected: true,
           className: expect.stringContaining("graph-edge-selected"),
           markerEnd: expect.objectContaining({
-            color: "#32d3e6",
+            color: "var(--accent)",
           }),
           style: expect.objectContaining({
-            stroke: "#32d3e6",
+            stroke: "var(--accent)",
             strokeWidth: 3.5,
           }),
         }),
@@ -537,7 +537,7 @@ describe("workflow graph helpers", () => {
       .toEqual(
         expect.objectContaining({
           className: expect.stringContaining("graph-edge-main"),
-          style: expect.objectContaining({ stroke: "#3e5668" }),
+          style: expect.objectContaining({ stroke: "var(--border-hover)" }),
         }),
       );
 
@@ -548,7 +548,7 @@ describe("workflow graph helpers", () => {
       .toEqual(
         expect.objectContaining({
           className: expect.stringContaining("graph-edge-completed"),
-          style: expect.objectContaining({ stroke: "#39d98a" }),
+          style: expect.objectContaining({ stroke: "var(--success)" }),
         }),
       );
 
@@ -559,7 +559,7 @@ describe("workflow graph helpers", () => {
       .toEqual(
         expect.objectContaining({
           className: expect.stringContaining("graph-edge-failed"),
-          style: expect.objectContaining({ stroke: "#f06467" }),
+          style: expect.objectContaining({ stroke: "var(--failure)" }),
         }),
       );
 
@@ -570,7 +570,7 @@ describe("workflow graph helpers", () => {
       .toEqual(
         expect.objectContaining({
           className: expect.stringContaining("graph-edge-has-issue"),
-          style: expect.objectContaining({ stroke: "#f4b740" }),
+          style: expect.objectContaining({ stroke: "var(--attention)" }),
         }),
       );
   });

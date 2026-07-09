@@ -277,7 +277,7 @@
 }
 
 .graph-canvas .graph-edge-selected .react-flow__edge-textbg {
-  stroke: rgba(50, 211, 230, 0.72);
+  stroke: var(--accent-border-strong);
 }
 
 .graph-canvas .graph-edge-has-issue .react-flow__edge-path {
@@ -411,7 +411,7 @@
   --graph-node-accent: var(--accent);
   --graph-node-accent-bg: var(--accent-bg);
 
-  border-color: rgba(50, 211, 230, 0.38);
+  border-color: var(--accent-border);
   background:
     linear-gradient(90deg, var(--graph-node-accent-bg), transparent 34%),
     var(--bg);
@@ -419,7 +419,7 @@
 
 .graph-node-logic {
   --graph-node-accent: var(--attention);
-  --graph-node-accent-bg: rgba(244, 183, 64, 0.12);
+  --graph-node-accent-bg: var(--attention-bg);
 
   border-color: var(--attention);
   background:
@@ -538,27 +538,27 @@
 }
 
 .graph-node-selected {
-  outline: 2px solid rgba(50, 211, 230, 0.58);
+  outline: 2px solid var(--accent-border-strong);
   outline-offset: 2px;
-  color: #67e8f9;
+  color: var(--accent);
 }
 
 .graph-node-has-issue {
-  border-color: rgba(244, 183, 64, 0.6);
+  border-color: var(--attention);
 }
 
 .graph-node-has-issue.graph-node-selected {
-  border-color: rgba(244, 183, 64, 0.6);
+  border-color: var(--attention);
 }
 
 .graph-node-running {
   border-color: var(--accent);
-  background: linear-gradient(180deg, rgba(50, 211, 230, 0.22), var(--surface-elevated));
-  outline: 3px solid rgba(50, 211, 230, 0.7);
+  background: linear-gradient(180deg, var(--accent-bg), var(--surface-elevated));
+  outline: 3px solid var(--accent-border-strong);
   outline-offset: 2px;
   box-shadow:
-    0 0 0 1px rgba(50, 211, 230, 0.42) inset,
-    0 0 18px rgba(50, 211, 230, 0.34);
+    0 0 0 1px var(--accent-border) inset,
+    0 0 18px var(--focus-ring);
   color: var(--fg-primary);
 }
 
@@ -567,13 +567,13 @@
 }
 
 .graph-node-failed {
-  border-color: rgba(240, 100, 103, 0.76);
+  border-color: var(--failure);
   color: #fca5a5;
 }
 
 .graph-node-failed.graph-node-selected {
-  border-color: rgba(240, 100, 103, 0.76);
-  color: #fca5a5;
+  border-color: var(--failure);
+  color: var(--failure);
 }
 
 .graph-handle {
@@ -647,7 +647,7 @@
 .graph-canvas .react-flow__handle.connectingfrom {
   border-color: var(--accent);
   background: var(--fg-primary);
-  box-shadow: 0 0 0 4px rgba(50, 211, 230, 0.16);
+  box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
 .graph-handle-circle {
@@ -769,7 +769,7 @@
 
 .subflow-mode-card:hover,
 .subflow-mode-card-active {
-  border-color: rgba(50, 211, 230, 0.56);
+  border-color: var(--accent-border-strong);
   background: var(--surface);
 }
 
@@ -894,7 +894,7 @@
 }
 
 .subflow-picker-result:hover {
-  border-color: rgba(50, 211, 230, 0.56);
+  border-color: var(--accent-border-strong);
   background: var(--surface);
 }
 
@@ -932,7 +932,7 @@
   min-width: 0;
   gap: 8px;
   padding: 10px;
-  border: 1px solid rgba(240, 100, 103, 0.42);
+  border: 1px solid var(--failure);
   border-radius: 8px;
   background: var(--bg);
 }
@@ -961,7 +961,7 @@
   display: -webkit-box;
   overflow: hidden;
   overflow-wrap: anywhere;
-  color: #fca5a5;
+  color: var(--failure);
   font-size: 13px;
   line-height: 1.45;
   -webkit-box-orient: vertical;
@@ -995,9 +995,9 @@
 
 .graph-subflow-create-error {
   padding: 8px 10px;
-  border: 1px solid rgba(244, 183, 64, 0.45);
+  border: 1px solid var(--attention);
   border-radius: 8px;
-  background: rgba(244, 183, 64, 0.12);
+  background: var(--attention-bg);
   color: var(--attention);
   font-size: 12px;
   line-height: 1.45;

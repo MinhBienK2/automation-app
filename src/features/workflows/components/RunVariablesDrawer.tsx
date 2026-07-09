@@ -43,11 +43,11 @@ export function RunVariablesDrawer({
           <div className="run-variables-status" data-mode={isSnapshot ? "snapshot" : "live"}>
             {isSnapshot ? (
               <>
-                <span style={{ color: "#32d3e6", fontWeight: "bold" }}>◉ Snapshot</span>
-                {snapshotNodeName && <span style={{ color: "#9aaebd", fontSize: "11px" }}>({snapshotNodeName})</span>}
+                <span style={{ color: "var(--accent)", fontWeight: "bold" }}>◉ Snapshot</span>
+                {snapshotNodeName && <span style={{ color: "var(--fg-secondary)", fontSize: "11px" }}>({snapshotNodeName})</span>}
               </>
             ) : (
-              <span style={{ color: "#39d98a", fontWeight: "bold" }}>● Live (Latest)</span>
+              <span style={{ color: "var(--success)", fontWeight: "bold" }}>● Live (Latest)</span>
             )}
           </div>
         </div>

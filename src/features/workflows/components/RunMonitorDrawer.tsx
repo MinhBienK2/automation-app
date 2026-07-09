@@ -478,7 +478,7 @@ export function RunMonitorDrawer({
                         )}
                         {trace && trace.evidence_summary && trace.evidence_summary.length > 0 && (
                           <div className="run-monitor-evidence-list">
-                            <div style={{ fontSize: "12px", fontWeight: "600", color: "#32d3e6" }}>Evidence Saved</div>
+                            <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--accent)" }}>Evidence Saved</div>
                             {trace.evidence_summary.map((ev: any, idx: number) => (
                               <div key={idx} className="run-monitor-evidence-item">
                                 <span>{ev.artifact_kind === "screenshot" ? "📸 Screenshot" : "📥 Download"}:</span>
@@ -488,7 +488,7 @@ export function RunMonitorDrawer({
                           </div>
                         )}
                         {trace && (trace.status === "failed" || trace.status === "stopped") && trace.reason && (
-                          <div style={{ color: "#f06467", padding: "10px", border: "1px solid #f06467", borderRadius: "6px", background: "rgba(240, 100, 103, 0.1)", fontSize: "13px", marginTop: "10px", marginBottom: "10px", overflowWrap: "anywhere" }}>
+                          <div style={{ color: "var(--failure)", padding: "10px", border: "1px solid var(--failure)", borderRadius: "6px", background: "var(--failure-bg)", fontSize: "13px", marginTop: "10px", marginBottom: "10px", overflowWrap: "anywhere" }}>
                             <strong>Error:</strong> {trace.reason}
                           </div>
                         )}

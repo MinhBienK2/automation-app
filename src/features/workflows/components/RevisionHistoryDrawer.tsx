@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { History, RotateCcw, Tag, X, Eye, Trash2 } from "lucide-react";
 import { IconButton } from "../../../components/ui/icon-button";
 import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -317,7 +318,7 @@ export function RevisionHistoryDrawer({
                   onClick={() => setDeleteCandidate(revision)}
                   disabled={isRestoring || isDeleting}
                   aria-label={`Delete revision ${revision.revision_number}`}
-                  style={{ color: "var(--destructive, #ef4444)" }}
+                  style={{ color: "var(--failure)" }}
                 >
                   <Trash2 aria-hidden="true" />
                   Delete
@@ -474,19 +475,12 @@ export function RevisionHistoryDrawer({
           <div style={{ display: "flex", flexDirection: "column", gap: "16px", margin: "16px 0" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <label style={{ fontSize: "14px", fontWeight: 500 }}>Backup description (Required)</label>
-              <input
+              <Input
                 type="text"
                 placeholder="e.g. Before changing logic, or v1.0.0 stable"
                 value={backupComment}
                 onChange={(e) => setBackupComment(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border, #ccc)",
-                  background: "transparent",
-                  color: "inherit",
-                  width: "100%"
-                }}
+                className="w-full"
                 maxLength={200}
                 aria-label="Backup description"
               />
@@ -494,19 +488,12 @@ export function RevisionHistoryDrawer({
             
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <label style={{ fontSize: "14px", fontWeight: 500 }}>Tag / Label (Optional)</label>
-              <input
+              <Input
                 type="text"
                 placeholder="e.g. stable-v1 (Revisions with tags are preserved from auto-cleanup)"
                 value={backupTag}
                 onChange={(e) => setBackupTag(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border, #ccc)",
-                  background: "transparent",
-                  color: "inherit",
-                  width: "100%"
-                }}
+                className="w-full"
                 maxLength={32}
                 aria-label="Backup tag"
               />

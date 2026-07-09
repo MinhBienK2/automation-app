@@ -149,7 +149,7 @@ export function VariableAutocompletePopover({
   return createPortal(
     <div
       ref={popoverRef}
-      className="variable-picker absolute z-[9999] bg-[#0b1016] border border-[#233240] rounded-md shadow-lg p-2 flex flex-col gap-2"
+      className="variable-picker absolute z-[9999] bg-base-200 border border-base-300 rounded-md shadow-lg p-2 flex flex-col gap-2"
       style={{
         top: popoverCoords.top,
         left: popoverCoords.left,
@@ -158,7 +158,7 @@ export function VariableAutocompletePopover({
       role="listbox"
       aria-label={`${label} variables`}
     >
-      <div className="flex border-b border-[#233240]">
+      <div className="flex border-b border-base-300">
         <button
           type="button"
           className={`flex-1 py-1 text-center text-xs font-semibold border-b-2 transition-all ${
@@ -203,7 +203,7 @@ export function VariableAutocompletePopover({
             key={`${option.source}:${option.name}`}
             role="option"
             type="button"
-            className="w-full text-left px-2 py-1.5 hover:bg-[#121c26] text-xs text-[var(--app-text)] rounded flex justify-between items-center"
+            className="w-full text-left px-2 py-1.5 hover:bg-base-300 text-xs text-[var(--app-text)] rounded flex justify-between items-center"
             onClick={() => insertVariable(option.name)}
           >
             <span className="font-mono">

@@ -423,9 +423,9 @@ describe("App CSS", () => {
     );
 
     expect(selectedNode).not.toContain("border-color: rgba(50, 211, 230");
-    expect(selectedNode).toContain("outline: 2px solid rgba(50, 211, 230");
-    expect(selectedIssueNode).toContain("border-color: rgba(244, 183, 64");
-    expect(selectedFailedNode).toContain("border-color: rgba(240, 100, 103");
+    expect(selectedNode).toContain("outline: 2px solid var(--accent-border-strong)");
+    expect(selectedIssueNode).toContain("border-color: var(--attention)");
+    expect(selectedFailedNode).toContain("border-color: var(--failure)");
     expect(selectedIssueEdge).toContain("stroke: var(--attention)");
     expect(selectedFailedEdge).toContain("stroke: var(--failure)");
   });
@@ -435,7 +435,7 @@ describe("App CSS", () => {
 
     expect(runningNode).toContain("border-color: var(--accent)");
     expect(runningNode).toContain("background: linear-gradient");
-    expect(runningNode).toContain("outline: 3px solid rgba(50, 211, 230");
+    expect(runningNode).toContain("outline: 3px solid var(--accent-border-strong)");
     expect(runningNode).toContain("box-shadow:");
   });
 
