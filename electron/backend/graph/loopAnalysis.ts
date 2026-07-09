@@ -80,7 +80,6 @@ export function generateLoopPreludeSteps(graph: WorkflowGraph, startNodeId: stri
                 name: itemName,
                 value: typeof firstItem === "string" ? firstItem : JSON.stringify(firstItem ?? ""),
                 value_type: "text",
-                variables: null,
               },
             },
           });

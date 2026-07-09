@@ -480,7 +480,6 @@ describe("TypeScript graph compiler parity", () => {
         name: "row",
         value: "val1",
         value_type: "text",
-        variables: null,
       },
     });
 
