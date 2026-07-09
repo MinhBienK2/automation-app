@@ -8,7 +8,7 @@ import {
   actionDescriptions,
   actionPickerGroups,
   actionPickerOptions,
-} from "./WorkflowGraphPalettes";
+} from "./ActionNodePalette";
 
 export function actionTypeFromConfig(config: ActionConfig | null): ActionType | null {
   if (!config) {
@@ -58,8 +58,47 @@ export function ActionTypeDropdown({
       }
     }
 
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        const options = Array.from(
+          containerRef.current?.querySelectorAll(".action-type-option") ?? []
+        ) as HTMLElement[];
+        if (options.length === 0) return;
+
+        const activeElement = document.activeElement as HTMLElement;
+        const activeIndex = options.indexOf(activeElement);
+        let nextIndex = 0;
+
+        if (activeIndex === -1) {
+          nextIndex = event.key === "ArrowDown" ? 0 : options.length - 1;
+        } else {
+          if (event.key === "ArrowDown") {
+            nextIndex = activeIndex + 1 < options.length ? activeIndex + 1 : 0;
+          } else {
+            nextIndex = activeIndex - 1 >= 0 ? activeIndex - 1 : options.length - 1;
+          }
+        }
+
+        options[nextIndex]?.focus();
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }
+
     document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
+    containerRef.current?.addEventListener("keydown", handleKeyDown);
+    
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      containerRef.current?.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   return (

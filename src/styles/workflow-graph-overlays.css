@@ -4,7 +4,7 @@
   padding: 10px;
   border: 1px solid var(--border-emphasized);
   border-radius: 8px;
-  background: #121212;
+  background: var(--bg);
 }
 
 .graph-internal-action .eyebrow {
@@ -89,7 +89,7 @@
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #121212;
+  background: var(--bg);
   color: var(--fg-secondary);
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 12px;

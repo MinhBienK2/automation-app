@@ -18,8 +18,8 @@ const stepHelpModalSource = readFileSync(
   join(process.cwd(), "src/features/workflows/components/StepHelpModal.tsx"),
   "utf8",
 );
-const workflowGraphPalettesSource = readFileSync(
-  join(process.cwd(), "src/features/workflows/components/WorkflowGraphPalettes.tsx"),
+const nodeHelpDialogSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/components/NodeHelpDialog.tsx"),
   "utf8",
 );
 
@@ -28,7 +28,7 @@ describe("step help content", () => {
     expect(stepHelpContentSource).not.toContain("export type StepHelpLanguage");
     expect(stepHelpContentSource).not.toContain("export type StepHelpContent");
     expect(stepHelpModalSource).toContain('../lib/stepHelpTypes');
-    expect(workflowGraphPalettesSource).toContain('../lib/stepHelpTypes');
+    expect(nodeHelpDialogSource).toContain('../lib/stepHelpTypes');
   });
 
   test("keeps field guidance data outside the generated action catalog", () => {

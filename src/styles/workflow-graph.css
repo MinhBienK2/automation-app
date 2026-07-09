@@ -934,7 +934,7 @@
   padding: 10px;
   border: 1px solid rgba(240, 100, 103, 0.42);
   border-radius: 8px;
-  background: #121212;
+  background: var(--bg);
 }
 
 .graph-error-card-header,
@@ -988,7 +988,7 @@
   padding: 8px;
   border: 1px solid var(--accent-border);
   border-radius: 8px;
-  background: #121212;
+  background: var(--bg);
   color: var(--fg-primary);
   font-size: 12px;
 }
@@ -1055,7 +1055,7 @@
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #121212;
+  background: var(--bg);
 }
 
 .router-case-header {
@@ -1127,7 +1127,7 @@
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #0e1620;
+  background: var(--bg);
 }
 
 .revision-item.revision-tagged {
@@ -1200,7 +1200,7 @@
   padding: 2px 6px;
   border: 1px solid var(--border-emphasized);
   border-radius: 4px;
-  background: #0e1620;
+  background: var(--bg);
   color: #e5e7eb;
   font-size: 0.8rem;
 }
@@ -1230,7 +1230,7 @@
   margin: 0;
   padding: 12px;
   border-radius: 6px;
-  background: #0e1620;
+  background: var(--bg);
   color: #d1d5db;
   font-size: 0.8rem;
   font-family: monospace;

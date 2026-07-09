@@ -1,6 +1,8 @@
+import { useWorkflowGraphHistory } from "../hooks/useWorkflowGraphHistory";
+import { useWorkflowGraphClipboard } from "../hooks/useWorkflowGraphClipboard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import {
   Background,
   Controls,
@@ -14,12 +16,12 @@ import {
 } from "@xyflow/react";
 import type {
   Connection,
-  Edge,
   EdgeChange,
-  Node,
   NodeChange,
-  NodeProps,
   ReactFlowInstance,
+  NodeProps,
+  Edge,
+  Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type {
@@ -44,15 +46,7 @@ import {
   type WorkflowFlowNode,
 } from "../lib/workflowGraph";
 import {
-  copyGraphSelection,
   deleteGraphSelection,
-  duplicateGraphSelection,
-  pasteGraphClipboard,
-  pushGraphHistory,
-  redoGraphHistory,
-  undoGraphHistory,
-  type GraphClipboard,
-  type GraphHistoryState,
   type GraphSelection,
 } from "../lib/graphEditorCommands";
 import { layoutWorkflowGraph } from "../lib/graphLayout";
@@ -75,16 +69,13 @@ import { RevisionHistoryDrawer } from "./RevisionHistoryDrawer";
 import { useWorkflowGraphShortcuts } from "./useWorkflowGraphShortcuts";
 import { useSelectionSubflowCreator } from "./useSelectionSubflowCreator";
 import { useWorkflowGraphDerivedState } from "./useWorkflowGraphDerivedState";
-import {
-  ActionNodePalette,
-  GraphNodePalette,
-  LinkContextMenu,
-  NodeContextMenu,
-  NodeHelpDialog,
-  type SubflowAddMode,
-  SubflowNodePalette,
-} from "./WorkflowGraphPalettes";
+import { GraphNodePalette } from "./WorkflowGraphPalettes";
+import { ActionNodePalette } from "./ActionNodePalette";
+import { SubflowNodePalette, type SubflowAddMode } from "./SubflowNodePalette";
+import { NodeContextMenu, LinkContextMenu } from "./WorkflowGraphContextMenus";
+import { NodeHelpDialog } from "./NodeHelpDialog";
 import { WorkflowGraphToolbar } from "./WorkflowGraphToolbar";
+import { WorkflowGraphPaletteSidebar } from "./WorkflowGraphPaletteSidebar";
 
 type WorkflowGraphEditorProps = {
   graph: WorkflowGraph;
@@ -173,35 +164,7 @@ export function WorkflowGraphEditor({
   );
 }
 
-const PALETTE_ITEMS = [
-  {
-    category: "Action Nodes",
-    nodes: [
-      { type: "action", label: "Visit", actionType: "navigate" },
-      { type: "action", label: "Click", actionType: "click" },
-      { type: "action", label: "Input Text", actionType: "input_text" },
-      { type: "action", label: "Press Key", actionType: "press_key" },
-      { type: "action", label: "Wait", actionType: "wait" },
-      { type: "action", label: "Execute JS", actionType: "execute_js" },
-    ],
-  },
-  {
-    category: "Logic Nodes",
-    nodes: [
-      { type: "if_else", label: "If/Else" },
-      { type: "loop", label: "Loop" },
-      { type: "try_catch", label: "Try/Catch" },
-      { type: "call_subflow", label: "Call Subflow" },
-    ],
-  },
-  {
-    category: "Variables",
-    nodes: [
-      { type: "define_variables", label: "Define Variables" },
-      { type: "set_variable", label: "Set Variable" },
-    ],
-  },
-];
+// Palette sidebar is imported from WorkflowGraphPaletteSidebar
 
 function WorkflowGraphEditorInner({
   graph,
@@ -237,7 +200,11 @@ function WorkflowGraphEditorInner({
     nodeIds: [],
     edgeIds: [],
   });
-  const [clipboard, setClipboard] = useState<GraphClipboard | null>(null);
+  const {
+    copySelection: execCopySelection,
+    pasteClipboard: execPasteClipboard,
+    duplicateSelection: execDuplicateSelection,
+  } = useWorkflowGraphClipboard();
   const [contextMenu, setContextMenu] = useState<{
     nodeId: string;
     x: number;
@@ -314,13 +281,13 @@ function WorkflowGraphEditorInner({
   const isGraphShortcutActiveRef = useRef(false);
   const graphRef = useRef(graph);
   const selectionRef = useRef(selection);
-  const clipboardRef = useRef(clipboard);
-  const historyRef = useRef<GraphHistoryState>({
-    past: [],
-    present: graph,
-    future: [],
-    limit: 50,
-  });
+  const {
+    commitHistoryChange,
+    undo,
+    redo,
+    updatePresent,
+    resetHistory,
+  } = useWorkflowGraphHistory(graph);
   const flowGraphRef = useRef<ReturnType<typeof toReactFlowGraph> | null>(null);
   const reactFlowNodesRef = useRef<WorkflowFlowNode[]>([]);
   const reactFlowEdgesRef = useRef<WorkflowFlowEdge[]>([]);
@@ -397,17 +364,12 @@ function WorkflowGraphEditorInner({
   );
   useEffect(() => {
     graphRef.current = graph;
-    historyRef.current = {
-      ...historyRef.current,
-      present: graph,
-    };
+    updatePresent(graph);
   }, [graph]);
   useEffect(() => {
     selectionRef.current = selection;
   }, [selection]);
-  useEffect(() => {
-    clipboardRef.current = clipboard;
-  }, [clipboard]);
+
   useEffect(() => {
     setReactFlowNodes((currentNodes) =>
       mergeReactFlowNodeRuntimeState(flowGraph.nodes, currentNodes),
@@ -721,12 +683,9 @@ function WorkflowGraphEditorInner({
     const shouldPushHistory = options.pushHistory ?? true;
     graphRef.current = nextGraph;
     if (shouldPushHistory) {
-      historyRef.current = pushGraphHistory(historyRef.current, nextGraph);
+      commitHistoryChange(nextGraph);
     } else {
-      historyRef.current = {
-        ...historyRef.current,
-        present: nextGraph,
-      };
+      resetHistory(nextGraph);
     }
     setContextMenu(null);
     setLinkContextMenu(null);
@@ -736,26 +695,24 @@ function WorkflowGraphEditorInner({
 
   function undoGraphEdit() {
     if (runState.status === "running") return;
-    const nextHistory = undoGraphHistory(historyRef.current);
-    if (nextHistory === historyRef.current) return;
-    historyRef.current = nextHistory;
-    graphRef.current = nextHistory.present;
+    const nextPresent = undo();
+    if (!nextPresent) return;
+    graphRef.current = nextPresent;
     setContextMenu(null);
     setLinkContextMenu(null);
     setSelection({ nodeIds: [], edgeIds: [] });
-    onChange(nextHistory.present);
+    onChange(nextPresent);
   }
 
   function redoGraphEdit() {
     if (runState.status === "running") return;
-    const nextHistory = redoGraphHistory(historyRef.current);
-    if (nextHistory === historyRef.current) return;
-    historyRef.current = nextHistory;
-    graphRef.current = nextHistory.present;
+    const nextPresent = redo();
+    if (!nextPresent) return;
+    graphRef.current = nextPresent;
     setContextMenu(null);
     setLinkContextMenu(null);
     setSelection({ nodeIds: [], edgeIds: [] });
-    onChange(nextHistory.present);
+    onChange(nextPresent);
   }
 
   function handleNodesChange(changes: NodeChange<WorkflowFlowNode>[]) {
@@ -891,7 +848,7 @@ function WorkflowGraphEditorInner({
   }
 
   function duplicateNode(nodeId: string) {
-    const result = duplicateGraphSelection(graphRef.current, {
+    const result = execDuplicateSelection(graphRef.current, {
       nodeIds: [nodeId],
       edgeIds: [],
     });
@@ -901,19 +858,20 @@ function WorkflowGraphEditorInner({
 
   function duplicateSelection() {
     if (runState.status === "running") return;
-    const result = duplicateGraphSelection(graphRef.current, selectionRef.current);
+    const result = execDuplicateSelection(graphRef.current, selectionRef.current);
     commitGraphChange(result.graph, result.selection);
   }
 
   function copySelection() {
-    const nextClipboard = copyGraphSelection(graphRef.current, selectionRef.current);
-    if (nextClipboard) setClipboard(nextClipboard);
+    execCopySelection(graphRef.current, selectionRef.current);
   }
 
   function pasteClipboard() {
     if (runState.status === "running") return;
-    const result = pasteGraphClipboard(graphRef.current, clipboardRef.current);
-    commitGraphChange(result.graph, result.selection);
+    const result = execPasteClipboard(graphRef.current);
+    if (result) {
+      commitGraphChange(result.graph, result.selection);
+    }
   }
 
   function deleteSelection() {
@@ -1005,60 +963,10 @@ function WorkflowGraphEditorInner({
           .filter(Boolean)
           .join(" ")
       }>
-        <aside className={`graph-palette-sidebar ${isPaletteOpen ? "open" : "collapsed"}`} aria-label="Node Palette">
-          <div className="palette-header">
-            <h3>Node Palette</h3>
-            <button
-              type="button"
-              className="palette-toggle-btn"
-              onClick={() => setIsPaletteOpen(false)}
-              aria-label="Collapse palette"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="palette-content">
-            {PALETTE_ITEMS.map((group) => (
-              <div key={group.category} className="palette-group">
-                <h4>{group.category}</h4>
-                <div className="palette-grid">
-                  {group.nodes.map((node) => (
-                    <div
-                      key={node.label}
-                      className="palette-node-item"
-                      draggable
-                      onDragStart={(event) => {
-                        event.dataTransfer.setData(
-                          "application/reactflow",
-                          JSON.stringify({
-                            type: node.type,
-                            label: node.label,
-                            actionType: (node as any).actionType,
-                          })
-                        );
-                        event.dataTransfer.effectAllowed = "move";
-                      }}
-                    >
-                      <span className="palette-node-dot" />
-                      <span>{node.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        {!isPaletteOpen && (
-          <button
-            type="button"
-            className="graph-palette-expand-trigger"
-            onClick={() => setIsPaletteOpen(true)}
-            aria-label="Expand palette"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        )}
+        <WorkflowGraphPaletteSidebar
+          isOpen={isPaletteOpen}
+          onToggle={setIsPaletteOpen}
+        />
 
         <div
           className="graph-canvas-wrap"
@@ -1140,11 +1048,10 @@ function WorkflowGraphEditorInner({
                 y={contextMenu.y}
                 onClose={() => setContextMenu(null)}
                 onCopy={() => {
-                  const nextClipboard = copyGraphSelection(graphRef.current, {
+                  execCopySelection(graphRef.current, {
                     nodeIds: [contextMenu.nodeId],
                     edgeIds: [],
                   });
-                  if (nextClipboard) setClipboard(nextClipboard);
                   setContextMenu(null);
                 }}
                 onDuplicate={() => duplicateNode(contextMenu.nodeId)}
@@ -1252,7 +1159,7 @@ function WorkflowGraphEditorInner({
         subflows={subflowOptions}
         error={subflowInsertError}
         isSelecting={isInsertingSubflowNodes}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           setIsSubflowPaletteOpen(open);
           if (open) setSubflowInsertError(null);
         }}
@@ -1260,7 +1167,7 @@ function WorkflowGraphEditorInner({
       />
       <GraphNodePalette
         palette={nodePalette}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           if (!open) setNodePalette(null);
         }}
         onSelectNode={addNode}
@@ -1268,7 +1175,7 @@ function WorkflowGraphEditorInner({
       <NodeHelpDialog
         node={helpNode}
         language={helpLanguage}
-        onOpenChange={(open) => !open && setHelpNode(null)}
+        onOpenChange={(open: boolean) => !open && setHelpNode(null)}
         onLanguageChange={setHelpLanguage}
       />
       <WorkflowGraphEditorDialogs

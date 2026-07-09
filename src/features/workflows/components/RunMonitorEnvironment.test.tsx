@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { buildVariableTree, buildEnvironmentChangeTree, type VariableTreeNode, type EnvironmentChangeNode } from "./RunMonitorEnvironment";
+import {
+  buildVariableTree,
+  buildEnvironmentChangeTree,
+  type VariableTreeNode,
+} from "../lib/runMonitorTree";
 
 describe("buildVariableTree", () => {
   test("returns empty array for empty input", () => {
@@ -19,8 +23,8 @@ describe("buildVariableTree", () => {
 
   test("keeps multiple top-level primitives as leaves", () => {
     const tree = buildVariableTree({ a: "x", b: 2, c: true });
-    expect(tree.map((node) => node.name).sort()).toEqual(["a", "b", "c"]);
-    expect(tree.every((node) => node.kind === "leaf")).toBe(true);
+    expect(tree.map((node: VariableTreeNode) => node.name).sort()).toEqual(["a", "b", "c"]);
+    expect(tree.every((node: VariableTreeNode) => node.kind === "leaf")).toBe(true);
   });
 
   test("groups dotted keys into a parent object with children", () => {
@@ -36,7 +40,7 @@ describe("buildVariableTree", () => {
     expect(userNode.path).toBe("user");
     if (userNode.kind !== "object") throw new Error("expected object");
     expect(userNode.children).toHaveLength(2);
-    expect(userNode.children.map((c) => c.name).sort()).toEqual(["email", "name"]);
+    expect(userNode.children.map((c: VariableTreeNode) => c.name).sort()).toEqual(["email", "name"]);
   });
 
   test("prefers nested object value over redundant dotted children with same data", () => {
@@ -84,7 +88,7 @@ describe("buildVariableTree", () => {
     expect(b.kind).toBe("object");
     if (b.kind !== "object") throw new Error("expected object");
     expect(b.children).toHaveLength(2);
-    expect(b.children.map((c) => c.name).sort()).toEqual(["c", "f"]);
+    expect(b.children.map((c: VariableTreeNode) => c.name).sort()).toEqual(["c", "f"]);
   });
 
   test("marks the source path used to derive each leaf", () => {
@@ -105,7 +109,7 @@ describe("buildVariableTree", () => {
     });
     const obj = tree[0];
     if (obj.kind !== "object") throw new Error("expected object");
-    expect(obj.children.map((c) => c.name)).toEqual(["a", "m", "z"]);
+    expect(obj.children.map((c: VariableTreeNode) => c.name)).toEqual(["a", "m", "z"]);
   });
 
   test("preserves arrays as leaf values (not expanded as tree)", () => {
@@ -165,7 +169,3 @@ describe("buildEnvironmentChangeTree", () => {
     }
   });
 });
-
-// Re-export type to ensure it's exported from the component
-export type _TreeNode = VariableTreeNode;
-export type _ChangeNode = EnvironmentChangeNode;

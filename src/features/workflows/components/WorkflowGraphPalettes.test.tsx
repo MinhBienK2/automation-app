@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import type { GraphNode, GraphNodeType } from "../../../types/workflow";
 import { logicNodeGroups, GraphNodePalette } from "./WorkflowGraphPalettes";
-import { NodeHelpDialog } from "./WorkflowGraphPalettes";
+import { NodeHelpDialog } from "./NodeHelpDialog";
 
 describe("NodeHelpDialog", () => {
   test("keeps Call Subflow out of the generic logic palette", () => {
