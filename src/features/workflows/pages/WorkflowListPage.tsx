@@ -283,7 +283,7 @@ export function WorkflowListPage({
           if (!open) onCloseWorkflowDialog();
         }}
       >
-        <DialogContent className="workflow-dialog max-w-md">
+        <DialogContent className="workflow-dialog">
           {workflowDialogMode ? (
             <>
               <DialogHeader>

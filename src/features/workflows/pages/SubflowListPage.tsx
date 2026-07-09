@@ -251,7 +251,7 @@ export function SubflowListPage({
           if (!open) closeCreateDialog();
         }}
       >
-        <DialogContent className="workflow-dialog max-w-md">
+        <DialogContent className="workflow-dialog">
           <DialogHeader>
             <p className="eyebrow">Subflow</p>
             <DialogTitle>Create Subflow</DialogTitle>

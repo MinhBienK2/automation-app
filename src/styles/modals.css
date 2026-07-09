@@ -4,7 +4,7 @@
 .workflow-dialog {
   display: grid;
   gap: 18px;
-  width: min(480px, 100%);
+  width: min(560px, 100%);
 }
 
 .modal-header {

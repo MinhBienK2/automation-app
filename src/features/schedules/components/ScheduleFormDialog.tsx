@@ -113,7 +113,7 @@ export function ScheduleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <p className="eyebrow">Schedule</p>
           <DialogTitle>
