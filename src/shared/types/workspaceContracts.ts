@@ -36,6 +36,7 @@ export interface AppNavigationAPI {
   setScreen: (screen: AppScreen) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setOverviewFocus: (focus: OverviewFocus) => void;
+  setProjectsBrowseMode: (mode: "grid" | "detail") => void;
   openProjects: (collection?: "workflows" | "subflows" | "profiles" | "settings") => void;
   openOverview: (focus?: OverviewFocus) => void;
   openSettings: () => void;

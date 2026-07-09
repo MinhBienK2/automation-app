@@ -251,7 +251,7 @@ export function RevisionHistoryDrawer({
             }}
           >
             <History style={{ width: "16px", height: "16px" }} />
-            Tạo bản sao lưu hiện tại
+            Create Backup
           </Button>
         </div>
       )}
@@ -432,13 +432,12 @@ export function RevisionHistoryDrawer({
         </DialogContent>
       </Dialog>
 
-      {/* Confirm Delete Dialog */}
       <Dialog open={!!deleteCandidate} onOpenChange={(o) => !o && setDeleteCandidate(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xóa lịch sử sao lưu?</DialogTitle>
+            <DialogTitle>Delete Backup History?</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa bản sao lưu #{deleteCandidate?.revision_number} không? Hành động này không thể hoàn tác.
+              Are you sure you want to delete backup revision #{deleteCandidate?.revision_number}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -448,7 +447,7 @@ export function RevisionHistoryDrawer({
               onClick={() => setDeleteCandidate(null)}
               disabled={isDeleting}
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               type="button"
@@ -456,7 +455,7 @@ export function RevisionHistoryDrawer({
               onClick={() => void handleConfirmDelete()}
               disabled={isDeleting}
             >
-              {isDeleting ? "Đang xóa..." : "Xóa"}
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -466,18 +465,18 @@ export function RevisionHistoryDrawer({
       <Dialog open={isBackupDialogOpen} onOpenChange={(o) => !o && setIsBackupDialogOpen(false)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tạo bản sao lưu cho {ownerKind === "workflow" ? "Workflow" : "Subflow"}</DialogTitle>
+            <DialogTitle>Create Backup for {ownerKind === "workflow" ? "Workflow" : "Subflow"}</DialogTitle>
             <DialogDescription>
-              Lưu lại trạng thái hiện tại làm mốc backup quan trọng. Các subflow chỉ thuộc về workflow này cũng sẽ được tự động sao lưu.
+              Save the current state as a backup milestone. Subflows belonging to this workflow will also be backed up automatically.
             </DialogDescription>
           </DialogHeader>
           
           <div style={{ display: "flex", flexDirection: "column", gap: "16px", margin: "16px 0" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "14px", fontWeight: 500 }}>Mô tả bản sao lưu (Bắt buộc)</label>
+              <label style={{ fontSize: "14px", fontWeight: 500 }}>Backup description (Required)</label>
               <input
                 type="text"
-                placeholder="Ví dụ: Trước khi sửa logic hoặc v1.0.0 ổn định"
+                placeholder="e.g. Before changing logic, or v1.0.0 stable"
                 value={backupComment}
                 onChange={(e) => setBackupComment(e.target.value)}
                 style={{
@@ -489,15 +488,15 @@ export function RevisionHistoryDrawer({
                   width: "100%"
                 }}
                 maxLength={200}
-                aria-label="Mô tả bản sao lưu"
+                aria-label="Backup description"
               />
             </div>
             
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "14px", fontWeight: 500 }}>Tag / Thẻ nhãn (Tùy chọn)</label>
+              <label style={{ fontSize: "14px", fontWeight: 500 }}>Tag / Label (Optional)</label>
               <input
                 type="text"
-                placeholder="Ví dụ: stable-v1 (Bản có Tag sẽ không bị tự động xóa)"
+                placeholder="e.g. stable-v1 (Revisions with tags are preserved from auto-cleanup)"
                 value={backupTag}
                 onChange={(e) => setBackupTag(e.target.value)}
                 style={{
@@ -509,7 +508,7 @@ export function RevisionHistoryDrawer({
                   width: "100%"
                 }}
                 maxLength={32}
-                aria-label="Tag bản sao lưu"
+                aria-label="Backup tag"
               />
             </div>
           </div>
@@ -521,14 +520,14 @@ export function RevisionHistoryDrawer({
               onClick={() => setIsBackupDialogOpen(false)}
               disabled={isSavingBackup}
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               type="button"
               onClick={handleCreateBackup}
               disabled={isSavingBackup || !backupComment.trim()}
             >
-              {isSavingBackup ? "Đang lưu..." : "Lưu sao lưu"}
+              {isSavingBackup ? "Saving..." : "Save Backup"}
             </Button>
           </DialogFooter>
         </DialogContent>

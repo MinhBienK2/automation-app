@@ -12,6 +12,7 @@ import type {
 } from "../../../types/workflow";
 import { ScheduleFormDialog } from "../components/ScheduleFormDialog";
 import { ScheduleHistoryDrawer } from "../components/ScheduleHistoryDrawer";
+import { ConfirmDialog } from "../../../components/ui/confirm-dialog";
 
 type ScheduleDialogMode = "create" | "edit" | null;
 
@@ -57,6 +58,7 @@ export function SchedulesPage({
   const [dialogMode, setDialogMode] = useState<ScheduleDialogMode>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [historySchedule, setHistorySchedule] = useState<WorkflowSchedule | null>(null);
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const sortedEvents = useMemo(
     () =>
@@ -210,7 +212,7 @@ export function SchedulesPage({
                           label={`Delete ${schedule.name}`}
                           type="button"
                           className="btn-ghost btn-xs text-error hover:bg-error/10"
-                          onClick={() => onDeleteSchedule(schedule.id)}
+                          onClick={() => setDeleteCandidateId(schedule.id)}
                         >
                           <Trash2 aria-hidden="true" size={14} />
                         </IconButton>
@@ -241,6 +243,23 @@ export function SchedulesPage({
         events={sortedEvents}
         onOpenWorkflow={onOpenWorkflow}
         onClose={() => setHistorySchedule(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteCandidateId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteCandidateId(null);
+        }}
+        title="Delete Schedule?"
+        description="Are you sure you want to delete this schedule? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={async () => {
+          if (deleteCandidateId) {
+            await onDeleteSchedule(deleteCandidateId);
+            setDeleteCandidateId(null);
+          }
+        }}
       />
     </section>
   );

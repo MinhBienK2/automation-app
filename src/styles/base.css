@@ -23,13 +23,14 @@
   --sidebar-bg: #0e151d;
   --surface: #121c26;
   --surface-elevated: #172431;
+  --surface-overlay: #1b2a39;
   --border: #233240;
   --border-emphasized: #314758;
   --border-hover: #3e5668;
 
   --fg-primary: #e7eef5;
   --fg-secondary: #9aaebd;
-  --fg-muted: #667d8d;
+  --fg-muted: #7a93a6;
 
   /* Semantic Status */
   --success: #39d98a;
@@ -110,13 +111,14 @@ html[data-theme="light"] {
   --sidebar-bg: #ffffff;
   --surface: #ffffff;
   --surface-elevated: #ebf1f6;
+  --surface-overlay: #ffffff;
   --border: #d1dfec;
   --border-emphasized: #a5c0db;
   --border-hover: #8aa6c2;
 
   --fg-primary: #111b24;
   --fg-secondary: #4a607a;
-  --fg-muted: #7e95ac;
+  --fg-muted: #8ca3ba;
 
   --success: #0f8a50;
   --success-bg: rgba(15, 138, 80, 0.08);

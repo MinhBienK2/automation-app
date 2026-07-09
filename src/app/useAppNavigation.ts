@@ -326,6 +326,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     setScreen,
     setSidebarCollapsed,
     setOverviewFocus,
+    setProjectsBrowseMode,
     openProjects,
     openOverview,
     openSettings,

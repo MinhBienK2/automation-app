@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, test, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { AdminBackupsPanel } from "./AdminBackupsPanel";
 import {
   listBackups,
@@ -124,10 +124,11 @@ describe("AdminBackupsPanel", () => {
 
     // Verify custom Dialog is visible
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText(/Xóa bản sao lưu\?/i)).toBeInTheDocument();
+    expect(screen.getByText(/Delete Backup\?/i)).toBeInTheDocument();
 
     // Click confirm "Delete/Xóa" button inside the dialog
-    const confirmDeleteBtn = screen.getByRole("button", { name: /^xóa$/i });
+    const dialog = screen.getByRole("dialog");
+    const confirmDeleteBtn = within(dialog).getByRole("button", { name: /^delete$/i });
     fireEvent.click(confirmDeleteBtn);
 
     await waitFor(() => {

@@ -319,10 +319,10 @@ describe("RevisionHistoryDrawer", () => {
     fireEvent.click(deleteButtons[0]);
 
     // Verify confirmation dialog is visible
-    expect(screen.getByText("Xóa lịch sử sao lưu?")).toBeTruthy();
+    expect(screen.getByText("Delete Backup History?")).toBeTruthy();
 
     // Confirm deletion
-    const confirmButton = screen.getByRole("button", { name: "Xóa" });
+    const confirmButton = screen.getByRole("button", { name: "Delete" });
     fireEvent.click(confirmButton);
 
     await waitFor(() => {

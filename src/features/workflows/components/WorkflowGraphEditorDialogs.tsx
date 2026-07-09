@@ -104,14 +104,14 @@ export function WorkflowGraphEditorDialogs({
               disabled={isCreatingSelectionSubflow}
               onClick={() => onCreateSubflowFromSelection("create_only")}
             >
-              Chỉ tạo
+              Create Only
             </Button>
             <Button
               type="button"
               disabled={isCreatingSelectionSubflow}
               onClick={() => onCreateSubflowFromSelection("create_and_replace")}
             >
-              Tạo và thay thế
+              Create & Replace
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,4 +1,4 @@
-import { Copy, Eye, Plus, RefreshCw, Settings, Trash2, Download, Upload, Search, GitFork } from "lucide-react";
+import { Copy, Eye, Plus, RefreshCw, Settings, Trash2, Download, Upload, GitFork } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "../../../components/ui/button";
 import {
@@ -11,8 +11,10 @@ import {
 } from "../../../components/ui/dialog";
 import { IconButton } from "../../../components/ui/icon-button";
 import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
 import type { SubflowSummary } from "../../../types/workflow";
+import { SearchInput } from "../../../components/ui/search-input";
+import { FormField } from "../../../components/ui/form-field";
+import { ConfirmDialog } from "../../../components/ui/confirm-dialog";
 import { SubflowSettingsDialog } from "../components/SubflowSettingsDialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
 
@@ -108,15 +110,13 @@ export function SubflowListPage({
 
       {/* Toolbar Filter */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-2">
-        <div className="relative max-w-xs flex-grow">
-          <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4" />
-          <Input
-            placeholder="Search subflows..."
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.currentTarget.value)}
-            className="pl-9 input-sm border-base-300"
-          />
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search subflows..."
+          label="Search subflows"
+          className="max-w-xs"
+        />
         <div className="flex items-center gap-3">
           <Button
             variant="secondary"
@@ -260,8 +260,7 @@ export function SubflowListPage({
             </DialogDescription>
           </DialogHeader>
           <form className="flex flex-col gap-4 mt-2" onSubmit={submitCreateSubflow}>
-            <div className="flex flex-col gap-1 w-full">
-              <Label htmlFor="subflow-name">Subflow name</Label>
+            <FormField label="Subflow name" htmlFor="subflow-name">
               <Input
                 autoFocus
                 id="subflow-name"
@@ -270,9 +269,8 @@ export function SubflowListPage({
                 placeholder="Login"
                 className="input-sm border-base-300 w-full"
               />
-            </div>
-            <div className="flex flex-col gap-1 w-full">
-              <Label htmlFor="subflow-description">Description</Label>
+            </FormField>
+            <FormField label="Description" htmlFor="subflow-description">
               <Input
                 id="subflow-description"
                 value={descriptionDraft}
@@ -280,7 +278,7 @@ export function SubflowListPage({
                 placeholder="Reusable login path"
                 className="input-sm border-base-300 w-full"
               />
-            </div>
+            </FormField>
             {localError ? <div className="alert alert-error text-xs p-2.5 mt-2">{localError}</div> : null}
             <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">
               <Button type="submit" disabled={creating} loading={creating} className="btn-primary">
@@ -305,56 +303,28 @@ export function SubflowListPage({
         }}
       />
       
-      <Dialog
+      <ConfirmDialog
         open={Boolean(deleteSubflowCandidate)}
         onOpenChange={(open) => {
           if (!open) setDeleteSubflowCandidate(null);
         }}
-      >
-        {deleteSubflowCandidate ? (
-          <DialogContent className="workflow-dialog max-w-md">
-            <DialogHeader>
-              <p className="eyebrow text-error">Subflow</p>
-              <DialogTitle>Delete Subflow</DialogTitle>
-              <DialogDescription>
-                This removes {deleteSubflowCandidate.name} from the app. This
-                action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-
-            {localError ? <div className="alert alert-error text-xs p-2.5 mt-2">{localError}</div> : null}
-            <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={deleting}
-                loading={deleting}
-                onClick={async () => {
-                  if (deleteSubflowCandidate) {
-                    setDeleting(true);
-                    try {
-                      await onDeleteSubflow(deleteSubflowCandidate);
-                      setDeleteSubflowCandidate(null);
-                    } finally {
-                      setDeleting(false);
-                    }
-                  }
-                }}
-              >
-                Delete Subflow
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={deleting}
-                onClick={() => setDeleteSubflowCandidate(null)}
-              >
-                Cancel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        ) : null}
-      </Dialog>
+        title="Delete Subflow"
+        description={`This removes ${deleteSubflowCandidate?.name || ""} from the app. This action cannot be undone.`}
+        confirmText="Delete Subflow"
+        variant="destructive"
+        isLoading={deleting}
+        onConfirm={async () => {
+          if (deleteSubflowCandidate) {
+            setDeleting(true);
+            try {
+              await onDeleteSubflow(deleteSubflowCandidate);
+              setDeleteSubflowCandidate(null);
+            } finally {
+              setDeleting(false);
+            }
+          }
+        }}
+      />
     </div>
   );
 }

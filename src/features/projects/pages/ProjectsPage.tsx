@@ -1,4 +1,4 @@
-import { Copy, Download, MoreVertical, Search, Trash, Upload } from "lucide-react";
+import { Copy, Download, MoreVertical, Trash, Upload } from "lucide-react";
 import { useMemo, useState, useEffect, type FormEvent, type ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
@@ -11,9 +11,11 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
 import { WorkspaceHeader } from "../../../components/layout/WorkspaceHeader";
 import type { Project } from "../../../types/workflow";
+import { SearchInput } from "../../../components/ui/search-input";
+import { ConfirmDialog } from "../../../components/ui/confirm-dialog";
+import { FormField } from "../../../components/ui/form-field";
 
 export type ProjectCollection = "workflows" | "subflows" | "profiles" | "settings";
 
@@ -166,19 +168,13 @@ export function ProjectsPage({
       {browsing || !selectedProject ? (
         <div className="project-grid-view mt-4">
           <div className="project-grid-header flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between mb-6">
-            <div className="search-input-wrapper relative flex-grow max-w-md">
-              <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4" />
-              <Label className="sr-only" htmlFor="project-grid-search">
-                Search projects
-              </Label>
-              <Input
-                id="project-grid-search"
-                placeholder="Search projects..."
-                value={gridSearchDraft}
-                onChange={(event) => setGridSearchDraft(event.currentTarget.value)}
-                className="pl-9 input-sm border-base-300"
-              />
-            </div>
+            <SearchInput
+              value={gridSearchDraft}
+              onChange={setGridSearchDraft}
+              placeholder="Search projects..."
+              label="Search projects"
+              className="flex-grow max-w-md"
+            />
 
             <div className="flex items-center gap-3">
               <label
@@ -389,8 +385,7 @@ export function ProjectsPage({
             </DialogDescription>
           </DialogHeader>
           <form className="flex flex-col gap-4 mt-2" onSubmit={submitProject}>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="project-name">Project name</Label>
+            <FormField label="Project name" htmlFor="project-name">
               <Input
                 autoFocus
                 id="project-name"
@@ -399,9 +394,8 @@ export function ProjectsPage({
                 placeholder="Staging abuse lab"
                 className="input-sm border-base-300"
               />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="project-description">Description</Label>
+            </FormField>
+            <FormField label="Description" htmlFor="project-description">
               <Input
                 id="project-description"
                 value={projectDescriptionDraft}
@@ -409,7 +403,7 @@ export function ProjectsPage({
                 placeholder="Owned staging workflows"
                 className="input-sm border-base-300"
               />
-            </div>
+            </FormField>
             {projectError ? <p className="text-error text-xs font-semibold">{projectError}</p> : null}
             <DialogFooter className="form-actions flex gap-2">
               <Button type="submit" disabled={creating} loading={creating} className="btn-primary">
@@ -423,43 +417,21 @@ export function ProjectsPage({
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <ConfirmDialog
         open={deleteProjectCandidateId !== null}
         onOpenChange={(open) => {
           if (!open) setDeleteProjectCandidateId(null);
         }}
-      >
-        <DialogContent className="workflow-dialog">
-          <DialogHeader>
-            <p className="eyebrow text-error">Danger Zone</p>
-            <DialogTitle>Delete Project?</DialogTitle>
-            <DialogDescription>
-              This will permanently delete the project and all workflows, subflows, and browser profiles inside it. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="form-actions flex gap-2">
-            <Button
-              variant="destructive"
-              type="button"
-              onClick={() => {
-                if (deleteProjectCandidateId && onDeleteProject) {
-                  onDeleteProject(deleteProjectCandidateId);
-                }
-                setDeleteProjectCandidateId(null);
-              }}
-            >
-              Delete
-            </Button>
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => setDeleteProjectCandidateId(null)}
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Delete Project?"
+        description="This will permanently delete the project and all workflows, subflows, and browser profiles inside it. This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={() => {
+          if (deleteProjectCandidateId && onDeleteProject) {
+            onDeleteProject(deleteProjectCandidateId);
+          }
+        }}
+      />
     </section>
   );
 }

@@ -7,15 +7,15 @@ describe("PrettyVariableViewer", () => {
   test("renders primitive boolean values as user-friendly text", () => {
     render(<PrettyVariableViewer variables={{ is_active: true, is_blocked: false }} />);
     expect(screen.getByText("is_active")).toBeInTheDocument();
-    expect(screen.getByText(/ĐÚNG|Đúng/)).toBeInTheDocument();
+    expect(screen.getByText(/TRUE|True/i)).toBeInTheDocument();
     expect(screen.getByText("is_blocked")).toBeInTheDocument();
-    expect(screen.getByText(/SAI|Sai/)).toBeInTheDocument();
+    expect(screen.getByText(/FALSE|False/i)).toBeInTheDocument();
   });
 
   test("renders null or undefined values as user-friendly empty label", () => {
     render(<PrettyVariableViewer variables={{ empty_val: null }} />);
     expect(screen.getByText("empty_val")).toBeInTheDocument();
-    expect(screen.getByText(/(Trống|Chưa có dữ liệu)/)).toBeInTheDocument();
+    expect(screen.getByText("(Empty)")).toBeInTheDocument();
   });
 
   test("renders formatted numbers", () => {
@@ -27,17 +27,17 @@ describe("PrettyVariableViewer", () => {
   test("renders array elements with clean numbering and cards", async () => {
     render(<PrettyVariableViewer variables={{ items: ["apple", "banana"] }} />);
     // Check array name and count
-    expect(screen.getByText(/items/)).toBeInTheDocument();
-    expect(screen.getByText(/2 phần tử/)).toBeInTheDocument();
+    expect(screen.getByText("items")).toBeInTheDocument();
+    expect(screen.getByText(/2 items/)).toBeInTheDocument();
 
     const user = userEvent.setup();
     const toggleBtn = screen.getByRole("button", { name: /items/ });
     await user.click(toggleBtn);
 
     // Check items formatting
-    expect(screen.getByText(/Phần tử 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Item 1/)).toBeInTheDocument();
     expect(screen.getByText("apple")).toBeInTheDocument();
-    expect(screen.getByText(/Phần tử 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Item 2/)).toBeInTheDocument();
     expect(screen.getByText("banana")).toBeInTheDocument();
   });
 
@@ -60,7 +60,7 @@ describe("PrettyVariableViewer", () => {
 
     render(<PrettyVariableViewer variables={{ api_key: "secret-token-abc" }} />);
     
-    const copyBtn = screen.getByTitle("Copy giá trị");
+    const copyBtn = screen.getByTitle("Copy value");
     expect(copyBtn).toBeInTheDocument();
 
     const user = userEvent.setup();
@@ -74,7 +74,7 @@ describe("PrettyVariableViewer", () => {
 
     render(<PrettyVariableViewer variables={{ tags: ["admin", "staff"] }} />);
     
-    const copyBtn = screen.getByTitle("Copy giá trị");
+    const copyBtn = screen.getByTitle("Copy value");
     expect(copyBtn).toBeInTheDocument();
 
     const user = userEvent.setup();
@@ -88,7 +88,7 @@ describe("PrettyVariableViewer", () => {
 
     render(<PrettyVariableViewer variables={{ meta: { version: 1 } }} />);
     
-    const copyBtn = screen.getByTitle("Copy giá trị");
+    const copyBtn = screen.getByTitle("Copy value");
     expect(copyBtn).toBeInTheDocument();
 
     const user = userEvent.setup();

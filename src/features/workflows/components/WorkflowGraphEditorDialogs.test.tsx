@@ -56,10 +56,10 @@ describe("WorkflowGraphEditorDialogs", () => {
     await userEvent.type(screen.getByLabelText("Subflow name"), " block");
     expect(onSelectionSubflowNameChange).toHaveBeenLastCalledWith("Login block");
 
-    await userEvent.click(screen.getByRole("button", { name: "Chỉ tạo" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create Only" }));
     expect(onCreateSubflowFromSelection).toHaveBeenCalledWith("create_only");
 
-    await userEvent.click(screen.getByRole("button", { name: "Tạo và thay thế" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create & Replace" }));
     expect(onCreateSubflowFromSelection).toHaveBeenCalledWith("create_and_replace");
   });
 });

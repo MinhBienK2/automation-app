@@ -10,7 +10,6 @@ import {
   Square,
   Trash2,
   Upload,
-  Search,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,7 +32,8 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
+import { SearchInput } from "../../../components/ui/search-input";
+import { FormField } from "../../../components/ui/form-field";
 import { runStatusLabel } from "../../../lib/workflowUi";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
 
@@ -119,15 +119,13 @@ export function WorkflowListPage({
 
       {/* Toolbar Filter */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-2">
-        <div className="relative max-w-xs flex-grow">
-          <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4" />
-          <Input
-            placeholder="Search workflows..."
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.currentTarget.value)}
-            className="pl-9 input-sm border-base-300"
-          />
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search workflows..."
+          label="Search workflows"
+          className="max-w-xs"
+        />
         <div className="flex items-center gap-3">
           <label className="btn btn-secondary btn-sm rounded-full cursor-pointer relative inline-flex items-center gap-1.5">
             <Upload aria-hidden="true" size={14} />
@@ -295,10 +293,7 @@ export function WorkflowListPage({
               </DialogHeader>
 
               <form className="flex flex-col gap-4 mt-2" onSubmit={onSubmitWorkflowDialog}>
-                <div className="flex flex-col gap-1 w-full">
-                  <Label htmlFor="workflow-name">
-                    {workflowNameLabel}
-                  </Label>
+                <FormField label={workflowNameLabel} htmlFor="workflow-name">
                   <Input
                     autoFocus
                     id="workflow-name"
@@ -309,12 +304,9 @@ export function WorkflowListPage({
                     placeholder="Login flow"
                     className="input-sm border-base-300 w-full"
                   />
-                </div>
+                </FormField>
                 {workflowDialogMode === "create" ? (
-                  <div className="flex flex-col gap-1 w-full">
-                    <Label htmlFor="workflow-profile">
-                      Browser Profile
-                    </Label>
+                  <FormField label="Browser Profile" htmlFor="workflow-profile">
                     <Select
                       id="workflow-profile"
                       value={selectedProfileIdDraft ?? ""}
@@ -329,7 +321,7 @@ export function WorkflowListPage({
                         </option>
                       ))}
                     </Select>
-                  </div>
+                  </FormField>
                 ) : null}
                 {appError ? <div className="alert alert-error text-xs p-2.5 mt-2">{appError}</div> : null}
                 <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">

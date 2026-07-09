@@ -44,13 +44,13 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
   // Formatting helper
   const renderPrimitive = (val: unknown) => {
     if (val === null || val === undefined) {
-      return <span className="pretty-var-empty">(Trống)</span>;
+      return <span className="pretty-var-empty">(Empty)</span>;
     }
     if (typeof val === "boolean") {
       return val ? (
-        <span className="pretty-var-badge pretty-var-badge-true" aria-label="Đúng">✓ Đúng</span>
+        <span className="pretty-var-badge pretty-var-badge-true" aria-label="True">✓ True</span>
       ) : (
-        <span className="pretty-var-badge pretty-var-badge-false" aria-label="Sai">✗ Sai</span>
+        <span className="pretty-var-badge pretty-var-badge-false" aria-label="False">✗ False</span>
       );
     }
     if (typeof val === "number") {
@@ -66,7 +66,7 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
         <span className="pretty-var-value-string">
           {displayText}
           {isUrl && (
-            <a href={val} target="_blank" rel="noopener noreferrer" className="pretty-var-link" title="Mở liên kết">
+            <a href={val} target="_blank" rel="noopener noreferrer" className="pretty-var-link" title="Open link">
               <ExternalLink className="h-3 w-3" style={{ display: "inline", marginLeft: "4px", verticalAlign: "middle" }} />
             </a>
           )}
@@ -76,7 +76,7 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
               className="pretty-var-showmore"
               onClick={() => setShowAll((prev) => !prev)}
             >
-              {showAll ? "Thu gọn" : "Xem thêm"}
+              {showAll ? "Collapse" : "See more"}
             </button>
           )}
         </span>
@@ -101,13 +101,13 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
               {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </span>
             <span className="pretty-var-key">{name}</span>
-            <span className="pretty-var-meta">Mảng · {value.length} phần tử</span>
+            <span className="pretty-var-meta">Array · {value.length} items</span>
           </button>
           <button
             type="button"
             className="pretty-var-copy-btn"
             onClick={handleCopy}
-            title="Copy giá trị"
+            title="Copy value"
           >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           </button>
@@ -116,7 +116,7 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
           <div className="pretty-var-children">
             {value.map((item, index) => (
               <div key={index} className="pretty-var-card">
-                <div className="pretty-var-card-title">Phần tử {index + 1}</div>
+                <div className="pretty-var-card-title">Item {index + 1}</div>
                 <PrettyVariableNode
                   name=""
                   value={item}
@@ -127,7 +127,7 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
             ))}
             {value.length === 0 && (
               <div className="pretty-var-empty" style={{ paddingLeft: "10px" }}>
-                (Mảng trống)
+                (Empty Array)
               </div>
             )}
           </div>
@@ -171,13 +171,13 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
               {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </span>
             <span className="pretty-var-key">{name}</span>
-            <span className="pretty-var-meta">Đối tượng · {entries.length} thuộc tính</span>
+            <span className="pretty-var-meta">Object · {entries.length} properties</span>
           </button>
           <button
             type="button"
             className="pretty-var-copy-btn"
             onClick={handleCopy}
-            title="Copy giá trị"
+            title="Copy value"
           >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           </button>
@@ -195,7 +195,7 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
             ))}
             {entries.length === 0 && (
               <div className="pretty-var-empty" style={{ paddingLeft: "10px" }}>
-                (Đối tượng trống)
+                (Empty Object)
               </div>
             )}
           </div>
@@ -220,7 +220,7 @@ function PrettyVariableNode({ name, value, path, highlighted = false, depth = 0 
           type="button"
           className="pretty-var-copy-btn"
           onClick={handleCopy}
-          title="Copy giá trị"
+          title="Copy value"
         >
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
         </button>

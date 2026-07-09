@@ -857,12 +857,17 @@ function App() {
           projectStats={projectStats}
           onSelectProject={(projectId) => {
             void projectsWorkspace.selectProject(projectId);
+            nav.setProjectsBrowseMode("detail");
           }}
-          onCreateProject={(input) => projectsWorkspace.createProject(input)}
+          onCreateProject={async (input) => {
+            await projectsWorkspace.createProject(input);
+            nav.setProjectsBrowseMode("detail");
+          }}
           onImportProjectPackageFile={importProjectPackageFile}
           onCollectionChange={(coll) => projectsWorkspace.setProjectCollection(coll)}
           onDuplicateProject={(projectId) => {
             void projectsWorkspace.duplicateProject(projectId);
+            nav.setProjectsBrowseMode("detail");
           }}
           onExportProject={(projectId) => {
             void exportProjectPackageFile(projectId);

@@ -15,10 +15,8 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
     const savedEmail = localStorage.getItem("remembered_email");
     return localStorage.getItem("remember_me") === "true" && savedEmail ? savedEmail : "";
   });
-  const [password, setPassword] = useState(() => {
-    const savedPassword = localStorage.getItem("remembered_password");
-    return localStorage.getItem("remember_me") === "true" && savedPassword ? savedPassword : "";
-  });
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,18 +28,19 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
       if (rememberMe) {
         localStorage.setItem("remember_me", "true");
         localStorage.setItem("remembered_email", email);
-        localStorage.setItem("remembered_password", password);
       } else {
         localStorage.removeItem("remember_me");
         localStorage.removeItem("remembered_email");
-        localStorage.removeItem("remembered_password");
       }
+      localStorage.removeItem("remembered_password");
 
       await onLogin(email, password);
     } finally {
       setSubmitting(false);
     }
   };
+
+  const isFieldsDisabled = isLoading || submitting;
 
   return (
     <div className="login-screen-container">
@@ -61,7 +60,7 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
               placeholder="e.g. admin@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading || submitting}
+              disabled={isFieldsDisabled}
               className="bg-base-100 border-base-300"
               required
             />
@@ -69,16 +68,26 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
 
           <div className="form-group">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              className="bg-base-100 border-base-300"
-              required
-            />
+            <div className="relative flex items-center">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isFieldsDisabled}
+                className="bg-base-100 border-base-300 pr-12 w-full"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 text-fg-muted hover:text-fg-primary text-xs font-semibold select-none focus:outline-none"
+                tabIndex={-1}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
           </div>
 
           <div className="remember-me-container">
@@ -89,9 +98,9 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
                 className="checkbox checkbox-primary checkbox-xs rounded"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                disabled={isLoading}
+                disabled={isFieldsDisabled}
               />
-              <span className="text-sm">Remember credentials</span>
+              <span className="text-sm">Remember email</span>
             </label>
           </div>
 
@@ -101,7 +110,7 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
             </div>
           )}
 
-          <Button type="submit" disabled={isLoading || submitting} loading={isLoading || submitting} className="btn-primary w-full">
+          <Button type="submit" disabled={isFieldsDisabled} loading={isFieldsDisabled} className="btn-primary w-full">
             Sign In
           </Button>
         </form>

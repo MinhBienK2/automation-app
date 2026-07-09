@@ -228,24 +228,24 @@ export function graphPortTooltip(nodeType: GraphNodeType, port: GraphPort) {
 
 function portUsageText(nodeType: GraphNodeType, port: GraphPort) {
   if (nodeType === "start" && port.id === "out") {
-    return "Bắt đầu workflow từ đây.";
+    return "Start workflow from here.";
   }
   if (
     (nodeType === "end_success" || nodeType === "end_failure") &&
     port.id === "in"
   ) {
     return nodeType === "end_success"
-      ? "Kết thúc workflow thành công tại node này."
-      : "Kết thúc workflow thất bại tại node này.";
+      ? "End workflow successfully at this node."
+      : "End workflow in failure at this node.";
   }
   if (nodeType === "stop_workflow" && port.id === "in") {
-    return "Kết thúc workflow theo trạng thái được cấu hình trong node này.";
+    return "Stop workflow with the configured status.";
   }
   if (nodeType === "break_loop" && port.id === "in") {
-    return "Chạy lệnh thoát vòng lặp hiện tại; chỉ dùng bên trong loop body.";
+    return "Break out of the current loop; only use within loop body.";
   }
   if (nodeType === "continue_loop" && port.id === "in") {
-    return "Chạy lệnh bỏ qua phần còn lại của lượt lặp hiện tại; chỉ dùng bên trong loop body.";
+    return "Skip to next iteration of the loop; only use within loop body.";
   }
 
   switch (nodeType) {
@@ -307,78 +307,78 @@ function portUsageText(nodeType: GraphNodeType, port: GraphPort) {
 function ifPortUsage(port: GraphPort) {
   switch (port.id) {
     case "in":
-      return "Nhận luồng trước khi kiểm tra condition.";
+      return "Receive control flow before checking condition.";
     case "true":
-      return "Chạy branch khi condition đúng; bỏ trống thì branch này no-op.";
+      return "Execute branch when condition is true; if empty, this branch is a no-op.";
     case "false":
-      return "Chạy branch khi condition sai; bỏ trống thì branch này no-op.";
+      return "Execute branch when condition is false; if empty, this branch is a no-op.";
     case "done":
-      return "Quay về flow chính sau khi branch True hoặc False hoàn tất; bỏ trống thì path kết thúc thành công.";
+      return "Return to main flow after True or False branch completes; if empty, path ends in success.";
     default:
       return genericPortUsage(port);
   }
 }
 
 function switchPortUsage(port: GraphPort) {
-  if (port.id === "in") return "Nhận luồng trước khi so khớp switch expression.";
-  if (port.id === "default") return "Chạy branch khi không case nào khớp.";
+  if (port.id === "in") return "Receive control flow before matching switch expression.";
+  if (port.id === "default") return "Execute branch when no cases match.";
   if (port.id === "done") {
-    return "Quay về flow chính sau khi branch case hoặc Default hoàn tất; bỏ trống thì path kết thúc thành công.";
+    return "Return to main flow after case or Default branch completes; if empty, path ends in success.";
   }
   if (port.id.startsWith("case_")) {
-    return "Chạy branch khi case này khớp expression; bỏ trống thì branch này no-op.";
+    return "Execute branch when this case matches expression; if empty, this branch is a no-op.";
   }
   return genericPortUsage(port);
 }
 
 function routerPortUsage(port: GraphPort) {
-  if (port.id === "in") return "Nhận luồng trước khi Router kiểm tra các case theo thứ tự.";
-  if (port.id === "default") return "Chạy branch khi không case Router nào khớp.";
+  if (port.id === "in") return "Receive control flow before Router checks cases sequentially.";
+  if (port.id === "default") return "Execute branch when no Router cases match.";
   if (port.id === "done") {
-    return "Quay về flow chính sau khi branch Router được chọn hoàn tất; bỏ trống thì path kết thúc thành công.";
+    return "Return to main flow after selected Router branch completes; if empty, path ends in success.";
   }
   if (port.id.startsWith("case_")) {
-    return "Chạy branch cho case đầu tiên có condition khớp; bỏ trống thì branch này no-op.";
+    return "Execute branch for first case with matching condition; if empty, this branch is a no-op.";
   }
   return genericPortUsage(port);
 }
 
 function randomChoicePortUsage(port: GraphPort) {
-  if (port.id === "in") return "Nhận luồng trước khi chọn ngẫu nhiên một choice theo weight.";
+  if (port.id === "in") return "Receive control flow before randomly selecting a choice by weight.";
   if (port.id === "done") {
-    return "Quay về flow chính sau khi choice được chọn hoàn tất; bỏ trống thì path kết thúc thành công.";
+    return "Return to main flow after selected choice completes; if empty, path ends in success.";
   }
   if (port.id.startsWith("choice_")) {
-    return "Chạy branch nếu choice này được chọn; bỏ trống thì branch này no-op.";
+    return "Execute branch if this choice is selected; if empty, this branch is a no-op.";
   }
   return genericPortUsage(port);
 }
 
 function mergePortUsage(port: GraphPort) {
   if (port.id === "in") {
-    return "Nhận nhiều nhánh đi vào cùng một điểm hội tụ; Merge không chờ các nhánh khác.";
+    return "Receive multiple incoming paths to a single convergence point; Merge does not wait for others.";
   }
   if (port.id === "out") {
-    return "Chạy tiếp từ Merge khi một nhánh đã tới điểm hội tụ; bỏ trống thì path kết thúc thành công.";
+    return "Continue from Merge when any path reaches convergence point; if empty, path ends in success.";
   }
   return genericPortUsage(port);
 }
 
 function loopPortUsage(port: GraphPort) {
-  if (port.id === "in") return "Nhận luồng trước khi bắt đầu vòng lặp.";
-  if (port.id === "loop") return "Chạy body của vòng lặp; port này cần được nối trước khi run.";
+  if (port.id === "in") return "Receive control flow before starting loop.";
+  if (port.id === "loop") return "Execute loop body; this port must be connected before run.";
   if (port.id === "done") {
-    return "Chạy tiếp sau khi vòng lặp hoàn tất; bỏ trống thì path kết thúc thành công.";
+    return "Continue after loop completes; if empty, path ends in success.";
   }
   return genericPortUsage(port);
 }
 
 function repeatUntilPortUsage(port: GraphPort) {
   if (port.id === "timeout") {
-    return "Chạy branch optional khi vòng lặp hết giới hạn hoặc timeout trước khi condition đạt.";
+    return "Execute optional branch if loop limit or timeout is reached before condition is met.";
   }
   if (port.id === "loop") {
-    return "Chạy body cho tới khi condition đạt; port này cần được nối trước khi run.";
+    return "Execute body until condition is met; this port must be connected before run.";
   }
   return loopPortUsage(port);
 }
@@ -386,13 +386,13 @@ function repeatUntilPortUsage(port: GraphPort) {
 function retryPortUsage(port: GraphPort) {
   switch (port.id) {
     case "in":
-      return "Nhận luồng trước khi bắt đầu retry block.";
+      return "Receive control flow before starting retry block.";
     case "try":
-      return "Chạy branch công việc cần thử lại; port này cần được nối trước khi run.";
+      return "Execute branch task to retry; this port must be connected before run.";
     case "success":
-      return "Chạy tiếp khi Try thành công; bỏ trống thì path kết thúc thành công.";
+      return "Continue when Try succeeds; if empty, path ends in success.";
     case "failed":
-      return "Chạy branch optional khi hết lượt retry; bỏ trống thì workflow fail với lỗi cuối.";
+      return "Execute optional branch when retries are exhausted; if empty, workflow fails with the last error.";
     default:
       return genericPortUsage(port);
   }
@@ -401,17 +401,17 @@ function retryPortUsage(port: GraphPort) {
 function tryCatchPortUsage(port: GraphPort) {
   switch (port.id) {
     case "in":
-      return "Nhận luồng trước khi bắt đầu Try/Catch.";
+      return "Receive control flow before starting Try/Catch.";
     case "try":
-      return "Chạy branch chính cần bắt lỗi; port này cần được nối trước khi run.";
+      return "Execute main branch to intercept errors; this port must be connected before run.";
     case "success":
-      return "Chạy branch optional khi Try hoàn tất thành công.";
+      return "Execute optional branch when Try completes successfully.";
     case "error":
-      return "Chạy branch optional khi Try lỗi; bỏ trống thì workflow fail với lỗi gốc.";
+      return "Execute optional branch when Try throws an error; if empty, workflow fails with the original error.";
     case "finally":
-      return "Chạy branch optional luôn chạy sau Try, dù thành công hay lỗi.";
+      return "Execute optional branch always running after Try, regardless of success or error.";
     case "done":
-      return "Quay về flow chính sau Try/Catch; bỏ trống thì path kết thúc thành công.";
+      return "Return to main flow after Try/Catch; if empty, path ends in success.";
     default:
       return genericPortUsage(port);
   }
@@ -420,97 +420,97 @@ function tryCatchPortUsage(port: GraphPort) {
 function fallbackPortUsage(port: GraphPort) {
   switch (port.id) {
     case "in":
-      return "Nhận luồng trước khi chạy fallback block.";
+      return "Receive control flow before running fallback block.";
     case "primary":
-      return "Chạy branch chính cần thử trước; port này cần được nối trước khi run.";
+      return "Execute main branch to try first; this port must be connected before run.";
     case "fallback":
-      return "Chạy branch dự phòng optional khi Primary lỗi; bỏ trống thì workflow fail với lỗi Primary.";
+      return "Execute optional fallback branch when Primary fails; if empty, workflow fails with Primary error.";
     case "done":
-      return "Quay về flow chính sau Primary hoặc Fallback; bỏ trống thì path kết thúc thành công.";
+      return "Return to main flow after Primary or Fallback; if empty, path ends in success.";
     default:
       return genericPortUsage(port);
   }
 }
 
 function actionPortUsage(port: GraphPort) {
-  if (port.id === "in") return "Nhận luồng để chạy action trong node này.";
-  if (port.id === "out") return "Chạy node tiếp theo sau khi action hoàn tất.";
+  if (port.id === "in") return "Receive control flow to run action in this node.";
+  if (port.id === "out") return "Execute next node after action completes.";
   return genericPortUsage(port);
 }
 
 function utilityPortUsage(nodeType: GraphNodeType, port: GraphPort) {
-  if (port.id === "in") return `Nhận luồng để ${utilityNodeVerb(nodeType)}.`;
-  if (port.id === "out") return `Chạy node tiếp theo sau khi ${utilityNodeVerb(nodeType)} hoàn tất.`;
+  if (port.id === "in") return `Receive control flow to ${utilityNodeVerb(nodeType)}.`;
+  if (port.id === "out") return `Execute next node after ${utilityNodeVerb(nodeType)} completes.`;
   return genericPortUsage(port);
 }
 
 function utilityNodeVerb(nodeType: GraphNodeType) {
   switch (nodeType) {
     case "set_variable":
-      return "ghi biến";
+      return "set variable";
     case "set_json_variables":
-      return "ghi biến từ JSON";
+      return "set JSON variables";
     case "update_number_variable":
-      return "cập nhật biến số";
+      return "update number variable";
     case "update_text_variable":
-      return "cập nhật biến chữ";
+      return "update text variable";
     case "update_flag_variable":
-      return "cập nhật biến flag";
+      return "update flag variable";
     case "update_list_variable":
-      return "cập nhật biến danh sách";
+      return "update list variable";
     case "create_empty_object":
-      return "tạo đối tượng rỗng";
+      return "create empty object";
     case "create_object_manual":
-      return "tạo đối tượng thủ công";
+      return "create object manually";
     case "parse_json_to_object":
-      return "phân tích JSON thành đối tượng";
+      return "parse JSON to object";
     case "set_object_property":
-      return "đặt thuộc tính đối tượng";
+      return "set object property";
     case "remove_object_property":
-      return "xóa thuộc tính đối tượng";
+      return "remove object property";
     case "merge_objects":
-      return "gộp đối tượng";
+      return "merge objects";
     case "rename_object_property":
-      return "đổi tên thuộc tính đối tượng";
+      return "rename object property";
     case "get_object_property":
-      return "lấy thuộc tính đối tượng";
+      return "get object property";
     case "get_object_keys":
-      return "lấy danh sách khóa đối tượng";
+      return "get object keys";
     case "get_object_values":
-      return "lấy danh sách giá trị đối tượng";
+      return "get object values";
     case "stringify_object":
-      return "chuyển đối tượng thành chuỗi JSON";
+      return "stringify object";
     case "execute_object_script":
-      return "chạy script trên đối tượng";
+      return "execute object script";
     case "check_object_key_exists":
-      return "kiểm tra khóa đối tượng tồn tại";
+      return "check object key exists";
     case "check_object_empty":
-      return "kiểm tra đối tượng rỗng";
+      return "check object empty";
     case "transform_variable":
-      return "biến đổi biến";
+      return "transform variable";
     case "assert_output":
-      return "kiểm tra output";
+      return "assert output";
     case "domain_allowlist":
-      return "áp dụng domain allowlist";
+      return "apply domain allowlist";
     case "check_conditions":
-      return "kiểm tra điều kiện";
+      return "check conditions";
     case "calculate_value":
-      return "đánh giá biểu thức";
+      return "calculate value";
     default:
-      return "chạy node";
+      return "run node";
   }
 }
 
 function genericPortUsage(port: GraphPort) {
   return port.direction === "input"
-    ? "Nhận luồng chạy từ node trước."
-    : "Chạy node tiếp theo khi luồng đi ra từ node này.";
+    ? "Receive control flow running from previous node."
+    : "Execute next node when flow exits this node.";
 }
 
 function linkingHint(port: GraphPort) {
   return port.direction === "input"
-    ? "Nối output của node trước vào port này."
-    : "Kéo từ port này sang input của node kế tiếp.";
+    ? "Connect output of previous node to this port."
+    : "Drag from this port to input of next node.";
 }
 
 function portsByDirection(

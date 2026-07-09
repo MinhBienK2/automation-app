@@ -129,7 +129,7 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleString("vi-VN") || d.toLocaleString();
+    return d.toLocaleString() || d.toLocaleString();
   };
 
   return (
@@ -341,9 +341,9 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
       <Dialog open={!!deleteCandidate} onOpenChange={(o) => !o && setDeleteCandidate(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xóa bản sao lưu?</DialogTitle>
+            <DialogTitle>Delete Backup?</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa bản sao lưu <strong>{deleteCandidate}</strong> không? Hành động này không thể hoàn tác.
+              Are you sure you want to delete backup <strong>{deleteCandidate}</strong>? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -353,7 +353,7 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
               onClick={() => setDeleteCandidate(null)}
               disabled={actionLoading === `delete-${deleteCandidate}`}
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               type="button"
@@ -362,7 +362,7 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
               disabled={actionLoading === `delete-${deleteCandidate}`}
               loading={actionLoading === `delete-${deleteCandidate}`}
             >
-              Xóa
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

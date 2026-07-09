@@ -778,17 +778,17 @@ describe("Workflow graph editor integration", () => {
           expect.stringContaining(port.label),
         );
         expect(tooltip, `${nodeType}.${port.id}`).toEqual(
-          expect.stringMatching(/Nối|Kéo|Nhận|Chạy|Kết thúc/),
+          expect.stringMatching(/Connect|Drag|Receive|Execute|End|Stop|Break|Skip|Continue/i),
         );
       }
     }
 
     expect(
       canvasParts.graphPortTooltip?.("merge", { id: "in", label: "In", direction: "input" }),
-    ).toContain("nhiều nhánh");
+    ).toContain("incoming paths");
     expect(
       canvasParts.graphPortTooltip?.("try_catch", { id: "finally", label: "Finally", direction: "output" }),
-    ).toContain("luôn chạy");
+    ).toContain("always running");
   });
 
   test("renders port tooltip metadata on React Flow handles", async () => {
@@ -814,11 +814,11 @@ describe("Workflow graph editor integration", () => {
 
     expect(within(editor).getByLabelText("If True port")).toHaveAttribute(
       "data-tooltip",
-      expect.stringContaining("condition đúng"),
+      expect.stringContaining("condition is true"),
     );
     expect(within(editor).getByLabelText("If Done port")).toHaveAttribute(
       "data-tooltip",
-      expect.stringContaining("flow chính"),
+      expect.stringContaining("main flow"),
     );
   });
 
@@ -2333,7 +2333,7 @@ describe("Workflow graph editor integration", () => {
       name: "Create subflow from selection",
     });
     await userEvent.type(within(dialog).getByLabelText("Subflow name"), "Login block");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Chỉ tạo" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create Only" }));
 
     await waitFor(() => {
       expect(workflowCommandCallMock).toHaveBeenCalledWith("create_subflow", {
@@ -2421,7 +2421,7 @@ describe("Workflow graph editor integration", () => {
       name: "Create subflow from selection",
     });
     await userEvent.type(within(dialog).getByLabelText("Subflow name"), "Login block");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Tạo và thay thế" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create & Replace" }));
 
     await waitFor(() => {
       expect(within(editor).getByRole("button", { name: "Graph canvas node node-call_subflow-42" }))

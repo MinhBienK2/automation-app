@@ -210,9 +210,9 @@ export function AdminPanel(_props: AdminPanelProps) {
       <Dialog open={!!deleteCandidate} onOpenChange={(o) => !o && setDeleteCandidate(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xóa người dùng?</DialogTitle>
+            <DialogTitle>Delete User?</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa người dùng <strong>{deleteCandidate?.email}</strong> không? Hành động này không thể hoàn tác.
+              Are you sure you want to delete user <strong>{deleteCandidate?.email}</strong>? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -222,7 +222,7 @@ export function AdminPanel(_props: AdminPanelProps) {
               onClick={() => setDeleteCandidate(null)}
               disabled={deletingUserId !== null}
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               type="button"
@@ -231,7 +231,7 @@ export function AdminPanel(_props: AdminPanelProps) {
               disabled={deletingUserId !== null}
               loading={deletingUserId !== null}
             >
-              Xóa
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
