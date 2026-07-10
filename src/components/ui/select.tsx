@@ -3,15 +3,17 @@ import { ChevronDown, Check } from "lucide-react";
 
 interface SelectProps extends Omit<React.ComponentProps<"select">, "onChange"> {
   onChange?: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  placeholder?: string;
 }
 
 function parseOptions(children: React.ReactNode) {
   const options: { value: string; label: string; disabled?: boolean }[] = [];
   React.Children.forEach(children, (child) => {
     if (React.isValidElement(child) && child.type === "option") {
-      const val = String(child.props.value ?? "");
-      const label = child.props.children ? String(child.props.children) : val;
-      options.push({ value: val, label, disabled: !!child.props.disabled });
+      const props = child.props as any;
+      const val = String(props.value ?? "");
+      const label = props.children ? String(props.children) : val;
+      options.push({ value: val, label, disabled: !!props.disabled });
     }
   });
   return options;

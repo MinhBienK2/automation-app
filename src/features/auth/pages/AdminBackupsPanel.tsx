@@ -4,6 +4,7 @@ import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import { Label } from "../../../components/ui/label";
 import { Checkbox } from "../../../components/ui/checkbox";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
 import {
   listBackups,
   createBackup,
@@ -298,24 +299,24 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
                   <p className="text-sm">No backups available locally.</p>
                 </div>
               ) : (
-                <table className="table table-sm table-zebra w-full">
-                  <thead>
-                    <tr>
-                      <th className="text-base-content/75 font-semibold">Filename</th>
-                      <th className="text-base-content/75 font-semibold">Created Time</th>
-                      <th className="text-base-content/75 font-semibold">Size</th>
-                      <th className="text-base-content/75 font-semibold text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="table-zebra">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Filename</TableHead>
+                      <TableHead>Created Time</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {backups.map((b) => (
-                      <tr key={b.filename} className="hover">
-                        <td className="font-mono text-xs text-base-content font-medium">
+                      <TableRow key={b.filename}>
+                        <TableCell className="font-mono text-xs text-base-content font-medium">
                           {b.filename}
-                        </td>
-                        <td className="text-xs">{formatDate(b.createdAt)}</td>
-                        <td className="text-secondary text-xs">{formatBytes(b.size)}</td>
-                        <td className="text-right">
+                        </TableCell>
+                        <TableCell className="text-xs">{formatDate(b.createdAt)}</TableCell>
+                        <TableCell className="text-secondary text-xs">{formatBytes(b.size)}</TableCell>
+                        <TableCell className="text-right">
                           <Button
                             type="button"
                             variant="ghost"
@@ -327,11 +328,11 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
                             <Trash2 size={14} />
                             <span>Delete</span>
                           </Button>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               )}
             </div>
           </section>

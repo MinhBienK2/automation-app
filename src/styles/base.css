@@ -537,6 +537,14 @@ details.dropdown summary.select::-webkit-details-marker {
   transition: background-color 150ms ease;
 }
 
+/* Make row bottom borders extremely thin and subtle */
+.table :where(tbody th, tbody td) {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 25%, transparent) !important;
+}
+.table :where(tbody tr:last-child th, tbody tr:last-child td) {
+  border-bottom: none !important;
+}
+
 /* Fix border colors matching backgrounds */
 .border-base-100,
 .border-base-200,

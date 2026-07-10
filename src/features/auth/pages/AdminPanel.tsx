@@ -5,6 +5,7 @@ import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import { Label } from "../../../components/ui/label";
 import { Badge } from "../../../components/ui/badge";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
 import { listUsers, createUser, deleteUser } from "../../../lib/workflowApi";
 
 interface User {
@@ -166,24 +167,24 @@ export function AdminPanel(_props: AdminPanelProps) {
           </div>
 
           <div className="max-h-[400px] overflow-y-auto">
-            <table className="table table-sm table-zebra w-full">
-              <thead>
-                <tr>
-                  <th className="text-base-content/75 font-semibold">Email</th>
-                  <th className="text-base-content/75 font-semibold">Role</th>
-                  <th className="text-base-content/75 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="table-zebra">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {users.map((u) => (
-                  <tr key={u.id} className="hover">
-                    <td className="font-mono text-xs">{u.email}</td>
-                    <td>
+                  <TableRow key={u.id}>
+                    <TableCell className="font-mono text-xs">{u.email}</TableCell>
+                    <TableCell>
                       <Badge variant={u.role === "admin" ? "running" : "secondary"}>
                         {u.role.toUpperCase()}
                       </Badge>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {u.role === "admin" ? (
                         <span className="text-secondary/50 text-xs">—</span>
                       ) : (
@@ -198,11 +199,11 @@ export function AdminPanel(_props: AdminPanelProps) {
                           Delete
                         </Button>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </section>
       </div>
