@@ -848,14 +848,21 @@
 .xpath-recipe {
   align-content: start;
   min-width: 0;
-  background: var(--bg);
+  background: var(--bg) !important;
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+
+.xpath-recipe:hover {
+  border-color: var(--border-emphasized, var(--accent-muted, #4b5563)) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
 }
 
 .xpath-recipe-title {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  width: 100%;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -866,24 +873,19 @@
 }
 
 .xpath-recipe-title > span:last-child {
-  padding: 2px 8px;
-  border: 1px solid var(--accent-border);
-  border-radius: var(--app-radius-sm);
-  color: var(--app-text-muted);
-  font-size: 11px;
-  font-weight: 500;
+  flex-shrink: 0;
 }
 
 .xpath-recipe p {
   margin: 0;
-  color: var(--app-text-muted);
+  color: var(--fg-secondary);
   font-size: 13px;
   line-height: 1.5;
 }
 
 .xpath-recipe-examples {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -891,17 +893,12 @@
   display: block;
   min-width: 0;
   overflow-x: auto;
-  padding: 8px 10px;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-sm);
-  background: var(--surface);
-  color: var(--app-text);
-  font-family:
-    "Source Code Pro",
-    "Office Code Pro",
-    Menlo,
-    Consolas,
-    monospace;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-elevated, var(--surface));
+  color: var(--fg-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Source Code Pro", monospace;
   font-size: 12px;
   line-height: 1.5;
   white-space: pre;
@@ -913,7 +910,7 @@
 }
 
 .xpath-recipe-block strong {
-  color: var(--app-text);
+  color: var(--fg-primary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -923,9 +920,20 @@
   gap: 6px;
   margin: 0;
   padding-left: 18px;
-  color: var(--app-text-muted);
+  color: var(--fg-secondary);
   font-size: 13px;
   line-height: 1.5;
+}
+
+/* Distinct styling for warning/avoid section */
+.xpath-recipe-block-avoid strong {
+  color: var(--failure, #ef4444) !important;
+}
+
+.xpath-recipe-block-avoid code {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  background: rgba(239, 68, 68, 0.04) !important;
+  color: #f87171 !important;
 }
 
 .settings-project-environments-panel {

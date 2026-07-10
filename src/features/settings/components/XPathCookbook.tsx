@@ -319,7 +319,7 @@ export function XPathCookbook() {
             title={
               <span className="xpath-recipe-title">
                 <span>{recipe.title}</span>
-                <span>{recipe.category}</span>
+                <span className="badge badge-sm badge-outline border-primary/20 text-primary/80 font-medium">{recipe.category}</span>
               </span>
             }
           >
@@ -330,7 +330,7 @@ export function XPathCookbook() {
               ))}
             </div>
             {recipe.avoid?.length ? (
-              <div className="xpath-recipe-block">
+              <div className="xpath-recipe-block xpath-recipe-block-avoid">
                 <strong>Avoid</strong>
                 <ul>
                   {recipe.avoid.map((item) => (

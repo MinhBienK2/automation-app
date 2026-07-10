@@ -29,7 +29,7 @@ describe("NodeHelpDialog", () => {
       />,
     );
 
-    const help = await screen.findByRole("dialog", { name: "If Help" });
+    const help = await screen.findByRole("dialog", { name: "Trợ giúp Rẽ nhánh Điều kiện (If)" });
     const portsSection = within(help)
       .getByText("Port và luồng chạy")
       .closest("details") as HTMLDetailsElement | null;

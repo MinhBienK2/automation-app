@@ -216,22 +216,29 @@
 .help-disclosure {
   display: grid;
   gap: 10px;
-  padding: 14px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+
+.help-disclosure:hover {
+  border-color: var(--border-emphasized, var(--accent-muted, #4b5563));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .help-disclosure-summary {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
+  display: flex;
+  gap: 10px;
   align-items: center;
   cursor: pointer;
   list-style: none;
   color: var(--fg-primary);
   font-size: 15px;
   font-weight: 500;
+  user-select: none;
+  padding: 2px 0;
 }
 
 .help-disclosure-summary::-webkit-details-marker {
@@ -239,23 +246,42 @@
 }
 
 .help-disclosure-summary::before {
-  content: ">";
-  width: 16px;
-  color: var(--fg-muted);
-  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
-  font-size: 12px;
-  line-height: 1;
-  transition: transform 120ms ease, color 120ms ease;
+  display: none;
 }
 
-.help-disclosure[open] > .help-disclosure-summary::before {
-  color: var(--accent);
+.help-disclosure-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--fg-muted);
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), color 200ms ease;
+}
+
+.help-disclosure[open] > .help-disclosure-summary .help-disclosure-chevron {
   transform: rotate(90deg);
+  color: var(--accent);
 }
 
 .help-disclosure-content {
   display: grid;
   gap: 10px;
+}
+
+.help-disclosure[open] > .help-disclosure-content {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 2px;
+  animation: helpDisclosureSlideDown 200ms ease-out;
+}
+
+@keyframes helpDisclosureSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .help-section {
@@ -287,16 +313,26 @@
 .help-field-group {
   display: grid;
   gap: 8px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.help-field-group:hover {
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 .help-field-group-summary {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex !important;
   gap: 6px;
   align-items: center;
   width: fit-content;
   cursor: pointer;
   list-style: none;
+  padding: 0 !important;
 }
 
 .help-field-group-summary::-webkit-details-marker {
@@ -304,17 +340,18 @@
 }
 
 .help-field-group-summary::before {
-  content: ">";
-  color: var(--fg-muted);
-  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
-  font-size: 10px;
-  line-height: 1;
-  transition: transform 120ms ease, color 120ms ease;
+  display: none !important;
 }
 
 .help-field-group[open] > .help-field-group-summary::before {
-  color: var(--accent);
-  transform: rotate(90deg);
+  display: none !important;
+}
+
+.help-field-group[open] > .help-disclosure-content {
+  border-top: 0 !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  animation: none !important;
 }
 
 .help-field-group h4 {
@@ -334,32 +371,45 @@
 }
 
 .help-field-leaf {
-  padding: 10px 0 0;
-  border: 0;
-  border-top: 1px solid var(--border);
-  border-radius: 0;
-  background: transparent;
+  padding: 10px 0 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.help-field-leaf:hover {
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 .help-field-list > .help-field-leaf:first-child {
-  padding-top: 0;
-  border-top: 0;
+  padding-top: 0 !important;
+  border-top: 0 !important;
 }
 
 .help-field-leaf > .help-disclosure-summary {
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex !important;
   gap: 6px;
   color: var(--fg-primary);
   font-size: 13px;
+  padding: 0 !important;
 }
 
 .help-field-leaf > .help-disclosure-summary::before {
-  width: 12px;
-  font-size: 10px;
+  display: none !important;
 }
 
 .help-field-leaf > .help-disclosure-content {
   gap: 6px;
+}
+
+.help-field-leaf[open] > .help-disclosure-content {
+  border-top: 0 !important;
+  padding-top: 6px !important;
+  margin-top: 0 !important;
+  animation: none !important;
 }
 
 .help-field-title-row {
@@ -421,18 +471,38 @@
 .help-option-item {
   display: grid;
   gap: 5px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  padding: 10px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  background: var(--bg) !important;
+  box-shadow: none !important;
 }
 
 .help-option-disclosure {
-  border: 1px solid var(--border);
+  border: 1px solid var(--border) !important;
+}
+
+.help-option-disclosure:hover {
+  border-color: var(--border-emphasized, var(--accent-muted, #4b5563)) !important;
 }
 
 .help-option-summary {
+  display: flex !important;
+  gap: 6px;
+  align-items: center;
   font-size: 13px;
+  padding: 0 !important;
+}
+
+.help-option-summary::before {
+  display: none !important;
+}
+
+.help-option-disclosure[open] > .help-disclosure-content {
+  border-top: 0 !important;
+  padding-top: 6px !important;
+  margin-top: 0 !important;
+  animation: none !important;
 }
 
 .help-option-item strong {

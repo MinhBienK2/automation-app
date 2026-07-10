@@ -354,16 +354,15 @@ function FieldReferenceGroups({
         const groupFields = fields.filter((field) => field.category === category);
         if (!groupFields.length) return null;
         return (
-          <details
+          <HelpDisclosure
             className="help-field-group"
             key={category}
-            open={category === "required"}
+            defaultOpen={category === "required"}
+            summaryClassName="help-field-group-summary"
+            title={<h4>{labels[category]}</h4>}
           >
-            <summary className="help-field-group-summary">
-              <h4>{labels[category]}</h4>
-            </summary>
             <FieldReferenceList fields={groupFields} />
-          </details>
+          </HelpDisclosure>
         );
       })}
     </div>

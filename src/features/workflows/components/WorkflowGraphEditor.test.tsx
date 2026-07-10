@@ -1443,7 +1443,7 @@ describe("Workflow graph editor integration", () => {
     );
     await userEvent.click(within(editor).getByRole("button", { name: "Open If help" }));
 
-    let help = await screen.findByRole("dialog", { name: "If Help" });
+    let help = await screen.findByRole("dialog", { name: "Trợ giúp Rẽ nhánh Điều kiện (If)" });
     expect(within(help).getByText("Node này làm gì")).toBeInTheDocument();
     expect(within(help).getByText("Port và luồng chạy")).toBeInTheDocument();
     expect(within(help).getByText("Ví dụ workflow")).toBeInTheDocument();
@@ -1455,7 +1455,7 @@ describe("Workflow graph editor integration", () => {
     fireEvent.contextMenu(within(editor).getByRole("button", { name: "Graph canvas node node-if-42" }));
     await userEvent.click(await within(editor).findByRole("menuitem", { name: "Help" }));
 
-    help = await screen.findByRole("dialog", { name: "If Help" });
+    help = await screen.findByRole("dialog", { name: "Trợ giúp Rẽ nhánh Điều kiện (If)" });
     expect(within(help).getByText("Chạy khi condition sai; thiếu link sẽ no-op."))
       .toBeInTheDocument();
   });
