@@ -2,16 +2,14 @@ import * as React from "react";
 
 export const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className = "", ...props }, ref) => (
-    <div className="overflow-x-auto w-full">
-      <table ref={ref} className={`table table-sm w-full border-collapse text-left ${className}`} {...props} />
-    </div>
+    <table ref={ref} className={`table table-sm w-full border-collapse text-left ${className}`} {...props} />
   )
 );
 Table.displayName = "Table";
 
 export const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
   ({ className = "", ...props }, ref) => (
-    <thead ref={ref} className={`border-b-2 border-border/70 text-[11px] font-semibold text-fg-muted uppercase tracking-wider ${className}`} {...props} />
+    <thead ref={ref} className={`border-b-2 border-border/70 text-[11px] font-semibold text-secondary uppercase tracking-wider ${className}`} {...props} />
   )
 );
 TableHeader.displayName = "TableHeader";
@@ -32,7 +30,7 @@ TableRow.displayName = "TableRow";
 
 export const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
   ({ className = "", ...props }, ref) => (
-    <th ref={ref} className={`px-4 py-3 font-semibold text-fg-muted tracking-wider uppercase ${className}`} {...props} />
+    <th ref={ref} className={`px-4 py-3 font-semibold text-secondary tracking-wider uppercase ${className}`} {...props} />
   )
 );
 TableHead.displayName = "TableHead";

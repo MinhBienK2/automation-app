@@ -635,12 +635,14 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .project-collection-panel {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--space-sm) var(--space-md);
   display: flex;
   flex-direction: column;

@@ -134,95 +134,97 @@ export function SchedulesPage({
             <p className="text-xs">Create a schedule to run a saved workflow automatically.</p>
           </div>
         ) : (
-          <Table className="table-zebra">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Workflow</TableHead>
-                <TableHead>Next run</TableHead>
-                <TableHead>Last result</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {schedules.map((schedule) => (
-                <TableRow
-                  key={schedule.id}
-                  aria-label={`${schedule.name} ${schedule.workflow_name}`}
-                  className={focusedScheduleId === schedule.id ? "bg-primary/5 border-l-4 border-l-primary" : ""}
-                >
-                  <TableCell>
-                    <Badge variant={schedule.enabled ? "success" : "secondary"} className="badge-xs uppercase tracking-wider font-semibold">
-                      {schedule.enabled ? "Enabled" : "Disabled"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5">
-                      <strong className="text-sm font-semibold text-base-content">{schedule.name}</strong>
-                      <span className="text-[11px] text-secondary">{scheduleKindSummary(schedule.kind)}</span>
-                      {focusedScheduleId === schedule.id ? (
-                        <span className="badge badge-primary badge-xs mt-1 font-semibold uppercase tracking-wider">Selected Target</span>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-xs">{schedule.workflow_name}</TableCell>
-                  <TableCell className="text-xs">{formatDateTime(schedule.next_run_at)}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5">
-                      <Badge variant={schedule.last_status === "started" ? "success" : (schedule.last_status === "failed_to_start" || schedule.last_status === "missed") ? "failure" : "secondary"} className="badge-xs w-fit font-semibold uppercase tracking-wider">
-                        {statusLabel(schedule.last_status)}
-                      </Badge>
-                      {schedule.last_reason ? (
-                        <span className="text-[10px] text-error max-w-[180px] truncate" title={schedule.last_reason}>
-                          {schedule.last_reason}
-                        </span>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end items-center">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        type="button"
-                        onClick={() => onToggleSchedule(schedule.id, !schedule.enabled)}
-                        className="btn-xs rounded-md"
-                      >
-                        {schedule.enabled ? `Disable ${schedule.name}` : `Enable ${schedule.name}`}
-                      </Button>
-                      <IconButton
-                        label={`Edit ${schedule.name}`}
-                        type="button"
-                        className="btn-ghost btn-xs text-base-content hover:bg-base-300"
-                        onClick={() => openEditDialog(schedule)}
-                      >
-                        <Pencil aria-hidden="true" size={14} />
-                      </IconButton>
-                      <IconButton
-                        label={`View history for ${schedule.name}`}
-                        type="button"
-                        className="btn-ghost btn-xs text-base-content hover:bg-base-300"
-                        onClick={() => {
-                          void openHistory(schedule);
-                        }}
-                      >
-                        <History aria-hidden="true" size={14} />
-                      </IconButton>
-                      <IconButton
-                        label={`Delete ${schedule.name}`}
-                        type="button"
-                        className="btn-ghost btn-xs text-error hover:bg-error/10"
-                        onClick={() => setDeleteCandidateId(schedule.id)}
-                      >
-                        <Trash2 aria-hidden="true" size={14} />
-                      </IconButton>
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto w-full">
+            <Table className="table-zebra">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Schedule</TableHead>
+                  <TableHead>Workflow</TableHead>
+                  <TableHead>Next run</TableHead>
+                  <TableHead>Last result</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {schedules.map((schedule) => (
+                  <TableRow
+                    key={schedule.id}
+                    aria-label={`${schedule.name} ${schedule.workflow_name}`}
+                    className={focusedScheduleId === schedule.id ? "bg-primary/5 border-l-4 border-l-primary" : ""}
+                  >
+                    <TableCell>
+                      <Badge variant={schedule.enabled ? "success" : "secondary"} className="badge-xs uppercase tracking-wider font-semibold">
+                        {schedule.enabled ? "Enabled" : "Disabled"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5">
+                        <strong className="text-sm font-semibold text-base-content">{schedule.name}</strong>
+                        <span className="text-[11px] text-secondary">{scheduleKindSummary(schedule.kind)}</span>
+                        {focusedScheduleId === schedule.id ? (
+                          <span className="badge badge-primary badge-xs mt-1 font-semibold uppercase tracking-wider">Selected Target</span>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">{schedule.workflow_name}</TableCell>
+                    <TableCell className="text-xs">{formatDateTime(schedule.next_run_at)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5">
+                        <Badge variant={schedule.last_status === "started" ? "success" : (schedule.last_status === "failed_to_start" || schedule.last_status === "missed") ? "failure" : "secondary"} className="badge-xs w-fit font-semibold uppercase tracking-wider">
+                          {statusLabel(schedule.last_status)}
+                        </Badge>
+                        {schedule.last_reason ? (
+                          <span className="text-[10px] text-error max-w-[180px] truncate" title={schedule.last_reason}>
+                            {schedule.last_reason}
+                          </span>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end items-center">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          type="button"
+                          onClick={() => onToggleSchedule(schedule.id, !schedule.enabled)}
+                          className="btn-xs rounded-md"
+                        >
+                          {schedule.enabled ? `Disable ${schedule.name}` : `Enable ${schedule.name}`}
+                        </Button>
+                        <IconButton
+                          label={`Edit ${schedule.name}`}
+                          type="button"
+                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                          onClick={() => openEditDialog(schedule)}
+                        >
+                          <Pencil aria-hidden="true" size={14} />
+                        </IconButton>
+                        <IconButton
+                          label={`View history for ${schedule.name}`}
+                          type="button"
+                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                          onClick={() => {
+                            void openHistory(schedule);
+                          }}
+                        >
+                          <History aria-hidden="true" size={14} />
+                        </IconButton>
+                        <IconButton
+                          label={`Delete ${schedule.name}`}
+                          type="button"
+                          className="btn-ghost btn-xs text-error hover:bg-error/10"
+                          onClick={() => setDeleteCandidateId(schedule.id)}
+                        >
+                          <Trash2 aria-hidden="true" size={14} />
+                        </IconButton>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </section>
 
