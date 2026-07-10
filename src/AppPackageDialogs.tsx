@@ -83,7 +83,7 @@ export function AppPackageDialogs({
           if (!open) onCloseExportPackageDialog();
         }}
       >
-        <DialogContent className="workflow-dialog">
+        <DialogContent className="workflow-dialog max-w-none">
           <DialogHeader>
             <p className="eyebrow">Package</p>
             <DialogTitle>Export Workflow</DialogTitle>
@@ -126,7 +126,7 @@ export function AppPackageDialogs({
           if (!open) onCloseImportPackageDialog();
         }}
       >
-        <DialogContent className="workflow-dialog">
+        <DialogContent className="workflow-dialog max-w-none">
           <DialogHeader>
             <p className="eyebrow">Package</p>
             <DialogTitle>Import Workflow</DialogTitle>
@@ -192,7 +192,7 @@ export function AppPackageDialogs({
           if (!open) onCloseImportProjectPackageDialog();
         }}
       >
-        <DialogContent className="workflow-dialog">
+        <DialogContent className="workflow-dialog max-w-none">
           <DialogHeader>
             <p className="eyebrow">Package</p>
             <DialogTitle>Import Project</DialogTitle>
@@ -256,7 +256,7 @@ export function AppPackageDialogs({
           if (!open) onCancelDeleteWorkflow();
         }}
       >
-        <DialogContent className="workflow-dialog">
+        <DialogContent className="workflow-dialog max-w-none">
           <DialogHeader>
             <p className="eyebrow">Workflow</p>
             <DialogTitle>Delete Workflow</DialogTitle>

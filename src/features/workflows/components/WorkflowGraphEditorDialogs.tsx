@@ -46,7 +46,7 @@ export function WorkflowGraphEditorDialogs({
   return (
     <>
       <Dialog open={isShortcutGuideOpen} onOpenChange={onShortcutGuideOpenChange}>
-        <DialogContent className="graph-shortcuts-dialog">
+        <DialogContent className="graph-shortcuts-dialog max-w-none">
           <DialogHeader className="modal-header">
             <div>
               <p className="eyebrow">Visual Graph</p>

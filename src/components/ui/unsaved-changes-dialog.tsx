@@ -37,7 +37,7 @@ export function UnsavedChangesDialog({
         if (!nextOpen) onKeepEditing();
       }}
     >
-      <DialogContent className="unsaved-changes-dialog">
+      <DialogContent className="unsaved-changes-dialog max-w-none">
         <DialogHeader>
           <DialogTitle>Unsaved changes</DialogTitle>
           <DialogDescription>

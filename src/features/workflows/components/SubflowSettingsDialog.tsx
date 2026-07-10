@@ -64,7 +64,7 @@ export function SubflowSettingsDialog({
         if (!nextOpen) onOpenChange(false);
       }}
     >
-      <DialogContent className="workflow-dialog">
+      <DialogContent className="workflow-dialog max-w-none">
         <DialogHeader>
           <p className="eyebrow">Subflow</p>
           <DialogTitle>Subflow Settings</DialogTitle>

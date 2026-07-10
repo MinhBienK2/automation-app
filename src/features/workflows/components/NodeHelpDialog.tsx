@@ -61,7 +61,7 @@ export function NodeHelpDialog({
 
   return (
     <Dialog open={Boolean(node)} onOpenChange={onOpenChange}>
-      <DialogContent className="step-help-dialog">
+      <DialogContent className="step-help-dialog max-w-none">
         <DialogHeader className="modal-header">
           <div>
             <p className="eyebrow">{language === "vi" ? "Trợ giúp node" : "Node Help"}</p>

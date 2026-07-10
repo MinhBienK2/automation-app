@@ -78,8 +78,14 @@ function DialogContent({
     .filter(Boolean)
     .join(" ");
 
+  // Check generically if custom width/max-width classes are passed to the dialog
+  const hasMaxWidth = className?.split(/\s+/).some((c) => c.startsWith("max-w-"));
+  const hasWidth = className?.split(/\s+/).some((c) => c.startsWith("w-"));
+
   const boxClasses = [
-    "modal-box border border-base-300 bg-base-200 p-6 relative max-w-lg w-full shadow-lg",
+    "modal-box border border-base-300 bg-base-200 p-6 relative shadow-lg",
+    !hasMaxWidth && "max-w-lg",
+    !hasWidth && "w-full",
     className
   ]
     .filter(Boolean)
@@ -103,7 +109,7 @@ function DialogContent({
           ✕
         </button>
       </div>
-      <div className="modal-backdrop bg-black/50" onClick={() => context.setOpen(false)} />
+      <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={() => context.setOpen(false)} />
     </div>,
     document.body
   );

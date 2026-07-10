@@ -196,7 +196,8 @@ export function SubflowListPage({
                       <IconButton
                         label={`Open ${subflow.name}`}
                         type="button"
-                        className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                        variant="ghost"
+                        className="text-fg-primary hover:text-accent w-8 h-8"
                         onClick={() => onOpenSubflow(subflow.id)}
                       >
                         <Eye aria-hidden="true" size={15} />
@@ -204,7 +205,8 @@ export function SubflowListPage({
                       <IconButton
                         label={`Settings ${subflow.name}`}
                         type="button"
-                        className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                        variant="ghost"
+                        className="text-fg-primary hover:text-accent w-8 h-8"
                         onClick={() => setSettingsSubflow(subflow)}
                       >
                         <Settings aria-hidden="true" size={15} />
@@ -212,7 +214,8 @@ export function SubflowListPage({
                       <IconButton
                         label={`Duplicate ${subflow.name}`}
                         type="button"
-                        className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                        variant="ghost"
+                        className="text-fg-primary hover:text-accent w-8 h-8"
                         onClick={() => {
                           void onDuplicateSubflow(subflow);
                         }}
@@ -222,7 +225,8 @@ export function SubflowListPage({
                       <IconButton
                         label={`Export ${subflow.name}`}
                         type="button"
-                        className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                        variant="ghost"
+                        className="text-fg-primary hover:text-accent w-8 h-8"
                         onClick={() => onExportSubflow(subflow.id)}
                       >
                         <Download aria-hidden="true" size={15} />
@@ -230,7 +234,8 @@ export function SubflowListPage({
                       <IconButton
                         label={`Delete ${subflow.name}`}
                         type="button"
-                        className="btn btn-ghost btn-xs text-error hover:bg-error/10 w-8 h-8 p-0"
+                        variant="ghost"
+                        className="text-error hover:bg-error/10 w-8 h-8"
                         onClick={() => {
                           setDeleteSubflowCandidate(subflow);
                         }}

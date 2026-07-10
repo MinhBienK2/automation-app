@@ -86,7 +86,7 @@ export function SubflowNodePalette({
         if (!nextOpen) resetPalette();
       }}
     >
-      <DialogContent className="add-step-palette">
+      <DialogContent className="add-step-palette max-w-none">
         <DialogHeader>
           <p className="eyebrow">Add Subflow</p>
           <DialogTitle>Choose a subflow</DialogTitle>

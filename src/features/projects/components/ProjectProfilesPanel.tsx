@@ -171,7 +171,8 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
                           <IconButton
                             label={`Configure profile ${env.name}`}
                             type="button"
-                            className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                            variant="ghost"
+                            className="text-fg-primary hover:text-accent w-8 h-8"
                             onClick={() => {
                               setSelectedEnvId(env.id);
                               setEditDialogOpen(true);
@@ -182,7 +183,8 @@ export function ProjectProfilesPanel(props: ProjectProfilesPanelProps) {
                           <IconButton
                             label={`Delete profile ${env.name}`}
                             type="button"
-                            className={`btn btn-ghost btn-sm hover:bg-error/10 w-8 h-8 p-0 ${count > 0 ? "text-base-content/30" : "text-error"}`}
+                            variant="ghost"
+                            className={`hover:bg-error/10 w-8 h-8 ${count > 0 ? "text-base-content/30" : "text-error"}`}
                             disabled={count > 0}
                             tooltip={count > 0 ? "Profile is used by workflows" : `Delete profile ${env.name}`}
                             onClick={() => {

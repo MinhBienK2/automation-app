@@ -368,7 +368,7 @@ export function GraphNodePalette({
         if (!nextOpen) resetPalette();
       }}
     >
-      <DialogContent className="add-step-palette">
+      <DialogContent className="add-step-palette max-w-none">
         <DialogHeader>
           <p className="eyebrow">{palette?.eyebrow}</p>
           <DialogTitle>{palette?.title}</DialogTitle>

@@ -52,7 +52,7 @@ export function StepHelpModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="step-help-dialog action-help-dialog">
+      <DialogContent className="step-help-dialog action-help-dialog max-w-none">
         <DialogHeader className="modal-header action-help-header" data-testid="action-help-header">
           <div>
             <p className="eyebrow">{language === "vi" ? "Hướng dẫn action" : "Action guide"}</p>

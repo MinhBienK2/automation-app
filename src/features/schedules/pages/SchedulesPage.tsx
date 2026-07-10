@@ -195,7 +195,8 @@ export function SchedulesPage({
                         <IconButton
                           label={`Edit ${schedule.name}`}
                           type="button"
-                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                          variant="ghost"
+                          className="text-fg-primary hover:text-accent w-8 h-8"
                           onClick={() => openEditDialog(schedule)}
                         >
                           <Pencil aria-hidden="true" size={14} />
@@ -203,7 +204,8 @@ export function SchedulesPage({
                         <IconButton
                           label={`View history for ${schedule.name}`}
                           type="button"
-                          className="btn-ghost btn-xs text-base-content hover:bg-base-300"
+                          variant="ghost"
+                          className="text-fg-primary hover:text-accent w-8 h-8"
                           onClick={() => {
                             void openHistory(schedule);
                           }}
@@ -213,7 +215,8 @@ export function SchedulesPage({
                         <IconButton
                           label={`Delete ${schedule.name}`}
                           type="button"
-                          className="btn-ghost btn-xs text-error hover:bg-error/10"
+                          variant="ghost"
+                          className="text-error hover:bg-error/10 w-8 h-8"
                           onClick={() => setDeleteCandidateId(schedule.id)}
                         >
                           <Trash2 aria-hidden="true" size={14} />

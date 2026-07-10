@@ -285,7 +285,7 @@ export function ActionNodePalette({
         if (!nextOpen) resetPalette();
       }}
     >
-      <DialogContent className="add-step-palette">
+      <DialogContent className="add-step-palette max-w-none">
         <DialogHeader>
           <p className="eyebrow">Add Action Node</p>
           <DialogTitle>Choose an action type</DialogTitle>

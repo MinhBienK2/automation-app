@@ -70,7 +70,6 @@ export function SubflowDetailPage({
         actions={
           <div className="flex gap-2">
             <IconButton
-              className="btn-ghost text-base-content hover:bg-base-300"
               variant="secondary"
               type="button"
               label="Settings"
@@ -80,7 +79,6 @@ export function SubflowDetailPage({
               <Settings aria-hidden="true" size={16} />
             </IconButton>
             <IconButton
-              className="btn-ghost text-base-content hover:bg-base-300"
               variant="secondary"
               type="button"
               label="Save"
