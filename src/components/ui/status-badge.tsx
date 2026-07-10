@@ -22,39 +22,39 @@ const statusConfig: Record<
   running: {
     icon: RefreshCw,
     label: "Running",
-    bgClass: "bg-primary/10 border-primary/20",
-    textClass: "text-primary",
+    bgClass: "bg-[var(--accent-bg)] border-[rgba(50,211,230,0.18)]",
+    textClass: "text-[var(--accent)]",
     animateClass: "animate-spin",
   },
   success: {
     icon: CheckCircle2,
     label: "Success",
-    bgClass: "bg-success/10 border-success/20",
-    textClass: "text-success",
+    bgClass: "bg-[var(--success-bg)] border-[rgba(57,217,138,0.18)]",
+    textClass: "text-[var(--success)]",
   },
   failed: {
     icon: XCircle,
     label: "Failed",
-    bgClass: "bg-error/10 border-error/20",
-    textClass: "text-error",
+    bgClass: "bg-[var(--failure-bg)] border-[rgba(240,100,103,0.18)]",
+    textClass: "text-[var(--failure)]",
   },
   stopped: {
     icon: StopCircle,
     label: "Stopped",
-    bgClass: "bg-neutral/10 border-border",
-    textClass: "text-fg-secondary",
+    bgClass: "bg-[var(--surface-elevated)] border-[var(--border)]",
+    textClass: "text-[var(--fg-secondary)]",
   },
   idle: {
     icon: Play,
     label: "Idle",
-    bgClass: "bg-neutral/10 border-border",
-    textClass: "text-fg-secondary",
+    bgClass: "bg-[var(--surface-elevated)] border-[var(--border)]",
+    textClass: "text-[var(--fg-secondary)]",
   },
   attention: {
     icon: AlertTriangle,
     label: "Attention",
-    bgClass: "bg-warning/10 border-warning/20",
-    textClass: "text-warning",
+    bgClass: "bg-[var(--attention-bg)] border-[rgba(244,183,64,0.18)]",
+    textClass: "text-[var(--attention)]",
   },
 };
 
@@ -64,9 +64,9 @@ export function StatusBadge({ status, customText, className = "" }: StatusBadgeP
   const Icon = config.icon;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${config.bgClass} ${config.textClass} ${className}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${config.bgClass} ${config.textClass} ${className}`}
     >
-      <Icon size={12} className={config.animateClass} aria-hidden="true" />
+      <Icon size={11} className={config.animateClass} aria-hidden="true" />
       <span>{customText || config.label}</span>
     </span>
   );

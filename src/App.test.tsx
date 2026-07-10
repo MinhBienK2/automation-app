@@ -676,9 +676,11 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByRole("heading", { name: "Project Settings" }))
       .toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Main" }));
-    const dropdown = await screen.findByRole("listbox", { name: /select project/i });
-    await userEvent.click(within(dropdown).getByRole("option", { name: /Owned Staging/ }));
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    await userEvent.click(within(breadcrumb).getByRole("button", { name: "Projects" }));
+
+    const grid = screen.getByRole("list", { name: /projects/i });
+    await userEvent.click(within(grid).getByText("Owned Staging"));
 
     const sections = await screen.findByRole("navigation", { name: "Project sections" });
     expect(within(sections).getByRole("button", { name: "Workflows" }))

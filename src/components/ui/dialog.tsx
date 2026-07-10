@@ -1,4 +1,5 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 
 const DialogContext = React.createContext<{
   open: boolean;
@@ -84,7 +85,7 @@ function DialogContent({
     .filter(Boolean)
     .join(" ");
 
-  return (
+  return createPortal(
     <div
       className={containerClasses}
       role="dialog"
@@ -103,7 +104,8 @@ function DialogContent({
         </button>
       </div>
       <div className="modal-backdrop bg-black/50" onClick={() => context.setOpen(false)} />
-    </div>
+    </div>,
+    document.body
   );
 }
 

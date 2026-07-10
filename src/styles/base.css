@@ -461,6 +461,50 @@ html[data-density="spacious"] {
   --tglbg: var(--bg) !important;
 }
 
+/* Checkbox Overrides & Modern Standard Styles */
+.checkbox {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 1.5px solid var(--border-emphasized) !important;
+  border-radius: var(--radius-sm) !important;
+  background-color: var(--surface-elevated) !important;
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all var(--transition);
+  outline: none;
+}
+.checkbox:hover:not(:disabled) {
+  border-color: var(--border-hover) !important;
+}
+.checkbox:focus-visible {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+.checkbox:checked {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+.checkbox:checked::after {
+  content: "";
+  display: block;
+  width: 9px;
+  height: 5px;
+  border-left: 2.2px solid var(--bg);
+  border-bottom: 2.2px solid var(--bg);
+  transform: rotate(-45deg) translate(0.5px, -1px);
+}
+.checkbox:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+
 /* Table Hover Effect */
 .table tbody tr:hover {
   background-color: var(--surface-elevated) !important;
@@ -485,6 +529,55 @@ html[data-density="spacious"] {
 /* Hide scrollbar arrow buttons */
 ::-webkit-scrollbar-button {
   display: none !important;
+}
+
+/* Premium Custom Badges overriding daisyUI flat defaults */
+.badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 3px 8px !important;
+  height: auto !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid transparent !important;
+  line-height: 1.2 !important;
+  width: fit-content !important;
+  text-transform: none !important;
+}
+
+.badge-error,
+.badge-destructive {
+  background-color: var(--failure-bg) !important;
+  color: var(--failure) !important;
+  border-color: rgba(240, 100, 103, 0.2) !important;
+}
+
+.badge-warning,
+.badge-attention {
+  background-color: var(--attention-bg) !important;
+  color: var(--attention) !important;
+  border-color: rgba(244, 183, 64, 0.2) !important;
+}
+
+.badge-success {
+  background-color: var(--success-bg) !important;
+  color: var(--success) !important;
+  border-color: rgba(57, 217, 138, 0.2) !important;
+}
+
+.badge-info,
+.badge-primary {
+  background-color: var(--accent-bg) !important;
+  color: var(--accent) !important;
+  border-color: rgba(50, 211, 230, 0.2) !important;
+}
+
+.badge-ghost {
+  background-color: var(--surface-elevated) !important;
+  color: var(--fg-secondary) !important;
+  border-color: var(--border) !important;
 }
 
 @import "./auth.css";

@@ -159,10 +159,7 @@ export function ProjectsPage({
   return (
     <section className="app-screen projects-screen" aria-label="Projects">
       <WorkspaceHeader
-        onCreateProject={openCreateDialog}
-        onSelectProject={handleSelectProject}
         onViewAllProjects={() => setBrowsing(true)}
-        projects={projects}
         selectedProject={browsing ? null : selectedProject}
       />
 

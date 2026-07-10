@@ -46,3 +46,5 @@ docs/superpowers/
 .env
 
 graphify-out/
+
+**/__pycache__/*

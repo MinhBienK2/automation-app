@@ -93,22 +93,6 @@ describe("ProjectsPage", () => {
     expect(screen.queryByRole("list", { name: /projects/i })).not.toBeInTheDocument();
   });
 
-  test("switches the selected project via the header dropdown search", () => {
-    const { props } = renderPage();
-
-    // Must open a project first to see the header dropdown
-    openProjectDetail();
-
-    fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
-    const menu = screen.getByRole("listbox", { name: /select project/i });
-    fireEvent.change(within(menu).getByPlaceholderText(/search projects/i), {
-      target: { value: "facebook" },
-    });
-    fireEvent.click(within(menu).getByRole("option", { name: /facebook crm/i }));
-
-    expect(props.onSelectProject).toHaveBeenCalledWith("project-2");
-  });
-
   test("offers import and create actions in the projects list grid", async () => {
     const { props } = renderPage({ selectedProject: null });
 
@@ -138,21 +122,6 @@ describe("ProjectsPage", () => {
     expect(within(workflowsTab).getByText("4")).toBeInTheDocument();
     expect(within(subflowsTab).getByText("3")).toBeInTheDocument();
     expect(within(profilesTab).getByText("2")).toBeInTheDocument();
-  });
-
-  test("opens the create project dialog from the header dropdown", () => {
-    renderPage();
-
-    // Must open a project first to see the header dropdown
-    openProjectDetail();
-
-    fireEvent.click(screen.getByRole("button", { name: /tiktok automation/i }));
-    const menu = screen.getByRole("listbox", { name: /select project/i });
-    fireEvent.click(within(menu).getByRole("button", { name: "Create project" }));
-
-    expect(
-      screen.getByRole("dialog", { name: /create project/i }),
-    ).toBeInTheDocument();
   });
 
   test("shows action menu dropdown on project card in list and handles actions", () => {
