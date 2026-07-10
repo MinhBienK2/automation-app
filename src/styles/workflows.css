@@ -105,12 +105,21 @@
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 38px;
-  min-height: 38px;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
   padding: 0;
-  border-color: var(--accent-border);
-  border-radius: 8px;
-  color: var(--accent);
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  color: var(--fg-secondary) !important;
+  background: var(--surface) !important;
+  transition: all 0.2s ease !important;
+}
+
+.step-help-button:hover {
+  border-color: var(--accent-border) !important;
+  color: var(--accent) !important;
+  background: var(--accent-bg) !important;
 }
 
 .row-actions,

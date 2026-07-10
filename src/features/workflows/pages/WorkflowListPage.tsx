@@ -204,7 +204,8 @@ export function WorkflowListPage({
                         <IconButton
                           label="View Details"
                           type="button"
-                          className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                          variant="ghost"
+                          className="text-fg-primary hover:text-accent w-8 h-8"
                           onClick={() => onOpenWorkflow(workflow.id)}
                         >
                           <Eye aria-hidden="true" size={15} />
@@ -212,7 +213,8 @@ export function WorkflowListPage({
                         <IconButton
                           label={`Run ${workflow.name}`}
                           type="button"
-                          className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 w-8 h-8 p-0"
+                          variant="ghost"
+                          className="text-primary hover:bg-primary/10 w-8 h-8"
                           disabled={hasActiveRun}
                           onClick={() => onRunWorkflow(workflow)}
                         >
@@ -222,7 +224,8 @@ export function WorkflowListPage({
                           <IconButton
                             label={`Stop ${workflow.name}`}
                             type="button"
-                            className="btn btn-ghost btn-xs text-error hover:bg-error/10 w-8 h-8 p-0"
+                            variant="ghost"
+                            className="text-error hover:bg-error/10 w-8 h-8"
                             onClick={() => onStopRun(activeRun.run_id)}
                           >
                             <Square aria-hidden="true" size={15} />
@@ -233,7 +236,8 @@ export function WorkflowListPage({
                             <IconButton
                               label={`More actions for ${workflow.name}`}
                               type="button"
-                              className="btn btn-ghost btn-xs text-fg-primary hover:bg-base-300 w-8 h-8 p-0"
+                              variant="ghost"
+                              className="text-fg-primary hover:text-accent w-8 h-8"
                             >
                               <MoreHorizontal aria-hidden="true" size={15} />
                             </IconButton>

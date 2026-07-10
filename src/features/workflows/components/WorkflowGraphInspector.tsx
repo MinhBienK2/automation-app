@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClipboardCopy, ExternalLink, X, ChevronRight } from "lucide-react";
+import { ClipboardCopy, ExternalLink, X, ChevronRight, HelpCircle } from "lucide-react";
 import type {
   GraphEdge,
   GraphNode,
@@ -174,14 +174,16 @@ export function WorkflowGraphInspector({
               <h2>{selectedNode.label}</h2>
               <p className="muted">{graphNodeLabel(selectedNode.node_type)} node</p>
             </div>
-            <Button
-              aria-label={`Open ${selectedNode.label} help`}
+            <IconButton
               className="step-help-button"
+              variant="ghost"
               type="button"
+              label={`Open ${selectedNode.label} help`}
+              tooltip="Open help guide"
               onClick={onOpenSelectedNodeHelp}
             >
-              ?
-            </Button>
+              <HelpCircle className="w-5 h-5" aria-hidden="true" />
+            </IconButton>
           </div>
           <fieldset disabled={runState.status === "running"} className="contents">
             {selectedNode.node_type !== "start" ? (

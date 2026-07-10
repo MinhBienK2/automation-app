@@ -1,4 +1,16 @@
 import { useMemo, type ReactNode } from "react";
+import {
+  BookOpen,
+  Target,
+  AlertTriangle,
+  GitBranch,
+  Settings,
+  FileCode,
+  Network,
+  ArrowUpRight,
+  ShieldAlert,
+  Info
+} from "lucide-react";
 import type { GraphNode, ActionType } from "../../../types/workflow";
 import {
   Dialog,
@@ -187,6 +199,41 @@ function actionTypeForNodeHelp(node: GraphNode | null) {
     : null;
 }
 
+function getSectionIcon(title: string) {
+  const t = title.toLowerCase();
+  if (t.includes("làm gì") || t.includes("does")) {
+    return <BookOpen size={16} className="text-accent" />;
+  }
+  if (t.includes("dùng khi") || t.includes("use it when")) {
+    return <Target size={16} className="text-success" />;
+  }
+  if (t.includes("dùng cái khác") || t.includes("use something else")) {
+    return <AlertTriangle size={16} className="text-warning" />;
+  }
+  if (t.includes("port") || t.includes("luồng")) {
+    return <GitBranch size={16} className="text-accent" />;
+  }
+  if (t.includes("tối thiểu") || t.includes("setup") || t.includes("cấu hình")) {
+    return <Settings size={16} className="text-accent" />;
+  }
+  if (t.includes("tất cả field") || t.includes("options") || t.includes("lựa chọn")) {
+    return <Settings size={16} className="text-accent" />;
+  }
+  if (t.includes("ví dụ") || t.includes("examples")) {
+    return <FileCode size={16} className="text-purple-400" />;
+  }
+  if (t.includes("liên quan") || t.includes("related")) {
+    return <Network size={16} className="text-accent" />;
+  }
+  if (t.includes("output") || t.includes("được tạo")) {
+    return <ArrowUpRight size={16} className="text-success" />;
+  }
+  if (t.includes("an toàn") || t.includes("safety")) {
+    return <ShieldAlert size={16} className="text-error" />;
+  }
+  return <Info size={16} className="text-accent" />;
+}
+
 function HelpSection({
   children,
   defaultOpen = false,
@@ -196,11 +243,17 @@ function HelpSection({
   defaultOpen?: boolean;
   title: string;
 }) {
+  const icon = getSectionIcon(title);
   return (
     <HelpDisclosure
       className="help-section"
       defaultOpen={defaultOpen}
-      title={title}
+      title={
+        <span className="flex items-center gap-2 font-semibold">
+          {icon}
+          <span>{title}</span>
+        </span>
+      }
     >
       {children}
     </HelpDisclosure>
