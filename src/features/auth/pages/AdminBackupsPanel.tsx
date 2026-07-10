@@ -3,6 +3,7 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import { Label } from "../../../components/ui/label";
+import { Checkbox } from "../../../components/ui/checkbox";
 import {
   listBackups,
   createBackup,
@@ -181,16 +182,15 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
               </div>
 
               <form onSubmit={handleSaveConfig} className="flex flex-col gap-4">
-                <div className="form-group flex items-center justify-between">
-                  <Label htmlFor="auto-backup-enabled" className="cursor-pointer font-semibold text-sm">
+                <div className="flex items-center justify-between py-1">
+                  <Label htmlFor="auto-backup-enabled" className="cursor-pointer font-semibold text-sm text-base-content">
                     Enable Automatic Backups
                   </Label>
-                  <input
+                  <Checkbox
                     id="auto-backup-enabled"
-                    type="checkbox"
-                    className="checkbox checkbox-primary checkbox-sm"
+                    className="checkbox-sm"
                     checked={config.enabled}
-                    onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
+                    onCheckedChange={(checked) => setConfig({ ...config, enabled: checked })}
                   />
                 </div>
 

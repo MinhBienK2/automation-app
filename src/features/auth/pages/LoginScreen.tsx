@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { Checkbox } from "../../../components/ui/checkbox";
 
 import { Alert } from "../../../components/ui/alert";
 
@@ -94,12 +95,11 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
 
           <div className="remember-me-container">
             <label className="checkbox-label flex items-center gap-2 cursor-pointer select-none">
-              <input
+              <Checkbox
                 id="rememberMe"
-                type="checkbox"
-                className="checkbox checkbox-primary checkbox-xs rounded"
+                className="checkbox-xs rounded"
                 checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
+                onCheckedChange={setRememberMe}
                 disabled={isFieldsDisabled}
               />
               <span className="text-sm">Remember email</span>

@@ -13,6 +13,7 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { Checkbox } from "../../../components/ui/checkbox";
 import type {
   ActionConfig,
   ReviewedRecordingStep,
@@ -178,14 +179,13 @@ function RecordingStepEditor({
     <article className={`card bg-base-200 border card-body p-4 gap-3 ${step.included ? "border-base-300" : "border-base-300 opacity-60"}`}>
       <div className="flex items-center justify-between border-b border-base-300 pb-2">
         <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
+          <Checkbox
             aria-label={`Include ${step.label}`}
-            type="checkbox"
             checked={step.included}
-            onChange={(event) =>
-              onChange({ ...step, included: event.currentTarget.checked })
+            onCheckedChange={(checked) =>
+              onChange({ ...step, included: checked })
             }
-            className="checkbox checkbox-primary checkbox-xs shrink-0"
+            className="checkbox-xs shrink-0"
           />
           <span className="text-sm font-bold text-base-content">{step.label}</span>
         </label>

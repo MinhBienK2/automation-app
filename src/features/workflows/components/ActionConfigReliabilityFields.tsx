@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { ActionConfig } from "../../../types/workflow";
 import { Label } from "../../../components/ui/label";
+import { Input } from "../../../components/ui/input";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { NetworkWaitFields } from "./ActionConfigNetworkFields";
@@ -32,9 +33,8 @@ export function ReliabilityActionFields({
           <ActionConfigFieldGroup title="Script result">
             <Label>
               Output name
-              <input
+              <Input
                 type="text"
-                className="flex h-10 w-full rounded-[var(--app-radius-sm)] border border-[var(--app-border-strong)] bg-[var(--app-surface)] px-3 py-2 text-sm leading-5 text-[var(--app-text)] outline-none transition-colors placeholder:text-[var(--app-text-muted)] focus-visible:border-[var(--app-accent-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
                 value={config.config.output_name ?? ""}
                 onChange={(event) =>
                   onChange(updateActionConfigField(config, "output_name", event.currentTarget.value))

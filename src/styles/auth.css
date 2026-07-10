@@ -138,7 +138,7 @@
   font-weight: 600;
 }
 
-.form-group input {
+.form-group input:not([type="checkbox"]):not([type="radio"]) {
   padding: 0.75rem 1rem;
   border-radius: 8px;
   background: rgba(4, 7, 12, 0.8) !important;
@@ -149,11 +149,11 @@
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.form-group input:hover:not(:disabled) {
+.form-group input:not([type="checkbox"]):not([type="radio"]):hover:not(:disabled) {
   border-color: var(--border-hover) !important;
 }
 
-.form-group input:focus {
+.form-group input:not([type="checkbox"]):not([type="radio"]):focus {
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 3px var(--focus-ring) !important;
   background: rgba(4, 7, 12, 0.95) !important;
