@@ -244,6 +244,7 @@ export function NodeConfigFields({
             <SetVariablesConfigFields
               config={objectConfig(node.config)}
               onChange={(config) => updateConfig(config)}
+              variableOptions={variableOptions}
             />
           </ActionConfigFieldGroup>
         </div>

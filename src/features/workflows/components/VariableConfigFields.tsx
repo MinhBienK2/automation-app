@@ -6,7 +6,7 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { X } from "lucide-react";
 import { VariableIconButton } from "./WorkflowIconButtons";
-import { TemplateTextField, type TemplateTextFieldRef } from "./TemplateTextField";
+import { TemplateTextField, type TemplateTextFieldRef, type VariableOption } from "./TemplateTextField";
 
 type SetVariableConfig = {
   name?: string | null;
@@ -19,9 +19,11 @@ type SetVariableConfig = {
 export function SetVariablesConfigFields({
   config,
   onChange,
+  variableOptions,
 }: {
   config: SetVariableConfig;
   onChange: (config: SetVariableConfig) => void;
+  variableOptions?: VariableOption[];
 }) {
   const rows = variableRowsFromConfig(config);
   const duplicateNames = duplicateVariableNames(rows);
@@ -70,6 +72,7 @@ export function SetVariablesConfigFields({
                 onChange={(value) => updateRow(index, { value })}
                 placeholder="Value"
                 hideCompactButtons={true}
+                variableOptions={variableOptions}
               />
             </div>
           </div>
@@ -168,9 +171,11 @@ function duplicateVariableNames(rows: VariableAssignment[]) {
 export function CreateObjectManualFields({
   fields,
   onChange,
+  variableOptions,
 }: {
   fields: ObjectFieldAssignment[];
   onChange: (fields: ObjectFieldAssignment[]) => void;
+  variableOptions?: VariableOption[];
 }) {
   const rows = fields || [];
   const duplicateKeys = duplicateFieldKeys(rows);
@@ -219,6 +224,7 @@ export function CreateObjectManualFields({
                 onChange={(value) => updateRow(index, { value })}
                 placeholder="Value"
                 hideCompactButtons={true}
+                variableOptions={variableOptions}
               />
             </div>
           </div>

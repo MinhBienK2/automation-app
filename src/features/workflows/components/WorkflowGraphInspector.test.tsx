@@ -125,4 +125,25 @@ describe("collectVariableOptions", () => {
     expect(options.find((opt) => opt.name === "settingsVar1")?.source).toBe("Workflow Settings Env");
     expect(options.find((opt) => opt.name === "profileVar1")?.source).toBe("Profile Env");
   });
+
+  test("collects variables from any node with output_name property generically", () => {
+    const listNode = { ...graphNode("list-node", "create_empty_list", { output_name: "my_empty_list" }), label: "" };
+    const boolNode = { ...graphNode("bool-node", "set_boolean_variable", { output_name: "is_valid", value: "true" }), label: "" };
+    const downstreamNode = graphNode("downstream", "set_variable", { name: "x", value_type: "text", value: "1" });
+    const graph3: WorkflowGraph = {
+      version: 2,
+      nodes: [listNode, boolNode, downstreamNode],
+      edges: [
+        { id: "e1", source_node_id: "list-node", source_port: "out", target_node_id: "bool-node", target_port: "in", label: "", condition: null },
+        { id: "e2", source_node_id: "bool-node", source_port: "out", target_node_id: "downstream", target_port: "in", label: "", condition: null },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+    const options = collectVariableOptions(graph3, downstreamNode);
+    const names = options.map((opt) => opt.name);
+    expect(names).toContain("my_empty_list");
+    expect(names).toContain("is_valid");
+    expect(options.find((opt) => opt.name === "my_empty_list")?.source).toBe("Create Empty List");
+    expect(options.find((opt) => opt.name === "is_valid")?.source).toBe("Boolean: Set Value");
+  });
 });

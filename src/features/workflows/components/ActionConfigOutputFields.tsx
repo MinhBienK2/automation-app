@@ -27,6 +27,7 @@ export function OutputActionFields({
           <SetVariablesConfigFields
             config={config.config}
             onChange={(nextConfig) => onChange({ type: "set_variable", config: nextConfig })}
+            variableOptions={variableOptions}
           />
         </ActionConfigFieldGroup>
       );

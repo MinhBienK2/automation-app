@@ -54,6 +54,7 @@ export function ObjectNodeFields({
             <CreateObjectManualFields
               fields={fields}
               onChange={(val: ObjectFieldAssignment[]) => updateConfig({ ...configObj, fields: val })}
+              variableOptions={variableOptions}
             />
           </ActionConfigFieldGroup>
         </div>

@@ -1,7 +1,6 @@
 import type { GraphNode } from "../../../../../types/workflow";
 import { Label } from "../../../../../components/ui/label";
 import { Select } from "../../../../../components/ui/select";
-import { Textarea } from "../../../../../components/ui/textarea";
 import { SwitchField } from "../../../../../components/ui/switch";
 import { ActionConfigFieldGroup } from "../../ActionConfigFieldGroup";
 import { TemplateTextField, TemplateTextareaField, type VariableOption } from "../../TemplateTextField";
@@ -160,20 +159,18 @@ export function ListMutationFields({
                 <option value="boolean">Boolean</option>
               </Select>
             </Label>
-            <Label>
-              List Items (One per line)
-              <Textarea
-                value={itemsText}
-                placeholder="item1&#10;item2&#10;item3"
-                rows={5}
-                onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  updateConfig({
-                    ...configObj,
-                    items: event.currentTarget.value.split("\n").filter(Boolean),
-                  })
-                }
-              />
-            </Label>
+            <TemplateTextareaField
+              label="List Items (One per line)"
+              value={itemsText}
+              onChange={(val: string) =>
+                updateConfig({
+                  ...configObj,
+                  items: val.split("\n").filter(Boolean),
+                })
+              }
+              placeholder="item1&#10;item2&#10;item3"
+              variableOptions={variableOptions}
+            />
           </ActionConfigFieldGroup>
         </div>
       );

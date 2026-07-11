@@ -457,16 +457,14 @@ export function collectVariableOptions(
       continue;
     }
 
-    if (node.node_type === "check_conditions" || node.node_type === "calculate_value") {
-      const config = objectConfig(node.config);
-      const name = typeof config.output_name === "string" ? config.output_name.trim() : "";
-      if (name) {
-        options.push({
-          name,
-          source: node.label || (node.node_type === "check_conditions" ? "Check Conditions" : "Calculate Value"),
-          evaluation_type: config.evaluation_type === "dynamic" ? "dynamic" : "static",
-        });
-      }
+    const config = objectConfig(node.config);
+    const outputName = typeof config.output_name === "string" ? config.output_name.trim() : "";
+    if (outputName) {
+      options.push({
+        name: outputName,
+        source: node.label || graphNodeLabel(node.node_type),
+        evaluation_type: config.evaluation_type === "dynamic" ? "dynamic" : "static",
+      });
     }
 
     if (node.node_type === "set_variable") {
