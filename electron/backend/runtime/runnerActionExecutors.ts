@@ -941,6 +941,22 @@ export function createRunnerActionExecutors(
         await runtime.page.goto(url);
       }
     },
+    click_and_switch_tab: async (action) => {
+      const timeout = action.config.timeout_ms ?? 30000;
+      const locator = await deps.locatorForAction(runtime, action.config);
+
+      if (!runtime.context.waitForEvent) {
+        throw new Error("Browser context does not support waitForEvent");
+      }
+
+      const [newPage] = await Promise.all([
+        runtime.context.waitForEvent("page", { timeout }),
+        locator.click({ timeout }),
+      ]);
+
+      runtime.page = newPage;
+      await runtime.page.bringToFront?.();
+    },
     switch_tab: async (action) => {
       const page = runtime.context.pages()[action.config.index];
       if (!page) throw new Error(`Tab index ${action.config.index} does not exist`);

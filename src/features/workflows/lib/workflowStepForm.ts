@@ -143,6 +143,8 @@ export function updateActionConfigField(
       return updateElementConfigField(config, field, value);
     case "click":
       return updateClickConfigField(config, field, value);
+    case "click_and_switch_tab":
+      return updateClickAndSwitchTabConfigField(config, field, value);
     case "find_element":
       return updateFindElementConfigField(config, field, value);
     case "scroll":
@@ -482,6 +484,7 @@ function actionSupportsTargetRef(actionType: ActionConfig["type"]): boolean {
       "input_text",
       "clear_input",
       "click",
+      "click_and_switch_tab",
       "scroll",
       "select_option",
       "hover",
@@ -660,6 +663,40 @@ function updateClickConfigField(
 
   return {
     type: "click",
+    config: { ...config.config, [field]: value },
+  };
+}
+
+function updateClickAndSwitchTabConfigField(
+  config: Extract<ActionConfig, { type: "click_and_switch_tab" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (
+    field === "timeout_ms"
+  ) {
+    return {
+      type: "click_and_switch_tab",
+      config: { ...config.config, [field]: Number(value) },
+    };
+  }
+
+  if (field === "iframe_xpath") {
+    return {
+      type: "click_and_switch_tab",
+      config: { ...config.config, [field]: value || null },
+    };
+  }
+
+  if (field === "target_ref") {
+    return {
+      type: "click_and_switch_tab",
+      config: { ...config.config, target_ref: value || null },
+    };
+  }
+
+  return {
+    type: "click_and_switch_tab",
     config: { ...config.config, [field]: value },
   };
 }

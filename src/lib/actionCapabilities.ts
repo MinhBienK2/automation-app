@@ -47,6 +47,7 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   go_forward: "implemented",
   reload: "implemented",
   open_new_tab: "implemented",
+  click_and_switch_tab: "implemented",
   switch_tab: "implemented",
   close_tab: "implemented",
   accept_dialog: "implemented_partial_requires_validation",

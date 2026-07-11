@@ -32,6 +32,7 @@ export function PointerActionFields({
         </ActionConfigFieldGroup>
       );
     case "click":
+    case "click_and_switch_tab":
       return (
         <ActionConfigFieldGroup title="Element target">
           <ElementTargetSourceFields config={config} onChange={onChange} />

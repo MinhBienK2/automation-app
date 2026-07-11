@@ -57,6 +57,17 @@ export const test = base.extend<DesktopFixtures>({
   appWindow: async ({ electronApp }, use) => {
     const window = await electronApp.firstWindow();
     await window.waitForLoadState("domcontentloaded");
+
+    const emailInput = window.locator("#email");
+    const passwordInput = window.locator("#password");
+    const signInButton = window.locator('button[type="submit"]:has-text("Sign In")');
+
+    if (await emailInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await emailInput.fill("admin@gmail.com");
+      await passwordInput.fill("admin");
+      await signInButton.click();
+    }
+
     const mainNavigation = window.getByRole("navigation", { name: "Main navigation" });
     await expect(mainNavigation).toBeVisible();
     await expect(mainNavigation.getByRole("button", { name: "Projects", exact: true })).toBeVisible();

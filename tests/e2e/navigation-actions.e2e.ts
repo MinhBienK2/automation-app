@@ -151,4 +151,53 @@ test.describe("desktop navigation and tab node execution", () => {
       expect.arrayContaining(["open-tab-a", "open-tab-b", "switch-tab-a", "close-tab-b"]),
     );
   });
+
+  test("runs click and switch tab node", async ({
+    appWindow,
+    fixtureServer,
+  }, testInfo) => {
+    testInfo.annotations.push(
+      { type: "fixture route", description: "/tab-home, /tab-a" },
+      {
+        type: "nodes",
+        description: "navigate, click_and_switch_tab, extract_text",
+      },
+      {
+        type: "desktop depth",
+        description: "Verifies clicking a link to open a tab and switching context automatically.",
+      },
+    );
+
+    const { state } = await createAndRunWorkflow(appWindow, "E2E click and switch tab", [
+      {
+        id: "navigate-home",
+        label: "Navigate Home",
+        config: { type: "navigate", config: { url: `${fixtureServer.baseUrl}/tab-home` } },
+      },
+      {
+        id: "click-switch-tab",
+        label: "Click Open Tab A",
+        config: {
+          type: "click_and_switch_tab",
+          config: {
+            xpath: "//*[@data-testid='open-tab-link']",
+            timeout_ms: 30000,
+          },
+        },
+      },
+      {
+        id: "extract-tab-a",
+        label: "Extract Tab A",
+        config: {
+          type: "extract_text",
+          config: { target: target("tab-marker"), output_name: "active_tab_a" },
+        },
+      },
+    ]);
+
+    expect(state.outputs.active_tab_a).toBe("tab:a");
+    expect(state.completed_step_ids).toEqual(
+      expect.arrayContaining(["navigate-home", "click-switch-tab", "extract-tab-a"]),
+    );
+  });
 });

@@ -394,6 +394,11 @@ const actionValidators = createActionValidatorMap({
   go_forward: () => null,
   reload: () => null,
   open_new_tab: () => null,
+  click_and_switch_tab: (config) =>
+    firstValidation(
+      validateElementTargetSource(config.config),
+      validateElementActionTiming(config.config),
+    ),
   switch_tab: (config) =>
     zeroOrPositiveInteger(config.config.index, "index", "Tab index must be zero or greater"),
   close_tab: (config) =>

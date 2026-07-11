@@ -68,6 +68,7 @@ export type ActionType =
   | "go_forward"
   | "reload"
   | "open_new_tab"
+  | "click_and_switch_tab"
   | "switch_tab"
   | "close_tab"
   | "accept_dialog"
@@ -955,6 +956,17 @@ export type ActionConfig =
   | { type: "go_forward"; config: Record<string, never> }
   | { type: "reload"; config: Record<string, never> }
   | { type: "open_new_tab"; config: { url?: string | null } }
+  | {
+      type: "click_and_switch_tab";
+      config: {
+        xpath?: string | null;
+        target?: ElementTarget | null;
+        target_ref?: string | null;
+        iframe_xpath?: string | null;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
   | { type: "switch_tab"; config: { index: number } }
   | { type: "close_tab"; config: { index?: number | null } }
   | { type: "accept_dialog"; config: { prompt_text?: string | null } }

@@ -89,6 +89,7 @@ const runnerActionCapabilities: Partial<Record<ActionType, RunnerActionCapabilit
   scroll: "custom_human",
   paste_clipboard: "custom_human",
   open_new_tab: "cloak_native",
+  click_and_switch_tab: "cloak_native",
   switch_tab: "cloak_native",
   close_tab: "cloak_native",
   wait_for_download: "cloak_native",
@@ -177,6 +178,7 @@ export function actionConfigSummary(action: ActionConfig): string | null {
     case "random_wait":
       return `Duration ${action.config.min_ms}-${action.config.max_ms} ms`;
     case "click":
+    case "click_and_switch_tab":
     case "double_click":
     case "right_click":
     case "hover":

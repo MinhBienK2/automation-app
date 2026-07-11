@@ -715,6 +715,7 @@ function tabPage(marker: "home" | "a" | "b") {
   <head><title>Tab ${marker}</title></head>
   <body>
     <h1 data-testid="tab-marker">tab:${marker}</h1>
+    ${marker === "home" ? `<a href="/tab-a" target="_blank" data-testid="open-tab-link">Open Tab A</a>` : ""}
   </body>
 </html>`;
 }

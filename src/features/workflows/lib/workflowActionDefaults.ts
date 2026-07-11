@@ -34,6 +34,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         },
       };
     case "click":
+    case "click_and_switch_tab":
       return {
         type: actionType,
         config: {

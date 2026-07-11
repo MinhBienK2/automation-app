@@ -49,6 +49,7 @@ export type BrowserDriverContext = {
   pages(): BrowserDriverPage[];
   newPage(): Promise<BrowserDriverPage>;
   close(): Promise<void>;
+  waitForEvent?(eventName: string, options?: Record<string, unknown>): Promise<any>;
   on?(eventName: string, handler: (...args: never[]) => void): void;
   addCookies?(cookies: Array<Record<string, unknown>>): Promise<void>;
   clearCookies?(options?: Record<string, unknown>): Promise<void>;
