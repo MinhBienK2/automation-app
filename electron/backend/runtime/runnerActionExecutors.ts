@@ -31,7 +31,6 @@ import {
   submitFormTarget,
 } from "./interactionActions.js";
 import {
-  evaluateMathInObject,
   parseVariableValue,
   renderTemplate,
   setVariables,
@@ -1023,8 +1022,7 @@ export function createRunnerActionExecutors(
     set_json_variables: async (action) => {
       const parsed = JSON.parse(renderTemplate(action.config.json, runtime.outputs));
       if (!isPlainRecord(parsed)) throw new Error("JSON variables must be an object");
-      const evaluated = evaluateMathInObject(parsed);
-      for (const [key, val] of Object.entries(evaluated)) {
+      for (const [key, val] of Object.entries(parsed)) {
         writeVariableValue(runtime.outputs, key, val);
       }
     },
@@ -1894,9 +1892,8 @@ export function createRunnerActionExecutors(
         const parsedVal = parseVariableValue(field.value_type || "text", field.value || "", runtime.outputs);
         obj[field.key] = parsedVal;
       }
-      const evaluated = evaluateMathInObject(obj);
       cleanFlattenedKeys(runtime.outputs, output_name);
-      writeVariableValue(runtime.outputs, output_name, evaluated);
+      writeVariableValue(runtime.outputs, output_name, obj);
     },
     parse_json_to_object: async (action) => {
       const { source_text, output_name } = action.config;
@@ -1918,9 +1915,8 @@ export function createRunnerActionExecutors(
       if (propKey) {
         const parsedVal = parseVariableValue(value_type || "text", value || "", runtime.outputs);
         setPath(obj, propKey, parsedVal);
-        const evaluated = evaluateMathInObject(obj);
         cleanFlattenedKeys(runtime.outputs, name);
-        writeVariableValue(runtime.outputs, name, evaluated);
+        writeVariableValue(runtime.outputs, name, obj);
       }
     },
     remove_object_property: async (action) => {
@@ -1948,9 +1944,8 @@ export function createRunnerActionExecutors(
         throw new Error("Merged value must be a JSON object");
       }
       const newObj = deep ? deepMerge(obj, parsedValue) : { ...obj, ...parsedValue };
-      const evaluated = evaluateMathInObject(newObj);
       cleanFlattenedKeys(runtime.outputs, name);
-      writeVariableValue(runtime.outputs, name, evaluated);
+      writeVariableValue(runtime.outputs, name, newObj);
     },
     rename_object_property: async (action) => {
       const { name, old_key, new_key } = action.config;

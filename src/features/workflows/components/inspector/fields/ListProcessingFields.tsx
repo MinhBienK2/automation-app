@@ -430,7 +430,6 @@ export function ListProcessingFields({
               onChange={(val: string) => updateConfig({ ...configObj, script: val })}
               placeholder="return list.map(item => item);"
               variableOptions={variableOptions}
-              showMath={false}
             />
             <TemplateTextField
               label="Result output variable name"

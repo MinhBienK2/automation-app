@@ -2,7 +2,6 @@
 
 import { describe, expect, test } from "vitest";
 import {
-  evaluateMathInObject,
   renderTemplate,
   resolveObjectTemplates,
   setVariables,
@@ -76,7 +75,7 @@ describe("runner variable helpers", () => {
     expect(outputs["payload.ok"]).toBeUndefined();
   });
 
-  test("evaluates simple math expressions for number type variables", () => {
+  test("does not evaluate =() math expressions for number variables", () => {
     const outputs: Record<string, unknown> = { count: 3 };
 
     setVariables(outputs, {
@@ -86,18 +85,18 @@ describe("runner variable helpers", () => {
       variables: [
         { name: "next_count", value_type: "number", value: "={{count}} + 1" },
         { name: "complex_math", value_type: "number", value: "=2 * (5 + 3)" },
-        { name: "decimal_math", value_type: "number", value: "=1.5 * 2" },
-        { name: "non_prefixed_math", value_type: "number", value: "5 + 5" },
+        { name: "plain_number", value_type: "number", value: "42" },
+        { name: "templated_number", value_type: "number", value: "{{count}}" },
       ],
     });
 
-    expect(outputs.next_count).toBe(4);
-    expect(outputs.complex_math).toBe(16);
-    expect(outputs.decimal_math).toBe(3);
-    expect(outputs.non_prefixed_math).toBeNaN();
+    expect(outputs.next_count).toBeNaN();
+    expect(outputs.complex_math).toBeNaN();
+    expect(outputs.plain_number).toBe(42);
+    expect(outputs.templated_number).toBe(3);
   });
 
-  test("does not evaluate math expressions on non-number fields", () => {
+  test("keeps text fields literal including former math prefixes", () => {
     const outputs: Record<string, unknown> = {};
 
     setVariables(outputs, {
@@ -116,31 +115,6 @@ describe("runner variable helpers", () => {
     expect(outputs.phone_val).toBe("09-123-456");
     expect(outputs.math_as_text).toBe("1 + 2");
     expect(outputs.math_prefix_text).toBe("=1 + 2");
-  });
-
-  test("evaluates math expressions inside set_json_variables but preserves phone/dates", () => {
-    const input = {
-      nested: {
-        counter: "=5 + 1",
-        not_math: "hello",
-        date: "2026-06-13",
-        phone: "091-234-5678",
-        negative_num: "-123",
-        math_with_minus: "=10 - 2",
-        plain_text_math: "10 -2",
-      },
-      array: ["=1 + 1", "hello"],
-    };
-    const result = evaluateMathInObject(input);
-
-    expect(result.nested.counter).toBe(6);
-    expect(result.nested.not_math).toBe("hello");
-    expect(result.nested.date).toBe("2026-06-13");
-    expect(result.nested.phone).toBe("091-234-5678");
-    expect(result.nested.negative_num).toBe("-123");
-    expect(result.nested.math_with_minus).toBe(8);
-    expect(result.nested.plain_text_math).toBe("10 -2");
-    expect(result.array).toEqual([2, "hello"]);
   });
 
   test("resolves template tokens in check_conditions script config", () => {

@@ -262,7 +262,6 @@ export function NodeConfigFields({
                 })
               }
               variableOptions={variableOptions}
-              showMath={false}
             />
           </ActionConfigFieldGroup>
         </div>

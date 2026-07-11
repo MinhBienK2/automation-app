@@ -100,7 +100,6 @@ export function ListMutationFields({
                 onChange={(val: string) => updateConfig({ ...configObj, value: val })}
                 placeholder="Value"
                 variableOptions={variableOptions}
-                showMath={value_type === "number"}
               />
             )}
             {showIndex && (
@@ -298,7 +297,6 @@ export function ListMutationFields({
               onChange={(val: string) => updateConfig({ ...configObj, value: val })}
               placeholder="Value"
               variableOptions={variableOptions}
-              showMath={value_type === "number"}
             />
           </ActionConfigFieldGroup>
         </div>
@@ -362,7 +360,6 @@ export function ListMutationFields({
               onChange={(val: string) => updateConfig({ ...configObj, value: val })}
               placeholder="Value"
               variableOptions={variableOptions}
-              showMath={value_type === "number"}
             />
           </ActionConfigFieldGroup>
         </div>

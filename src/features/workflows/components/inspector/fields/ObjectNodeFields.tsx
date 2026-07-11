@@ -125,7 +125,6 @@ export function ObjectNodeFields({
               onChange={(val: string) => updateConfig({ ...configObj, value: val })}
               placeholder="Value"
               variableOptions={variableOptions}
-              showMath={value_type === "number"}
             />
           </ActionConfigFieldGroup>
         </div>
@@ -354,7 +353,6 @@ export function ObjectNodeFields({
               onChange={(val: string) => updateConfig({ ...configObj, script: val })}
               placeholder="return obj;"
               variableOptions={variableOptions}
-              showMath={false}
             />
             <TemplateTextField
               label="Result output variable name"

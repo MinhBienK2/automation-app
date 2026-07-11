@@ -1183,11 +1183,6 @@
   font-weight: 500;
 }
 
-.math-token-highlight {
-  color: var(--app-warning) !important; /* Attention amber */
-  font-weight: 500;
-}
-
 /* Run Monitor UX Improvements */
 .run-monitor-step-meta {
   display: grid;

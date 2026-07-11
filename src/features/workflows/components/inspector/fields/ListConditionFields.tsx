@@ -78,7 +78,6 @@ export function ListConditionFields({
               onChange={(val: string) => updateConfig({ ...configObj, value: val })}
               placeholder="Value"
               variableOptions={variableOptions}
-              showMath={value_type === "number"}
             />
             <TemplateTextField
               label="Result output variable name"

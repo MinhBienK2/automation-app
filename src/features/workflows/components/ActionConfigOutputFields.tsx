@@ -39,7 +39,6 @@ export function OutputActionFields({
             onChange={(val) =>
               onChange(updateActionConfigField(config, "json", val))
             }
-            showMath={false}
           />
         </ActionConfigFieldGroup>
       );
@@ -217,7 +216,6 @@ export function OutputActionFields({
               onChange={(val) => onChange(updateActionConfigField(config, "value", val))}
               placeholder="Value"
               variableOptions={variableOptions}
-              showMath={value_type === "number"}
             />
           )}
           {showIndex && (

@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
 
 describe("SetVariablesConfigFields", () => {
-  test("hides calculation math button when type is json or boolean, but shows it for text and number", () => {
+  test("renders variable insert button for every value type and never a math button", () => {
     const config = {
       variables: [
         { name: "var_text", value_type: "text", value: "hello" },
@@ -15,20 +15,9 @@ describe("SetVariablesConfigFields", () => {
 
     render(<SetVariablesConfigFields config={config} onChange={vi.fn()} />);
 
-    // Check Text row (index 0)
-    expect(screen.getByRole("button", { name: /Insert math for variable 1/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Insert variable for variable 1/i })).toBeInTheDocument();
-
-    // Check Number row (index 1)
-    expect(screen.getByRole("button", { name: /Insert math for variable 2/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Insert variable for variable 2/i })).toBeInTheDocument();
-
-    // Check JSON row (index 2) - should not have math button
-    expect(screen.queryByRole("button", { name: /Insert math for variable 3/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Insert variable for variable 3/i })).toBeInTheDocument();
-
-    // Check Boolean row (index 3) - should not have math button
-    expect(screen.queryByRole("button", { name: /Insert math for variable 4/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Insert variable for variable 4/i })).toBeInTheDocument();
+    for (let index = 1; index <= 4; index += 1) {
+      expect(screen.getByRole("button", { name: new RegExp(`Insert variable for variable ${index}`, "i") })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: new RegExp(`Insert math for variable ${index}`, "i") })).not.toBeInTheDocument();
+    }
   });
 });

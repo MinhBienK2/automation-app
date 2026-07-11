@@ -5,7 +5,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { X } from "lucide-react";
-import { MathIconButton, VariableIconButton } from "./WorkflowIconButtons";
+import { VariableIconButton } from "./WorkflowIconButtons";
 import { TemplateTextField, type TemplateTextFieldRef } from "./TemplateTextField";
 
 type SetVariableConfig = {
@@ -43,86 +43,76 @@ export function SetVariablesConfigFields({
 
   return (
     <div className="variable-row-table-v2">
-      {rows.map((row, index) => {
-        const showMath = row.value_type !== "json" && row.value_type !== "boolean";
-        return (
-          <div className="variable-row-group-card" key={index}>
-            {/* Row 1: Name and Value */}
-            <div className="variable-row-line-one">
-              <div className="variable-row-field">
-                <Label htmlFor={`var-name-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Name</Label>
-                <Input
-                  id={`var-name-${index}`}
-                  aria-label={`Variable ${index + 1} name`}
-                  placeholder="Variable name"
-                  value={row.name}
-                  onChange={(event) => updateRow(index, { name: event.currentTarget.value })}
-                  className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
-                />
-              </div>
-              <div className="variable-row-field">
-                <Label htmlFor={`var-value-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Value</Label>
-                <TemplateTextField
-                  ref={(el) => {
-                    itemRefs.current[index] = el;
-                  }}
-                  id={`var-value-${index}`}
-                  label=""
-                  value={row.value}
-                  onChange={(value) => updateRow(index, { value })}
-                  placeholder="Value"
-                  hideCompactButtons={true}
-                />
-              </div>
+      {rows.map((row, index) => (
+        <div className="variable-row-group-card" key={index}>
+          {/* Row 1: Name and Value */}
+          <div className="variable-row-line-one">
+            <div className="variable-row-field">
+              <Label htmlFor={`var-name-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Name</Label>
+              <Input
+                id={`var-name-${index}`}
+                aria-label={`Variable ${index + 1} name`}
+                placeholder="Variable name"
+                value={row.name}
+                onChange={(event) => updateRow(index, { name: event.currentTarget.value })}
+                className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
+              />
             </div>
-
-            {/* Row 2: Type and Action Buttons */}
-            <div className="variable-row-line-two">
-              <div className="variable-row-type-select">
-                <span className="text-xs text-[var(--app-text-secondary)] font-medium">Type:</span>
-                <Select
-                  aria-label={`Variable ${index + 1} type`}
-                  value={row.value_type}
-                  onChange={(event) =>
-                    updateRow(index, { value_type: event.currentTarget.value as VariableValueType })
-                  }
-                  className="h-7 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)] py-0"
-                >
-                  <option value="text">Text</option>
-                  <option value="json">JSON</option>
-                  <option value="number">Number</option>
-                  <option value="boolean">Boolean</option>
-                </Select>
-              </div>
-
-              <div className="variable-row-actions">
-                {showMath && (
-                  <MathIconButton
-                    label={`Insert math for variable ${index + 1}`}
-                    onClick={() => itemRefs.current[index]?.insertMath()}
-                    size="md"
-                  />
-                )}
-                <VariableIconButton
-                  label={`Insert variable for variable ${index + 1}`}
-                  onClick={() => itemRefs.current[index]?.toggleBraces()}
-                  size="md"
-                />
-                <Button
-                  aria-label={`Remove variable ${index + 1}`}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeRow(index)}
-                  className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+            <div className="variable-row-field">
+              <Label htmlFor={`var-value-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Value</Label>
+              <TemplateTextField
+                ref={(el) => {
+                  itemRefs.current[index] = el;
+                }}
+                id={`var-value-${index}`}
+                label=""
+                value={row.value}
+                onChange={(value) => updateRow(index, { value })}
+                placeholder="Value"
+                hideCompactButtons={true}
+              />
             </div>
           </div>
-        );
-      })}
+
+          {/* Row 2: Type and Action Buttons */}
+          <div className="variable-row-line-two">
+            <div className="variable-row-type-select">
+              <span className="text-xs text-[var(--app-text-secondary)] font-medium">Type:</span>
+              <Select
+                aria-label={`Variable ${index + 1} type`}
+                value={row.value_type}
+                onChange={(event) =>
+                  updateRow(index, { value_type: event.currentTarget.value as VariableValueType })
+                }
+                className="h-7 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)] py-0"
+              >
+                <option value="text">Text</option>
+                <option value="json">JSON</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+              </Select>
+            </div>
+
+            <div className="variable-row-actions">
+              <VariableIconButton
+                label={`Insert variable for variable ${index + 1}`}
+                onClick={() => itemRefs.current[index]?.toggleBraces()}
+                size="md"
+              />
+              <Button
+                aria-label={`Remove variable ${index + 1}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeRow(index)}
+                className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ))}
       {duplicateNames.length ? (
         <p className="variable-warning">
           Duplicate paths overwrite earlier rows: {duplicateNames.join(", ")}
@@ -202,86 +192,76 @@ export function CreateObjectManualFields({
 
   return (
     <div className="variable-row-table-v2">
-      {rows.map((row, index) => {
-        const showMath = row.value_type !== "json" && row.value_type !== "boolean";
-        return (
-          <div className="variable-row-group-card" key={index}>
-            {/* Row 1: Key and Value */}
-            <div className="variable-row-line-one">
-              <div className="variable-row-field">
-                <Label htmlFor={`field-key-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Key Path</Label>
-                <Input
-                  id={`field-key-${index}`}
-                  aria-label={`Field ${index + 1} key`}
-                  placeholder="e.g. name or user.age"
-                  value={row.key}
-                  onChange={(event) => updateRow(index, { key: event.currentTarget.value })}
-                  className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
-                />
-              </div>
-              <div className="variable-row-field">
-                <Label htmlFor={`field-value-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Value</Label>
-                <TemplateTextField
-                  ref={(el) => {
-                    itemRefs.current[index] = el;
-                  }}
-                  id={`field-value-${index}`}
-                  label=""
-                  value={row.value}
-                  onChange={(value) => updateRow(index, { value })}
-                  placeholder="Value"
-                  hideCompactButtons={true}
-                />
-              </div>
+      {rows.map((row, index) => (
+        <div className="variable-row-group-card" key={index}>
+          {/* Row 1: Key and Value */}
+          <div className="variable-row-line-one">
+            <div className="variable-row-field">
+              <Label htmlFor={`field-key-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Key Path</Label>
+              <Input
+                id={`field-key-${index}`}
+                aria-label={`Field ${index + 1} key`}
+                placeholder="e.g. name or user.age"
+                value={row.key}
+                onChange={(event) => updateRow(index, { key: event.currentTarget.value })}
+                className="h-8 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)]"
+              />
             </div>
-
-            {/* Row 2: Type and Action Buttons */}
-            <div className="variable-row-line-two">
-              <div className="variable-row-type-select">
-                <span className="text-xs text-[var(--app-text-secondary)] font-medium">Type:</span>
-                <Select
-                  aria-label={`Field ${index + 1} type`}
-                  value={row.value_type}
-                  onChange={(event) =>
-                    updateRow(index, { value_type: event.currentTarget.value as VariableValueType })
-                  }
-                  className="h-7 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)] py-0"
-                >
-                  <option value="text">Text</option>
-                  <option value="json">JSON</option>
-                  <option value="number">Number</option>
-                  <option value="boolean">Boolean</option>
-                </Select>
-              </div>
-
-              <div className="variable-row-actions">
-                {showMath && (
-                  <MathIconButton
-                    label={`Insert math for field ${index + 1}`}
-                    onClick={() => itemRefs.current[index]?.insertMath()}
-                    size="md"
-                  />
-                )}
-                <VariableIconButton
-                  label={`Insert variable for field ${index + 1}`}
-                  onClick={() => itemRefs.current[index]?.toggleBraces()}
-                  size="md"
-                />
-                <Button
-                  aria-label={`Remove field ${index + 1}`}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeRow(index)}
-                  className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+            <div className="variable-row-field">
+              <Label htmlFor={`field-value-${index}`} className="text-xs text-[var(--app-text-secondary)] font-medium">Value</Label>
+              <TemplateTextField
+                ref={(el) => {
+                  itemRefs.current[index] = el;
+                }}
+                id={`field-value-${index}`}
+                label=""
+                value={row.value}
+                onChange={(value) => updateRow(index, { value })}
+                placeholder="Value"
+                hideCompactButtons={true}
+              />
             </div>
           </div>
-        );
-      })}
+
+          {/* Row 2: Type and Action Buttons */}
+          <div className="variable-row-line-two">
+            <div className="variable-row-type-select">
+              <span className="text-xs text-[var(--app-text-secondary)] font-medium">Type:</span>
+              <Select
+                aria-label={`Field ${index + 1} type`}
+                value={row.value_type}
+                onChange={(event) =>
+                  updateRow(index, { value_type: event.currentTarget.value as VariableValueType })
+                }
+                className="h-7 text-xs bg-[var(--app-surface-hover)] border-[var(--app-border)] py-0"
+              >
+                <option value="text">Text</option>
+                <option value="json">JSON</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+              </Select>
+            </div>
+
+            <div className="variable-row-actions">
+              <VariableIconButton
+                label={`Insert variable for field ${index + 1}`}
+                onClick={() => itemRefs.current[index]?.toggleBraces()}
+                size="md"
+              />
+              <Button
+                aria-label={`Remove field ${index + 1}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeRow(index)}
+                className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ))}
       {duplicateKeys.length ? (
         <p className="variable-warning">
           Duplicate keys overwrite earlier rows: {duplicateKeys.join(", ")}

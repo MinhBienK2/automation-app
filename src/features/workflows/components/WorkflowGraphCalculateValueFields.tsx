@@ -65,7 +65,6 @@ export function WorkflowGraphCalculateValueFields({
           value={expression}
           placeholder="outputs.A + outputs.B"
           variableOptions={variableOptions}
-          showMath={false}
           isJs={true}
           onChange={(value) => updateConfig({ expression: value })}
         />

@@ -86,21 +86,17 @@ describe("TemplateTextField", () => {
     expect(handleChange).toHaveBeenCalledWith("hello {{var1}} world{{system.last_error}}");
   });
 
-  test("does not render math button in textarea when showMath is false", () => {
+  test("does not render a math button on textarea fields", () => {
     const handleChange = vi.fn();
     render(
       <TemplateTextareaField
         label="My Textarea"
         value="hello"
         onChange={handleChange}
-        showMath={false}
       />
     );
 
-    // Math button should not be present
     expect(screen.queryByRole("button", { name: /Insert math for My Textarea/i })).not.toBeInTheDocument();
-    
-    // Braces button should still be present
     expect(screen.getByRole("button", { name: /Insert variable for My Textarea/i })).toBeInTheDocument();
   });
 
@@ -174,7 +170,7 @@ describe("TemplateTextField", () => {
     expect(screen.getByRole("listbox")).toBeInTheDocument();
   });
 
-  test("highlights math prefix '=' and parentheses '()' inside a math expression", () => {
+  test("still highlights template tokens when value contains equals and parentheses", () => {
     render(
       <TemplateTextField
         label="Math test"
@@ -183,15 +179,7 @@ describe("TemplateTextField", () => {
       />
     );
 
-    const equalSign = screen.getByText("=");
-    expect(equalSign).toBeInTheDocument();
-    expect(equalSign).toHaveClass("math-token-highlight");
-
-    const openParen = screen.getByText("(");
-    const closeParen = screen.getByText(")");
-    expect(openParen).toHaveClass("math-token-highlight");
-    expect(closeParen).toHaveClass("math-token-highlight");
-
+    expect(screen.queryByText("=", { selector: ".math-token-highlight" })).not.toBeInTheDocument();
     const tokens = screen.getAllByText("{{count}}");
     const countToken = tokens.find((el) => el.tagName === "SPAN");
     expect(countToken).toHaveClass("template-token-highlight");
