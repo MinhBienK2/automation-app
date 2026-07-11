@@ -1,7 +1,6 @@
 import { useRef, useState, useId, forwardRef, useImperativeHandle, createContext } from "react";
-import { Braces, Calculator } from "lucide-react";
-import { Button } from "../../../components/ui/button";
 import { Label } from "../../../components/ui/label";
+import { MathIconButton, VariableIconButton } from "./WorkflowIconButtons";
 import { VariableAutocompletePopover, type VariableOption } from "./VariableAutocompletePopover";
 
 export const VariableOptionsContext = createContext<VariableOption[]>([]);
@@ -106,27 +105,17 @@ export const TemplateTextField = forwardRef<TemplateTextFieldRef, TemplateTextFi
           <div className="flex items-center justify-between">
             <Label htmlFor={inputId} className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
             <div className="flex items-center gap-1.5">
-              <Button
-                aria-label={`Insert math for ${label}`}
-                type="button"
-                variant="ghost"
-                size="sm"
+              <MathIconButton
+                label={`Insert math for ${label}`}
                 onClick={insertMath}
-                className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-              >
-                <Calculator className="h-3 w-3" />
-              </Button>
-              <Button
-                aria-expanded={open}
-                aria-label={`Insert variable for ${label}`}
-                type="button"
-                variant="ghost"
                 size="sm"
+              />
+              <VariableIconButton
+                open={open}
+                label={`Insert variable for ${label}`}
                 onClick={() => setOpen((current) => !current)}
-                className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-              >
-                <Braces className="h-3 w-3" />
-              </Button>
+                size="sm"
+              />
             </div>
           </div>
         )}
@@ -149,27 +138,17 @@ export const TemplateTextField = forwardRef<TemplateTextFieldRef, TemplateTextFi
           />
           {!hasLabel && !hideCompactButtons && (
             <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1 z-[3]">
-              <Button
-                aria-label="Insert math"
-                type="button"
-                variant="ghost"
-                size="sm"
+              <MathIconButton
+                label="Insert math"
                 onClick={insertMath}
-                className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-              >
-                <Calculator className="h-3 w-3" />
-              </Button>
-              <Button
-                aria-expanded={open}
-                aria-label="Insert variable"
-                type="button"
-                variant="ghost"
                 size="sm"
+              />
+              <VariableIconButton
+                open={open}
+                label="Insert variable"
                 onClick={() => setOpen((current) => !current)}
-                className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-              >
-                <Braces className="h-3 w-3" />
-              </Button>
+                size="sm"
+              />
             </div>
           )}
         </div>
@@ -267,28 +246,18 @@ export function TemplateTextareaField({
         <Label htmlFor={textareaId} className="text-sm font-medium text-[var(--app-text)]">{label}</Label>
         <div className="flex items-center gap-1.5">
           {showMath && (
-            <Button
-              aria-label={`Insert math for ${label}`}
-              type="button"
-              variant="ghost"
-              size="sm"
+            <MathIconButton
+              label={`Insert math for ${label}`}
               onClick={insertMath}
-              className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-            >
-              <Calculator className="h-3 w-3" />
-            </Button>
+              size="sm"
+            />
           )}
-          <Button
-            aria-expanded={open}
-            aria-label={`Insert variable for ${label}`}
-            type="button"
-            variant="ghost"
-            size="sm"
+          <VariableIconButton
+            open={open}
+            label={`Insert variable for ${label}`}
             onClick={() => setOpen((current) => !current)}
-            className="h-5 w-5 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-          >
-            <Braces className="h-3 w-3" />
-          </Button>
+            size="sm"
+          />
         </div>
       </div>
 

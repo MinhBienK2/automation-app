@@ -167,7 +167,7 @@ describe("TemplateTextField", () => {
     // Should render the compact trigger button
     const trigger = screen.getByRole("button", { name: "Insert variable" });
     expect(trigger).toBeInTheDocument();
-    expect(trigger.parentElement).toHaveClass("absolute");
+    expect(trigger.closest(".absolute")).toHaveClass("absolute");
 
     // Click trigger and verify popover opens
     await user.click(trigger);

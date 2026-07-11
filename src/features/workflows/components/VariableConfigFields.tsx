@@ -4,7 +4,8 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
-import { X, Calculator, Braces } from "lucide-react";
+import { X } from "lucide-react";
+import { MathIconButton, VariableIconButton } from "./WorkflowIconButtons";
 import { TemplateTextField, type TemplateTextFieldRef } from "./TemplateTextField";
 
 type SetVariableConfig = {
@@ -96,27 +97,17 @@ export function SetVariablesConfigFields({
 
               <div className="variable-row-actions">
                 {showMath && (
-                  <Button
-                    aria-label={`Insert math for variable ${index + 1}`}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
+                  <MathIconButton
+                    label={`Insert math for variable ${index + 1}`}
                     onClick={() => itemRefs.current[index]?.insertMath()}
-                    className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-                  >
-                    <Calculator className="h-3.5 w-3.5" />
-                  </Button>
+                    size="md"
+                  />
                 )}
-                <Button
-                  aria-label={`Insert variable for variable ${index + 1}`}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
+                <VariableIconButton
+                  label={`Insert variable for variable ${index + 1}`}
                   onClick={() => itemRefs.current[index]?.toggleBraces()}
-                  className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-                >
-                  <Braces className="h-3.5 w-3.5" />
-                </Button>
+                  size="md"
+                />
                 <Button
                   aria-label={`Remove variable ${index + 1}`}
                   type="button"
@@ -265,27 +256,17 @@ export function CreateObjectManualFields({
 
               <div className="variable-row-actions">
                 {showMath && (
-                  <Button
-                    aria-label={`Insert math for field ${index + 1}`}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
+                  <MathIconButton
+                    label={`Insert math for field ${index + 1}`}
                     onClick={() => itemRefs.current[index]?.insertMath()}
-                    className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-                  >
-                    <Calculator className="h-3.5 w-3.5" />
-                  </Button>
+                    size="md"
+                  />
                 )}
-                <Button
-                  aria-label={`Insert variable for field ${index + 1}`}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
+                <VariableIconButton
+                  label={`Insert variable for field ${index + 1}`}
                   onClick={() => itemRefs.current[index]?.toggleBraces()}
-                  className="h-7 w-7 p-0 text-[var(--app-text-muted)] hover:bg-[var(--app-surface-hover)] hover:text-[var(--app-accent-text)]"
-                >
-                  <Braces className="h-3.5 w-3.5" />
-                </Button>
+                  size="md"
+                />
                 <Button
                   aria-label={`Remove field ${index + 1}`}
                   type="button"
