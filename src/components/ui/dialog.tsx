@@ -109,7 +109,7 @@ function DialogContent({
           ✕
         </button>
       </div>
-      <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={() => context.setOpen(false)} />
+      <div className="modal-backdrop bg-black/60" onClick={() => context.setOpen(false)} />
     </div>,
     document.body
   );
