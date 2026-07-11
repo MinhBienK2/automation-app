@@ -450,6 +450,17 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-purple) 13%, transparent) inset;
 }
 
+.graph-node-data {
+  --graph-node-accent: var(--color-teal);
+  --graph-node-accent-bg: var(--color-teal-bg);
+
+  border-color: var(--color-teal-border);
+  background:
+    linear-gradient(90deg, var(--graph-node-accent-bg), transparent 36%),
+    var(--bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-teal) 13%, transparent) inset;
+}
+
 .graph-node-start,
 .graph-node-end {
   --graph-node-accent: var(--fg-muted);

@@ -196,6 +196,60 @@ export const variableNodeGroups = [
   },
 ] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
 
+export const dataNodeGroups = [
+  {
+    label: "Text",
+    nodes: ["extract_text", "extract_text_content", "extract_inner_html", "extract_outer_html"],
+  },
+  {
+    label: "Attribute: Single",
+    nodes: ["extract_attribute", "extract_computed_style"],
+  },
+  {
+    label: "Attribute: Bulk",
+    nodes: [
+      "extract_all_attributes",
+      "extract_data_attributes",
+      "extract_class_list",
+      "extract_descendant_attributes",
+    ],
+  },
+  {
+    label: "Form",
+    nodes: [
+      "extract_input_value",
+      "extract_select_value",
+      "extract_select_options",
+      "extract_checkbox_state",
+      "extract_form_data",
+    ],
+  },
+  {
+    label: "Table: Full",
+    nodes: ["extract_table", "extract_table_headers"],
+  },
+  {
+    label: "Table: Parts",
+    nodes: ["extract_table_row", "extract_table_column", "extract_table_cell"],
+  },
+  {
+    label: "Collection",
+    nodes: ["extract_list", "extract_list_attributes", "count_elements", "extract_structured_list"],
+  },
+  {
+    label: "Element",
+    nodes: ["extract_dimensions", "extract_visibility", "extract_element_state", "check_element_exists"],
+  },
+  {
+    label: "Page",
+    nodes: ["get_current_url", "get_page_title", "get_meta_content", "extract_page_links"],
+  },
+  {
+    label: "Pattern",
+    nodes: ["extract_regex_matches", "extract_numbers", "extract_urls", "extract_emails"],
+  },
+] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
+
 export const endNodeGroups = [
   { label: "End", nodes: ["end_success", "end_failure", "stop_workflow"] },
 ] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
@@ -240,7 +294,7 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   check_boolean_property: "Check if a boolean variable is true or false.",
   update_list_variable: "Update a list variable (push, pop, shift, unshift, remove, unique, merge).",
   create_empty_list: "Create an empty list variable.",
-  create_list_manual: "Create a list by specifying items manually.",
+  create_list_manual: "Create list manually.",
   split_text_to_list: "Split a text string into a list using a delimiter.",
   generate_number_range: "Generate a list of numbers from start to end.",
   add_to_list: "Add a value to the start, end, or uniquely to a list.",
@@ -278,6 +332,42 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   domain_allowlist: "Restrict navigation to allowed domains.",
   end_success: "End the graph successfully.",
   end_failure: "End the graph as a failure.",
+  extract_text: "Capture visible text from an element.",
+  extract_text_content: "Capture text content including hidden text.",
+  extract_inner_html: "Capture inner HTML markup of an element.",
+  extract_outer_html: "Capture outer HTML markup of an element.",
+  extract_attribute: "Capture a specific attribute value.",
+  extract_computed_style: "Capture calculated CSS style value.",
+  extract_all_attributes: "Capture all attributes of an element.",
+  extract_data_attributes: "Capture all data attributes.",
+  extract_class_list: "Capture list of CSS classes.",
+  extract_descendant_attributes: "Capture attributes of element and descendants.",
+  extract_input_value: "Capture value of an input field.",
+  extract_select_value: "Capture selected option of a dropdown.",
+  extract_select_options: "Capture all options of a dropdown.",
+  extract_checkbox_state: "Capture checked state of a checkbox.",
+  extract_form_data: "Capture all inputs inside a form.",
+  extract_table: "Capture table rows and columns.",
+  extract_table_headers: "Capture column headers of a table.",
+  extract_table_row: "Capture a specific row from a table.",
+  extract_table_column: "Capture a specific column from a table.",
+  extract_table_cell: "Capture a specific cell from a table.",
+  extract_list: "Capture text from multiple matching elements.",
+  extract_list_attributes: "Capture attribute from multiple elements.",
+  count_elements: "Count matching elements on the page.",
+  extract_structured_list: "Capture structured data from repeating containers.",
+  extract_dimensions: "Capture element position and size.",
+  extract_visibility: "Check if element is visible and in viewport.",
+  extract_element_state: "Check if element is disabled, editable, etc.",
+  check_element_exists: "Check if element selector exists on the page.",
+  get_current_url: "Capture current URL and components.",
+  get_page_title: "Capture page title.",
+  get_meta_content: "Capture page meta content attribute.",
+  extract_page_links: "Capture all link elements on the page.",
+  extract_regex_matches: "Extract pattern matches from an output.",
+  extract_numbers: "Extract all numbers from a text output.",
+  extract_urls: "Extract all URLs from a text output.",
+  extract_emails: "Extract all emails from a text output.",
 };
 
 type GraphNodePaletteProps = {

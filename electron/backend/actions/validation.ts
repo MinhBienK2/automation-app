@@ -293,6 +293,86 @@ const actionValidators = createActionValidatorMap({
       regexPatternValidation(config.config.pattern, config.config.flags),
       requiredActionString(config.config.output_name, "output_name", "Output name is required"),
     ),
+  extract_text_content: (config) => validateDataCaptureConfig(config.config),
+  extract_inner_html: (config) => validateDataCaptureConfig(config.config),
+  extract_outer_html: (config) => validateDataCaptureConfig(config.config),
+  extract_all_attributes: (config) => validateDataCaptureConfig(config.config),
+  extract_data_attributes: (config) => validateDataCaptureConfig(config.config),
+  extract_class_list: (config) => validateDataCaptureConfig(config.config),
+  extract_descendant_attributes: (config) => validateDataCaptureConfig(config.config),
+  extract_select_value: (config) => validateDataCaptureConfig(config.config),
+  extract_select_options: (config) => validateDataCaptureConfig(config.config),
+  extract_checkbox_state: (config) => validateDataCaptureConfig(config.config),
+  extract_form_data: (config) => validateDataCaptureConfig(config.config),
+  extract_table_headers: (config) => validateDataCaptureConfig(config.config),
+  extract_dimensions: (config) => validateDataCaptureConfig(config.config),
+  extract_visibility: (config) => validateDataCaptureConfig(config.config),
+  extract_element_state: (config) => validateDataCaptureConfig(config.config),
+  check_element_exists: (config) => validateDataCaptureConfig(config.config),
+  extract_computed_style: (config) =>
+    firstValidation(
+      validateDataCaptureConfig(config.config),
+      requiredActionString(config.config.property, "property", "Property is required"),
+    ),
+  extract_table_row: (config) =>
+    firstValidation(
+      validateDataCaptureConfig(config.config),
+      zeroOrPositiveInteger(config.config.row_index, "row_index", "Row index must be a non-negative integer"),
+    ),
+  extract_table_column: (config) =>
+    firstValidation(
+      validateDataCaptureConfig(config.config),
+      requiredActionString(config.config.column, "column", "Column is required"),
+    ),
+  extract_table_cell: (config) =>
+    firstValidation(
+      validateDataCaptureConfig(config.config),
+      zeroOrPositiveInteger(config.config.row, "row", "Row must be a non-negative integer"),
+      requiredActionString(String(config.config.column), "column", "Column is required"),
+    ),
+  extract_list_attributes: (config) =>
+    firstValidation(
+      validateDataCaptureConfig(config.config),
+      requiredActionString(config.config.attribute, "attribute", "Attribute is required"),
+    ),
+  extract_structured_list: (config) =>
+    firstValidation(
+      validateDataCaptureConfig(config.config),
+      !Array.isArray(config.config.mappings) || config.config.mappings.length === 0
+        ? { field: "mappings", message: "At least one mapping is required" }
+        : null,
+    ),
+  get_page_title: (config) =>
+    firstValidation(
+      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
+    ),
+  extract_page_links: (config) =>
+    firstValidation(
+      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
+    ),
+  get_meta_content: (config) =>
+    firstValidation(
+      requiredActionString(config.config.meta_name, "meta_name", "Meta name is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
+    ),
+  extract_numbers: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+    ),
+  extract_urls: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+    ),
+  extract_emails: (config) =>
+    firstValidation(
+      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
+      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+    ),
   take_screenshot: (config) =>
     safeArtifactNameValidation(
       config.config.path,

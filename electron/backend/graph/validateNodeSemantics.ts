@@ -1,5 +1,6 @@
 import type {
   ActionConfig,
+  ActionType,
   GraphNode,
   GraphNodeType,
   GraphPort,
@@ -119,6 +120,42 @@ const supportedGraphNodeTypes = new Set<string>([
   "transform_variable",
   "assert_output",
   "domain_allowlist",
+  "extract_text",
+  "extract_attribute",
+  "extract_input_value",
+  "extract_table",
+  "extract_list",
+  "count_elements",
+  "extract_regex_matches",
+  "extract_text_content",
+  "extract_inner_html",
+  "extract_outer_html",
+  "extract_computed_style",
+  "extract_all_attributes",
+  "extract_data_attributes",
+  "extract_class_list",
+  "extract_descendant_attributes",
+  "extract_select_value",
+  "extract_select_options",
+  "extract_checkbox_state",
+  "extract_form_data",
+  "extract_table_headers",
+  "extract_table_row",
+  "extract_table_column",
+  "extract_table_cell",
+  "extract_list_attributes",
+  "extract_structured_list",
+  "extract_dimensions",
+  "extract_visibility",
+  "extract_element_state",
+  "check_element_exists",
+  "get_page_title",
+  "get_meta_content",
+  "extract_page_links",
+  "extract_numbers",
+  "extract_urls",
+  "extract_emails",
+  "get_current_url",
   "quarantined",
 ]);
 
@@ -154,6 +191,56 @@ export function pushNodeSemanticIssues(
         }
       }
       break;
+    case "extract_text":
+    case "extract_attribute":
+    case "extract_input_value":
+    case "extract_table":
+    case "extract_list":
+    case "count_elements":
+    case "extract_regex_matches":
+    case "extract_text_content":
+    case "extract_inner_html":
+    case "extract_outer_html":
+    case "extract_computed_style":
+    case "extract_all_attributes":
+    case "extract_data_attributes":
+    case "extract_class_list":
+    case "extract_descendant_attributes":
+    case "extract_select_value":
+    case "extract_select_options":
+    case "extract_checkbox_state":
+    case "extract_form_data":
+    case "extract_table_headers":
+    case "extract_table_row":
+    case "extract_table_column":
+    case "extract_table_cell":
+    case "extract_list_attributes":
+    case "extract_structured_list":
+    case "extract_dimensions":
+    case "extract_visibility":
+    case "extract_element_state":
+    case "check_element_exists":
+    case "get_page_title":
+    case "get_meta_content":
+    case "extract_page_links":
+    case "extract_numbers":
+    case "extract_urls":
+    case "extract_emails":
+    case "get_current_url": {
+      if (node.config == null) {
+        issues.push(error(node.id, null, `Configure ${node.label} before running this node`));
+      } else {
+        const dummyActionConfig = {
+          type: node.node_type as ActionType,
+          config: node.config,
+        } as ActionConfig;
+        const validation = validateActionConfig(dummyActionConfig);
+        if (validation) {
+          issues.push(error(node.id, null, `Node ${node.label} has invalid config: ${validation.message}`));
+        }
+      }
+      break;
+    }
     case "call_subflow":
       pushCallSubflowIssues(node, issues, options);
       warnMissingContinuation(graph, node, "out", "Call Subflow out is unconnected; workflow ends successfully here", issues);

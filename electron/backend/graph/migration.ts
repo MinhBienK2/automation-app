@@ -4,7 +4,7 @@ import type {
 } from "../../../src/types/workflow.js";
 import { runMigrations } from "./migrations/index.js";
 
-export const CURRENT_WORKFLOW_GRAPH_VERSION = 8;
+export const CURRENT_WORKFLOW_GRAPH_VERSION = 9;
 
 /**
  * Thin shim re-exporting the new migration pipeline under the legacy name.

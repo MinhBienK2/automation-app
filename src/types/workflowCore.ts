@@ -34,6 +34,34 @@ export type ActionType =
   | "extract_list"
   | "count_elements"
   | "extract_regex_matches"
+  | "extract_text_content"
+  | "extract_inner_html"
+  | "extract_outer_html"
+  | "extract_computed_style"
+  | "extract_all_attributes"
+  | "extract_data_attributes"
+  | "extract_class_list"
+  | "extract_descendant_attributes"
+  | "extract_select_value"
+  | "extract_select_options"
+  | "extract_checkbox_state"
+  | "extract_form_data"
+  | "extract_table_headers"
+  | "extract_table_row"
+  | "extract_table_column"
+  | "extract_table_cell"
+  | "extract_list_attributes"
+  | "extract_structured_list"
+  | "extract_dimensions"
+  | "extract_visibility"
+  | "extract_element_state"
+  | "check_element_exists"
+  | "get_page_title"
+  | "get_meta_content"
+  | "extract_page_links"
+  | "extract_numbers"
+  | "extract_urls"
+  | "extract_emails"
   | "take_screenshot"
   | "write_text_file"
   | "go_back"
@@ -754,6 +782,155 @@ export type ActionConfig =
         output_name: string;
         append?: boolean | null;
         dedupe?: boolean | null;
+      };
+    }
+  | {
+      type: "extract_text_content";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_inner_html";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_outer_html";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_computed_style";
+      config: DataCaptureElementConfig & {
+        property: string;
+      };
+    }
+  | {
+      type: "extract_all_attributes";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_data_attributes";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_class_list";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_descendant_attributes";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_select_value";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_select_options";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_checkbox_state";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_form_data";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_table_headers";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_table_row";
+      config: DataCaptureElementConfig & {
+        row_index: number;
+      };
+    }
+  | {
+      type: "extract_table_column";
+      config: DataCaptureElementConfig & {
+        column: string;
+      };
+    }
+  | {
+      type: "extract_table_cell";
+      config: DataCaptureElementConfig & {
+        row: number;
+        column: number;
+      };
+    }
+  | {
+      type: "extract_list_attributes";
+      config: DataCaptureElementConfig & {
+        attribute: string;
+      };
+    }
+  | {
+      type: "extract_structured_list";
+      config: DataCaptureElementConfig & {
+        mappings: Array<{
+          name: string;
+          selector: string;
+          capture_type: string;
+          attribute?: string;
+        }>;
+      };
+    }
+  | {
+      type: "extract_dimensions";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_visibility";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_element_state";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "check_element_exists";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "get_page_title";
+      config: {
+        output_name: string;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "get_meta_content";
+      config: {
+        meta_name: string;
+        output_name: string;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "extract_page_links";
+      config: {
+        output_name: string;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "extract_numbers";
+      config: {
+        source_name: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "extract_urls";
+      config: {
+        source_name: string;
+        output_name: string;
+      };
+    }
+  | {
+      type: "extract_emails";
+      config: {
+        source_name: string;
+        output_name: string;
       };
     }
   | {

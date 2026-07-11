@@ -470,6 +470,8 @@ export function updateActionConfigField(
     case "get_current_url":
     case "quarantined":
       return config;
+    default:
+      return config;
   }
 }
 

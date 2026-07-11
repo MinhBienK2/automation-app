@@ -535,6 +535,8 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Iframe XPath"];
     case "switch_to_parent_frame":
       return ["No fields"];
+    default:
+      return [];
   }
 }
 

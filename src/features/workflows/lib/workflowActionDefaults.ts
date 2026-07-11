@@ -153,6 +153,86 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
           dedupe: true,
         },
       };
+    case "extract_text_content":
+    case "extract_inner_html":
+    case "extract_outer_html":
+    case "extract_all_attributes":
+    case "extract_data_attributes":
+    case "extract_class_list":
+    case "extract_descendant_attributes":
+    case "extract_select_value":
+    case "extract_select_options":
+    case "extract_checkbox_state":
+    case "extract_form_data":
+    case "extract_table_headers":
+    case "extract_dimensions":
+    case "extract_visibility":
+    case "extract_element_state":
+    case "check_element_exists":
+      return {
+        type: actionType,
+        config: { target: null, output_name: actionType.replace("extract_", "") },
+      } as ActionConfig;
+    case "extract_computed_style":
+      return {
+        type: actionType,
+        config: { target: null, property: "", output_name: "style" },
+      } as ActionConfig;
+    case "extract_table_row":
+      return {
+        type: actionType,
+        config: { target: null, row_index: 0, output_name: "row" },
+      } as ActionConfig;
+    case "extract_table_column":
+      return {
+        type: actionType,
+        config: { target: null, column: "", output_name: "column" },
+      } as ActionConfig;
+    case "extract_table_cell":
+      return {
+        type: actionType,
+        config: { target: null, row: 0, column: 0, output_name: "cell" },
+      } as ActionConfig;
+    case "extract_list_attributes":
+      return {
+        type: actionType,
+        config: { target: null, attribute: "", output_name: "list_attributes" },
+      } as ActionConfig;
+    case "extract_structured_list":
+      return {
+        type: actionType,
+        config: { target: null, mappings: [], output_name: "structured_list" },
+      } as ActionConfig;
+    case "get_page_title":
+      return {
+        type: actionType,
+        config: { output_name: "page_title" },
+      } as ActionConfig;
+    case "get_meta_content":
+      return {
+        type: actionType,
+        config: { meta_name: "", output_name: "meta_content" },
+      } as ActionConfig;
+    case "extract_page_links":
+      return {
+        type: actionType,
+        config: { output_name: "page_links" },
+      } as ActionConfig;
+    case "extract_numbers":
+      return {
+        type: actionType,
+        config: { source_name: "text", output_name: "numbers" },
+      } as ActionConfig;
+    case "extract_urls":
+      return {
+        type: actionType,
+        config: { source_name: "text", output_name: "urls" },
+      } as ActionConfig;
+    case "extract_emails":
+      return {
+        type: actionType,
+        config: { source_name: "text", output_name: "emails" },
+      } as ActionConfig;
     case "extract_attribute":
       return {
         type: actionType,

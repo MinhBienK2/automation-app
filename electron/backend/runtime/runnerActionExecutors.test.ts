@@ -1367,6 +1367,89 @@ function minimalRuntime(overrides: Partial<RunnerActionRuntime> = {}): RunnerAct
   };
 }
 
+  test("extract_text_content, extract_inner_html, extract_outer_html, extract_computed_style, extract_all_attributes work correctly", async () => {
+    const runtime = minimalRuntime();
+    const mockLocator = {
+      textContent: async () => "Plain text",
+      innerHTML: async () => "<span>HTML</span>",
+      evaluate: async (fn: any, arg?: any) => {
+        const mockEl = {
+          outerHTML: "<div>Outer</div>",
+          attributes: [
+            { name: "class", value: "test-class" },
+            { name: "data-id", value: "123" },
+          ],
+        };
+        if (arg === "background-color") {
+          return "rgb(255, 0, 0)";
+        }
+        return fn(mockEl, arg);
+      },
+    } as any;
+
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies({
+      locatorForAction: async () => mockLocator,
+    }));
+
+    await executeRegisteredAction(executors, {
+      type: "extract_text_content",
+      config: { output_name: "text" },
+    } as any);
+    expect(runtime.outputs.text).toBe("Plain text");
+
+    await executeRegisteredAction(executors, {
+      type: "extract_inner_html",
+      config: { output_name: "inner" },
+    } as any);
+    expect(runtime.outputs.inner).toBe("<span>HTML</span>");
+
+    await executeRegisteredAction(executors, {
+      type: "extract_outer_html",
+      config: { output_name: "outer" },
+    } as any);
+    expect(runtime.outputs.outer).toBe("<div>Outer</div>");
+
+    await executeRegisteredAction(executors, {
+      type: "extract_computed_style",
+      config: { property: "background-color", output_name: "color" },
+    } as any);
+    expect(runtime.outputs.color).toBe("rgb(255, 0, 0)");
+
+    await executeRegisteredAction(executors, {
+      type: "extract_all_attributes",
+      config: { output_name: "attrs" },
+    } as any);
+    expect(runtime.outputs.attrs).toEqual({
+      class: "test-class",
+      "data-id": "123",
+    });
+  });
+
+  test("extract_numbers, extract_urls, extract_emails pattern extractors work correctly", async () => {
+    const runtime = minimalRuntime();
+    runtime.outputs.source = "Call me at +1 234-567-8900 or email at test@example.com. Visit https://google.com.";
+
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    await executeRegisteredAction(executors, {
+      type: "extract_numbers",
+      config: { source_name: "source", output_name: "numbers" },
+    } as any);
+    expect(runtime.outputs.numbers).toEqual([1, 234, -567, -8900]);
+
+    await executeRegisteredAction(executors, {
+      type: "extract_urls",
+      config: { source_name: "source", output_name: "urls" },
+    } as any);
+    expect(runtime.outputs.urls).toEqual(["https://google.com."]);
+
+    await executeRegisteredAction(executors, {
+      type: "extract_emails",
+      config: { source_name: "source", output_name: "emails" },
+    } as any);
+    expect(runtime.outputs.emails).toEqual(["test@example.com"]);
+  });
+
 function minimalDependencies(
   overrides: Partial<RunnerActionExecutorDependencies> = {},
 ): RunnerActionExecutorDependencies {

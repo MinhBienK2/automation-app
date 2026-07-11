@@ -14,6 +14,7 @@ import {
   Workflow,
   Zap,
   ChevronDown,
+  Database,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -27,6 +28,7 @@ import {
   endNodeGroups,
   logicNodeGroups,
   variableNodeGroups,
+  dataNodeGroups,
 } from "./WorkflowGraphPalettes";
 
 type NodePaletteGroups = Array<{ label: string; nodes: GraphNodeType[] }>;
@@ -234,6 +236,22 @@ export function WorkflowGraphToolbar({
           }
         >
           <Variable aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          label="Add Data"
+          type="button"
+          variant="ghost"
+          disabled={isReadOnly}
+          onClick={() =>
+            onOpenNodePalette(
+              "Choose a data node",
+              "Add Data Node",
+              "Search data nodes",
+              dataNodeGroups,
+            )
+          }
+        >
+          <Database aria-hidden="true" />
         </IconButton>
         <IconButton
           label="Add End"

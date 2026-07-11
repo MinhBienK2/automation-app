@@ -125,6 +125,45 @@ function graphNodeCategoryClass(nodeType: GraphNodeType) {
   return `graph-node-${graphNodeCategory(nodeType)}`;
 }
 
+const dataNodeTypes = new Set<string>([
+  "extract_text",
+  "extract_attribute",
+  "extract_input_value",
+  "extract_table",
+  "extract_list",
+  "count_elements",
+  "extract_regex_matches",
+  "get_current_url",
+  "extract_text_content",
+  "extract_inner_html",
+  "extract_outer_html",
+  "extract_computed_style",
+  "extract_all_attributes",
+  "extract_data_attributes",
+  "extract_class_list",
+  "extract_descendant_attributes",
+  "extract_select_value",
+  "extract_select_options",
+  "extract_checkbox_state",
+  "extract_form_data",
+  "extract_table_headers",
+  "extract_table_row",
+  "extract_table_column",
+  "extract_table_cell",
+  "extract_list_attributes",
+  "extract_structured_list",
+  "extract_dimensions",
+  "extract_visibility",
+  "extract_element_state",
+  "check_element_exists",
+  "get_page_title",
+  "get_meta_content",
+  "extract_page_links",
+  "extract_numbers",
+  "extract_urls",
+  "extract_emails",
+]);
+
 function graphNodeCategoryLabel(nodeType: GraphNodeType) {
   switch (graphNodeCategory(nodeType)) {
     case "action":
@@ -135,6 +174,8 @@ function graphNodeCategoryLabel(nodeType: GraphNodeType) {
       return "Subflow";
     case "variable":
       return "Variable";
+    case "data":
+      return "Data";
     case "end":
       return "End";
     default:
@@ -149,6 +190,9 @@ function graphNodeCategory(nodeType: GraphNodeType) {
   if (nodeType === "end_success" || nodeType === "end_failure" || nodeType === "stop_workflow") {
     return "end";
   }
+  if (dataNodeTypes.has(nodeType)) {
+    return "data";
+  }
   if (
     nodeType === "set_variable" ||
     nodeType === "set_json_variables" ||
@@ -156,6 +200,26 @@ function graphNodeCategory(nodeType: GraphNodeType) {
     nodeType === "update_text_variable" ||
     nodeType === "update_flag_variable" ||
     nodeType === "update_list_variable" ||
+    nodeType === "create_empty_list" ||
+    nodeType === "create_list_manual" ||
+    nodeType === "split_text_to_list" ||
+    nodeType === "generate_number_range" ||
+    nodeType === "add_to_list" ||
+    nodeType === "remove_from_list_by_index" ||
+    nodeType === "remove_from_list_by_value" ||
+    nodeType === "merge_lists" ||
+    nodeType === "get_list_item" ||
+    nodeType === "get_list_length" ||
+    nodeType === "slice_list" ||
+    nodeType === "join_list" ||
+    nodeType === "filter_list" ||
+    nodeType === "map_list_property" ||
+    nodeType === "sort_reverse_list" ||
+    nodeType === "execute_list_script" ||
+    nodeType === "check_list_empty" ||
+    nodeType === "check_list_contains" ||
+    nodeType === "check_list_any_match" ||
+    nodeType === "check_list_all_match" ||
     nodeType === "create_empty_object" ||
     nodeType === "create_object_manual" ||
     nodeType === "parse_json_to_object" ||

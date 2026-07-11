@@ -51,6 +51,8 @@
   /* Misc accent swatches (for TweaksPanel) */
   --color-cyan: #32d3e6;
   --color-teal: #2bd5b3;
+  --color-teal-bg: rgba(43, 213, 179, 0.12);
+  --color-teal-border: rgba(43, 213, 179, 0.56);
   --color-purple: #b07dfd;
   --color-purple-bg: rgba(176, 125, 253, 0.12);
   --color-purple-border: rgba(176, 125, 253, 0.56);
@@ -141,6 +143,8 @@ html[data-theme="light"] {
   /* Misc accent swatches overrides for light theme */
   --color-cyan: #00a6b8;
   --color-teal: #0e9f82;
+  --color-teal-bg: rgba(14, 159, 130, 0.08);
+  --color-teal-border: rgba(14, 159, 130, 0.48);
   --color-purple: #7d3ee8;
   --color-purple-bg: rgba(125, 62, 232, 0.08);
   --color-purple-border: rgba(125, 62, 232, 0.48);

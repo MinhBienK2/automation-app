@@ -1256,8 +1256,60 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { name: "output", match: "equals", value: "" };
     case "domain_allowlist":
       return { domains: [] };
+    case "extract_text":
+    case "extract_text_content":
+    case "extract_inner_html":
+    case "extract_outer_html":
+    case "extract_all_attributes":
+    case "extract_data_attributes":
+    case "extract_class_list":
+    case "extract_descendant_attributes":
+    case "extract_select_value":
+    case "extract_select_options":
+    case "extract_checkbox_state":
+    case "extract_form_data":
+    case "extract_table_headers":
+    case "extract_dimensions":
+    case "extract_visibility":
+    case "extract_element_state":
+    case "check_element_exists":
+    case "extract_table":
+    case "count_elements":
+      return { target: null, output_name: nodeType.replace("extract_", "") };
+    case "extract_attribute":
+      return { target: null, attribute: "", output_name: "attribute" };
+    case "extract_input_value":
+      return { target: null, output_name: "input_value" };
+    case "extract_computed_style":
+      return { target: null, property: "", output_name: "style" };
+    case "extract_table_row":
+      return { target: null, row_index: 0, output_name: "row" };
+    case "extract_table_column":
+      return { target: null, column: "", output_name: "column" };
+    case "extract_table_cell":
+      return { target: null, row: 0, column: 0, output_name: "cell" };
+    case "extract_list":
+      return { target: null, output_name: "list" };
+    case "extract_list_attributes":
+      return { target: null, attribute: "", output_name: "list_attributes" };
+    case "extract_structured_list":
+      return { target: null, mappings: [], output_name: "structured_list" };
     case "get_current_url":
-      return {};
+      return { output_name: "url" };
+    case "get_page_title":
+      return { output_name: "page_title" };
+    case "get_meta_content":
+      return { meta_name: "", output_name: "meta_content" };
+    case "extract_page_links":
+      return { output_name: "page_links" };
+    case "extract_regex_matches":
+      return { source_name: "text", pattern: "", flags: "g", output_name: "matches", append: true, dedupe: true };
+    case "extract_numbers":
+      return { source_name: "text", output_name: "numbers" };
+    case "extract_urls":
+      return { source_name: "text", output_name: "urls" };
+    case "extract_emails":
+      return { source_name: "text", output_name: "emails" };
     case "call_subflow":
       return { subflow_id: "", input_mapping: [], output_prefix: null };
     default:

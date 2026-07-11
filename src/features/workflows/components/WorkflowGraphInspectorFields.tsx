@@ -32,6 +32,7 @@ import { BooleanNodeFields } from "./inspector/fields/BooleanNodeFields";
 import { ListNodeFields } from "./inspector/fields/ListNodeFields";
 import { ObjectNodeFields } from "./inspector/fields/ObjectNodeFields";
 import { ActionNodeConfigFields } from "./inspector/fields/ActionNodeConfigFields";
+import { DataNodeFields } from "./inspector/fields/DataNodeFields";
 
 type NodeConfigFieldsProps = {
   node: GraphNode;
@@ -562,6 +563,49 @@ export function NodeConfigFields({
             Configure this node by connecting its named ports on the canvas.
           </p>
         </div>
+      );
+    case "extract_text":
+    case "extract_attribute":
+    case "extract_input_value":
+    case "extract_table":
+    case "extract_list":
+    case "count_elements":
+    case "extract_regex_matches":
+    case "extract_text_content":
+    case "extract_inner_html":
+    case "extract_outer_html":
+    case "extract_computed_style":
+    case "extract_all_attributes":
+    case "extract_data_attributes":
+    case "extract_class_list":
+    case "extract_descendant_attributes":
+    case "extract_select_value":
+    case "extract_select_options":
+    case "extract_checkbox_state":
+    case "extract_form_data":
+    case "extract_table_headers":
+    case "extract_table_row":
+    case "extract_table_column":
+    case "extract_table_cell":
+    case "extract_list_attributes":
+    case "extract_structured_list":
+    case "extract_dimensions":
+    case "extract_visibility":
+    case "extract_element_state":
+    case "check_element_exists":
+    case "get_page_title":
+    case "get_meta_content":
+    case "extract_page_links":
+    case "extract_numbers":
+    case "extract_urls":
+    case "extract_emails":
+    case "get_current_url":
+      return (
+        <DataNodeFields
+          node={node}
+          onChange={onChange}
+          variableOptions={variableOptions}
+        />
       );
     case "action":
       return (
