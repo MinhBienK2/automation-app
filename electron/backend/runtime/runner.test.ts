@@ -36,7 +36,7 @@ describe("BrowserWorkflowRunner", () => {
       "utf8",
     );
 
-    expect(existsSync(path.join(process.cwd(), "electron/backend/evidence/artifacts.ts"))).toBe(
+    expect(existsSync(path.join(process.cwd(), "electron/backend/features/evidence/artifacts.ts"))).toBe(
       true,
     );
     expect(runnerSource).toContain("./runnerEvidence.js");

@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import { WorkflowRepository } from "../../repositories/workflowRepository.js";
+import { WorkflowRepository } from "../../features/workflows/workflowRepository.js";
 import { migrateAllGraphs } from "./migrateAllGraphs.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";

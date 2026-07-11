@@ -6,7 +6,7 @@ import type {
   ElementTarget,
   RunState,
 } from "../../../src/types/workflow.js";
-import type { EvidenceCategory } from "../evidence/model.js";
+import type { EvidenceCategory } from "../features/evidence/model.js";
 
 export type ActionTrace = {
   node_id: string;

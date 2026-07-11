@@ -1,10 +1,10 @@
 import { isCommandError, type CommandError } from "./commandHelpers.js";
 
-export { createWorkflowCommandHandlers } from "./commands/index.js";
-export type WorkflowCommandHandlers = ReturnType<typeof import("./commands/index.js").createWorkflowCommandHandlers>;
+export { createWorkflowCommandHandlers } from "./features/index.js";
+export type WorkflowCommandHandlers = ReturnType<typeof import("./features/index.js").createWorkflowCommandHandlers>;
 
 export { finishRun } from "./runtime/runDbHelpers.js";
-export { defaultWorkflowSettings, deriveFingerprintSeedFromIdentityId } from "./services/workflowSettingsService.js";
+export { defaultWorkflowSettings, deriveFingerprintSeedFromIdentityId } from "./features/workflows/workflowSettingsService.js";
 export type { CommandError } from "./commandHelpers.js";
 
 export function serializeCommandError(error: unknown): CommandError {

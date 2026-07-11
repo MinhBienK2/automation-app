@@ -17,7 +17,7 @@ import {
   type ActionExecutorMap,
 } from "../actions/execution.js";
 import type { AppPaths } from "../db/database.js";
-import { resolveEvidenceArtifact } from "../evidence/artifacts.js";
+import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { isPlainRecord } from "../shared/records.js";
 import type { ActionTrace } from "./actionTrace.js";
 import {

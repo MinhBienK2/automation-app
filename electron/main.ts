@@ -212,10 +212,10 @@ app.whenReady().then(async () => {
     appPaths,
     database,
     defaultFingerprintFontsDir: path.join(appPaths.rootDir, ".local", "cloakbrowser-fonts", "linux"),
-    async openPath(targetPath) {
+    async openPath(targetPath: string) {
       await shell.openPath(targetPath);
     },
-    async saveWorkflowPackageFile(packageValue) {
+    async saveWorkflowPackageFile(packageValue: any) {
       const { canceled, filePath } = await dialog.showSaveDialog({
         defaultPath: path.join(
           appPaths.rootDir,
@@ -229,7 +229,7 @@ app.whenReady().then(async () => {
       await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
       return filePath;
     },
-    async saveProjectPackageFile(packageValue) {
+    async saveProjectPackageFile(packageValue: any) {
       const { canceled, filePath } = await dialog.showSaveDialog({
         defaultPath: path.join(
           appPaths.rootDir,
@@ -243,7 +243,7 @@ app.whenReady().then(async () => {
       await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
       return filePath;
     },
-    async saveSubflowPackageFile(packageValue) {
+    async saveSubflowPackageFile(packageValue: any) {
       const { canceled, filePath } = await dialog.showSaveDialog({
         defaultPath: path.join(
           appPaths.rootDir,

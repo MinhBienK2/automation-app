@@ -4,7 +4,7 @@ import type { WorkflowGraph } from "../../../../src/types/workflow.js";
 import { runMigrations } from "../../graph/migrations/index.js";
 import { validateActionConfig } from "../../actions/schemas/index.js";
 import { quarantineNode } from "../../graph/quarantine.js";
-import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "../../repositories/normalizedGraphRepository.js";
+import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "../../features/workflows/normalizedGraphRepository.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 
 export type MigrationReport = {

@@ -198,14 +198,14 @@ export const workflowJourneyCoverage = {
   evidence_persistence: entry([
     ...batchEvidence,
     "tests/e2e/capture-network.e2e.ts",
-    "electron/backend/commands/settingsCommands.test.ts",
+    "electron/backend/features/settings/settingsCommands.test.ts",
   ], "desktop_e2e_and_backend"),
   import_export: entry([
     ...workflowPackage,
     "src/features/workflows/pages/WorkflowListPage.test.tsx",
-    "electron/backend/commands/packageCommands.test.ts",
+    "electron/backend/features/workflows/packageCommands.test.ts",
   ], "desktop_e2e_and_backend"),
-  batch_execution: entry([...batchEvidence, "electron/backend/commands/workflowCommands.test.ts"], "desktop_e2e_and_backend"),
+  batch_execution: entry([...batchEvidence, "electron/backend/features/workflows/workflowCommands.test.ts"], "desktop_e2e_and_backend"),
 } satisfies Record<string, CoverageEntry>;
 
 export type BehaviorCapabilityStatus = "covered" | "gap" | "not_applicable";
