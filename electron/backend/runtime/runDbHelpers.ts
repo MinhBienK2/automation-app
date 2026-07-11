@@ -55,6 +55,9 @@ export async function finishRun(
 ): Promise<void> {
   if (!runId) return;
   await database.transaction(async (tx) => {
+    const outputsForDb = { ...state.outputs };
+    delete outputsForDb.__action_traces;
+
     await tx.execute(
       `UPDATE runs
        SET status = $1,
@@ -65,7 +68,7 @@ export async function finishRun(
       [
         state.status,
         new Date().toISOString(),
-        JSON.stringify(state.outputs ?? {}),
+        JSON.stringify(outputsForDb),
         state.error ? JSON.stringify(state.error) : null,
         runId,
         tx.ownerId,

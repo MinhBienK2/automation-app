@@ -375,10 +375,19 @@ export function pushActionTrace(
   runtime: TraceSink,
   trace: Omit<ActionTrace, "trace_sequence"> & { trace_sequence?: number },
 ) {
+  const lastTrace = runtime.traces[runtime.traces.length - 1];
+  const lastSequence = lastTrace ? (lastTrace.trace_sequence ?? 0) : -1;
+  const sequence = trace.trace_sequence ?? (lastSequence + 1);
+
   runtime.traces.push({
     ...trace,
-    trace_sequence: trace.trace_sequence ?? runtime.traces.length,
+    trace_sequence: sequence,
   });
+
+  const maxTraces = 1000;
+  if (runtime.traces.length > maxTraces) {
+    runtime.traces.shift();
+  }
 }
 
 export function snapshotOutputs(outputs: Record<string, unknown>) {

@@ -88,6 +88,18 @@ describe("RunMonitorDrawer", () => {
           current_step_id: "step-2",
           current_step_number: 2,
           completed_step_ids: ["step-1"],
+          outputs: {
+            __action_traces: [
+              {
+                node_id: "step-1",
+                label: "Open page",
+                action_type: "wait",
+                status: "success",
+                started_at: new Date().toISOString(),
+                finished_at: new Date().toISOString(),
+              },
+            ],
+          },
         }}
         onClose={vi.fn()}
         onFocusNode={vi.fn()}

@@ -135,14 +135,6 @@ function buildTimeline(graph: WorkflowGraph, runState: RunState) {
     : [];
 
   const traces = [...rawTraces];
-  while (traces.length < runState.completed_step_ids.length) {
-    traces.push({
-      node_id: runState.completed_step_ids[traces.length],
-      status: "success",
-      output_summary: { added_keys: [], changed_keys: [], removed_keys: [] },
-      output_values: {},
-    });
-  }
 
   traces.forEach((trace, index) => {
     const status: RunMonitorTimelineEventStatus =

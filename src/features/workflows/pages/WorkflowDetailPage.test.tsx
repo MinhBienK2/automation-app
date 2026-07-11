@@ -206,13 +206,33 @@ describe("Workflow detail integration", () => {
       created_at: "3",
       updated_at: "3",
     };
-    const runningState = {
+    const runningState: RunState = {
       ...idleRunState,
       status: "running" as const,
       mode: "run_workflow" as const,
       current_step_id: "step-2",
       current_step_number: 2,
       completed_step_ids: ["step-1", "step-1"],
+      outputs: {
+        __action_traces: [
+          {
+            node_id: "step-1",
+            label: "Wait for page",
+            action_type: "wait",
+            status: "success",
+            started_at: new Date().toISOString(),
+            finished_at: new Date().toISOString(),
+          },
+          {
+            node_id: "step-1",
+            label: "Wait for page",
+            action_type: "wait",
+            status: "success",
+            started_at: new Date().toISOString(),
+            finished_at: new Date().toISOString(),
+          },
+        ],
+      },
     };
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep, fillStep, submitStep]),
