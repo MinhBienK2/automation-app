@@ -9,6 +9,7 @@ import {
   type WorkflowCommandHandlers,
 } from "./backend/commands.js";
 import { createAppPaths } from "./backend/db/database.js";
+import { initializeJwtSecret } from "./backend/db/pgSync.js";
 import { loadAppConfig } from "./backend/config/appConfig.js";
 import { initializePgPool } from "./backend/db/pgSync.js";
 import { PgDbAdapter } from "./backend/db/dbAdapter.js";
@@ -153,7 +154,8 @@ function loadEnvFile(appPath: string) {
 app.whenReady().then(async () => {
   loadEnvFile(app.getAppPath());
   const appPaths = createAppPaths(app.getPath("appData"));
-  
+  initializeJwtSecret(appPaths.rootDir);
+
   // Load config & assert PG URL
   const appConfig = loadAppConfig(appPaths.rootDir);
   if (!appConfig.publicDatabaseUrl) {

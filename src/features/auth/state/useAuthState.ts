@@ -1,6 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { login as apiLogin, logout as apiLogout, me as apiMe } from "../../../lib/workflowApi";
 
+// Verify a saved token, retrying on transient backend errors (e.g. DB pool
+// not ready at startup). Returns null only when the token is definitively
+// invalid; throws if it could not be verified after retries.
+async function verifySavedSession(token: string, maxAttempts = 5): Promise<ReturnType<typeof apiMe> | null> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await apiMe({ token });
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -22,21 +40,26 @@ export function useAuthState() {
       setIsLoading(true);
       const savedToken = localStorage.getItem("auth_token");
 
-      if (savedToken) {
-        const user = await apiMe({ token: savedToken });
-        if (user) {
-          setCurrentUser(user);
-          setToken(savedToken);
-          setMode("team");
-        } else {
-          localStorage.removeItem("auth_token");
-          setMode("pending");
-        }
+      if (!savedToken) {
+        setMode("pending");
+        return;
+      }
+
+      // Retry a few times in case the backend (or its DB pool) isn't ready
+      // yet at startup. A transient failure must NOT destroy the saved token.
+      const user = await verifySavedSession(savedToken);
+      if (user) {
+        setCurrentUser(user);
+        setToken(savedToken);
+        setMode("team");
       } else {
+        // Only reached when the token is definitively invalid/expired.
+        localStorage.removeItem("auth_token");
         setMode("pending");
       }
     } catch (error: any) {
       console.error("Failed to load auth config or session:", error);
+      // Keep the token so the next launch can retry; show login for now.
       setMode("pending");
     } finally {
       setIsLoading(false);
