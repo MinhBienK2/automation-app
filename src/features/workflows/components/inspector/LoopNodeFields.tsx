@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Input } from "../../../../components/ui/input";
 import { Label } from "../../../../components/ui/label";
 import { Select } from "../../../../components/ui/select";
 import { Textarea } from "../../../../components/ui/textarea";
+import { Checkbox } from "../../../../components/ui/checkbox";
 import { ActionConfigFieldGroup } from "../ActionConfigFieldGroup";
 import { ConditionFields, conditionFromConfig } from "../WorkflowGraphConditionFields";
+import { TemplateTextField, type VariableOption } from "../TemplateTextField";
 import type { GraphNode } from "../../../../types/workflow";
 import {
   arrayConfig,
@@ -15,9 +18,18 @@ import { VariableNumericInput } from "../VariableNumericInput";
 type LoopNodeFieldsProps = {
   node: GraphNode;
   onChange: (node: GraphNode) => void;
+  variableOptions?: VariableOption[];
 };
 
-export function LoopNodeFields({ node, onChange }: LoopNodeFieldsProps) {
+export function LoopNodeFields({ node, onChange, variableOptions }: LoopNodeFieldsProps) {
+  const hasAdvancedValues = Boolean(
+    stringConfig(node.config, "start_index", "") ||
+    stringConfig(node.config, "end_index", "") ||
+    stringConfig(node.config, "max_loops", "") ||
+    stringConfig(node.config, "min_loops", "")
+  );
+  const [showAdvanced, setShowAdvanced] = useState(hasAdvancedValues);
+
   function updateConfig(config: unknown) {
     onChange({ ...node, config });
   }
@@ -52,7 +64,7 @@ export function LoopNodeFields({ node, onChange }: LoopNodeFieldsProps) {
       ? "variable_array"
       : "manual";
     return (
-      <div className="graph-config-fields">
+      <div className="graph-config-fields space-y-4">
         <ActionConfigFieldGroup title="Iteration source">
           <Label>
             Items source
@@ -121,6 +133,90 @@ export function LoopNodeFields({ node, onChange }: LoopNodeFieldsProps) {
             </Label>
           )}
         </ActionConfigFieldGroup>
+
+        <div className="flex items-center gap-2 p-1">
+          <Checkbox
+            id="show-advanced-loop-settings"
+            checked={showAdvanced}
+            onCheckedChange={(checked) => setShowAdvanced(Boolean(checked))}
+          />
+          <label
+            htmlFor="show-advanced-loop-settings"
+            className="text-sm font-semibold select-none cursor-pointer text-muted-foreground hover:text-foreground"
+          >
+            Advanced settings
+          </label>
+        </div>
+
+        {showAdvanced && (
+          <div className="space-y-4 border-t border-border/60 pt-4">
+            {/* Range Selection Group */}
+            <div className="p-3 border border-border/80 rounded-lg bg-surface-inset space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-secondary font-mono">
+                Range Selection (Slice)
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <TemplateTextField
+                  label="Start Index"
+                  placeholder="0"
+                  value={stringConfig(node.config, "start_index", "")}
+                  onChange={(val) =>
+                    updateConfig({
+                      ...objectConfig(node.config),
+                      start_index: val || null,
+                    })
+                  }
+                  variableOptions={variableOptions}
+                />
+                <TemplateTextField
+                  label="End Index (Exclusive)"
+                  placeholder="e.g. 5"
+                  value={stringConfig(node.config, "end_index", "")}
+                  onChange={(val) =>
+                    updateConfig({
+                      ...objectConfig(node.config),
+                      end_index: val || null,
+                    })
+                  }
+                  variableOptions={variableOptions}
+                />
+              </div>
+            </div>
+
+            {/* Loop Limits Group */}
+            <div className="p-3 border border-border/80 rounded-lg bg-surface-inset space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-secondary font-mono">
+                Loop Limits & Padding
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <TemplateTextField
+                  label="Maximum loops"
+                  placeholder="No limit"
+                  value={stringConfig(node.config, "max_loops", "")}
+                  onChange={(val) =>
+                    updateConfig({
+                      ...objectConfig(node.config),
+                      max_loops: val || null,
+                    })
+                  }
+                  variableOptions={variableOptions}
+                />
+                <TemplateTextField
+                  label="Minimum loops"
+                  placeholder="0"
+                  value={stringConfig(node.config, "min_loops", "")}
+                  onChange={(val) =>
+                    updateConfig({
+                      ...objectConfig(node.config),
+                      min_loops: val || null,
+                    })
+                  }
+                  variableOptions={variableOptions}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

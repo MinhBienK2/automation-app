@@ -71,6 +71,7 @@ export function NodeConfigFields({
         <LoopNodeFields
           node={node}
           onChange={onChange}
+          variableOptions={variableOptions}
         />
       );
     case "switch":

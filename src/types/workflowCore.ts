@@ -1560,6 +1560,10 @@ export type ActionConfig =
         array_variable?: string | null;
         items: string[];
         steps: CompiledNestedAction[];
+        start_index?: string | null;
+        end_index?: string | null;
+        max_loops?: string | null;
+        min_loops?: string | null;
       };
     }
   | {

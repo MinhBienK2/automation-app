@@ -2012,6 +2012,57 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
+  test("supports repeat_for_each with start_index, end_index, max_loops, and min_loops", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("set-array", "Set Array", {
+            type: "set_json_variables",
+            config: {
+              json: "{\"items\":[\"A\",\"B\",\"C\",\"D\",\"E\"]}",
+            },
+          }),
+          step("loop", "Loop items", {
+            type: "repeat_for_each",
+            config: {
+              item_name: "val",
+              array_variable: "items",
+              items: [],
+              start_index: "1",
+              end_index: "4",
+              max_loops: "2",
+              min_loops: "3",
+              steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "history_{{system.loop.index}}", value_type: "text", value: "{{val}}" },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      "history_0": "B",
+      "history_1": "C",
+      "history_2": "",
+    });
+  });
+
   test("populates system.last_error and last_error during try_catch execution", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),

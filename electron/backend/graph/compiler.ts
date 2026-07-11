@@ -276,16 +276,30 @@ function compilePath(
     }
     case "repeat_for_each": {
       const arrayVariable = stringField(node.config, "array_variable");
+      const repeatConfig: Record<string, any> = {
+        item_name: requiredString(node.config, "item_name", "Item name is required"),
+        array_variable: arrayVariable,
+        items: arrayVariable
+          ? []
+          : stringArray(node.config, "items", "Items are required"),
+        steps: compileNestedConfigs(graph, node.id, "loop", visited, options),
+      };
+
+      const startIndex = stringField(node.config, "start_index");
+      if (startIndex) repeatConfig.start_index = startIndex;
+
+      const endIndex = stringField(node.config, "end_index");
+      if (endIndex) repeatConfig.end_index = endIndex;
+
+      const maxLoops = stringField(node.config, "max_loops");
+      if (maxLoops) repeatConfig.max_loops = maxLoops;
+
+      const minLoops = stringField(node.config, "min_loops");
+      if (minLoops) repeatConfig.min_loops = minLoops;
+
       steps.push(step(node, {
         type: "repeat_for_each",
-        config: {
-          item_name: requiredString(node.config, "item_name", "Item name is required"),
-          array_variable: arrayVariable,
-          items: arrayVariable
-            ? []
-            : stringArray(node.config, "items", "Items are required"),
-          steps: compileNestedConfigs(graph, node.id, "loop", visited, options),
-        },
+        config: repeatConfig as any,
       }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;

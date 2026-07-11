@@ -2046,8 +2046,56 @@ export function createRunnerActionExecutors(
         ? (runtime.outputs[action.config.array_variable] as unknown[])
         : action.config.items;
       if (!Array.isArray(items)) throw new Error("repeat_for_each source is not an array");
+
+      let processedItems = [...items];
+
+      // 1. Range Slicing
+      let start = 0;
+      if (action.config.start_index) {
+        const renderedStart = renderTemplate(action.config.start_index, runtime.outputs);
+        const parsedStart = parseInt(renderedStart, 10);
+        if (!isNaN(parsedStart)) {
+          start = parsedStart;
+        }
+      }
+
+      let end: number | undefined;
+      if (action.config.end_index) {
+        const renderedEnd = renderTemplate(action.config.end_index, runtime.outputs);
+        const parsedEnd = parseInt(renderedEnd, 10);
+        if (!isNaN(parsedEnd)) {
+          end = parsedEnd;
+        }
+      }
+
+      if (end !== undefined) {
+        processedItems = processedItems.slice(start, end);
+      } else {
+        processedItems = processedItems.slice(start);
+      }
+
+      // 2. Max loops (limit)
+      if (action.config.max_loops) {
+        const renderedMax = renderTemplate(action.config.max_loops, runtime.outputs);
+        const parsedMax = parseInt(renderedMax, 10);
+        if (!isNaN(parsedMax) && parsedMax >= 0) {
+          processedItems = processedItems.slice(0, parsedMax);
+        }
+      }
+
+      // 3. Min loops (padding)
+      if (action.config.min_loops) {
+        const renderedMin = renderTemplate(action.config.min_loops, runtime.outputs);
+        const parsedMin = parseInt(renderedMin, 10);
+        if (!isNaN(parsedMin) && parsedMin > 0) {
+          while (processedItems.length < parsedMin) {
+            processedItems.push(null);
+          }
+        }
+      }
+
       let index = 0;
-      for (const item of items) {
+      for (const item of processedItems) {
         writeVariableValue(runtime.outputs, action.config.item_name, item);
         runtime.outputs["system.loop.index"] = index;
         runtime.outputs["system.loop.number"] = index + 1;
