@@ -411,7 +411,7 @@ export function collectVariableOptions(
   if (initialVariables) {
     for (const v of initialVariables) {
       if (v.name?.trim()) {
-        options.push({ name: v.name.trim(), source: "Workflow Settings Env" });
+        options.push({ name: v.name.trim(), source: "Workflow Settings Env", type: "text" });
       }
     }
   }
@@ -419,7 +419,7 @@ export function collectVariableOptions(
   if (profileVariables) {
     for (const v of profileVariables) {
       if (v.name?.trim()) {
-        options.push({ name: v.name.trim(), source: "Profile Env" });
+        options.push({ name: v.name.trim(), source: "Profile Env", type: "text" });
       }
     }
   }
@@ -464,6 +464,7 @@ export function collectVariableOptions(
         name: outputName,
         source: node.label || graphNodeLabel(node.node_type),
         evaluation_type: config.evaluation_type === "dynamic" ? "dynamic" : "static",
+        type: getVariableTypeForNodeType(node.node_type),
       });
     }
 
@@ -473,13 +474,15 @@ export function collectVariableOptions(
       for (const row of rows) {
         if (row && typeof row === "object" && "name" in row) {
           const name = String(row.name ?? "").trim();
-          if (name) options.push({ name, source: "Set Variables" });
+          const valType = String((row as any).value_type ?? "text");
+          if (name) options.push({ name, source: "Set Variables", type: mapValueType(valType) });
         }
       }
       const singleName = typeof config.name === "string" ? config.name.trim() : "";
-      if (singleName) options.push({ name: singleName, source: "Set Variables" });
+      const singleType = String(config.value_type ?? "text");
+      if (singleName) options.push({ name: singleName, source: "Set Variables", type: mapValueType(singleType) });
       for (const name of variableNamesFromSerializedConfig(node.config)) {
-        options.push({ name, source: "Set Variables" });
+        options.push({ name, source: "Set Variables", type: "text" });
       }
     }
 
@@ -501,7 +504,14 @@ export function collectVariableOptions(
     if (isVariableUpdate) {
       const name = objectConfig(node.config).name;
       if (typeof name === "string" && name.trim()) {
-        options.push({ name: name.trim(), source: "Update Variable" });
+        let type: "text" | "number" | "boolean" | "list" | "object" | undefined;
+        const nodeTypeStr = node.node_type as string;
+        if (nodeTypeStr === "update_number_variable") type = "number";
+        else if (nodeTypeStr === "update_text_variable") type = "text";
+        else if (nodeTypeStr === "update_flag_variable") type = "boolean";
+        else if (nodeTypeStr === "update_list_variable") type = "list";
+        else if (nodeTypeStr === "update_object_variable") type = "object";
+        options.push({ name: name.trim(), source: "Update Variable", type });
       }
     }
 
@@ -515,12 +525,12 @@ export function collectVariableOptions(
 
     if (node.node_type === "action" && isActionConfig(node.config)) {
       const outputName = outputNameForAction(node.config);
-      if (outputName) options.push({ name: outputName, source: node.label });
+      if (outputName) options.push({ name: outputName, source: node.label, type: "text" });
     }
 
     if (node.node_type === "get_current_url" || (node.node_type === "action" && isActionConfig(node.config) && node.config.type === "get_current_url")) {
       options.push(
-        { name: "system.current_url", source: "Get Current URL" },
+        { name: "system.current_url", source: "Get Current URL", type: "text" },
       );
     }
   }
@@ -534,6 +544,52 @@ export function collectVariableOptions(
   });
 }
 
+function getVariableTypeForNodeType(nodeType: string): "text" | "number" | "boolean" | "list" | "object" | undefined {
+  if ([
+    "set_boolean_variable", "generate_random_boolean", "parse_to_boolean",
+    "boolean_logical_op", "compare_booleans", "check_boolean_property",
+    "check_object_key_exists", "check_object_empty", "check_list_empty",
+    "check_list_contains", "check_list_any_match", "check_list_all_match",
+    "check_text_empty", "check_text_contains", "check_text_regex_matches"
+  ].includes(nodeType)) {
+    return "boolean";
+  }
+  if ([
+    "set_number_variable", "generate_random_number", "parse_text_to_number",
+    "math_operation", "round_number", "format_number",
+    "get_list_length", "get_text_length"
+  ].includes(nodeType)) {
+    return "number";
+  }
+  if ([
+    "create_empty_list", "create_list_manual", "split_text_to_list",
+    "generate_number_range", "slice_list", "filter_list",
+    "map_list_property", "sort_reverse_list",
+    "get_object_keys", "get_object_values"
+  ].includes(nodeType)) {
+    return "list";
+  }
+  if ([
+    "create_empty_object", "create_object_manual", "parse_json_to_object",
+    "execute_object_script", "execute_list_script"
+  ].includes(nodeType)) {
+    return "object";
+  }
+  if ([
+    "set_text_variable", "slice_text", "regex_extract", "join_list", "stringify_object", "get_current_url"
+  ].includes(nodeType)) {
+    return "text";
+  }
+  return undefined;
+}
+
+function mapValueType(valType: string): "text" | "number" | "boolean" | "list" | "object" {
+  if (valType === "json") return "object";
+  if (valType === "number") return "number";
+  if (valType === "boolean") return "boolean";
+  return "text";
+}
+
 function variableNamesFromSerializedConfig(config: unknown) {
   const matches = JSON.stringify(config).matchAll(/"name"\s*:\s*"([^"]+)"/g);
   return [...matches]
@@ -541,14 +597,38 @@ function variableNamesFromSerializedConfig(config: unknown) {
     .filter(Boolean);
 }
 
+function getValueAtPath(obj: any, path: string): any {
+  const parts = path.split(".");
+  let current = obj;
+  for (const part of parts) {
+    if (current && typeof current === "object" && part in current) {
+      current = current[part];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+}
+
 function jsonVariableOptions(json: string): VariableOption[] {
   try {
     const value = JSON.parse(json);
     if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-    return flattenObjectKeys(value).map((name) => ({
-      name,
-      source: "Set JSON Variables",
-    }));
+    return flattenObjectKeys(value).map((name) => {
+      const val = getValueAtPath(value, name);
+      const valType = typeof val;
+      let type: "text" | "number" | "boolean" | "list" | "object" | undefined;
+      if (valType === "number") type = "number";
+      else if (valType === "boolean") type = "boolean";
+      else if (Array.isArray(val)) type = "list";
+      else if (val && valType === "object") type = "object";
+      else if (valType === "string") type = "text";
+      return {
+        name,
+        source: "Set JSON Variables",
+        type,
+      };
+    });
   } catch {
     return [];
   }

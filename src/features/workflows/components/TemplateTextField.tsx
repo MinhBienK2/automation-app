@@ -6,9 +6,9 @@ import { VariableAutocompletePopover, type VariableOption } from "./VariableAuto
 export const VariableOptionsContext = createContext<VariableOption[]>([]);
 
 export const defaultVariableOptions: VariableOption[] = [
-  { name: "system.loop.index", source: "Loop current item" },
-  { name: "system.loop.number", source: "Loop current item" },
-  { name: "system.last_error", source: "System outputs" },
+  { name: "system.loop.index", source: "Loop current item", type: "number" },
+  { name: "system.loop.number", source: "Loop current item", type: "number" },
+  { name: "system.last_error", source: "System outputs", type: "object" },
 ];
 
 export interface TemplateTextFieldRef {
