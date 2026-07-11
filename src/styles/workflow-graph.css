@@ -765,28 +765,29 @@
 }
 
 .subflow-mode-card {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  align-items: center;
-  justify-content: stretch;
-  min-height: 72px;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--sidebar-bg);
-  text-align: left;
-  white-space: normal;
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  justify-content: stretch !important;
+  min-height: 72px !important;
+  gap: 10px !important;
+  padding: 10px !important;
+  border: 1px solid var(--border-emphasized) !important;
+  border-radius: 10px !important;
+  background: var(--sidebar-bg) !important;
+  text-align: left !important;
+  white-space: normal !important;
+  transition: all 0.2s ease !important;
 }
 
 .subflow-mode-card:hover,
 .subflow-mode-card-active {
-  border-color: var(--accent-border-strong);
-  background: var(--surface);
+  border-color: var(--accent) !important;
+  background: var(--accent-bg) !important;
 }
 
 .subflow-mode-card-active {
-  box-shadow: inset 0 0 0 1px var(--focus-ring);
+  box-shadow: inset 0 0 0 1px var(--focus-ring), 0 4px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
 .subflow-mode-icon,
@@ -886,28 +887,46 @@
   display: grid;
   gap: 8px;
   min-height: 160px;
-  max-height: min(360px, calc(100dvh - 390px));
+  max-height: min(480px, calc(100dvh - 340px));
   overflow-y: auto;
 }
 
+/* Beautiful Slim Scrollbar */
+.subflow-picker-results::-webkit-scrollbar {
+  width: 6px;
+}
+.subflow-picker-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+.subflow-picker-results::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+.subflow-picker-results::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .subflow-picker-result {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  align-items: center;
-  justify-content: stretch;
-  min-height: 64px;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--sidebar-bg);
-  text-align: left;
-  white-space: normal;
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  justify-content: stretch !important;
+  min-height: 64px !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  border: 1px solid var(--border-emphasized) !important;
+  border-radius: 10px !important;
+  background: var(--sidebar-bg) !important;
+  text-align: left !important;
+  white-space: normal !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .subflow-picker-result:hover {
-  border-color: var(--accent-border-strong);
-  background: var(--surface);
+  transform: translateY(-2px) !important;
+  border-color: var(--accent) !important;
+  background: var(--accent-bg) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
 .subflow-picker-result-icon {

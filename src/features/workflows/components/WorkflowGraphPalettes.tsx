@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import type { GraphNodeType } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import {
@@ -467,12 +468,15 @@ export function GraphNodePalette({
           </DialogDescription>
         </DialogHeader>
 
-        <Input
-          aria-label={palette?.searchLabel}
-          placeholder="Search nodes..."
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <div className="palette-search">
+          <Search aria-hidden="true" />
+          <Input
+            aria-label={palette?.searchLabel}
+            placeholder="Search nodes..."
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
 
         <div className="add-step-palette-body">
           <div aria-label="Node categories" className="action-category-list">

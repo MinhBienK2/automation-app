@@ -125,20 +125,20 @@ describe("App CSS", () => {
     const addStepPalette = cssRule(".add-step-palette");
     const paletteBody = cssRule(".add-step-palette-body");
     const actionCategory = cssRule(".action-category");
-    const actionCategoryActive = cssRule(".action-category-active,\n.action-category:hover");
+    const actionCategoryActive = cssRule(".action-category-active");
     const actionResultList = cssRule(".action-result-list");
     const actionResult = cssRule(".action-result");
     const pageBackButton = cssRule(".page-back-button");
     const toastAlert = cssRule(".toast-alert");
 
-    expect(addStepPalette).toContain("width: min(760px, calc(100vw - 48px))");
-    expect(addStepPalette).toContain("max-height: min(760px, calc(100dvh - 48px))");
-    expect(paletteBody).toContain("grid-template-columns: 160px minmax(0, 1fr)");
+    expect(addStepPalette).toContain("width: min(980px, calc(100vw - 48px))");
+    expect(addStepPalette).toContain("max-height: min(840px, calc(100dvh - 48px))");
+    expect(paletteBody).toContain("grid-template-columns: 200px minmax(0, 1fr)");
     expect(actionCategory).toContain("color: var(--fg-secondary)");
     expect(actionCategoryActive).toContain("color: var(--accent)");
     expect(actionResultList).toContain("overflow-y: auto");
-    expect(css).toContain(".action-result-list {\n  grid-template-columns: repeat(2, minmax(0, 1fr))");
-    expect(actionResult).toContain("min-height: 58px");
+    expect(css).toContain(".action-result-list {\n  grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(actionResult).toContain("min-height: 72px");
     expect(css).not.toContain(".action-picker-menu");
     expect(css).not.toContain(".monitor-dialog");
     expect(css).not.toContain(".monitor-step-status");

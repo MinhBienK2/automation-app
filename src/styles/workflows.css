@@ -4,16 +4,20 @@
 }
 
 .add-step-palette {
-  width: min(760px, calc(100vw - 48px));
-  max-height: min(760px, calc(100dvh - 48px));
+  width: min(980px, calc(100vw - 48px));
+  max-height: min(840px, calc(100dvh - 48px));
   grid-template-rows: auto auto minmax(0, 1fr);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 38px 3px rgba(0, 0, 0, 0.35), 0 9px 46px 8px rgba(0, 0, 0, 0.3);
 }
 
 .add-step-palette-body {
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 20px;
   min-height: 0;
+  margin-top: 8px;
 }
 
 .action-category-list,
@@ -21,59 +25,123 @@
   display: grid;
   align-content: start;
   min-height: 0;
-  max-height: min(430px, calc(100dvh - 300px));
+  max-height: min(540px, calc(100dvh - 280px));
   overflow-y: auto;
-  gap: 6px;
+  gap: 8px;
+}
+
+/* Beautiful Slim Scrollbar */
+.action-category-list::-webkit-scrollbar,
+.action-result-list::-webkit-scrollbar {
+  width: 6px;
+}
+.action-category-list::-webkit-scrollbar-track,
+.action-result-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.action-category-list::-webkit-scrollbar-thumb,
+.action-result-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+.action-category-list::-webkit-scrollbar-thumb:hover,
+.action-result-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .action-result-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .action-category {
-  justify-content: start;
-  min-height: 34px;
-  padding: 0 10px;
-  color: var(--fg-secondary);
+  justify-content: start !important;
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+  color: var(--fg-secondary) !important;
+  border-radius: 8px !important;
+  border-left: 3px solid transparent !important;
+  transition: all 0.2s ease !important;
+  font-weight: 500 !important;
+  font-size: 13.5px !important;
 }
 
-.action-category-active,
-.action-category:hover {
-  border-color: var(--accent-border);
-  color: var(--accent);
+.action-category-active {
+  border-left-color: var(--accent) !important;
+  color: var(--accent) !important;
+  background: var(--accent-bg) !important;
+  font-weight: 600 !important;
+}
+
+.action-category:hover:not(.action-category-active) {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: var(--fg-primary) !important;
 }
 
 .action-result {
-  display: grid;
-  justify-items: start;
-  align-content: center;
-  min-width: 0;
-  min-height: 58px;
-  padding: 9px 10px;
-  white-space: normal;
-  text-align: left;
+  display: grid !important;
+  justify-items: start !important;
+  align-content: start !important;
+  min-width: 0 !important;
+  min-height: 72px !important;
+  padding: 12px 14px !important;
+  white-space: normal !important;
+  text-align: left !important;
+  border-radius: 10px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border-emphasized) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.action-result span,
-.action-result small {
-  min-width: 0;
-  max-width: 100%;
+.action-result span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-primary);
+  margin-bottom: 4px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.action-result span {
-  color: var(--fg-primary);
-}
-
 .action-result small {
-  color: var(--fg-muted);
-  font-size: 12px;
-  line-height: 1.3;
+  color: var(--fg-secondary);
+  font-size: 11.5px;
+  line-height: 1.4;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .action-result:hover {
-  border-color: var(--accent-border);
+  transform: translateY(-2px) !important;
+  border-color: var(--accent) !important;
+  background: var(--accent-bg) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Reusable Palette Search Input with Icon styling */
+.palette-search {
+  position: relative;
+  width: 100%;
+}
+
+.palette-search svg {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 12px;
+  color: var(--fg-muted);
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.palette-search input,
+.palette-search .input {
+  padding-left: 36px !important;
+  border-radius: 10px;
 }
 
 .workflow-library {
