@@ -46,6 +46,7 @@ type WorkflowListPageProps = {
   selectedProfileIdDraft: string | null;
   appError: string;
   runSnapshots: WorkflowRunSnapshot[];
+  startingWorkflowId?: string | null;
   onWorkflowNameDraftChange: (name: string) => void;
   onSelectedProfileIdDraftChange: (id: string | null) => void;
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
@@ -71,6 +72,7 @@ export function WorkflowListPage({
   selectedProfileIdDraft,
   appError,
   runSnapshots,
+  startingWorkflowId = null,
   onWorkflowNameDraftChange,
   onSelectedProfileIdDraftChange,
   onSubmitWorkflowDialog,
@@ -215,7 +217,8 @@ export function WorkflowListPage({
                           type="button"
                           variant="ghost"
                           className="text-primary hover:bg-primary/10 w-8 h-8"
-                          disabled={hasActiveRun}
+                          disabled={hasActiveRun || (!!startingWorkflowId && startingWorkflowId !== workflow.id)}
+                          loading={startingWorkflowId === workflow.id}
                           onClick={() => onRunWorkflow(workflow)}
                         >
                           <Play aria-hidden="true" size={15} />

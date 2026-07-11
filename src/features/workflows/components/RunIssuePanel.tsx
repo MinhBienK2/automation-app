@@ -13,6 +13,7 @@ type RunIssuePanelProps = {
   onSelectEdge: (edgeId: string) => void;
   onSelectNode: (nodeId: string) => void;
   onValidateAgain: () => void;
+  isStartingRun?: boolean;
 };
 
 export function RunIssuePanel({
@@ -24,6 +25,7 @@ export function RunIssuePanel({
   onSelectEdge,
   onSelectNode,
   onValidateAgain,
+  isStartingRun = false,
 }: RunIssuePanelProps) {
   const [expandedIssueIds, setExpandedIssueIds] = useState<Set<string>>(() => new Set());
   if (!issues.length) return null;
@@ -89,9 +91,13 @@ export function RunIssuePanel({
             </Button>
           ) : null}
           {firstIssue.severity === "runtime" ? (
-            <Button type="button" variant="secondary" onClick={onRunAgain}>
-              <RotateCw aria-hidden="true" />
-              Run again
+            <Button type="button" variant="secondary" onClick={onRunAgain} disabled={isStartingRun}>
+              {isStartingRun ? (
+                <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <RotateCw aria-hidden="true" />
+              )}
+              {isStartingRun ? "Starting..." : "Run again"}
             </Button>
           ) : null}
           {firstIssue.node_id && firstIssue.severity !== "blocking" ? (

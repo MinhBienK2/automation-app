@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import type {
   WorkflowRunStateAPI,
 } from "../../../shared/types/workspaceContracts";
@@ -69,6 +69,9 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
     setRunSnapshots,
     setActiveRunWorkflowName,
   } = deps;
+
+  const [startingWorkflowId, setStartingWorkflowId] = useState<string | null>(null);
+  const isStartingRun = Boolean(startingWorkflowId);
 
   const refreshRunStates = useCallback(async () => {
     try {
@@ -141,12 +144,19 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
   const runGraph = useCallback(async () => {
     if (!detail || !workflowGraph) return;
     setAppError("");
+    setStartingWorkflowId(detail.workflow.id);
 
     try {
       const saved = await persistCurrentGraph();
-      if (!saved) return;
+      if (!saved) {
+        setStartingWorkflowId(null);
+        return;
+      }
       const settingsSaved = await persistDirtyWorkflowSettings();
-      if (!settingsSaved) return;
+      if (!settingsSaved) {
+        setStartingWorkflowId(null);
+        return;
+      }
       setActiveRunWorkflowName(detail.workflow.name);
       const snapshot = await runWorkflowCommand(detail.workflow.id);
       setGraphIssues([]);
@@ -167,6 +177,8 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
           // Keep the command error as the primary system issue when validation cannot run.
         }
       }
+    } finally {
+      setStartingWorkflowId(null);
     }
   }, [
     detail,
@@ -184,6 +196,7 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
   const runSavedWorkflow = useCallback(async (workflow: WorkflowSummary) => {
     setAppError("");
     setActiveRunWorkflowName(workflow.name);
+    setStartingWorkflowId(workflow.id);
 
     try {
       const state = await runWorkflowCommand(workflow.id);
@@ -195,18 +208,27 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
     } catch (error) {
       setAppError(commandMessage(error));
       await loadOperationsOverview();
+    } finally {
+      setStartingWorkflowId(null);
     }
   }, [upsertRunSnapshot, loadOperationsOverview, setActiveRunWorkflowName, setAppError]);
 
   const runGraphFromSelectedNode = useCallback(async (mode?: "selected_only" | "from_selected") => {
     if (!detail || !workflowGraph || !selectedGraphNodeId) return;
     setAppError("");
+    setStartingWorkflowId(detail.workflow.id);
 
     try {
       const saved = await persistCurrentGraph();
-      if (!saved) return;
+      if (!saved) {
+        setStartingWorkflowId(null);
+        return;
+      }
       const settingsSaved = await persistDirtyWorkflowSettings();
-      if (!settingsSaved) return;
+      if (!settingsSaved) {
+        setStartingWorkflowId(null);
+        return;
+      }
       setActiveRunWorkflowName(detail.workflow.name);
       const state = await runWorkflowFromNodeCommand(
         detail.workflow.id,
@@ -229,6 +251,8 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
           // Keep the command error as the primary system issue when validation cannot run.
         }
       }
+    } finally {
+      setStartingWorkflowId(null);
     }
   }, [
     detail,
@@ -263,6 +287,8 @@ export function useWorkflowRunState(deps: WorkflowRunStateDeps): WorkflowRunStat
     runState,
     runSnapshots,
     activeRunWorkflowName,
+    isStartingRun,
+    startingWorkflowId,
     setRunState,
     setRunSnapshots,
     setActiveRunWorkflowName,

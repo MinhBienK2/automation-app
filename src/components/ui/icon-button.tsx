@@ -14,6 +14,7 @@ type IconButtonProps = Omit<
   children: ReactNode;
   label: string;
   tooltip?: string;
+  loading?: boolean;
 };
 
 function IconButton({
@@ -21,6 +22,7 @@ function IconButton({
   label,
   tooltip = label,
   className,
+  loading = false,
   ...props
 }: IconButtonProps) {
   const classes = ["btn-square", className].filter(Boolean).join(" ");
@@ -31,6 +33,7 @@ function IconButton({
         <TooltipTrigger asChild>
           <Button
             {...props}
+            loading={loading}
             className={classes}
             aria-label={label}
             data-tooltip={tooltip}

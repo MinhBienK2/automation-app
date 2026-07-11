@@ -949,6 +949,7 @@ function AppInner() {
               selectedProfileIdDraft={workflowsWorkspace.selectedProfileIdDraft}
               appError={appError}
               runSnapshots={runSnapshots}
+              startingWorkflowId={runWorkspace.startingWorkflowId}
               onWorkflowNameDraftChange={workflowsWorkspace.setWorkflowNameDraft}
               onSelectedProfileIdDraftChange={workflowsWorkspace.setSelectedProfileIdDraft}
               onSubmitWorkflowDialog={workflowsWorkspace.submitWorkflowDialog}
@@ -1008,6 +1009,7 @@ function AppInner() {
             detail={workflowsWorkspace.detail}
             projectName={detailProjectName}
             isRunning={isRunning}
+            isStartingRun={runWorkspace.isStartingRun}
             appError={appError}
             graphSaveStatus={graphSaveStatusLabel(graphSaveStatus)}
             canSaveGraph={canSaveWorkflowGraph}

@@ -32,6 +32,7 @@ type WorkflowDetailPageProps = {
   detail: WorkflowDetail;
   projectName?: string | null;
   isRunning: boolean;
+  isStartingRun?: boolean;
   appError: string;
   graphSaveStatus: string;
   canSaveGraph: boolean;
@@ -71,6 +72,7 @@ export function WorkflowDetailPage({
   detail,
   projectName = null,
   isRunning,
+  isStartingRun = false,
   appError,
   graphSaveStatus,
   canSaveGraph,
@@ -375,7 +377,7 @@ export function WorkflowDetailPage({
                   size="sm"
                   type="button"
                   onClick={() => setIsRunFromSelectedOpen((prev) => !prev)}
-                  disabled={!canRunGraphFromSelected}
+                  disabled={!canRunGraphFromSelected || isStartingRun}
                   title={runGraphFromSelectedReason}
                   aria-haspopup="menu"
                   aria-expanded={isRunFromSelectedOpen}
@@ -417,9 +419,16 @@ export function WorkflowDetailPage({
               size="sm"
               type="button"
               onClick={onRunGraph}
-              disabled={isRunning}
+              disabled={isRunning || isStartingRun}
             >
-              Run
+              {isStartingRun ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Starting...
+                </span>
+              ) : (
+                "Run"
+              )}
             </Button>
             {isRunning ? (
               <Button
@@ -445,6 +454,7 @@ export function WorkflowDetailPage({
         onSelectEdge={requestEdgeSelection}
         onSelectNode={requestNodeSelection}
         onValidateAgain={onValidateGraph}
+        isStartingRun={isStartingRun}
       />
 
       {workflowGraph ? (

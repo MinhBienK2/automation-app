@@ -151,6 +151,8 @@ export interface WorkflowRunStateAPI {
   runState: RunState;
   runSnapshots: WorkflowRunSnapshot[];
   activeRunWorkflowName: string | null;
+  isStartingRun: boolean;
+  startingWorkflowId: string | null;
 
   setRunState: (state: RunState | ((curr: RunState) => RunState)) => void;
   setRunSnapshots: (snapshots: WorkflowRunSnapshot[] | ((curr: WorkflowRunSnapshot[]) => WorkflowRunSnapshot[])) => void;
