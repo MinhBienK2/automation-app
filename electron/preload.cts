@@ -238,6 +238,8 @@ const workflowApi: WorkflowElectronBridge = {
   getBackupConfig: () => invokeWorkflow("getBackupConfig"),
   saveBackupConfig: (config) => invokeWorkflow("saveBackupConfig", config),
   openBackupsFolder: () => invokeWorkflow("openBackupsFolder"),
+  getAppSettings: () => invokeWorkflow("getAppSettings"),
+  saveAppSettings: (settings) => invokeWorkflow("saveAppSettings", settings),
 };
 
 contextBridge.exposeInMainWorld("workflowApi", workflowApi);

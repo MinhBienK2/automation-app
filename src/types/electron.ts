@@ -255,6 +255,8 @@ export type WorkflowElectronBridge = {
   getBackupConfig(): Promise<BackupConfig>;
   saveBackupConfig(config: BackupConfig): Promise<{ ok: boolean }>;
   openBackupsFolder(): Promise<{ ok: boolean }>;
+  getAppSettings(): Promise<Record<string, any>>;
+  saveAppSettings(settings: Record<string, any>): Promise<void>;
 };
 
 export type BackupConfig = {

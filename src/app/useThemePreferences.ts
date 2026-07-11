@@ -90,6 +90,20 @@ export function useThemePreferences(): ThemePreferences {
   });
 
   useEffect(() => {
+    if (window.workflowApi?.getAppSettings) {
+      window.workflowApi.getAppSettings().then((settings) => {
+        if (settings) {
+          if (isTheme(settings.theme)) setThemeState(settings.theme);
+          if (isAccent(settings.accent)) setAccentState(settings.accent);
+          if (isDensity(settings.density)) setDensityState(settings.density);
+        }
+      }).catch((err) => {
+        console.error("Failed to load theme preferences from backend:", err);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     applyAttributes(theme, accent, density);
   }, [theme, accent, density]);
 
@@ -100,6 +114,9 @@ export function useThemePreferences(): ThemePreferences {
       accent,
       density,
     });
+    if (window.workflowApi?.saveAppSettings) {
+      void window.workflowApi.saveAppSettings({ theme: next });
+    }
   }, [accent, density]);
 
   const setAccent = useCallback((next: Accent) => {
@@ -109,6 +126,9 @@ export function useThemePreferences(): ThemePreferences {
       accent: next,
       density,
     });
+    if (window.workflowApi?.saveAppSettings) {
+      void window.workflowApi.saveAppSettings({ accent: next });
+    }
   }, [theme, density]);
 
   const setDensity = useCallback((next: Density) => {
@@ -118,6 +138,9 @@ export function useThemePreferences(): ThemePreferences {
       accent,
       density: next,
     });
+    if (window.workflowApi?.saveAppSettings) {
+      void window.workflowApi.saveAppSettings({ density: next });
+    }
   }, [theme, accent]);
 
   return {

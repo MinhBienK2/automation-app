@@ -134,5 +134,30 @@ export function createSettingsCommands(deps: CommandDeps) {
       result.deleted_profiles.sort((left: string, right: string) => left.localeCompare(right));
       return result;
     },
+
+    async getAppSettings(): Promise<Record<string, any>> {
+      const settingsPath = path.join(deps.context.appPaths.rootDir, "settings.json");
+      try {
+        const content = await fs.readFile(settingsPath, "utf-8");
+        return JSON.parse(content);
+      } catch {
+        return {};
+      }
+    },
+
+    async saveAppSettings(settings: Record<string, any>): Promise<void> {
+      const settingsPath = path.join(deps.context.appPaths.rootDir, "settings.json");
+      try {
+        let existing = {};
+        try {
+          const content = await fs.readFile(settingsPath, "utf-8");
+          existing = JSON.parse(content);
+        } catch {}
+        const merged = { ...existing, ...settings };
+        await fs.writeFile(settingsPath, JSON.stringify(merged, null, 2), "utf-8");
+      } catch (err) {
+        console.error("Failed to save app settings to file:", err);
+      }
+    },
   };
 }

@@ -112,6 +112,8 @@ const methodNames: BridgeMethodName[] = [
   "deleteUser",
   "getAppConfig",
   "saveAppConfig",
+  "getAppSettings",
+  "saveAppSettings",
 ];
 
 export const workflowBridgeMock = Object.fromEntries(
@@ -124,6 +126,9 @@ export function resetWorkflowBridge() {
     method.mockReset();
   }
   workflowCommandCallMock.mockReset();
+
+  workflowBridgeMock.getAppSettings.mockResolvedValue({});
+  workflowBridgeMock.saveAppSettings.mockResolvedValue(undefined);
 
   window.workflowApi = workflowBridgeMock as unknown as WorkflowElectronBridge;
 }

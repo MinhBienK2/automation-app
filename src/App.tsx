@@ -529,6 +529,25 @@ function AppInner() {
     graphExitDialogOpen,
   ]);
 
+  // --- Load App Settings ---
+  useEffect(() => {
+    if (window.workflowApi?.getAppSettings) {
+      window.workflowApi.getAppSettings().then((settings) => {
+        if (settings) {
+          if (typeof settings.graphAutosaveEnabled === "boolean") {
+            setGraphAutosaveEnabled(settings.graphAutosaveEnabled);
+            setGraphSaveStatus(settings.graphAutosaveEnabled ? "saved" : "off");
+          }
+          if (typeof settings.graphAutosaveDelayMs === "number") {
+            setGraphAutosaveDelayMs(settings.graphAutosaveDelayMs);
+          }
+        }
+      }).catch((err) => {
+        console.error("Failed to load app settings from backend:", err);
+      });
+    }
+  }, []);
+
   // --- Initial Data Load ---
   useEffect(() => {
     if (auth.mode === "pending") return;
@@ -629,6 +648,9 @@ function AppInner() {
   const updateGraphAutosaveEnabled = useCallback((enabled: boolean) => {
     setGraphAutosaveEnabled(enabled);
     writeGraphAutosaveEnabled(enabled);
+    if (window.workflowApi?.saveAppSettings) {
+      void window.workflowApi.saveAppSettings({ graphAutosaveEnabled: enabled });
+    }
     if (!enabled) {
       setGraphSaveStatus("off");
       return;
@@ -642,6 +664,9 @@ function AppInner() {
   const updateGraphAutosaveDelayMs = useCallback((delayMs: number) => {
     setGraphAutosaveDelayMs(delayMs);
     writeGraphAutosaveDelayMs(delayMs);
+    if (window.workflowApi?.saveAppSettings) {
+      void window.workflowApi.saveAppSettings({ graphAutosaveDelayMs: delayMs });
+    }
   }, []);
 
   const openDetailWorkflowSettings = useCallback((section: WorkflowSettingsSectionId) => {
