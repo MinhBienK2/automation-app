@@ -14,6 +14,8 @@ import { initializePgPool } from "./backend/db/pgSync.js";
 import { PgDbAdapter } from "./backend/db/dbAdapter.js";
 import { PostgresDbConnection, checkMigrationsPending } from "./backend/db/migrations/migrationRunner.js";
 import { migrations } from "./backend/db/migrations/migrations.js";
+import { checkMongoMigrationsPending } from "./backend/db/mongo.js";
+
 import pkg from "electron-updater";
 const { autoUpdater } = pkg;
 import {
@@ -182,6 +184,30 @@ app.whenReady().then(async () => {
       return;
     }
     console.log("[startup] Database schema check completed. Schema is up to date.");
+
+    // Check MongoDB migrations
+    try {
+      const pendingMongo = await checkMongoMigrationsPending(app.getAppPath());
+      if (pendingMongo.length > 0) {
+        console.error(`[startup] MongoDB schema is out of date. Pending migrations: ${pendingMongo.join(", ")}`);
+        dialog.showErrorBox(
+          "MongoDB Schema Out of Date",
+          "Your MongoDB schema is outdated. Please run \"npm run db:migrate-mongo:up\" to update the database schema before launching the application."
+        );
+        app.quit();
+        return;
+      }
+      console.log("[startup] MongoDB schema check completed. Schema is up to date.");
+    } catch (mongoError) {
+      console.error("[startup] Failed to check MongoDB migrations:", mongoError);
+      dialog.showErrorBox(
+        "MongoDB Connection Failed",
+        `Failed to connect or check MongoDB migrations: ${mongoError instanceof Error ? mongoError.message : String(mongoError)}`,
+      );
+      app.quit();
+      return;
+    }
+
   } catch (error) {
     dialog.showErrorBox(
       "Database Connection Failed",

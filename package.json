@@ -37,6 +37,10 @@
     "db:migrate-graphs": "npm run build:electron && node scripts/db-migrate-graphs.mjs",
     "db:rollback": "npm run build:electron && node scripts/db-rollback.mjs",
     "db:seed": "npm run build:electron && node scripts/db-seed.mjs",
+    "db:migrate-mongo:create": "npx migrate-mongo create",
+    "db:migrate-mongo:up": "npx migrate-mongo up",
+    "db:migrate-mongo:down": "npx migrate-mongo down",
+    "db:migrate-mongo:status": "npx migrate-mongo status",
     "preview": "vite preview"
   },
   "build": {
@@ -56,6 +60,7 @@
       "dist/**/*",
       "dist-electron/**/*",
       "migrations/**/*",
+      "migrations-mongo/**/*",
       "package.json"
     ],
     "mac": {
@@ -128,6 +133,7 @@
     "eslint": "^10.5.0",
     "js-yaml": "^4.1.1",
     "jsdom": "^29.0.2",
+    "migrate-mongo": "^14.0.7",
     "node-pg-migrate": "^8.0.4",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",

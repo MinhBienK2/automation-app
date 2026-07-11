@@ -1,4 +1,6 @@
 import { MongoClient, type Collection, type Document } from "mongodb";
+import fs from "node:fs";
+import path from "node:path";
 
 export interface MongoRunStep extends Document {
   id: string;
@@ -48,7 +50,8 @@ export async function getMongoCollection<T extends Document = any>(
   if (!client) {
     return null;
   }
-  return client.db().collection<T>(collectionName);
+  const dbName = process.env.MONGO_DB_NAME || "automation_app";
+  return client.db(dbName).collection<T>(collectionName);
 }
 
 export async function closeMongoClient(): Promise<void> {
@@ -58,3 +61,38 @@ export async function closeMongoClient(): Promise<void> {
     console.log("[mongo] MongoDB connection closed.");
   }
 }
+
+export async function checkMongoMigrationsPending(appPath: string): Promise<string[]> {
+  // If MONGODB_URI is not set in env, skip MongoDB migration checks
+  if (!process.env.MONGODB_URI) {
+    return [];
+  }
+
+  const client = await getMongoClient();
+  if (!client) {
+    throw new Error("Failed to connect to MongoDB");
+  }
+
+  const dbName = process.env.MONGO_DB_NAME || "automation_app";
+  const db = client.db(dbName);
+  const collection = db.collection("migration_history");
+
+  // Get all applied migrations
+  const appliedDocs = await collection.find({}, { projection: { fileName: 1 } }).toArray();
+  const applied = new Set<string>(appliedDocs.map((doc: any) => doc.fileName));
+
+  // Read local migration files from migrations-mongo directory
+  const migrationsDir = path.join(appPath, "migrations-mongo");
+  if (!fs.existsSync(migrationsDir)) {
+    return [];
+  }
+
+  const localFiles = fs.readdirSync(migrationsDir)
+    .filter((file) => file.endsWith(".js"))
+    .sort();
+
+  // Find files that are in the directory but not in migration_history
+  const pending = localFiles.filter((file) => !applied.has(file));
+  return pending;
+}
+
