@@ -68,7 +68,7 @@ export type ActionType =
   | "go_forward"
   | "reload"
   | "open_new_tab"
-  | "click_open_tab"
+  | "open_link_in_new_tab"
   | "switch_tab"
   | "close_tab"
   | "accept_dialog"
@@ -957,7 +957,7 @@ export type ActionConfig =
   | { type: "reload"; config: Record<string, never> }
   | { type: "open_new_tab"; config: { url?: string | null } }
   | {
-      type: "click_open_tab";
+      type: "open_link_in_new_tab";
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;

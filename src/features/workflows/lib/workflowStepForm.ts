@@ -143,8 +143,8 @@ export function updateActionConfigField(
       return updateElementConfigField(config, field, value);
     case "click":
       return updateClickConfigField(config, field, value);
-    case "click_open_tab":
-      return updateClickOpenTabConfigField(config, field, value);
+    case "open_link_in_new_tab":
+      return updateOpenLinkInNewTabConfigField(config, field, value);
     case "find_element":
       return updateFindElementConfigField(config, field, value);
     case "scroll":
@@ -484,7 +484,7 @@ function actionSupportsTargetRef(actionType: ActionConfig["type"]): boolean {
       "input_text",
       "clear_input",
       "click",
-      "click_open_tab",
+      "open_link_in_new_tab",
       "scroll",
       "select_option",
       "hover",
@@ -667,8 +667,8 @@ function updateClickConfigField(
   };
 }
 
-function updateClickOpenTabConfigField(
-  config: Extract<ActionConfig, { type: "click_open_tab" }>,
+function updateOpenLinkInNewTabConfigField(
+  config: Extract<ActionConfig, { type: "open_link_in_new_tab" }>,
   field: ActionConfigField,
   value: string,
 ): ActionConfig {
@@ -676,27 +676,27 @@ function updateClickOpenTabConfigField(
     field === "timeout_ms"
   ) {
     return {
-      type: "click_open_tab",
+      type: "open_link_in_new_tab",
       config: { ...config.config, [field]: Number(value) },
     };
   }
 
   if (field === "iframe_xpath") {
     return {
-      type: "click_open_tab",
+      type: "open_link_in_new_tab",
       config: { ...config.config, [field]: value || null },
     };
   }
 
   if (field === "target_ref") {
     return {
-      type: "click_open_tab",
+      type: "open_link_in_new_tab",
       config: { ...config.config, target_ref: value || null },
     };
   }
 
   return {
-    type: "click_open_tab",
+    type: "open_link_in_new_tab",
     config: { ...config.config, [field]: value },
   };
 }

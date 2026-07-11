@@ -34,7 +34,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         },
       };
     case "click":
-    case "click_open_tab":
+    case "open_link_in_new_tab":
       return {
         type: actionType,
         config: {

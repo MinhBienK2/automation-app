@@ -152,7 +152,7 @@ test.describe("desktop navigation and tab node execution", () => {
     );
   });
 
-  test("runs click open tab node (target=_blank)", async ({
+  test("runs open link in new tab node (target=_blank)", async ({
     appWindow,
     fixtureServer,
   }, testInfo) => {
@@ -160,7 +160,7 @@ test.describe("desktop navigation and tab node execution", () => {
       { type: "fixture route", description: "/tab-home, /tab-a" },
       {
         type: "nodes",
-        description: "navigate, click_open_tab, extract_text",
+        description: "navigate, open_link_in_new_tab, extract_text",
       },
       {
         type: "desktop depth",
@@ -168,17 +168,17 @@ test.describe("desktop navigation and tab node execution", () => {
       },
     );
 
-    const { state } = await createAndRunWorkflow(appWindow, "E2E click open tab target blank", [
+    const { state } = await createAndRunWorkflow(appWindow, "E2E open link in new tab target blank", [
       {
         id: "navigate-home",
         label: "Navigate Home",
         config: { type: "navigate", config: { url: `${fixtureServer.baseUrl}/tab-home` } },
       },
       {
-        id: "click-open-tab",
-        label: "Click Open Tab A",
+        id: "open-link-in-new-tab",
+        label: "Open Link in New Tab A",
         config: {
-          type: "click_open_tab",
+          type: "open_link_in_new_tab",
           config: {
             xpath: "//*[@data-testid='open-tab-link']",
             timeout_ms: 30000,
@@ -197,11 +197,11 @@ test.describe("desktop navigation and tab node execution", () => {
 
     expect(state.outputs.active_tab_a).toBe("tab:a");
     expect(state.completed_step_ids).toEqual(
-      expect.arrayContaining(["navigate-home", "click-open-tab", "extract-tab-a"]),
+      expect.arrayContaining(["navigate-home", "open-link-in-new-tab", "extract-tab-a"]),
     );
   });
 
-  test("runs click open tab node on link without target=_blank", async ({
+  test("runs open link in new tab node on link without target=_blank", async ({
     appWindow,
     fixtureServer,
   }, testInfo) => {
@@ -209,7 +209,7 @@ test.describe("desktop navigation and tab node execution", () => {
       { type: "fixture route", description: "/tab-home, /tab-b" },
       {
         type: "nodes",
-        description: "navigate, click_open_tab, extract_text",
+        description: "navigate, open_link_in_new_tab, extract_text",
       },
       {
         type: "desktop depth",
@@ -217,17 +217,17 @@ test.describe("desktop navigation and tab node execution", () => {
       },
     );
 
-    const { state } = await createAndRunWorkflow(appWindow, "E2E click open tab no target blank", [
+    const { state } = await createAndRunWorkflow(appWindow, "E2E open link in new tab no target blank", [
       {
         id: "navigate-home",
         label: "Navigate Home",
         config: { type: "navigate", config: { url: `${fixtureServer.baseUrl}/tab-home` } },
       },
       {
-        id: "click-open-tab-no-blank",
-        label: "Click Open Tab B",
+        id: "open-link-in-new-tab-no-blank",
+        label: "Open Link in New Tab B",
         config: {
-          type: "click_open_tab",
+          type: "open_link_in_new_tab",
           config: {
             xpath: "//*[@data-testid='open-tab-link-no-blank']",
             timeout_ms: 30000,
@@ -246,7 +246,7 @@ test.describe("desktop navigation and tab node execution", () => {
 
     expect(state.outputs.active_tab_b).toBe("tab:b");
     expect(state.completed_step_ids).toEqual(
-      expect.arrayContaining(["navigate-home", "click-open-tab-no-blank", "extract-tab-b"]),
+      expect.arrayContaining(["navigate-home", "open-link-in-new-tab-no-blank", "extract-tab-b"]),
     );
   });
 });

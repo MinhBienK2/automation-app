@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { elementTargetActionConfigSchema } from "./common.js";
 
-export const clickOpenTabSchema = z.object({
-  type: z.literal("click_open_tab"),
+export const openLinkInNewTabSchema = z.object({
+  type: z.literal("open_link_in_new_tab"),
   config: elementTargetActionConfigSchema,
 });

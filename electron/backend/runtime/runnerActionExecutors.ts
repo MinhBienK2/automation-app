@@ -941,7 +941,7 @@ export function createRunnerActionExecutors(
         await runtime.page.goto(url);
       }
     },
-    click_open_tab: async (action) => {
+    open_link_in_new_tab: async (action) => {
       const timeout = action.config.timeout_ms ?? 30000;
       const locator = await deps.locatorForAction(runtime, action.config);
 

@@ -397,8 +397,8 @@ function actionLabel(action: ActionConfig) {
       return "Navigate";
     case "click":
       return "Click";
-    case "click_open_tab":
-      return "Click Open Tab";
+    case "open_link_in_new_tab":
+      return "Open Link in New Tab";
     case "input_text":
       return "Input";
     case "select_option":

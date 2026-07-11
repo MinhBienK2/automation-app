@@ -225,7 +225,7 @@ export const phaseOneVietnameseStepHelpContent: Record<string, StepHelpContent> 
   go_forward: elementHelpVi("Go Forward", "đi tới trang sau", "history"),
   reload: elementHelpVi("Reload", "tải lại tab hiện tại", "browser"),
   open_new_tab: elementHelpVi("Open New Tab", "mở tab mới", "tab"),
-  click_open_tab: elementHelpVi("Click Open Tab", "click liên kết/phần tử để mở tab mới và tự động chuyển sang", "open-tab"),
+  open_link_in_new_tab: elementHelpVi("Open Link in New Tab", "mở liên kết hoặc phần tử trong tab mới và tự động chuyển sang", "open-tab"),
   switch_tab: elementHelpVi("Switch Tab", "chuyển tab", "tab"),
   close_tab: elementHelpVi("Close Tab", "đóng tab", "tab"),
   accept_dialog: elementHelpVi("Accept Dialog", "đồng ý dialog", "dialog"),
