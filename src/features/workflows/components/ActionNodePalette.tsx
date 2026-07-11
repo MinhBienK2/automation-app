@@ -129,7 +129,7 @@ export const actionDescriptions: Record<ActionType, string> = {
   input_text: "Fill a field",
   clear_input: "Clear a field",
   click: "Click an element",
-  click_and_switch_tab: "Click an element and switch to the newly opened tab",
+  click_open_tab: "Click a link/element to open and switch to the new tab",
   find_element: "Resolve an element for later actions",
   scroll: "Move the page or an element",
   select_option: "Choose a native select option",

@@ -253,7 +253,7 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "clear_input":
       return targetSourceFields;
     case "click":
-    case "click_and_switch_tab":
+    case "click_open_tab":
       return targetSourceFields;
     case "find_element":
       return [...targetFields, "Output name", "In viewport", "Rank"];

@@ -394,7 +394,7 @@ const actionValidators = createActionValidatorMap({
   go_forward: () => null,
   reload: () => null,
   open_new_tab: () => null,
-  click_and_switch_tab: (config) =>
+  click_open_tab: (config) =>
     firstValidation(
       validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),

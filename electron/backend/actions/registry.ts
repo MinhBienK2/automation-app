@@ -135,7 +135,7 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("go_forward", "navigation"),
   definition("reload", "navigation"),
   definition("open_new_tab", "navigation"),
-  definition("click_and_switch_tab", "navigation"),
+  definition("click_open_tab", "navigation"),
   definition("switch_tab", "navigation"),
   definition("close_tab", "navigation"),
   definition("accept_dialog", "browser_context"),

@@ -225,7 +225,7 @@ export const phaseOneEnglishStepHelpContent: Record<string, StepHelpContent> = {
   go_forward: elementHelpEn("Go Forward", "go forward in browser history", "history"),
   reload: elementHelpEn("Reload", "reload the current tab", "browser"),
   open_new_tab: elementHelpEn("Open New Tab", "open a new browser tab", "tab"),
-  click_and_switch_tab: elementHelpEn("Click & Switch Tab", "click and switch to a new tab", "open-tab"),
+  click_open_tab: elementHelpEn("Click Open Tab", "click a link/element to open and switch to the new tab", "open-tab"),
   switch_tab: elementHelpEn("Switch Tab", "switch to a different browser tab", "tab"),
   close_tab: elementHelpEn("Close Tab", "close a browser tab", "tab"),
   accept_dialog: elementHelpEn("Accept Dialog", "accept an alert, confirm, or prompt", "dialog"),

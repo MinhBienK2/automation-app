@@ -941,7 +941,7 @@ export function createRunnerActionExecutors(
         await runtime.page.goto(url);
       }
     },
-    click_and_switch_tab: async (action) => {
+    click_open_tab: async (action) => {
       const timeout = action.config.timeout_ms ?? 30000;
       const locator = await deps.locatorForAction(runtime, action.config);
 
@@ -949,13 +949,50 @@ export function createRunnerActionExecutors(
         throw new Error("Browser context does not support waitForEvent");
       }
 
-      const [newPage] = await Promise.all([
-        runtime.context.waitForEvent("page", { timeout }),
-        locator.click({ timeout }),
-      ]);
+      // Check if it's an <a> tag with a valid navigation href
+      let href: string | null = null;
+      try {
+        if (locator.waitFor) {
+          await locator.waitFor({ state: "attached", timeout });
+        }
+        if (locator.evaluate) {
+          href = await locator.evaluate((el) => {
+            if (el.tagName.toLowerCase() === "a") {
+              const rawHref = el.getAttribute("href");
+              const resolvedHref = (el as HTMLAnchorElement).href;
+              if (
+                rawHref &&
+                rawHref !== "#" &&
+                !rawHref.startsWith("javascript:") &&
+                !rawHref.startsWith("mailto:") &&
+                !rawHref.startsWith("tel:")
+              ) {
+                if (resolvedHref && (resolvedHref.startsWith("http:") || resolvedHref.startsWith("https:"))) {
+                  return resolvedHref;
+                }
+              }
+            }
+            return null;
+          });
+        }
+      } catch (err) {
+        // Fallback to clicking if evaluation fails
+      }
 
-      runtime.page = newPage;
-      await runtime.page.bringToFront?.();
+      if (href) {
+        await deps.enforceNavigationPolicy(runtime, href);
+        const newPage = await runtime.context.newPage();
+        await newPage.goto(href, { timeout, waitUntil: "load" });
+        runtime.page = newPage;
+        await runtime.page.bringToFront?.();
+      } else {
+        const [newPage] = await Promise.all([
+          runtime.context.waitForEvent("page", { timeout }),
+          locator.click({ timeout }),
+        ]);
+        runtime.page = newPage;
+        await runtime.page.bringToFront?.();
+      }
     },
     switch_tab: async (action) => {
       const page = runtime.context.pages()[action.config.index];

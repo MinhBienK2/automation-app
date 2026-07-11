@@ -98,7 +98,7 @@ import { goBackSchema } from "./go_back.js";
 import { goForwardSchema } from "./go_forward.js";
 import { reloadSchema } from "./reload.js";
 import { openNewTabSchema } from "./open_new_tab.js";
-import { clickAndSwitchTabSchema } from "./click_and_switch_tab.js";
+import { clickOpenTabSchema } from "./click_open_tab.js";
 import { switchTabSchema } from "./switch_tab.js";
 import { closeTabSchema } from "./close_tab.js";
 
@@ -253,7 +253,7 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   go_forward: goForwardSchema,
   reload: reloadSchema,
   open_new_tab: openNewTabSchema,
-  click_and_switch_tab: clickAndSwitchTabSchema,
+  click_open_tab: clickOpenTabSchema,
   switch_tab: switchTabSchema,
   close_tab: closeTabSchema,
   accept_dialog: acceptDialogSchema,
