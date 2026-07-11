@@ -1027,6 +1027,74 @@ describe("runnerActionExecutors", () => {
     expect(runtime.outputs.script_res).toEqual(["A", "B", "C"]);
   });
 
+  test("get_list_item fallback during run from selected loop prelude step", async () => {
+    const runtime = minimalRuntime({
+      outputs: {},
+    });
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+
+    // Normal behavior: non-existent list returns undefined
+    await executeRegisteredAction(executors, {
+      type: "get_list_item",
+      config: { source: "missing_list", position: "first", output_name: "link_var" },
+    } as any);
+    expect(runtime.outputs.link_var).toBeUndefined();
+
+    // Prelude behavior: missing list gets fallback mock value based on variable name
+    runtime.currentStepId = "__prelude:loop_item:loop-1";
+    
+    // Link/URL variable name
+    await executeRegisteredAction(executors, {
+      type: "get_list_item",
+      config: { source: "missing_list", position: "first", output_name: "link_var" },
+    } as any);
+    expect(runtime.outputs.link_var).toBe("https://www.tiktok.com/@tiktok");
+
+    // Video variable name
+    await executeRegisteredAction(executors, {
+      type: "get_list_item",
+      config: { source: "missing_list", position: "first", output_name: "video_url" },
+    } as any);
+    expect(runtime.outputs.video_url).toBe("https://www.tiktok.com/@tiktok/video/7350000000000000000");
+
+    // Username/user variable name
+    await executeRegisteredAction(executors, {
+      type: "get_list_item",
+      config: { source: "missing_list", position: "first", output_name: "username" },
+    } as any);
+    expect(runtime.outputs.username).toBe("tiktok");
+
+    // ID variable name
+    await executeRegisteredAction(executors, {
+      type: "get_list_item",
+      config: { source: "missing_list", position: "first", output_name: "some_id" },
+    } as any);
+    expect(runtime.outputs.some_id).toBe("1234567890");
+
+    // Count/index variable name
+    await executeRegisteredAction(executors, {
+      type: "get_list_item",
+      config: { source: "missing_list", position: "first", output_name: "loop_index" },
+    } as any);
+    expect(runtime.outputs.loop_index).toBe("1");
+
+    // Other/unknown variable name
+    await executeRegisteredAction(executors, {
+      type: "get_list_item",
+      config: { source: "missing_list", position: "first", output_name: "other_field" },
+    } as any);
+    expect(runtime.outputs.other_field).toBe("mock_other_field");
+
+    // Empty list also gets fallback mock value
+    runtime.outputs.empty_list = [];
+    await executeRegisteredAction(executors, {
+      type: "get_list_item",
+      config: { source: "empty_list", position: "first", output_name: "empty_link" },
+    } as any);
+    expect(runtime.outputs.empty_link).toBe("https://www.tiktok.com/@tiktok");
+  });
+
+
   test("new list actions - List: Conditions", async () => {
     const runtime = minimalRuntime({
       outputs: {

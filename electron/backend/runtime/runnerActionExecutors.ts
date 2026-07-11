@@ -186,6 +186,32 @@ type ActionTargetConfig = {
   target?: Extract<ActionConfig, { type: "click" }>["config"]["target"];
 };
 
+function getMockValueForVariable(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.includes("video")) {
+    return "https://www.tiktok.com/@tiktok/video/7350000000000000000";
+  }
+  if (lower.includes("url") || lower.includes("link")) {
+    return "https://www.tiktok.com/@tiktok";
+  }
+  if (
+    lower.includes("user") ||
+    lower.includes("name") ||
+    lower.includes("account") ||
+    lower.includes("channel") ||
+    lower.includes("profile")
+  ) {
+    return "tiktok";
+  }
+  if (lower.includes("id")) {
+    return "1234567890";
+  }
+  if (lower.includes("num") || lower.includes("count") || lower.includes("index")) {
+    return "1";
+  }
+  return `mock_${name}`;
+}
+
 export function createRunnerActionExecutors(
   runtime: RunnerActionRuntime,
   deps: RunnerActionExecutorDependencies,
@@ -1183,7 +1209,12 @@ export function createRunnerActionExecutors(
       const { source, position, index, output_name } = action.config;
       if (!output_name) return;
       const array = runtime.outputs[source];
-      if (!Array.isArray(array)) {
+      if (!Array.isArray(array) || array.length === 0) {
+        if (runtime.currentStepId?.startsWith("__prelude:loop_item:")) {
+          const mockVal = getMockValueForVariable(output_name);
+          writeVariableValue(runtime.outputs, output_name, mockVal);
+          return;
+        }
         writeVariableValue(runtime.outputs, output_name, undefined);
         return;
       }
