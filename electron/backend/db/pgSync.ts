@@ -5,8 +5,6 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import fs from "node:fs";
-
 const { Pool } = pg;
 
 const JWT_FALLBACK_SECRET = "super-secret-key-for-automation-app";
