@@ -57,7 +57,7 @@ export function NodeHelpDialog({
     );
   }
 
-  const content = node ? graphNodeHelpContent[node.node_type][language] : null;
+  const content = node ? (graphNodeHelpContent[node.node_type]?.[language] ?? null) : null;
 
   return (
     <Dialog open={Boolean(node)} onOpenChange={onOpenChange}>
@@ -191,11 +191,16 @@ export function NodeHelpDialog({
 }
 
 function actionTypeForNodeHelp(node: GraphNode | null) {
-  if (!node || node.node_type !== "action") return null;
-  const config = node.config as { type?: unknown } | null;
-  const actionType = typeof config?.type === "string" ? config.type : null;
-  return actionType && allActionOptions.includes(actionType as ActionType)
-    ? (actionType as ActionType)
+  if (!node) return null;
+  if (node.node_type === "action") {
+    const config = node.config as { type?: unknown } | null;
+    const actionType = typeof config?.type === "string" ? config.type : null;
+    return actionType && allActionOptions.includes(actionType as ActionType)
+      ? (actionType as ActionType)
+      : null;
+  }
+  return allActionOptions.includes(node.node_type as ActionType)
+    ? (node.node_type as ActionType)
     : null;
 }
 

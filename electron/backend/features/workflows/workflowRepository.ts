@@ -107,6 +107,9 @@ export class WorkflowRepository {
   async getSubflowUsage(subflowId: string): Promise<SubflowUsage[]> {
     return await this.subflowRepo.getSubflowUsage(subflowId);
   }
+  async listProjectSubflowUsages(projectId: string): Promise<Record<string, SubflowUsage[]>> {
+    return await this.subflowRepo.listProjectSubflowUsages(projectId);
+  }
 
   // --- Workflow Methods ---
   async createWorkflow(

@@ -13,12 +13,12 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps) {
-  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("remember_me") === "true");
+  const [rememberMe, setRememberMe] = useState(true);
   const [email, setEmail] = useState(() => {
     const savedEmail = localStorage.getItem("remembered_email");
-    return localStorage.getItem("remember_me") === "true" && savedEmail ? savedEmail : "";
+    return localStorage.getItem("remember_me") === "true" && savedEmail ? savedEmail : "admin@gmail.com";
   });
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState("admin");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -102,7 +102,7 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
                 onCheckedChange={setRememberMe}
                 disabled={isFieldsDisabled}
               />
-              <span className="text-sm">Remember email</span>
+              <span className="text-sm">Remember</span>
             </label>
           </div>
 
@@ -117,11 +117,7 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
           </Button>
         </form>
 
-        <div className="login-footer">
-          <p className="credential-hint">
-            Default credentials: <strong>admin@gmail.com</strong> / <strong>admin</strong>
-          </p>
-        </div>
+        <div className="login-footer" />
       </div>
     </div>
   );

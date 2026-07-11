@@ -11,6 +11,7 @@ import type {
 } from "../../../types/workflow";
 import {
   listSubflows,
+  listProjectSubflowUsages,
   getSubflow,
   getSubflowGraph,
   getSubflowUsage,
@@ -51,6 +52,7 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
 
   const [subflows, setSubflows] = useState<SubflowSummary[]>([]);
   const [subflowsLoading, setSubflowsLoading] = useState(false);
+  const [subflowUsagesBySubflow, setSubflowUsagesBySubflow] = useState<Record<string, SubflowUsage[]>>({});
   const [selectedSubflow, setSelectedSubflow] = useState<Subflow | null>(null);
   const [selectedSubflowGraph, setSelectedSubflowGraph] = useState<WorkflowGraph | null>(null);
   const [selectedSubflowUsage, setSelectedSubflowUsage] = useState<SubflowUsage[] | null>([]);
@@ -68,6 +70,8 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
       }
       const items = await listSubflows(resolvedProjectId);
       setSubflows(items);
+      const usages = await listProjectSubflowUsages(resolvedProjectId).catch(() => ({}));
+      setSubflowUsagesBySubflow(usages ?? {});
       setAppError("");
       return items;
     } catch (error) {
@@ -270,6 +274,7 @@ export function useSubflowWorkspace(deps: SubflowWorkspaceDeps): SubflowWorkspac
   return {
     subflows,
     subflowsLoading,
+    subflowUsagesBySubflow,
     selectedSubflow,
     selectedSubflowGraph,
     selectedSubflowUsage,

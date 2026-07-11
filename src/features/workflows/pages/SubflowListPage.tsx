@@ -12,15 +12,19 @@ import {
 } from "../../../components/ui/dialog";
 import { IconButton } from "../../../components/ui/icon-button";
 import { Input } from "../../../components/ui/input";
-import type { SubflowSummary } from "../../../types/workflow";
+import type { SubflowSummary, SubflowUsage } from "../../../types/workflow";
 import { SearchInput } from "../../../components/ui/search-input";
 import { FormField } from "../../../components/ui/form-field";
 import { ConfirmDialog } from "../../../components/ui/confirm-dialog";
+import { Select } from "../../../components/ui/select";
 import { SubflowSettingsDialog } from "../components/SubflowSettingsDialog";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, SortableTableHead, type SortDirection } from "../../../components/ui/table";
+
+type SubflowSortKey = "name" | "used_by";
 
 type SubflowListPageProps = {
   subflows: SubflowSummary[];
+  subflowUsagesBySubflow: Record<string, SubflowUsage[]>;
   loading: boolean;
   error: string;
   onCreateSubflow: (input: { name: string; description?: string | null }) => Promise<void>;
@@ -38,6 +42,7 @@ type SubflowListPageProps = {
 
 export function SubflowListPage({
   subflows,
+  subflowUsagesBySubflow,
   loading,
   error,
   onCreateSubflow,
@@ -58,6 +63,9 @@ export function SubflowListPage({
   const [searchQuery, setSearchQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [workflowFilter, setWorkflowFilter] = useState<string>("");
+  const [sortKey, setSortKey] = useState<SubflowSortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDirection>("asc");
 
   async function submitCreateSubflow(event: React.FormEvent) {
     event.preventDefault();
@@ -90,15 +98,59 @@ export function SubflowListPage({
     setLocalError("");
   }
 
+  function handleSort(key: string) {
+    const typedKey = key as SubflowSortKey;
+    if (sortKey === typedKey) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(typedKey);
+      setSortDir("asc");
+    }
+  }
+
+  const workflowOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    Object.values(subflowUsagesBySubflow).forEach((usages) => {
+      usages.forEach((usage: SubflowUsage) => {
+        map.set(usage.workflow_id, usage.workflow_name);
+      });
+    });
+    return Array.from(map, ([value, label]) => ({ value, label })).sort((a, b) =>
+      a.label.localeCompare(b.label),
+    );
+  }, [subflowUsagesBySubflow]);
+
   const filteredSubflows = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return subflows;
-    return subflows.filter(
-      (sub) =>
-        sub.name.toLowerCase().includes(query) ||
-        (sub.description && sub.description.toLowerCase().includes(query)),
-    );
-  }, [subflows, searchQuery]);
+    let result = subflows;
+    if (workflowFilter === "not_used") {
+      result = result.filter((sub) => sub.used_by_count === 0);
+    } else if (workflowFilter) {
+      result = result.filter((sub) =>
+        (subflowUsagesBySubflow[sub.id] ?? []).some(
+          (usage) => usage.workflow_id === workflowFilter,
+        ),
+      );
+    }
+    if (query) {
+      result = result.filter(
+        (sub) =>
+          sub.name.toLowerCase().includes(query) ||
+          (sub.description && sub.description.toLowerCase().includes(query)),
+      );
+    }
+    if (sortKey) {
+      const dir = sortDir === "asc" ? 1 : -1;
+      result = [...result].sort((a, b) => {
+        const valueA = sortKey === "name" ? a.name.toLowerCase() : a.used_by_count;
+        const valueB = sortKey === "name" ? b.name.toLowerCase() : b.used_by_count;
+        if (valueA < valueB) return -1 * dir;
+        if (valueA > valueB) return 1 * dir;
+        return 0;
+      });
+    }
+    return result;
+  }, [subflows, searchQuery, workflowFilter, subflowUsagesBySubflow, sortKey, sortDir]);
 
   return (
     <div className="flex flex-col gap-4 mt-2">
@@ -111,13 +163,32 @@ export function SubflowListPage({
 
       {/* Toolbar Filter */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-2">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search subflows..."
-          label="Search subflows"
-          className="max-w-xs"
-        />
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search subflows..."
+            label="Search subflows"
+            className="max-w-xs"
+          />
+          <Select
+            aria-label="Filter subflows by workflow"
+            searchable
+            searchPlaceholder="Search workflows..."
+            placeholder="All workflows"
+            value={workflowFilter}
+            onChange={(event) => setWorkflowFilter(event.currentTarget.value)}
+            className="select-sm bg-base-100 border-base-300 min-w-[12rem]"
+          >
+            <option value="">All workflows</option>
+            <option value="not_used">Not used</option>
+            {workflowOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
         <div className="flex items-center gap-3">
           <Button
             variant="secondary"
@@ -162,17 +233,34 @@ export function SubflowListPage({
           </div>
         ) : (
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>NAME</TableHead>
-                <TableHead>DESCRIPTION</TableHead>
-                <TableHead>USED BY</TableHead>
-                <TableHead className="text-right">ACTIONS</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSubflows.map((subflow) => (
-                <TableRow key={subflow.id} data-slot="card">
+             <TableHeader>
+               <TableRow>
+                 <SortableTableHead
+                   label="NAME"
+                   sortKey="name"
+                   activeKey={sortKey}
+                   direction={sortDir}
+                   onSort={handleSort}
+                 />
+                 <TableHead>DESCRIPTION</TableHead>
+                 <SortableTableHead
+                   label="USED BY"
+                   sortKey="used_by"
+                   activeKey={sortKey}
+                   direction={sortDir}
+                   onSort={handleSort}
+                 />
+                 <TableHead className="text-right">ACTIONS</TableHead>
+               </TableRow>
+             </TableHeader>
+             <TableBody>
+               {filteredSubflows.map((subflow) => (
+                 <TableRow
+                   key={subflow.id}
+                   data-slot="card"
+                   className="cursor-pointer"
+                   onClick={() => onOpenSubflow(subflow.id)}
+                 >
                   <TableCell>
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
@@ -191,8 +279,11 @@ export function SubflowListPage({
                     {subflow.used_by_count}{" "}
                     {subflow.used_by_count === 1 ? "workflow" : "workflows"}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end items-center">
+                   <TableCell className="text-right">
+                     <div
+                       className="flex gap-2 justify-end items-center"
+                       onClick={(event) => event.stopPropagation()}
+                     >
                       <IconButton
                         label={`Open ${subflow.name}`}
                         type="button"

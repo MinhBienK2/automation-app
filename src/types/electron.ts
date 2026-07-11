@@ -94,6 +94,7 @@ export type WorkflowElectronBridge = {
     input: { name: string; description?: string | null },
   ): Promise<Subflow>;
   listSubflows(projectId: string): Promise<SubflowSummary[]>;
+  listProjectSubflowUsages(projectId: string): Promise<Record<string, SubflowUsage[]>>;
   getSubflow(subflowId: string): Promise<Subflow>;
   updateSubflow(
     subflowId: string,

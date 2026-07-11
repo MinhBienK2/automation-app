@@ -1,10 +1,13 @@
 /* eslint-disable max-lines-per-function */
 import * as React from "react";
 import { ChevronDown, Check } from "lucide-react";
+import { SearchInput } from "./search-input";
 
 interface SelectProps extends Omit<React.ComponentProps<"select">, "onChange"> {
   onChange?: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   placeholder?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 function getReactNodeText(node: React.ReactNode): string {
@@ -57,6 +60,8 @@ const Select = React.forwardRef<HTMLDetailsElement, SelectProps>(
       defaultValue,
       disabled,
       placeholder,
+      searchable = false,
+      searchPlaceholder = "Search...",
       onChange,
       ...props
     },
@@ -67,8 +72,16 @@ const Select = React.forwardRef<HTMLDetailsElement, SelectProps>(
 
     useClickOutside(detailsRef);
 
+    const [query, setQuery] = React.useState("");
+
     const options = React.useMemo(() => parseOptions(children), [children]);
     const currentValue = value !== undefined ? String(value) : (defaultValue !== undefined ? String(defaultValue) : "");
+
+    const visibleOptions = React.useMemo(() => {
+      if (!searchable || !query.trim()) return options;
+      const normalized = query.trim().toLowerCase();
+      return options.filter((opt) => opt.label.toLowerCase().includes(normalized));
+    }, [searchable, query, options]);
 
     const selectedOption = options.find((opt) => opt.value === currentValue);
     const selectedLabel = selectedOption ? selectedOption.label : (placeholder || options[0]?.label || "");
@@ -76,6 +89,7 @@ const Select = React.forwardRef<HTMLDetailsElement, SelectProps>(
     const handleSelect = (val: string, isDisabled?: boolean) => {
       if (isDisabled || disabled) return;
       detailsRef.current?.removeAttribute("open");
+      setQuery("");
 
       if (val !== currentValue && onChange) {
         const syntheticEvent = {
@@ -139,38 +153,62 @@ const Select = React.forwardRef<HTMLDetailsElement, SelectProps>(
           <summary
             className={triggerClasses}
             role="button"
-            onClick={(e) => disabled && e.preventDefault()}
+            onClick={(e) => {
+              if (disabled) {
+                e.preventDefault();
+              } else if (!detailsRef.current?.hasAttribute("open")) {
+                setQuery("");
+              }
+            }}
           >
             <span className="truncate">{selectedLabel}</span>
             <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
           </summary>
 
-          <ul className="dropdown-content menu flex-nowrap bg-base-200 border border-base-300 rounded-box z-50 w-full p-1 shadow-md max-h-60 overflow-y-auto mt-1">
-            {options.map((opt) => {
-              const isSelected = opt.value === currentValue;
-              const itemClasses = [
-                "flex w-full items-center justify-between gap-2 rounded-btn px-3 py-2 text-sm text-left transition-colors select-none",
-                opt.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
-                isSelected ? "bg-primary text-primary-content font-medium" : "text-base-content hover:bg-base-300"
-              ]
-                .filter(Boolean)
-                .join(" ");
+          <div className="dropdown-content bg-base-200 border border-base-300 rounded-box z-50 w-full shadow-md mt-1 overflow-hidden flex flex-col max-h-72">
+            {searchable ? (
+              <div className="p-2 border-b border-base-300">
+                <SearchInput
+                  value={query}
+                  onChange={setQuery}
+                  label="Search options"
+                  placeholder={searchPlaceholder}
+                  className="max-w-none"
+                  autoFocus
+                />
+              </div>
+            ) : null}
+            <ul className="menu flex-nowrap bg-base-200 border-base-300 rounded-box z-50 w-full p-1 shadow-md overflow-y-auto max-h-60">
+              {visibleOptions.length === 0 ? (
+                <li className="px-3 py-2 text-sm text-secondary">No matches</li>
+              ) : (
+                visibleOptions.map((opt) => {
+                  const isSelected = opt.value === currentValue;
+                  const itemClasses = [
+                    "flex w-full items-center justify-between gap-2 rounded-btn px-3 py-2 text-sm text-left transition-colors select-none",
+                    opt.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
+                    isSelected ? "bg-primary text-primary-content font-medium" : "text-base-content hover:bg-base-300"
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
 
-              return (
-                <li key={opt.value} role="option" aria-selected={isSelected}>
-                  <button
-                    type="button"
-                    disabled={opt.disabled}
-                    className={itemClasses}
-                    onClick={() => handleSelect(opt.value, opt.disabled)}
-                  >
-                    <span className="truncate">{opt.label}</span>
-                    {isSelected && <Check className="h-4 w-4 shrink-0" />}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                  return (
+                    <li key={opt.value} role="option" aria-selected={isSelected}>
+                      <button
+                        type="button"
+                        disabled={opt.disabled}
+                        className={itemClasses}
+                        onClick={() => handleSelect(opt.value, opt.disabled)}
+                      >
+                        <span className="truncate">{opt.label}</span>
+                        {isSelected && <Check className="h-4 w-4 shrink-0" />}
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
         </details>
       </>
     );

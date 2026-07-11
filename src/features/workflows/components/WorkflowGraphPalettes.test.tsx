@@ -61,6 +61,31 @@ describe("NodeHelpDialog", () => {
     await userEvent.click(fieldItem!.querySelector("summary")!);
     expect(fieldItem?.open).toBe(true);
   });
+
+  test("renders action help modal for graph-native action node types (e.g. extract_text)", async () => {
+    const extractNode: GraphNode = {
+      id: "node-extract_text",
+      node_type: "extract_text" as GraphNodeType,
+      label: "Extract text",
+      position: { x: 0, y: 0 },
+      config: null,
+      ports: [],
+    };
+
+    render(
+      <NodeHelpDialog
+        node={extractNode}
+        language="vi"
+        onOpenChange={vi.fn()}
+        onLanguageChange={vi.fn()}
+      />,
+    );
+
+    // Should render the StepHelpModal for extract_text
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("action-help-header")).toBeInTheDocument();
+    expect(screen.getByText("Extract Text Help")).toBeInTheDocument();
+  });
 });
 
 describe("GraphNodePalette", () => {

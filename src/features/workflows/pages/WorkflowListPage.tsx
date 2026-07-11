@@ -36,7 +36,7 @@ import { Input } from "../../../components/ui/input";
 import { SearchInput } from "../../../components/ui/search-input";
 import { FormField } from "../../../components/ui/form-field";
 import { runStatusLabel } from "../../../lib/workflowUi";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, SortableTableHead, type SortDirection } from "../../../components/ui/table";
 
 type WorkflowListPageProps = {
   workflows: WorkflowSummary[];
@@ -90,6 +90,8 @@ export function WorkflowListPage({
   workflowDialogBusy = false,
 }: WorkflowListPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortDir, setSortDir] = useState<SortDirection>("asc");
+  const [sortActive, setSortActive] = useState(false);
   const workflowDialogTitle =
     workflowDialogMode === "create" ? "Create Workflow" : "Edit Workflow";
   const workflowDialogDescription =
@@ -105,11 +107,33 @@ export function WorkflowListPage({
       .map((snapshot) => [snapshot.workflow_id, snapshot]),
   );
 
+  function handleSortName() {
+    if (sortActive) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortActive(true);
+      setSortDir("asc");
+    }
+  }
+
   const filteredWorkflows = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return workflows;
-    return workflows.filter((wf) => wf.name.toLowerCase().includes(query));
-  }, [workflows, searchQuery]);
+    let result = workflows;
+    if (query) {
+      result = result.filter((wf) => wf.name.toLowerCase().includes(query));
+    }
+    if (sortActive) {
+      const dir = sortDir === "asc" ? 1 : -1;
+      result = [...result].sort((a, b) => {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        if (nameA < nameB) return -1 * dir;
+        if (nameA > nameB) return 1 * dir;
+        return 0;
+      });
+    }
+    return result;
+  }, [workflows, searchQuery, sortActive, sortDir]);
 
   return (
     <div className="flex flex-col gap-4 mt-2">
@@ -163,18 +187,29 @@ export function WorkflowListPage({
           </div>
         ) : (
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>WORKFLOW</TableHead>
-                <TableHead className="text-right">ACTIONS</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredWorkflows.map((workflow) => {
-                const activeRun = activeRunsByWorkflow.get(workflow.id);
-                const hasActiveRun = Boolean(activeRun);
-                return (
-                  <TableRow key={workflow.id} data-slot="card">
+             <TableHeader>
+               <TableRow>
+                 <SortableTableHead
+                   label="WORKFLOW"
+                   sortKey="name"
+                   activeKey={sortActive ? "name" : null}
+                   direction={sortDir}
+                   onSort={handleSortName}
+                 />
+                 <TableHead className="text-right">ACTIONS</TableHead>
+               </TableRow>
+             </TableHeader>
+             <TableBody>
+               {filteredWorkflows.map((workflow) => {
+                 const activeRun = activeRunsByWorkflow.get(workflow.id);
+                 const hasActiveRun = Boolean(activeRun);
+                 return (
+                   <TableRow
+                     key={workflow.id}
+                     data-slot="card"
+                     className="cursor-pointer"
+                     onClick={() => onOpenWorkflow(workflow.id)}
+                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
@@ -201,8 +236,11 @@ export function WorkflowListPage({
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end items-center">
+                     <TableCell className="text-right">
+                       <div
+                         className="flex gap-2 justify-end items-center"
+                         onClick={(event) => event.stopPropagation()}
+                       >
                         <IconButton
                           label="View Details"
                           type="button"

@@ -536,7 +536,7 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "switch_to_parent_frame":
       return ["No fields"];
     default:
-      return [];
+      return ["Output name"];
   }
 }
 

@@ -889,6 +889,7 @@ function AppInner() {
           {projectsWorkspace.projectCollection === "subflows" ? (
             <SubflowListPage
               subflows={subflowsWorkspace.subflows}
+              subflowUsagesBySubflow={subflowsWorkspace.subflowUsagesBySubflow}
               loading={subflowsWorkspace.subflowsLoading}
               error={appError}
               onCreateSubflow={(input) => subflowsWorkspace.createProjectSubflow(input)}

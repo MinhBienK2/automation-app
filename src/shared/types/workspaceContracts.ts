@@ -187,6 +187,7 @@ export interface RecordingWorkspaceAPI {
 export interface SubflowWorkspaceAPI {
   subflows: SubflowSummary[];
   subflowsLoading: boolean;
+  subflowUsagesBySubflow: Record<string, SubflowUsage[]>;
   selectedSubflow: Subflow | null;
   selectedSubflowGraph: WorkflowGraph | null;
   selectedSubflowUsage: SubflowUsage[] | null;

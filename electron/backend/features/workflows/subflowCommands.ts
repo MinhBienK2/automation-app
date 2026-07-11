@@ -55,6 +55,11 @@ export function createSubflowCommands(deps: CommandDeps) {
       return await repository.listSubflows(projectId);
     },
 
+    async listProjectSubflowUsages(projectId: string): Promise<Record<string, SubflowUsage[]>> {
+      await requireProject(projectId);
+      return await repository.listProjectSubflowUsages(projectId);
+    },
+
     async getSubflow(subflowId: string): Promise<Subflow> {
       const subflow = await repository.getSubflow(subflowId);
       if (!subflow) throw commandError("Subflow not found", "subflowId");

@@ -133,6 +133,10 @@ export function listSubflows(projectId: string) {
   return bridge().listSubflows(projectId);
 }
 
+export function listProjectSubflowUsages(projectId: string) {
+  return bridge().listProjectSubflowUsages(projectId);
+}
+
 export function getSubflow(subflowId: string) {
   return bridge().getSubflow(subflowId);
 }

@@ -15,6 +15,7 @@ export const workflowIpcChannels = {
   resetBrowserProfileIdentity: "workflow:resetBrowserProfileIdentity",
   createSubflow: "workflow:createSubflow",
   listSubflows: "workflow:listSubflows",
+  listProjectSubflowUsages: "workflow:listProjectSubflowUsages",
   getSubflow: "workflow:getSubflow",
   updateSubflow: "workflow:updateSubflow",
   getSubflowGraph: "workflow:getSubflowGraph",

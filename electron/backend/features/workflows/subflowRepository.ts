@@ -173,6 +173,23 @@ export class SubflowRepository {
     return rows as SubflowUsage[];
   }
 
+  async listProjectSubflowUsages(projectId: string): Promise<Record<string, SubflowUsage[]>> {
+    const rows = await this.database.query(
+      `SELECT DISTINCT n.subflow_ref AS subflow_id, w.id AS workflow_id, w.name AS workflow_name
+       FROM workflow_nodes n
+       JOIN workflows w ON w.id = n.workflow_id
+       WHERE n.subflow_ref IS NOT NULL AND w.owner_id = $1 AND w.project_id = $2
+       ORDER BY w.name ASC`,
+      [this.database.ownerId, projectId],
+    ) as Array<SubflowUsage & { subflow_id: string }>;
+    const map: Record<string, SubflowUsage[]> = {};
+    for (const row of rows) {
+      const { subflow_id, ...usage } = row;
+      (map[subflow_id] ||= []).push(usage);
+    }
+    return map;
+  }
+
   private async getSubflowRow(subflowId: string): Promise<SubflowRow | null> {
     return (
       (await this.database.queryOne(
