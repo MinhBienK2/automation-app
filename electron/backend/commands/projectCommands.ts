@@ -11,7 +11,7 @@ import nodeFs from "node:fs";
 import path from "node:path";
 import { sanitizePathSegment } from "../evidence/artifacts.js";
 import { getBrowserProfileKey } from "../projects/projectCommandCascades.js";
-import { WorkflowRepository } from "../persistence/workflowRepository.js";
+import { WorkflowRepository } from "../repositories/workflowRepository.js";
 
 export function createProjectCommands(deps: CommandDeps) {
   const {

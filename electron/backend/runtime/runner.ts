@@ -11,7 +11,7 @@ import type {
   RunState,
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
-import type { AppPaths } from "../persistence/database.js";
+import type { AppPaths } from "../db/database.js";
 import {
   BrowserSessionManager,
   browserIdentityEvidence,

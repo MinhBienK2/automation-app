@@ -16,7 +16,7 @@ import { validateWorkflowGraph as validateGraphDefault } from "../graph/compiler
 import { generateRecordingGraph } from "./graphGenerator.js";
 import { reconcileReviewedRecordingSteps } from "./reviewReconciliation.js";
 import { normalizeRecordingEvents } from "./timelineNormalizer.js";
-import type { DbAdapter } from "../persistence/dbAdapter.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
 
 export type RecordingDraftSessionPort = {
   getSession(sessionId: string): RecordingSession | null;

@@ -5,8 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { createWorkflowCommandHandlers } from "../commands";
-import { createAppPaths } from "../persistence/database.js";
-import { TestDbAdapter } from "../persistence/testDbAdapter.js";
+import { createAppPaths } from "../db/database.js";
+import { TestDbAdapter } from "../db/testDbAdapter.js";
 import {
   compileWorkflowGraphFromNode,
   compileWorkflowRunPlan,

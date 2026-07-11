@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { WorkflowRepository } from "./workflowRepository.js";
 import { assembleGraphFromTables } from "./normalizedGraphRepository.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
-import { TestDbAdapter } from "./testDbAdapter.js";
+import { TestDbAdapter } from "../db/testDbAdapter.js";
 
 function sampleGraph(): WorkflowGraph {
   return {

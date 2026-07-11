@@ -1,9 +1,17 @@
 // @vitest-environment node
 
-import { describe, expect, test, vi } from "vitest";
-import { TestDbAdapter } from "../persistence/testDbAdapter.js";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { TestDbAdapter } from "../db/testDbAdapter.js";
 import { beginRun, finishRun } from "./runDbHelpers.js";
 import type { CompiledWorkflowGraph, RunState, WorkflowGraph, WorkflowSettings } from "../../../src/types/workflow.js";
+import { getMongoCollection } from "../db/mongo.js";
+
+afterEach(async () => {
+  const mongoCollection = await getMongoCollection("run_steps");
+  if (mongoCollection) {
+    await mongoCollection.deleteMany({});
+  }
+});
 
 function workflowSettings(workflowId: string): WorkflowSettings {
   return {
@@ -115,13 +123,15 @@ describe("runDbHelpers", () => {
 
     await finishRun(database, runId, compiledGraph, state);
 
-    // Under TDD, this should fail since the current code runs 1 update + 4 separate inserts (total 5 execution calls)
-    expect(executeSpy).toHaveBeenCalledTimes(2);
+    // Only 1 Postgres update query for the runs table
+    expect(executeSpy).toHaveBeenCalledTimes(1);
 
     executeSpy.mockRestore();
 
-    // Verify all steps are in database
-    const stepRows = await database.query("SELECT * FROM run_steps WHERE run_id = $1 ORDER BY step_number ASC", [runId]);
+    // Verify all steps are in MongoDB
+    const mongoCollection = await getMongoCollection("run_steps");
+    expect(mongoCollection).not.toBeNull();
+    const stepRows = await mongoCollection!.find({ run_id: runId }).sort({ step_number: 1 }).toArray();
     expect(stepRows).toHaveLength(4);
     expect(stepRows[0]).toMatchObject({ node_id: "step-1", status: "success" });
     expect(stepRows[3]).toMatchObject({ node_id: "nested-1", status: "success" });

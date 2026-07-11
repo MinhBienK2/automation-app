@@ -1,4 +1,4 @@
-import type { DbAdapter } from "./dbAdapter.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
 import type {
   Project,
   BrowserProfile,

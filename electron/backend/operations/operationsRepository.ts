@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { DbAdapter } from "../persistence/dbAdapter.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
 import type {
   OperationsOverview,
   OperationsOverviewRequest,

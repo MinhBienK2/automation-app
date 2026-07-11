@@ -7,7 +7,7 @@ import type {
   WorkflowPersona,
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
-import type { AppPaths } from "../persistence/database.js";
+import type { AppPaths } from "../db/database.js";
 import { sanitizePathSegment } from "../evidence/artifacts.js";
 import { isPlainRecord } from "../shared/records.js";
 import { localBrowserLocale, localBrowserTimezone } from "./localEnvironment.js";

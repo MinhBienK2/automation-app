@@ -479,8 +479,8 @@ describe("Projects, Environments, and Subflows integration", () => {
 
   test("ensureProjectModelReady does not create a default project if none exist", async () => {
     const { createWorkflowCommandHandlers } = await import("./index.js");
-    const { createAppPaths } = await import("../persistence/database.js");
-    const { TestDbAdapter } = await import("../persistence/testDbAdapter.js");
+    const { createAppPaths } = await import("../db/database.js");
+    const { TestDbAdapter } = await import("../db/testDbAdapter.js");
 
     const tempRoot = await fs.mkdtemp(path.join(tempRoots[0] ? path.dirname(tempRoots[0]) : "/tmp", "automation-app-"));
     const appPaths = createAppPaths(tempRoot);

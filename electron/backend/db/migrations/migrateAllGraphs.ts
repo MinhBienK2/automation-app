@@ -1,10 +1,10 @@
-import type { DbAdapter } from "./dbAdapter.js";
+import type { DbAdapter } from "../dbAdapter.js";
 import crypto from "node:crypto";
-import type { WorkflowGraph } from "../../../src/types/workflow.js";
-import { runMigrations } from "../graph/migrations/index.js";
-import { validateActionConfig } from "../actions/schemas/index.js";
-import { quarantineNode } from "../graph/quarantine.js";
-import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "./normalizedGraphRepository.js";
+import type { WorkflowGraph } from "../../../../src/types/workflow.js";
+import { runMigrations } from "../../graph/migrations/index.js";
+import { validateActionConfig } from "../../actions/schemas/index.js";
+import { quarantineNode } from "../../graph/quarantine.js";
+import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "../../repositories/normalizedGraphRepository.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 
 export type MigrationReport = {

@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { createAuthCommands } from "./authCommands.js";
-import { authenticateUser, verifyToken } from "../persistence/pgSync.js";
+import { authenticateUser, verifyToken } from "../db/pgSync.js";
 
-vi.mock("../persistence/pgSync.js", () => {
+vi.mock("../db/pgSync.js", () => {
   return {
     authenticateUser: vi.fn(),
     verifyToken: vi.fn(),

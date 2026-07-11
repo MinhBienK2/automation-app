@@ -7,8 +7,8 @@ import {
 } from "./commands.js";
 import {
   createAppPaths,
-} from "./persistence/database.js";
-import { TestDbAdapter } from "./persistence/testDbAdapter.js";
+} from "./db/database.js";
+import { TestDbAdapter } from "./db/testDbAdapter.js";
 import type {
   GraphNodeType,
   ProjectPackage,

@@ -5,9 +5,9 @@ import {
   listUsers,
   createUser,
   deleteUser
-} from "../persistence/pgSync.js";
-import type { DbAdapter } from "../persistence/dbAdapter.js";
-import type { User } from "../persistence/pgSync.js";
+} from "../db/pgSync.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
+import type { User } from "../db/pgSync.js";
 
 export function createAuthCommands(database: DbAdapter) {
   async function login(input: any) {

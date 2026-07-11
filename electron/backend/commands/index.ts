@@ -8,7 +8,7 @@ import { IdentityRepository } from "../identity/identityRepository.js";
 import { createProjectCommandCascades } from "../projects/projectCommandCascades.js";
 import { ProjectPackageService } from "../services/projectPackageService.js";
 import { WorkflowPackageService } from "../services/workflowPackageService.js";
-import { WorkflowRepository } from "../persistence/workflowRepository.js";
+import { WorkflowRepository } from "../repositories/workflowRepository.js";
 import { WorkflowScheduleRepository } from "../scheduling/workflowScheduleRepository.js";
 import { OperationsRepository } from "../operations/operationsRepository.js";
 import {
@@ -46,7 +46,7 @@ import { createRecordingCommands } from "./recordingCommands.js";
 import { createSettingsCommands } from "./settingsCommands.js";
 import { createAuthCommands } from "./authCommands.js";
 import { createBackupCommands } from "./backupCommands.js";
-import { loadAppConfig, saveAppConfig } from "../persistence/appConfig.js";
+import { loadAppConfig, saveAppConfig } from "../config/appConfig.js";
 
 export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { BackupService, type BackupConfig, type BackupFile } from "../persistence/backupService.js";
+import { BackupService, type BackupConfig, type BackupFile } from "../services/backupService.js";
 import type { CommandDeps } from "./types.js";
 
 export function createBackupCommands(deps: CommandDeps) {

@@ -13,7 +13,7 @@ import {
   deleteRevision,
 } from "./revisionRepository.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
-import { TestDbAdapter } from "./testDbAdapter.js";
+import { TestDbAdapter } from "../db/testDbAdapter.js";
 
 function sampleGraph(): WorkflowGraph {
   return {

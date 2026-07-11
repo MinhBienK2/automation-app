@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DbAdapter } from "../persistence/dbAdapter.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
 import type {
   CompiledWorkflowGraph,
   WorkflowGraph,
@@ -8,6 +8,7 @@ import type {
   WorkflowSummary,
   RunState,
 } from "../../../src/types/workflow.js";
+import { getMongoCollection } from "../db/mongo.js";
 
 export function browserProfileKey(settings: WorkflowSettings) {
   if (settings.browser_launch.session_mode !== "persistent_profile") return null;
@@ -79,77 +80,59 @@ export async function finishRun(
       ? (state.outputs.__action_traces as Array<Record<string, unknown>>)
       : [];
 
-    const stepsToInsert: any[][] = [];
+    const mongoCollection = await getMongoCollection("run_steps");
 
-    for (const [index, step] of graph.steps.entries()) {
-      const trace = traces.find((candidate) =>
-        candidate.node_id === step.node_id && !isNestedTrace(candidate),
-      ) ?? traces.find((candidate) => candidate.node_id === step.node_id);
-      const failed = state.error?.step_id === step.node_id;
-      const completed = state.completed_step_ids.includes(step.node_id);
+    if (mongoCollection) {
+      const documents: any[] = [];
 
-      stepsToInsert.push([
-        randomUUID(),
-        runId,
-        step.node_id,
-        index + 1,
-        step.config.type,
-        failed ? "failed" : completed ? "success" : "skipped",
-        traceTimestamp(trace, "started_at"),
-        traceTimestamp(trace, "finished_at") ?? (trace || failed ? new Date().toISOString() : null),
-        trace ? JSON.stringify(trace) : null,
-        failed && state.error ? JSON.stringify(state.error) : traceErrorJson(trace),
-        tx.ownerId,
-      ]);
-    }
+      for (const [index, step] of graph.steps.entries()) {
+        const trace = traces.find((candidate) =>
+          candidate.node_id === step.node_id && !isNestedTrace(candidate),
+        ) ?? traces.find((candidate) => candidate.node_id === step.node_id);
+        const failed = state.error?.step_id === step.node_id;
+        const completed = state.completed_step_ids.includes(step.node_id);
 
-    const nestedTraces = traces
-      .map((trace, index) => ({ trace, index }))
-      .filter(({ trace }) => isNestedTrace(trace))
-      .sort((left, right) => traceOrder(left.trace, left.index) - traceOrder(right.trace, right.index));
+        documents.push({
+          id: randomUUID(),
+          run_id: runId,
+          node_id: step.node_id,
+          step_number: index + 1,
+          action_type: step.config.type,
+          status: failed ? "failed" : completed ? "success" : "skipped",
+          started_at: traceTimestamp(trace, "started_at"),
+          finished_at: traceTimestamp(trace, "finished_at") ?? (trace || failed ? new Date().toISOString() : null),
+          trace: trace ?? null,
+          error: failed && state.error ? state.error : (trace ? traceErrorObject(trace) : null),
+          owner_id: tx.ownerId,
+          created_at: new Date().toISOString(),
+        });
+      }
 
-    for (const [nestedIndex, { trace }] of nestedTraces.entries()) {
-      stepsToInsert.push([
-        randomUUID(),
-        runId,
-        String(trace.node_id),
-        graph.steps.length + nestedIndex + 1,
-        typeof trace.action_type === "string" ? trace.action_type : "unknown",
-        traceRunStepStatus(trace),
-        traceTimestamp(trace, "started_at"),
-        traceTimestamp(trace, "finished_at") ?? new Date().toISOString(),
-        JSON.stringify(trace),
-        traceErrorJson(trace),
-        tx.ownerId,
-      ]);
-    }
+      const nestedTraces = traces
+        .map((trace, index) => ({ trace, index }))
+        .filter(({ trace }) => isNestedTrace(trace))
+        .sort((left, right) => traceOrder(left.trace, left.index) - traceOrder(right.trace, right.index));
 
-    if (stepsToInsert.length > 0) {
-      const placeholders = stepsToInsert
-        .map((_, rowIndex) => {
-          const base = rowIndex * 11;
-          const rowParams = Array.from({ length: 11 }, (_, colIndex) => `$${base + colIndex + 1}`);
-          return `(${rowParams.join(", ")})`;
-        })
-        .join(", ");
+      for (const [nestedIndex, { trace }] of nestedTraces.entries()) {
+        documents.push({
+          id: randomUUID(),
+          run_id: runId,
+          node_id: String(trace.node_id),
+          step_number: graph.steps.length + nestedIndex + 1,
+          action_type: typeof trace.action_type === "string" ? trace.action_type : "unknown",
+          status: traceRunStepStatus(trace),
+          started_at: traceTimestamp(trace, "started_at"),
+          finished_at: traceTimestamp(trace, "finished_at") ?? new Date().toISOString(),
+          trace: trace ?? null,
+          error: traceErrorObject(trace),
+          owner_id: tx.ownerId,
+          created_at: new Date().toISOString(),
+        });
+      }
 
-      const values = stepsToInsert.flat();
-      await tx.execute(
-        `INSERT INTO run_steps (
-          id,
-          run_id,
-          node_id,
-          step_number,
-          action_type,
-          status,
-          started_at,
-          finished_at,
-          trace_json,
-          error_json,
-          owner_id
-        ) VALUES ${placeholders}`,
-        values,
-      );
+      if (documents.length > 0) {
+        await mongoCollection.insertMany(documents);
+      }
     }
   });
 }
@@ -173,14 +156,14 @@ function traceRunStepStatus(trace: Record<string, unknown>) {
   return typeof trace.status === "string" ? trace.status : "success";
 }
 
-function traceErrorJson(trace: Record<string, unknown> | undefined) {
+function traceErrorObject(trace: Record<string, unknown> | undefined) {
   if (!trace || trace.status !== "failed") return null;
   const reason = typeof trace.reason === "string" ? trace.reason : "Action failed";
-  return JSON.stringify({
+  return {
     step_id: typeof trace.node_id === "string" ? trace.node_id : null,
     action_type: typeof trace.action_type === "string" ? trace.action_type : "unknown",
     reason,
-  });
+  };
 }
 
 export function fallbackWorkflowSummary(id: string, name: string): WorkflowSummary {

@@ -8,7 +8,7 @@ import { IdentityRepository } from "../identity/identityRepository.js";
 import { OperationsRepository } from "../operations/operationsRepository.js";
 import { RunManager } from "../runtime/runManager.js";
 import { WorkflowScheduleRepository } from "../scheduling/workflowScheduleRepository.js";
-import type { DbAdapter } from "./dbAdapter.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
 
 const mockDbAdapter = {
   query: async () => [],

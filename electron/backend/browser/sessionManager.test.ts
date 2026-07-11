@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import type { WorkflowSettings } from "../../../src/types/workflow";
 import { defaultWorkflowSettings } from "../commands";
-import { createAppPaths } from "../persistence/database";
+import { createAppPaths } from "../db/database";
 import {
   BrowserSessionManager,
   browserIdentityEvidence,

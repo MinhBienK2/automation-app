@@ -11,6 +11,7 @@ import type {
   WorkflowGraph,
   WorkflowRunSnapshot,
   WorkflowStep,
+  RunState,
 } from "../../../types/workflow";
 import {
   idleRunState,

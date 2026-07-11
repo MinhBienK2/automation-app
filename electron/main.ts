@@ -8,12 +8,12 @@ import {
   serializeCommandError,
   type WorkflowCommandHandlers,
 } from "./backend/commands.js";
-import { createAppPaths } from "./backend/persistence/database.js";
-import { loadAppConfig } from "./backend/persistence/appConfig.js";
-import { initializePgPool } from "./backend/persistence/pgSync.js";
-import { PgDbAdapter } from "./backend/persistence/dbAdapter.js";
-import { PostgresDbConnection, checkMigrationsPending } from "./backend/persistence/migrationRunner.js";
-import { migrations } from "./backend/persistence/migrations.js";
+import { createAppPaths } from "./backend/db/database.js";
+import { loadAppConfig } from "./backend/config/appConfig.js";
+import { initializePgPool } from "./backend/db/pgSync.js";
+import { PgDbAdapter } from "./backend/db/dbAdapter.js";
+import { PostgresDbConnection, checkMigrationsPending } from "./backend/db/migrations/migrationRunner.js";
+import { migrations } from "./backend/db/migrations/migrations.js";
 import pkg from "electron-updater";
 const { autoUpdater } = pkg;
 import {

@@ -30,7 +30,7 @@ import {
   tagRevision,
   untagRevision,
   deleteRevision,
-} from "../persistence/revisionRepository.js";
+} from "../repositories/revisionRepository.js";
 
 function isUnsupportedGraphDiscriminantMessage(message: string) {
   return (

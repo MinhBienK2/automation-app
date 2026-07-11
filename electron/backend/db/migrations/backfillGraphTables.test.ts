@@ -1,10 +1,10 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import { WorkflowRepository } from "./workflowRepository.js";
-import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "./normalizedGraphRepository.js";
+import { WorkflowRepository } from "../../repositories/workflowRepository.js";
+import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "../../repositories/normalizedGraphRepository.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
-import { TestDbAdapter } from "./testDbAdapter.js";
+import { TestDbAdapter } from "../testDbAdapter.js";
 
 function sampleGraph(): WorkflowGraph {
   return {

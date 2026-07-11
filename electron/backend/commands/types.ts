@@ -1,5 +1,5 @@
-import type { DbAdapter } from "../persistence/dbAdapter.js";
-import type { AppPaths } from "../persistence/database.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
+import type { AppPaths } from "../db/database.js";
 import type { BrowserDriver } from "../browser/sessionManager.js";
 import type { RunnerCommandPort } from "../runtime/runManager.js";
 import type {
@@ -15,7 +15,7 @@ import type {
   Subflow,
   SubflowExport,
 } from "../../../src/types/workflow.js";
-import { WorkflowRepository } from "../persistence/workflowRepository.js";
+import { WorkflowRepository } from "../repositories/workflowRepository.js";
 import { OperationsRepository } from "../operations/operationsRepository.js";
 import { WorkflowScheduleRepository } from "../scheduling/workflowScheduleRepository.js";
 import { RunManager } from "../runtime/runManager.js";

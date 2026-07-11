@@ -1,5 +1,5 @@
-import type { DbAdapter } from "./dbAdapter.js";
-import type { WorkflowGraph, GraphNode } from "../../../src/types/workflow.js";
+import type { DbAdapter } from "../dbAdapter.js";
+import type { WorkflowGraph, GraphNode } from "../../../../src/types/workflow.js";
 
 export type BackfillResult = {
   scanned: number;

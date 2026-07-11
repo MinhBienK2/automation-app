@@ -1,11 +1,11 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import { WorkflowRepository } from "./workflowRepository.js";
+import { WorkflowRepository } from "../../repositories/workflowRepository.js";
 import { migrateAllGraphs } from "./migrateAllGraphs.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
-import { TestDbAdapter } from "./testDbAdapter.js";
+import { TestDbAdapter } from "../testDbAdapter.js";
 
 function baselineV1Graph(): WorkflowGraph {
   return {

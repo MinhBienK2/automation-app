@@ -1,6 +1,4 @@
-// @vitest-environment node
-
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import type {
   CompiledWorkflowGraph,
   RunState,
@@ -9,7 +7,15 @@ import type {
   WorkflowSummary,
 } from "../../../src/types/workflow";
 import { idleRunState, RunManager } from "./runManager.js";
-import { TestDbAdapter } from "../persistence/testDbAdapter.js";
+import { TestDbAdapter } from "../db/testDbAdapter.js";
+import { getMongoCollection } from "../db/mongo.js";
+
+afterEach(async () => {
+  const mongoCollection = await getMongoCollection("run_steps");
+  if (mongoCollection) {
+    await mongoCollection.deleteMany({});
+  }
+});
 
 describe("RunManager", () => {
   test("marks durable running rows from a previous app process as failed on startup", async () => {
@@ -158,10 +164,9 @@ describe("RunManager", () => {
       outputs_json: JSON.stringify({ ok: true }),
     });
 
-    const stepsCount = await database.queryOne<{ count: number }>("SELECT COUNT(*) AS count FROM run_steps");
-    expect(stepsCount).toEqual({
-      count: 1,
-    });
+    const mongoCollection = await getMongoCollection("run_steps");
+    const count = await mongoCollection!.countDocuments({});
+    expect(count).toBe(1);
   });
 
   test("preserves terminal retained-session snapshot after active run entry is removed", async () => {

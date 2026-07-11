@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { AppPaths } from "../persistence/database.js";
+import type { AppPaths } from "../db/database.js";
 import { resolveEvidenceArtifact } from "../evidence/artifacts.js";
 import { finalizeEvidenceOutputs } from "../evidence/model.js";
 import type { RunnerActionRuntime } from "./runnerActionExecutors.js";

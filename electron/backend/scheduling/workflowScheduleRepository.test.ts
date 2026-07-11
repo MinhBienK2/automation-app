@@ -1,9 +1,9 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import { WorkflowRepository } from "../persistence/workflowRepository.js";
+import { WorkflowRepository } from "../repositories/workflowRepository.js";
 import { WorkflowScheduleRepository } from "./workflowScheduleRepository.js";
-import { TestDbAdapter } from "../persistence/testDbAdapter.js";
+import { TestDbAdapter } from "../db/testDbAdapter.js";
 
 describe("WorkflowScheduleRepository", () => {
   test("persists schedules with workflow names and schedule events", async () => {

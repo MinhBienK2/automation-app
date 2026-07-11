@@ -1,4 +1,4 @@
-import type { DbAdapter } from "./dbAdapter.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
 import type {
   Project,
   BrowserProfile,
@@ -12,8 +12,8 @@ import type {
   WorkflowSettings,
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
-import { processGraphOnLoad } from "./graphLoader.js";
-import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
+import { processGraphOnLoad } from "../services/graphLoader.js";
+import { writeGraphToNormalizedTables } from "../db/migrations/backfillGraphTables.js";
 import { assembleGraphFromTables } from "./normalizedGraphRepository.js";
 import { snapshotRevision } from "./revisionRepository.js";
 import { ProjectRepository } from "./projectRepository.js";

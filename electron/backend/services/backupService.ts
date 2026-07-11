@@ -3,8 +3,8 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import type { DbAdapter } from "./dbAdapter.js";
-import type { AppPaths } from "./database.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
+import type { AppPaths } from "../db/database.js";
 
 const execAsync = promisify(exec);
 
@@ -145,7 +145,6 @@ export class BackupService {
         "subflow_nodes",
         "subflow_edges",
         "runs",
-        "run_steps",
         "workflow_schedules",
         "workflow_schedule_events",
         "operational_attention_events",

@@ -1,6 +1,6 @@
-import type { DbAdapter } from "./dbAdapter.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
 import type { WorkflowGraph, WorkflowSettings } from "../../../src/types/workflow.js";
-import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
+import { writeGraphToNormalizedTables } from "../db/migrations/backfillGraphTables.js";
 
 export type WorkflowRevision = {
   id: string;

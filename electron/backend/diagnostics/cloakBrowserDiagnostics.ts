@@ -9,7 +9,7 @@ import type {
   WorkflowSettings,
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
-import type { AppPaths } from "../persistence/database.js";
+import type { AppPaths } from "../db/database.js";
 
 const nodeRequire = createRequire(import.meta.url);
 

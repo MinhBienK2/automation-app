@@ -12,7 +12,7 @@ import type {
   WorkflowSettings,
 } from "../../../src/types/workflow";
 import { defaultWorkflowSettings } from "../commands";
-import { createAppPaths } from "../persistence/database";
+import { createAppPaths } from "../db/database";
 import {
   BrowserWorkflowRunner,
   createCloakBrowserDriver,
@@ -3113,8 +3113,9 @@ describe("BrowserWorkflowRunner", () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
       driver: createFakeDriver(new FakeContext()),
-      sleep: async () => {
+      sleep: async (ms) => {
         sleepCalls += 1;
+        await new Promise((resolve) => setTimeout(resolve, ms));
       },
     });
 
@@ -3126,7 +3127,7 @@ describe("BrowserWorkflowRunner", () => {
             config: {
               condition: { kind: "variable_is_true", name: "done" },
               max_attempts: 100,
-              timeout_ms: 1,
+              timeout_ms: 10,
               steps: [
                 { type: "wait", config: { condition: "duration", duration_ms: 2 } },
               ],

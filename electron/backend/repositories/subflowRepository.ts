@@ -1,12 +1,12 @@
-import type { DbAdapter } from "./dbAdapter.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
 import type {
   Subflow,
   SubflowSummary,
   SubflowUsage,
   WorkflowGraph,
 } from "../../../src/types/workflow.js";
-import { processGraphOnLoad } from "./graphLoader.js";
-import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
+import { processGraphOnLoad } from "../services/graphLoader.js";
+import { writeGraphToNormalizedTables } from "../db/migrations/backfillGraphTables.js";
 import { assembleSubflowGraphFromTables } from "./normalizedGraphRepository.js";
 import { snapshotRevision } from "./revisionRepository.js";
 

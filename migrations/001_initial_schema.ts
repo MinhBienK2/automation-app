@@ -1,4 +1,4 @@
-import type { DbConnection } from "../electron/backend/persistence/migrationRunner.js";
+import type { DbConnection } from "../electron/backend/db/migrations/migrationRunner.js";
 
 async function tableInfo(db: DbConnection, table: string): Promise<Set<string>> {
   const rows = await db.query(`PRAGMA table_info(${table})`);

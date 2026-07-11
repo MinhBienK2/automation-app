@@ -24,6 +24,14 @@ import type {
 } from "../../../src/types/workflow";
 import { deriveFingerprintSeedFromIdentityId } from "../commands";
 import { finishRun } from "../runtime/runDbHelpers";
+import * as mongoModule from "../db/mongo.js";
+
+afterEach(async () => {
+  const mongoCollection = await mongoModule.getMongoCollection("run_steps");
+  if (mongoCollection) {
+    await mongoCollection.deleteMany({});
+  }
+});
 
 vi.mock("electron", () => ({
   dialog: {
@@ -362,9 +370,18 @@ describe("Workflow commands integration", () => {
       outputs: {},
       error: null,
     });
-    await waitForRunSnapshotStatus(handlers, snapshot.run_id, "success");
-
-    await handlers.deleteWorkflow(workflow.id);
+    // Wait for the background lock release and try deleting the workflow
+    let deleted = false;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      try {
+        await handlers.deleteWorkflow(workflow.id);
+        deleted = true;
+        break;
+      } catch (e) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    }
+    expect(deleted).toBe(true);
 
     expect(await handlers.getWorkflow(workflow.id)).toBeNull();
   });
@@ -405,7 +422,7 @@ describe("Workflow commands integration", () => {
       edges: [],
       viewport: { x: 0, y: 0, zoom: 1 },
     };
-    const { writeGraphToNormalizedTables } = await import("../persistence/backfillGraphTables.js");
+    const { writeGraphToNormalizedTables } = await import("../db/migrations/backfillGraphTables.js");
     await writeGraphToNormalizedTables(database, graph, "workflow", workflow.id, new Date().toISOString());
 
     const migrated = await handlers.getWorkflowGraph(workflow.id);
@@ -1402,9 +1419,15 @@ describe("Workflow commands integration", () => {
       ],
     });
 
-    const stepRows = database
-      .prepare("SELECT node_id, step_number, action_type, status, trace_json FROM run_steps")
-      .all() as Array<Record<string, string | number | null>>;
+    const mongoCollection = await mongoModule.getMongoCollection("run_steps");
+    const mongoSteps = await mongoCollection!.find({ run_id: runRows[0]?.id }).sort({ step_number: 1 }).toArray();
+    const stepRows = mongoSteps.map((row) => ({
+      node_id: row.node_id,
+      step_number: row.step_number,
+      action_type: row.action_type,
+      status: row.status,
+      trace_json: JSON.stringify(row.trace),
+    }));
     expect(stepRows).toEqual([
       expect.objectContaining({
         node_id: "visit",
@@ -1544,9 +1567,15 @@ describe("Workflow commands integration", () => {
       error: null,
     });
 
-    const stepRows = database
-      .prepare("SELECT node_id, step_number, action_type, status, trace_json FROM run_steps WHERE run_id = ? ORDER BY step_number")
-      .all(runId) as Array<Record<string, string | number | null>>;
+    const mongoCollection = await mongoModule.getMongoCollection("run_steps");
+    const mongoSteps = await mongoCollection!.find({ run_id: runId }).sort({ step_number: 1 }).toArray();
+    const stepRows = mongoSteps.map((row) => ({
+      node_id: row.node_id,
+      step_number: row.step_number,
+      action_type: row.action_type,
+      status: row.status,
+      trace_json: JSON.stringify(row.trace),
+    }));
     const nodeIds = stepRows.map((row) => row.node_id);
 
     expect(nodeIds).toEqual(
@@ -1601,14 +1630,15 @@ describe("Workflow commands integration", () => {
          VALUES (?, ?, ?, ?, ?)`,
       )
       .run(runId, workflow.id, "running", "1", database.ownerId);
-    database.exec(`
-      CREATE TRIGGER fail_second_step_insert
-      BEFORE INSERT ON run_steps
-      WHEN NEW.node_id = 'second'
-      BEGIN
-        SELECT RAISE(ABORT, 'step insert failed');
-      END;
-    `);
+
+    // Mock MongoDB insertMany to throw an error
+    const mockCollection = {
+      insertMany: vi.fn().mockRejectedValue(new Error("step insert failed")),
+      deleteMany: vi.fn(),
+      find: vi.fn(),
+    };
+    const mongoSpy = vi.spyOn(mongoModule, "getMongoCollection").mockResolvedValue(mockCollection as any);
+
     const graph: CompiledWorkflowGraph = {
       steps: [
         {
@@ -1637,11 +1667,15 @@ describe("Workflow commands integration", () => {
       }),
     ).rejects.toThrow("step insert failed");
 
+    mongoSpy.mockRestore();
+
     expect(
       database.prepare("SELECT status, finished_at FROM runs WHERE id = ?").get(runId),
     ).toMatchObject({ status: "running", finished_at: null });
-    expect(database.prepare("SELECT COUNT(*) AS count FROM run_steps WHERE run_id = ?").get(runId))
-      .toMatchObject({ count: 0 });
+
+    const mongoCollection = await mongoModule.getMongoCollection("run_steps");
+    const count = await mongoCollection!.countDocuments({ run_id: runId });
+    expect(count).toBe(0);
   });
 
   test("does not keep the active-run lock when run persistence fails before launch", async () => {

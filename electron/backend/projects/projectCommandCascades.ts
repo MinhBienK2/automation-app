@@ -1,6 +1,6 @@
 import nodeFs from "node:fs";
 import path from "node:path";
-import type { DbAdapter } from "../persistence/dbAdapter.js";
+import type { DbAdapter } from "../db/dbAdapter.js";
 import type {
   Project,
   BrowserProfile,
@@ -18,7 +18,7 @@ import {
   createHighEntropyBrowserIdentityId,
   deriveFingerprintSeedFromIdentityId,
 } from "../services/workflowSettingsService.js";
-import { WorkflowRepository } from "../persistence/workflowRepository.js";
+import { WorkflowRepository } from "../repositories/workflowRepository.js";
 import { commandError } from "../commandHelpers.js";
 import { browserProfileKey } from "../runtime/runManager.js";
 import { personaForSeed } from "../../../src/lib/personaCatalog.js";

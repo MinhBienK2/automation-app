@@ -3,7 +3,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, test } from "vitest";
 import { SqliteDbConnection, runMigrations, rollbackMigrations } from "./migrationRunner.js";
-import * as initialSchema from "../../../migrations/001_initial_schema.js";
+import * as initialSchema from "../../../../migrations/001_initial_schema.js";
 
 describe("001_initial_schema migration", () => {
   test("creates all SQLite tables on up, and drops them on down", async () => {

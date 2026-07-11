@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { initializePgPool } from "./pgSync.js";
-import { runMigrations } from "./migrationRunner.js";
+import { runMigrations } from "./migrations/migrationRunner.js";
 
 vi.mock("pg", () => {
   const queryMock = vi.fn().mockResolvedValue({ rows: [] });
@@ -20,7 +20,7 @@ vi.mock("pg", () => {
   };
 });
 
-vi.mock("./migrationRunner.js", () => {
+vi.mock("./migrations/migrationRunner.js", () => {
   return {
     PostgresDbConnection: class {},
     runMigrations: vi.fn(),

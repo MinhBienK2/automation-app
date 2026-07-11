@@ -3,8 +3,8 @@ import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { BackupService } from "./backupService.js";
-import { TestDbAdapter } from "./testDbAdapter.js";
-import { createAppPaths, type AppPaths } from "./database.js";
+import { TestDbAdapter } from "../db/testDbAdapter.js";
+import { createAppPaths, type AppPaths } from "../db/database.js";
 
 describe("BackupService (TDD)", () => {
   let db: TestDbAdapter;
