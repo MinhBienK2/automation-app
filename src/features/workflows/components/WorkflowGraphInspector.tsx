@@ -12,6 +12,7 @@ import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
 import { IconButton } from "../../../components/ui/icon-button";
 import { Input } from "../../../components/ui/input";
+import { NumberInput } from "../../../components/ui/number-input";
 import { Select } from "../../../components/ui/select";
 import { callSubflowIdFromNode, graphNodeLabel } from "../lib/workflowGraph";
 import { objectConfig } from "../lib/configUtils";
@@ -323,16 +324,16 @@ function LinkWaitFields({
       {delay?.type === "fixed" ? (
         <label className="field">
           <span>Fixed duration ms</span>
-          <Input
-            min={1}
-            type="number"
+          <NumberInput
             value={delay.duration_ms}
-            onChange={(event) =>
+            fallback={1000}
+            min={1}
+            onChange={(val) =>
               onChange({
                 ...edge,
                 delay: {
                   type: "fixed",
-                  duration_ms: numberOrDefault(event.currentTarget.value, 1000),
+                  duration_ms: val ?? 1000,
                 },
               })
             }
@@ -343,16 +344,16 @@ function LinkWaitFields({
         <>
           <label className="field">
             <span>Random min ms</span>
-            <Input
-              min={1}
-              type="number"
+            <NumberInput
               value={delay.min_ms}
-              onChange={(event) =>
+              fallback={800}
+              min={1}
+              onChange={(val) =>
                 onChange({
                   ...edge,
                   delay: {
                     type: "random",
-                    min_ms: numberOrDefault(event.currentTarget.value, 800),
+                    min_ms: val ?? 800,
                     max_ms: delay.max_ms,
                   },
                 })
@@ -361,17 +362,17 @@ function LinkWaitFields({
           </label>
           <label className="field">
             <span>Random max ms</span>
-            <Input
-              min={1}
-              type="number"
+            <NumberInput
               value={delay.max_ms}
-              onChange={(event) =>
+              fallback={1500}
+              min={1}
+              onChange={(val) =>
                 onChange({
                   ...edge,
                   delay: {
                     type: "random",
                     min_ms: delay.min_ms,
-                    max_ms: numberOrDefault(event.currentTarget.value, 1500),
+                    max_ms: val ?? 1500,
                   },
                 })
               }
@@ -383,10 +384,8 @@ function LinkWaitFields({
   );
 }
 
-function numberOrDefault(value: string, fallback: number) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
+
+
 
 function summarizeRunError(reason: string) {
   const firstLine = reason

@@ -1,6 +1,6 @@
 import { useState, useMemo, useId, useContext } from "react";
 import { Hash, Braces } from "lucide-react";
-import { Input } from "../../../components/ui/input";
+import { NumberInput } from "../../../components/ui/number-input";
 import { Label } from "../../../components/ui/label";
 import { Button } from "../../../components/ui/button";
 import { Select } from "../../../components/ui/select";
@@ -84,18 +84,15 @@ export function VariableNumericInput({
             ))}
           </Select>
         ) : (
-          <Input
+          <NumberInput
             id={inputId}
-            type="number"
             placeholder={placeholder}
             min={min}
             max={max}
             step={step}
-            value={value !== null && value !== undefined && !isVar ? value : ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              onChange(val === "" ? null : Number(val));
-            }}
+            value={value !== null && value !== undefined && !isVar ? Number(value) : null}
+            onChange={onChange}
+            allowDecimals={true}
           />
         )}
       </div>

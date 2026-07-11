@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
+import { NumberInput } from "../../../components/ui/number-input";
 import { Select } from "../../../components/ui/select";
 import { Label } from "../../../components/ui/label";
 import { Checkbox } from "../../../components/ui/checkbox";
@@ -202,12 +202,12 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
                         <Clock size={15} className="text-secondary" />
                         <span>Backup Interval (hours)</span>
                       </Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="8760"
+                      <NumberInput
+                        min={1}
+                        max={8760}
+                        fallback={24}
                         value={config.intervalHours}
-                        onChange={(e) => setConfig({ ...config, intervalHours: parseInt(e.target.value) || 24 })}
+                        onChange={(val) => setConfig({ ...config, intervalHours: val ?? 24 })}
                         className="bg-base-100 border-base-300 input-sm"
                         required
                       />
@@ -221,12 +221,12 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
                         <Settings size={15} className="text-secondary" />
                         <span>Maximum Retention Versions</span>
                       </Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="100"
+                      <NumberInput
+                        min={1}
+                        max={100}
+                        fallback={10}
                         value={config.maxKeepVersions}
-                        onChange={(e) => setConfig({ ...config, maxKeepVersions: parseInt(e.target.value) || 10 })}
+                        onChange={(val) => setConfig({ ...config, maxKeepVersions: val ?? 10 })}
                         className="bg-base-100 border-base-300 input-sm"
                         required
                       />
@@ -371,3 +371,5 @@ export function AdminBackupsPanel({ showToast }: { showToast: (message: string) 
     </section>
   );
 }
+
+

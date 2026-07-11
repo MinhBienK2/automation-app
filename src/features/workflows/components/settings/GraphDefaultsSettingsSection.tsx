@@ -1,7 +1,7 @@
 import { Select } from "../../../../components/ui/select";
 import { SettingsFieldGroup } from "../../../../components/ui/settings-field-group";
 import { SwitchField } from "../../../../components/ui/switch";
-import { Input } from "../../../../components/ui/input";
+import { NumberInput } from "../../../../components/ui/number-input";
 import type { WorkflowSettingsGraphDefaults } from "../../../../types/workflow";
 
 type GraphDefaultsSettingsSectionProps = {
@@ -79,6 +79,7 @@ export function GraphDefaultsSettingsSection({
           <NumberField
             label="Duration ms"
             value={delay.duration_ms}
+            fallback={1000}
             onChange={(next) =>
               onChange({
                 ...value,
@@ -92,6 +93,7 @@ export function GraphDefaultsSettingsSection({
             <NumberField
               label="Minimum wait ms"
               value={delay.min_ms}
+              fallback={800}
               onChange={(next) =>
                 onChange({
                   ...value,
@@ -106,6 +108,7 @@ export function GraphDefaultsSettingsSection({
             <NumberField
               label="Maximum wait ms"
               value={delay.max_ms}
+              fallback={1500}
               onChange={(next) =>
                 onChange({
                   ...value,
@@ -129,28 +132,25 @@ function NumberField({
   label,
   value,
   onChange,
+  fallback = 1000,
 }: {
   disabled?: boolean;
   label: string;
   value?: number | null;
   onChange: (value: number | null) => void;
+  fallback?: number;
 }) {
   return (
     <label className="field">
       <span>{label}</span>
-      <Input
+      <NumberInput
         min={1}
-        type="number"
-        value={value ?? ""}
+        value={value}
         disabled={disabled}
-        onChange={(event) => onChange(numberOrNull(event.currentTarget.value))}
+        onChange={onChange}
+        fallback={fallback}
       />
     </label>
   );
 }
 
-function numberOrNull(value: string) {
-  if (!value.trim()) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}

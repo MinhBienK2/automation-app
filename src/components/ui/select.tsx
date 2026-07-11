@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import * as React from "react";
 import { ChevronDown, Check } from "lucide-react";
 
@@ -6,13 +7,29 @@ interface SelectProps extends Omit<React.ComponentProps<"select">, "onChange"> {
   placeholder?: string;
 }
 
+function getReactNodeText(node: React.ReactNode): string {
+  if (node === null || node === undefined) {
+    return "";
+  }
+  if (typeof node === "string" || typeof node === "number" || typeof node === "boolean") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(getReactNodeText).join("");
+  }
+  if (React.isValidElement(node)) {
+    return getReactNodeText((node as any).props.children);
+  }
+  return "";
+}
+
 function parseOptions(children: React.ReactNode) {
   const options: { value: string; label: string; disabled?: boolean }[] = [];
   React.Children.forEach(children, (child) => {
     if (React.isValidElement(child) && child.type === "option") {
       const props = child.props as any;
       const val = String(props.value ?? "");
-      const label = props.children ? String(props.children) : val;
+      const label = props.children ? getReactNodeText(props.children) : val;
       options.push({ value: val, label, disabled: !!props.disabled });
     }
   });
@@ -128,7 +145,7 @@ const Select = React.forwardRef<HTMLDetailsElement, SelectProps>(
             <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
           </summary>
 
-          <ul className="dropdown-content menu bg-base-200 border border-base-300 rounded-box z-50 w-full p-1 shadow-md max-h-60 overflow-y-auto mt-1">
+          <ul className="dropdown-content menu flex-nowrap bg-base-200 border border-base-300 rounded-box z-50 w-full p-1 shadow-md max-h-60 overflow-y-auto mt-1">
             {options.map((opt) => {
               const isSelected = opt.value === currentValue;
               const itemClasses = [

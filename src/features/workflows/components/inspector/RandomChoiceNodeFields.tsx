@@ -1,5 +1,6 @@
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
+import { NumberInput } from "../../../../components/ui/number-input";
 import { Label } from "../../../../components/ui/label";
 import { ActionConfigFieldGroup } from "../ActionConfigFieldGroup";
 import type { GraphNode } from "../../../../types/workflow";
@@ -84,16 +85,16 @@ export function RandomChoiceNodeFields({ node, onChange }: RandomChoiceNodeField
               </Label>
               <Label>
                 Choice weight
-                <Input
-                  min="1"
-                  type="number"
+                <NumberInput
+                  min={1}
                   value={choice.weight}
-                  onChange={(event) =>
+                  fallback={1}
+                  onChange={(val) =>
                     updateRandomChoiceConfig({
                       ...randomChoiceConfigValue,
                       choices: choices.map((item) =>
                         item.id === choice.id
-                          ? { ...item, weight: Number(event.currentTarget.value) || 1 }
+                          ? { ...item, weight: val ?? 1 }
                           : item,
                       ),
                     })
@@ -124,3 +125,5 @@ export function RandomChoiceNodeFields({ node, onChange }: RandomChoiceNodeField
     </div>
   );
 }
+
+

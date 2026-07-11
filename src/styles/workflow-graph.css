@@ -31,6 +31,7 @@
   width: 100%;
   box-shadow: none;
   height: 100%;
+  max-height: clamp(460px, calc(100dvh - 180px), 85vh);
   align-self: stretch;
 }
 

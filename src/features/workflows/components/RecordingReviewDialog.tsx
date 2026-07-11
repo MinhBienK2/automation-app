@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
+import { NumberInput } from "../../../components/ui/number-input";
 import { Label } from "../../../components/ui/label";
 import { Checkbox } from "../../../components/ui/checkbox";
 import type {
@@ -316,19 +317,19 @@ function valueEditorForAction(
       return (
         <div className="flex flex-col gap-1 w-full">
           <Label htmlFor={inputId}>Scroll pixels</Label>
-          <Input
+          <NumberInput
             id={inputId}
-            min={0}
-            type="number"
             value={action.config.pixels ?? 0}
-            onChange={(event) =>
+            fallback={0}
+            min={0}
+            onChange={(val) =>
               onChange({
                 ...step,
                 action: {
                   type: "scroll",
                   config: {
                     ...action.config,
-                    pixels: Number(event.currentTarget.value) || 0,
+                    pixels: val ?? 0,
                   },
                 },
               })
@@ -474,3 +475,5 @@ function splitFilePathInput(value: string) {
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
+
+
