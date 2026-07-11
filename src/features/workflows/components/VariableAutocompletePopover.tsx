@@ -532,13 +532,15 @@ function mergeVariableOptions(
   const seen = new Set<string>();
   const results: VariableOption[] = [];
   for (const option of primary) {
-    seen.add(option.name);
-    results.push(option);
+    if (option.name?.trim()) {
+      seen.add(option.name.trim());
+      results.push({ ...option, name: option.name.trim() });
+    }
   }
   for (const option of secondary) {
-    if (!seen.has(option.name)) {
-      seen.add(option.name);
-      results.push(option);
+    if (option.name?.trim() && !seen.has(option.name.trim())) {
+      seen.add(option.name.trim());
+      results.push({ ...option, name: option.name.trim() });
     }
   }
   return results;

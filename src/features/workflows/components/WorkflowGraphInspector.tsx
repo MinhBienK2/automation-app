@@ -537,6 +537,8 @@ export function collectVariableOptions(
 
   const seen = new Set<string>();
   return options.filter((option) => {
+    if (!option.name?.trim()) return false;
+    option.name = option.name.trim();
     const key = `${option.source}:${option.name}`;
     if (seen.has(key)) return false;
     seen.add(key);
