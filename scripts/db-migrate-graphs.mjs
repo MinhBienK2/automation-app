@@ -4,9 +4,9 @@ import fs from "node:fs";
 import pg from "pg";
 import { DatabaseSync } from "node:sqlite";
 import { loadEnv } from "./lib/db-cli-helper.mjs";
-import { PgDbAdapter } from "../dist-electron/electron/backend/persistence/dbAdapter.js";
-import { TestDbAdapter } from "../dist-electron/electron/backend/persistence/testDbAdapter.js";
-import { migrateAllGraphs } from "../dist-electron/electron/backend/persistence/migrateAllGraphs.js";
+import { PgDbAdapter } from "../dist-electron/electron/backend/db/dbAdapter.js";
+import { TestDbAdapter } from "../dist-electron/electron/backend/db/testDbAdapter.js";
+import { migrateAllGraphs } from "../dist-electron/electron/backend/db/migrations/migrateAllGraphs.js";
 
 async function main() {
   loadEnv();

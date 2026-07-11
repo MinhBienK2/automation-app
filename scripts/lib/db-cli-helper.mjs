@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import pg from "pg";
 import { DatabaseSync } from "node:sqlite";
-import { SqliteDbConnection, PostgresDbConnection } from "../../dist-electron/electron/backend/persistence/migrationRunner.js";
+import { SqliteDbConnection, PostgresDbConnection } from "../../dist-electron/electron/backend/db/migrations/migrationRunner.js";
 
 export function loadEnv() {
   const envPath = path.join(process.cwd(), ".env");
