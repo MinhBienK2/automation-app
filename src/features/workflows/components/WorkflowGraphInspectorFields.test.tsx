@@ -309,4 +309,86 @@ describe("WorkflowGraphInspectorFields", () => {
       }),
     );
   });
+
+  test("renders list operation config fields correctly", () => {
+    const onChange = vi.fn();
+    
+    // Test execute_list_script
+    const executeScriptNode = graphNode({
+      node_type: "execute_list_script",
+      config: {
+        source: "my_list",
+        script: "return list.filter(item => item !== null);",
+        output_name: "filtered_result",
+      },
+    });
+    const { rerender } = render(<NodeConfigFields node={executeScriptNode} onChange={onChange} />);
+
+    const scriptGroup = screen.getByRole("group", { name: "Run Script on List Settings" });
+    expect(within(scriptGroup).getByLabelText("Source list variable name")).toHaveValue("my_list");
+    expect(within(scriptGroup).getByLabelText("JavaScript Script (source bound to 'list')")).toHaveValue("return list.filter(item => item !== null);");
+    expect(within(scriptGroup).getByLabelText("Result output variable name")).toHaveValue("filtered_result");
+
+    // Test map_list_property
+    const mapNode = graphNode({
+      node_type: "map_list_property",
+      config: {
+        source: "my_list",
+        property_key: "name",
+        output_name: "mapped_names",
+      },
+    });
+    rerender(<NodeConfigFields node={mapNode} onChange={onChange} />);
+    const mapGroup = screen.getByRole("group", { name: "Extract Property from List Settings" });
+    expect(within(mapGroup).getByLabelText("Source list variable name")).toHaveValue("my_list");
+    expect(within(mapGroup).getByLabelText("Property key / path")).toHaveValue("name");
+    expect(within(mapGroup).getByLabelText("Result output variable name")).toHaveValue("mapped_names");
+
+    // Test sort_reverse_list
+    const sortNode = graphNode({
+      node_type: "sort_reverse_list",
+      config: {
+        source: "my_list",
+        action: "sort_asc",
+        sort_key: "age",
+        output_name: "sorted_list",
+      },
+    });
+    rerender(<NodeConfigFields node={sortNode} onChange={onChange} />);
+    const sortGroup = screen.getByRole("group", { name: "Sort or Reverse List Settings" });
+    expect(within(sortGroup).getByLabelText("Source list variable name")).toHaveValue("my_list");
+    expect(within(sortGroup).getByLabelText("Action")).toHaveValue("sort_asc");
+    expect(within(sortGroup).getByLabelText("Sort key (optional, for list of objects)")).toHaveValue("age");
+    expect(within(sortGroup).getByLabelText("Result output variable name")).toHaveValue("sorted_list");
+
+    // Test check_list_empty
+    const emptyNode = graphNode({
+      node_type: "check_list_empty",
+      config: {
+        source: "my_list",
+        output_name: "is_empty",
+      },
+    });
+    rerender(<NodeConfigFields node={emptyNode} onChange={onChange} />);
+    const emptyGroup = screen.getByRole("group", { name: "Check List Empty Settings" });
+    expect(within(emptyGroup).getByLabelText("Source list variable name")).toHaveValue("my_list");
+    expect(within(emptyGroup).getByLabelText("Result output variable name")).toHaveValue("is_empty");
+
+    // Test check_list_contains
+    const containsNode = graphNode({
+      node_type: "check_list_contains",
+      config: {
+        source: "my_list",
+        value_type: "text",
+        value: "apple",
+        output_name: "contains_item",
+      },
+    });
+    rerender(<NodeConfigFields node={containsNode} onChange={onChange} />);
+    const containsGroup = screen.getByRole("group", { name: "Check List Contains Settings" });
+    expect(within(containsGroup).getByLabelText("Source list variable name")).toHaveValue("my_list");
+    expect(within(containsGroup).getByLabelText("Value type")).toHaveValue("text");
+    expect(within(containsGroup).getByLabelText("Value to check")).toHaveValue("apple");
+    expect(within(containsGroup).getByLabelText("Result output variable name")).toHaveValue("contains_item");
+  });
 });

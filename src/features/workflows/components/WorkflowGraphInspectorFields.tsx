@@ -332,6 +332,11 @@ export function NodeConfigFields({
     case "filter_list":
     case "check_list_any_match":
     case "check_list_all_match":
+    case "map_list_property":
+    case "sort_reverse_list":
+    case "execute_list_script":
+    case "check_list_empty":
+    case "check_list_contains":
       return (
         <ListNodeFields
           node={node}
