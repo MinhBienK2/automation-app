@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
@@ -124,7 +124,7 @@ describe("ProjectsPage", () => {
     expect(within(profilesTab).getByText("2")).toBeInTheDocument();
   });
 
-  test("shows action menu dropdown on project card in list and handles actions", () => {
+  test("shows action menu dropdown on project card in list and handles actions", async () => {
     const { props } = renderPage();
 
     const grid = screen.getByRole("list", { name: /projects/i });
@@ -147,6 +147,11 @@ describe("ProjectsPage", () => {
     // Test Duplicate callback
     fireEvent.click(duplicateBtn);
     expect(props.onDuplicateProject).toHaveBeenCalledWith("project-1");
+
+    // Wait for duplication state to clear and re-enable action button
+    await waitFor(() => {
+      expect(actionsBtn).not.toBeDisabled();
+    });
 
     // Reopen menu
     fireEvent.click(actionsBtn);

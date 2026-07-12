@@ -900,8 +900,8 @@ function AppInner() {
           }}
           onImportProjectPackageFile={importProjectPackageFile}
           onCollectionChange={(coll) => projectsWorkspace.setProjectCollection(coll)}
-          onDuplicateProject={(projectId) => {
-            void projectsWorkspace.duplicateProject(projectId);
+          onDuplicateProject={async (projectId) => {
+            await projectsWorkspace.duplicateProject(projectId);
             nav.setProjectsBrowseMode("detail");
           }}
           onExportProject={(projectId) => {

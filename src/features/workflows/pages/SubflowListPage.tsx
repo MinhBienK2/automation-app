@@ -66,6 +66,7 @@ export function SubflowListPage({
   const [workflowFilter, setWorkflowFilter] = useState<string>("");
   const [sortKey, setSortKey] = useState<SubflowSortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
+  const [duplicatingSubflowId, setDuplicatingSubflowId] = useState<string | null>(null);
 
   async function submitCreateSubflow(event: React.FormEvent) {
     event.preventDefault();
@@ -253,91 +254,115 @@ export function SubflowListPage({
                  <TableHead className="text-right">ACTIONS</TableHead>
                </TableRow>
              </TableHeader>
-             <TableBody>
-               {filteredSubflows.map((subflow) => (
-                 <TableRow
-                   key={subflow.id}
-                   data-slot="card"
-                   className="cursor-pointer"
-                   onClick={() => onOpenSubflow(subflow.id)}
-                 >
-                  <TableCell>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                        <GitFork className="w-3.5 h-3.5" />
-                      </div>
-                      <h2
-                        className="font-bold text-sm text-base-content cursor-pointer hover:underline hover:text-primary transition-colors"
-                        onClick={() => onOpenSubflow(subflow.id)}
-                      >
-                        {subflow.name}
-                      </h2>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-secondary text-xs">{subflow.description || "No description"}</TableCell>
-                  <TableCell className="text-secondary text-xs font-semibold">
-                    {subflow.used_by_count}{" "}
-                    {subflow.used_by_count === 1 ? "workflow" : "workflows"}
-                  </TableCell>
-                   <TableCell className="text-right">
-                     <div
-                       className="flex gap-2 justify-end items-center"
-                       onClick={(event) => event.stopPropagation()}
-                     >
-                      <IconButton
-                        label={`Open ${subflow.name}`}
-                        type="button"
-                        variant="ghost"
-                        className="text-fg-primary hover:text-accent w-8 h-8"
-                        onClick={() => onOpenSubflow(subflow.id)}
-                      >
-                        <Eye aria-hidden="true" size={15} />
-                      </IconButton>
-                      <IconButton
-                        label={`Settings ${subflow.name}`}
-                        type="button"
-                        variant="ghost"
-                        className="text-fg-primary hover:text-accent w-8 h-8"
-                        onClick={() => setSettingsSubflow(subflow)}
-                      >
-                        <Settings aria-hidden="true" size={15} />
-                      </IconButton>
-                      <IconButton
-                        label={`Duplicate ${subflow.name}`}
-                        type="button"
-                        variant="ghost"
-                        className="text-fg-primary hover:text-accent w-8 h-8"
-                        onClick={() => {
-                          void onDuplicateSubflow(subflow);
-                        }}
-                      >
-                        <Copy aria-hidden="true" size={15} />
-                      </IconButton>
-                      <IconButton
-                        label={`Export ${subflow.name}`}
-                        type="button"
-                        variant="ghost"
-                        className="text-fg-primary hover:text-accent w-8 h-8"
-                        onClick={() => onExportSubflow(subflow.id)}
-                      >
-                        <Download aria-hidden="true" size={15} />
-                      </IconButton>
-                      <IconButton
-                        label={`Delete ${subflow.name}`}
-                        type="button"
-                        variant="ghost"
-                        className="text-error hover:bg-error/10 w-8 h-8"
-                        onClick={() => {
-                          setDeleteSubflowCandidate(subflow);
-                        }}
-                      >
-                        <Trash2 aria-hidden="true" size={15} />
-                      </IconButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+              <TableBody>
+                {filteredSubflows.map((subflow) => {
+                  const isDuplicating = duplicatingSubflowId === subflow.id;
+                  return (
+                    <TableRow
+                      key={subflow.id}
+                      data-slot="card"
+                      className={`cursor-pointer ${duplicatingSubflowId ? "opacity-60 cursor-not-allowed" : ""}`}
+                      onClick={() => {
+                        if (duplicatingSubflowId) return;
+                        onOpenSubflow(subflow.id);
+                      }}
+                    >
+                     <TableCell>
+                       <div className="flex items-center gap-2.5">
+                         <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                           {isDuplicating ? (
+                             <span className="loading loading-spinner loading-xs text-primary" />
+                           ) : (
+                             <GitFork className="w-3.5 h-3.5" />
+                           )}
+                         </div>
+                         <h2
+                           className="font-bold text-sm text-base-content cursor-pointer hover:underline hover:text-primary transition-colors"
+                           onClick={() => {
+                             if (duplicatingSubflowId) return;
+                             onOpenSubflow(subflow.id);
+                           }}
+                         >
+                           {subflow.name}
+                         </h2>
+                       </div>
+                     </TableCell>
+                     <TableCell className="text-secondary text-xs">{subflow.description || "No description"}</TableCell>
+                     <TableCell className="text-secondary text-xs font-semibold">
+                       {subflow.used_by_count}{" "}
+                       {subflow.used_by_count === 1 ? "workflow" : "workflows"}
+                     </TableCell>
+                      <TableCell className="text-right">
+                        <div
+                          className="flex gap-2 justify-end items-center"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                         <IconButton
+                           label={`Open ${subflow.name}`}
+                           type="button"
+                           variant="ghost"
+                           className="text-fg-primary hover:text-accent w-8 h-8"
+                           disabled={duplicatingSubflowId !== null}
+                           onClick={() => onOpenSubflow(subflow.id)}
+                         >
+                           <Eye aria-hidden="true" size={15} />
+                         </IconButton>
+                         <IconButton
+                           label={`Settings ${subflow.name}`}
+                           type="button"
+                           variant="ghost"
+                           className="text-fg-primary hover:text-accent w-8 h-8"
+                           disabled={duplicatingSubflowId !== null}
+                           onClick={() => setSettingsSubflow(subflow)}
+                         >
+                           <Settings aria-hidden="true" size={15} />
+                         </IconButton>
+                         <IconButton
+                           label={`Duplicate ${subflow.name}`}
+                           type="button"
+                           variant="ghost"
+                           className="text-fg-primary hover:text-accent w-8 h-8"
+                           loading={isDuplicating}
+                           disabled={duplicatingSubflowId !== null}
+                           onClick={async () => {
+                             setDuplicatingSubflowId(subflow.id);
+                             try {
+                               await onDuplicateSubflow(subflow);
+                             } finally {
+                               setDuplicatingSubflowId(null);
+                             }
+                           }}
+                         >
+                           <Copy aria-hidden="true" size={15} />
+                         </IconButton>
+                         <IconButton
+                           label={`Export ${subflow.name}`}
+                           type="button"
+                           variant="ghost"
+                           className="text-fg-primary hover:text-accent w-8 h-8"
+                           disabled={duplicatingSubflowId !== null}
+                           onClick={() => onExportSubflow(subflow.id)}
+                         >
+                           <Download aria-hidden="true" size={15} />
+                         </IconButton>
+                         <IconButton
+                           label={`Delete ${subflow.name}`}
+                           type="button"
+                           variant="ghost"
+                           className="text-error hover:bg-error/10 w-8 h-8"
+                           disabled={duplicatingSubflowId !== null}
+                           onClick={() => {
+                             setDeleteSubflowCandidate(subflow);
+                           }}
+                         >
+                           <Trash2 aria-hidden="true" size={15} />
+                         </IconButton>
+                       </div>
+                     </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
           </Table>
         )}
       </section>

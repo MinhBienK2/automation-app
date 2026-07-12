@@ -38,7 +38,7 @@ export type ProjectsPageProps = {
   onCreateProject: (input: { name: string; description?: string | null }) => Promise<void>;
   onImportProjectPackageFile: (file: File | null) => void;
   onCollectionChange: (collection: ProjectCollection) => void;
-  onDuplicateProject?: (projectId: string) => void;
+  onDuplicateProject?: (projectId: string) => Promise<void>;
   onExportProject?: (projectId: string) => void;
   onDeleteProject?: (projectId: string) => void;
 };
@@ -85,6 +85,7 @@ export function ProjectsPage({
   const [gridSearchDraft, setGridSearchDraft] = useState("");
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [duplicatingProjectId, setDuplicatingProjectId] = useState<string | null>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -219,17 +220,22 @@ export function ProjectsPage({
                   profiles: 0,
                 };
                 const initials = project.name.slice(0, 2).toUpperCase();
+                const isDuplicating = duplicatingProjectId === project.id;
                 return (
                   <li key={project.id}>
                     <div
                       className={`card bg-base-200 border border-base-300 card-body p-5 hover:border-primary transition-colors cursor-pointer relative group ${
                         openActionMenuId === project.id ? "border-primary" : ""
-                      }`}
+                      } ${duplicatingProjectId ? "opacity-60 cursor-not-allowed" : ""}`}
                       role="button"
                       tabIndex={0}
                       aria-label={project.name}
-                      onClick={() => handleSelectProject(project.id)}
+                      onClick={() => {
+                        if (duplicatingProjectId) return;
+                        handleSelectProject(project.id);
+                      }}
                       onKeyDown={(e) => {
+                        if (duplicatingProjectId) return;
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
                           handleSelectProject(project.id);
@@ -238,7 +244,11 @@ export function ProjectsPage({
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-sm shrink-0">
-                          {initials}
+                          {isDuplicating ? (
+                            <span className="loading loading-spinner loading-xs text-primary" />
+                          ) : (
+                            initials
+                          )}
                         </div>
                         <span className="font-bold text-base-content text-sm truncate">{project.name}</span>
                       </div>
@@ -265,6 +275,7 @@ export function ProjectsPage({
                             className="w-7 h-7 rounded-full flex items-center justify-center border border-base-300 bg-base-100 hover:bg-base-300 text-secondary hover:text-base-content transition-colors cursor-pointer"
                             type="button"
                             aria-label="More actions"
+                            disabled={duplicatingProjectId !== null}
                             onClick={(e) => {
                               e.stopPropagation();
                               setOpenActionMenuId(openActionMenuId === project.id ? null : project.id);
@@ -278,9 +289,15 @@ export function ProjectsPage({
                                 <button
                                   className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-base-content hover:bg-base-300 rounded-md text-left w-full cursor-pointer transition-colors"
                                   type="button"
-                                  onClick={() => {
-                                    onDuplicateProject(project.id);
+                                  disabled={duplicatingProjectId !== null}
+                                  onClick={async () => {
                                     setOpenActionMenuId(null);
+                                    setDuplicatingProjectId(project.id);
+                                    try {
+                                      await onDuplicateProject(project.id);
+                                    } finally {
+                                      setDuplicatingProjectId(null);
+                                    }
                                   }}
                                 >
                                   <Copy className="h-3.5 w-3.5 shrink-0" />

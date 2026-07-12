@@ -52,7 +52,7 @@ type WorkflowListPageProps = {
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
   onOpenCreateWorkflow: () => void;
   onOpenEditWorkflow: (workflow: WorkflowSummary) => void;
-  onDuplicateWorkflow: (workflow: WorkflowSummary) => void;
+  onDuplicateWorkflow: (workflow: WorkflowSummary) => Promise<void>;
   onRunWorkflow: (workflow: WorkflowSummary) => void;
   onStopRun: (runId: string) => void;
   onOpenExportWorkflow: (workflow: WorkflowSummary) => void;
@@ -92,6 +92,7 @@ export function WorkflowListPage({
   const [searchQuery, setSearchQuery] = useState("");
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
   const [sortActive, setSortActive] = useState(false);
+  const [duplicatingWorkflowId, setDuplicatingWorkflowId] = useState<string | null>(null);
   const workflowDialogTitle =
     workflowDialogMode === "create" ? "Create Workflow" : "Edit Workflow";
   const workflowDialogDescription =
@@ -203,22 +204,33 @@ export function WorkflowListPage({
                {filteredWorkflows.map((workflow) => {
                  const activeRun = activeRunsByWorkflow.get(workflow.id);
                  const hasActiveRun = Boolean(activeRun);
+                 const isDuplicating = duplicatingWorkflowId === workflow.id;
                  return (
                    <TableRow
                      key={workflow.id}
                      data-slot="card"
-                     className="cursor-pointer"
-                     onClick={() => onOpenWorkflow(workflow.id)}
+                     className={`cursor-pointer ${duplicatingWorkflowId ? "opacity-60 cursor-not-allowed" : ""}`}
+                     onClick={() => {
+                       if (duplicatingWorkflowId) return;
+                       onOpenWorkflow(workflow.id);
+                     }}
                    >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                          <Play className="w-3.5 h-3.5 fill-current" />
+                          {isDuplicating ? (
+                            <span className="loading loading-spinner loading-xs text-primary" />
+                          ) : (
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                          )}
                         </div>
                         <div className="flex flex-col gap-0.5">
                           <h2
                             className="font-bold text-sm text-base-content cursor-pointer hover:underline hover:text-primary transition-colors"
-                            onClick={() => onOpenWorkflow(workflow.id)}
+                            onClick={() => {
+                              if (duplicatingWorkflowId) return;
+                              onOpenWorkflow(workflow.id);
+                            }}
                           >
                             {workflow.name}
                           </h2>
@@ -246,6 +258,7 @@ export function WorkflowListPage({
                           type="button"
                           variant="ghost"
                           className="text-fg-primary hover:text-accent w-8 h-8"
+                          disabled={duplicatingWorkflowId !== null}
                           onClick={() => onOpenWorkflow(workflow.id)}
                         >
                           <Eye aria-hidden="true" size={15} />
@@ -255,7 +268,7 @@ export function WorkflowListPage({
                           type="button"
                           variant="ghost"
                           className="text-primary hover:bg-primary/10 w-8 h-8"
-                          disabled={hasActiveRun || (!!startingWorkflowId && startingWorkflowId !== workflow.id)}
+                          disabled={hasActiveRun || (!!startingWorkflowId && startingWorkflowId !== workflow.id) || duplicatingWorkflowId !== null}
                           loading={startingWorkflowId === workflow.id}
                           onClick={() => onRunWorkflow(workflow)}
                         >
@@ -267,6 +280,7 @@ export function WorkflowListPage({
                             type="button"
                             variant="ghost"
                             className="text-error hover:bg-error/10 w-8 h-8"
+                            disabled={duplicatingWorkflowId !== null}
                             onClick={() => onStopRun(activeRun.run_id)}
                           >
                             <Square aria-hidden="true" size={15} />
@@ -279,6 +293,7 @@ export function WorkflowListPage({
                               type="button"
                               variant="ghost"
                               className="text-fg-primary hover:text-accent w-8 h-8"
+                              disabled={duplicatingWorkflowId !== null}
                             >
                               <MoreHorizontal aria-hidden="true" size={15} />
                             </IconButton>
@@ -289,14 +304,21 @@ export function WorkflowListPage({
                               <span>Edit</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              disabled={hasActiveRun}
-                              onSelect={() => setTimeout(() => onDuplicateWorkflow(workflow), 0)}
+                              disabled={hasActiveRun || duplicatingWorkflowId !== null}
+                              onSelect={async () => {
+                                setDuplicatingWorkflowId(workflow.id);
+                                try {
+                                  await onDuplicateWorkflow(workflow);
+                                } finally {
+                                   setDuplicatingWorkflowId(null);
+                                }
+                              }}
                             >
                               <Copy aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
                               <span>Duplicate</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              disabled={hasActiveRun}
+                              disabled={hasActiveRun || duplicatingWorkflowId !== null}
                               onSelect={() => setTimeout(() => onOpenExportWorkflow(workflow), 0)}
                             >
                               <Download aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
@@ -305,7 +327,7 @@ export function WorkflowListPage({
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               variant="destructive"
-                              disabled={hasActiveRun}
+                              disabled={hasActiveRun || duplicatingWorkflowId !== null}
                               onSelect={() => setTimeout(() => onDeleteWorkflow(workflow.id), 0)}
                             >
                               <Trash2 aria-hidden="true" size={14} className="mr-1.5 shrink-0" />
