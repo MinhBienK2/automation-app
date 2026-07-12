@@ -472,13 +472,12 @@ export function buildLaunchOptions(
     ? persona.webrtc_mode
     : browser.webrtc_policy;
   const fontBundlePath = browser.fingerprint_fonts_dir?.trim() || persona?.font_bundle.path?.trim();
+  const fingerprintSeed = resolveFingerprintSeed(browser);
   const args = [
-    browser.fingerprint_seed?.trim()
-      ? `--fingerprint=${browser.fingerprint_seed.trim()}`
-      : null,
+    fingerprintSeed ? `--fingerprint=${fingerprintSeed}` : null,
     "--fingerprint-noise=false",
     "--fingerprint-storage-quota=500",
-    "--fingerprint-platform=windows",
+    `--fingerprint-platform=${resolveFingerprintPlatform()}`,
     fontBundlePath
       ? `--fingerprint-fonts-dir=${fontBundlePath}`
       : null,
@@ -511,6 +510,47 @@ function omitUndefinedLaunchOptions(options: BrowserLaunchOptions): BrowserLaunc
   return Object.fromEntries(
     Object.entries(options).filter(([, value]) => value !== undefined),
   );
+}
+
+/**
+ * Resolve a stable fingerprint seed for the launch.
+ *
+ * A persistent profile keeps a logged-in identity across runs, so the browser
+ * device fingerprint must stay stable. If no seed is configured (workflow
+ * imported/edited, recording/retained-session path, or the field was cleared),
+ * cloakbrowser injects a RANDOM seed on every launch. TikTok's risk engine then
+ * sees the account "device hopping" between sessions — which suppresses
+ * engagement actions (like/follow) while still allowing passive browsing.
+ *
+ * When no seed is set we derive a deterministic one from the profile so the
+ * device identity is consistent across sessions. Temporary sessions keep a
+ * randomizing seed (cloakbrowser's default) since nothing is persisted anyway.
+ */
+function resolveFingerprintSeed(browser: WorkflowSettings["browser_launch"]): string {
+  const configured = browser.fingerprint_seed?.trim();
+  if (configured) return configured;
+  if (browser.session_mode !== "persistent_profile") return "";
+  const basis = browser.profile_dir?.trim() || browser.identity_id?.trim() || "";
+  return basis ? deterministicFingerprintSeed(basis) : "";
+}
+
+function deterministicFingerprintSeed(value: string): string {
+  let hash = 0;
+  for (const char of value) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 90000;
+  }
+  return String(10000 + hash).padStart(5, "0");
+}
+
+/**
+ * Pick the spoofed platform to match the host. CloakBrowser ships platform-
+ * specific patches; forcing Windows on a macOS host overrides the native `macos`
+ * patch and produces a navigator(Windows)/WebGL(macOS) mismatch that anti-bot
+ * systems correlate. Linux/Windows builds spoof as Windows (cloakbrowser's own
+ * default), macOS uses its native patch.
+ */
+function resolveFingerprintPlatform(): string {
+  return process.platform === "darwin" ? "macos" : "windows";
 }
 
 export function retainedProfileKey(settings: WorkflowSettings) {
