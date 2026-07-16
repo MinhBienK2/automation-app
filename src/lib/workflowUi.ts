@@ -195,6 +195,14 @@ export const actionLabels: Record<ActionType, string> = {
   crypto_operation: "Crypto Hashing & Base64",
   switch_frame: "Switch Frame Context",
   switch_to_parent_frame: "Switch to Parent Frame",
+  desktop_launch_app: "Desktop: Launch Application",
+  desktop_click: "Desktop: Mouse Click",
+  desktop_type_text: "Desktop: Type Text",
+  desktop_press_key: "Desktop: Press Key",
+  desktop_hotkey: "Desktop: Send Hotkey",
+  desktop_scroll: "Desktop: Mouse Scroll",
+  desktop_screenshot: "Desktop: Take Screenshot",
+  desktop_wait: "Desktop: Wait Duration",
 };
 
 const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [

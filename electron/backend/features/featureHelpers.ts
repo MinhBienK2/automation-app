@@ -415,26 +415,35 @@ export function createFeatureHelpers(
     const project = options.project_id
       ? await requireProject(options.project_id)
       : await ensureDefaultProject();
-    const browserProfile = options.browser_profile_id
-      ? await requireBrowserProfile(options.browser_profile_id)
-      : await ensureDefaultBrowserProfile(project);
+    const isDesktop = options.automationMode === "desktop";
+    const browserProfile = isDesktop
+      ? null
+      : (options.browser_profile_id
+        ? await requireBrowserProfile(options.browser_profile_id)
+        : await ensureDefaultBrowserProfile(project));
     const workflow = await repository.createWorkflow(
       normalized,
       createDraftGraph(),
       new Date(),
-      { projectId: project.id, browserProfileId: browserProfile.id },
+      { projectId: project.id, browserProfileId: browserProfile?.id ?? null, automationMode: isDesktop ? "desktop" : "web" },
     );
     const defaultSettings = settingsService.defaultWorkflowSettings(workflow, {
-      randomizeIdentity: true,
+      randomizeIdentity: !isDesktop,
     });
     await repository.saveWorkflowSettings(workflow.id, {
       ...defaultSettings,
-      browser_launch: browserProfile.browser_launch,
+      browser_launch: browserProfile ? browserProfile.browser_launch : ({} as any),
+      desktop_launch: isDesktop ? {
+        app_executable_path: "",
+        app_arguments: [],
+        cua_driver_mode: "local",
+      } : null,
     });
     return {
       ...workflow,
       project_id: project.id,
-      browser_profile_id: browserProfile.id,
+      browser_profile_id: browserProfile?.id ?? null,
+      automation_mode: isDesktop ? "desktop" : "web",
     };
   }
 

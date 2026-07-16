@@ -71,6 +71,7 @@ import { useSelectionSubflowCreator } from "./useSelectionSubflowCreator";
 import { useWorkflowGraphDerivedState } from "./useWorkflowGraphDerivedState";
 import { GraphNodePalette } from "./WorkflowGraphPalettes";
 import { ActionNodePalette } from "./ActionNodePalette";
+import { DesktopActionNodePalette } from "./DesktopActionNodePalette";
 import { SubflowNodePalette, type SubflowAddMode } from "./SubflowNodePalette";
 import { NodeContextMenu, LinkContextMenu } from "./WorkflowGraphContextMenus";
 import { NodeHelpDialog } from "./NodeHelpDialog";
@@ -99,6 +100,7 @@ type WorkflowGraphEditorProps = {
   defaultEdgeDelay?: GraphEdgeDelay | null;
   initialVariables?: Array<{ name: string; value: string }> | null;
   profileVariables?: Array<{ name: string; value: string }> | null;
+  automationMode?: "web" | "desktop";
 };
 
 export type GraphSelectionRequest = {
@@ -135,6 +137,7 @@ export function WorkflowGraphEditor({
   ownerId,
   initialVariables,
   profileVariables,
+  automationMode = "web",
 }: WorkflowGraphEditorProps) {
   return (
     <ReactFlowProvider>
@@ -158,6 +161,7 @@ export function WorkflowGraphEditor({
         ownerId={ownerId}
         initialVariables={initialVariables}
         profileVariables={profileVariables}
+        automationMode={automationMode}
       />
     </ReactFlowProvider>
   );
@@ -184,6 +188,7 @@ function WorkflowGraphEditorInner({
   ownerId,
   initialVariables,
   profileVariables,
+  automationMode = "web",
 }: WorkflowGraphEditorProps) {
   const [isActionPaletteOpen, setIsActionPaletteOpen] = useState(false);
   const [isSubflowPaletteOpen, setIsSubflowPaletteOpen] = useState(false);
@@ -1142,11 +1147,19 @@ function WorkflowGraphEditorInner({
         />
       ) : null}
 
-      <ActionNodePalette
-        open={isActionPaletteOpen}
-        onOpenChange={setIsActionPaletteOpen}
-        onSelectAction={addActionNode}
-      />
+      {automationMode === "desktop" ? (
+        <DesktopActionNodePalette
+          open={isActionPaletteOpen}
+          onOpenChange={setIsActionPaletteOpen}
+          onSelectAction={addActionNode}
+        />
+      ) : (
+        <ActionNodePalette
+          open={isActionPaletteOpen}
+          onOpenChange={setIsActionPaletteOpen}
+          onSelectAction={addActionNode}
+        />
+      )}
       <SubflowNodePalette
         open={isSubflowPaletteOpen}
         subflows={subflowOptions}

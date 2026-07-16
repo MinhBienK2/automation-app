@@ -854,23 +854,6 @@ describe("Settings commands integration", () => {
       ]
     );
     await database.execute(
-      `INSERT INTO run_steps (
-        id, run_id, node_id, step_number, action_type, status, started_at, finished_at, error_json, owner_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [
-        "step-1",
-        "run-failed",
-        "assert",
-        1,
-        "assert_text",
-        "failed",
-        "2026-05-27T10:00:00.000Z",
-        "2026-05-27T10:03:00.000Z",
-        JSON.stringify({ reason: "Assertion failed" }),
-        database.ownerId,
-      ]
-    );
-    await database.execute(
       `INSERT INTO workflow_schedule_events (
         id, schedule_id, workflow_id, event_type, run_id, scheduled_for, created_at, reason, owner_id
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,

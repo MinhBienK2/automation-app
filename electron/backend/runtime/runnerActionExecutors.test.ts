@@ -1374,6 +1374,7 @@ function minimalRuntime(overrides: Partial<RunnerActionRuntime> = {}): RunnerAct
       innerHTML: async () => "<span>HTML</span>",
       evaluate: async (fn: any, arg?: any) => {
         const mockEl = {
+          innerHTML: "<span>HTML</span>",
           outerHTML: "<div>Outer</div>",
           attributes: [
             { name: "class", value: "test-class" },

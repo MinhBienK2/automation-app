@@ -234,6 +234,7 @@ function AppInner() {
     setScreen: (screen) => nav.setScreen(screen),
     setProjectCollection: (coll) => projectsWorkspace.setProjectCollection(coll),
     ensureProjectId: () => projectsWorkspace.ensureProjectId(),
+    projectCollection: projectsWorkspace.projectCollection,
   });
 
 
@@ -890,6 +891,11 @@ function AppInner() {
           browseMode={nav.projectsBrowseMode}
           error={selectedProject ? "" : appError}
           projectStats={projectStats}
+          webWorkflowsCount={selectedProjectWorkflows.filter((w) => w.automation_mode !== "desktop").length}
+          desktopWorkflowsCount={selectedProjectWorkflows.filter((w) => w.automation_mode === "desktop").length}
+          webSubflowsCount={subflowsWorkspace.subflows.filter((s) => s.automation_mode !== "desktop").length}
+          desktopSubflowsCount={subflowsWorkspace.subflows.filter((s) => s.automation_mode === "desktop").length}
+          profilesCount={selectedBrowserProfiles.length}
           onSelectProject={(projectId) => {
             void projectsWorkspace.selectProject(projectId);
             nav.setProjectsBrowseMode("detail");
@@ -911,18 +917,27 @@ function AppInner() {
             void projectsWorkspace.deleteProject(projectId);
           }}
         >
-          {projectsWorkspace.projectCollection === "subflows" ? (
+          {projectsWorkspace.projectCollection === "subflows" || projectsWorkspace.projectCollection === "desktop_subflows" ? (
             <SubflowListPage
-              subflows={subflowsWorkspace.subflows}
+              subflows={
+                projectsWorkspace.projectCollection === "desktop_subflows"
+                  ? subflowsWorkspace.subflows.filter((s) => s.automation_mode === "desktop")
+                  : subflowsWorkspace.subflows.filter((s) => s.automation_mode !== "desktop")
+              }
               subflowUsagesBySubflow={subflowsWorkspace.subflowUsagesBySubflow}
               loading={subflowsWorkspace.subflowsLoading}
               error={appError}
-              onCreateSubflow={(input) => subflowsWorkspace.createProjectSubflow(input)}
+              onCreateSubflow={(input) =>
+                subflowsWorkspace.createProjectSubflow({
+                  ...input,
+                  automationMode: projectsWorkspace.projectCollection === "desktop_subflows" ? "desktop" : "web",
+                } as any)
+              }
               onUpdateSubflow={subflowsWorkspace.updateProjectSubflow}
               onDuplicateSubflow={subflowsWorkspace.duplicateProjectSubflow}
               onDeleteSubflow={(subflow) => subflowsWorkspace.deleteProjectSubflow(subflow.id)}
               onOpenSubflow={(subflowId) => {
-                void subflowsWorkspace.openSubflowDetail(subflowId, { type: "subflows" });
+                void subflowsWorkspace.openSubflowDetail(subflowId, { type: projectsWorkspace.projectCollection as any });
               }}
               onRefresh={() => {
                 void subflowsWorkspace.loadSubflowsForProject();
@@ -968,7 +983,11 @@ function AppInner() {
             />
           ) : (
             <WorkflowListPage
-              workflows={selectedProjectWorkflows}
+              workflows={
+                projectsWorkspace.projectCollection === "desktop_workflows"
+                  ? selectedProjectWorkflows.filter((w) => w.automation_mode === "desktop")
+                  : selectedProjectWorkflows.filter((w) => w.automation_mode !== "desktop")
+              }
               workflowDialogMode={workflowsWorkspace.workflowDialogMode}
               workflowNameDraft={workflowsWorkspace.workflowNameDraft}
               browserProfiles={selectedBrowserProfiles}
@@ -976,6 +995,7 @@ function AppInner() {
               appError={appError}
               runSnapshots={runSnapshots}
               startingWorkflowId={runWorkspace.startingWorkflowId}
+              hideBrowserProfileField={projectsWorkspace.projectCollection === "desktop_workflows"}
               onWorkflowNameDraftChange={workflowsWorkspace.setWorkflowNameDraft}
               onSelectedProfileIdDraftChange={workflowsWorkspace.setSelectedProfileIdDraft}
               onSubmitWorkflowDialog={workflowsWorkspace.submitWorkflowDialog}

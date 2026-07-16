@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import type {
   ProjectWorkspaceAPI,
+  ProjectCollection,
 } from "../../../shared/types/workspaceContracts";
 import type {
   Project,
@@ -30,7 +31,7 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [projectCollection, setProjectCollectionState] = useState<"workflows" | "subflows" | "profiles" | "settings">("workflows");
+  const [projectCollection, setProjectCollectionState] = useState<ProjectCollection>("workflows");
   const [browserProfiles, setBrowserProfiles] = useState<BrowserProfile[]>([]);
 
   const loadProjectModel = useCallback(async () => {
@@ -91,10 +92,17 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
     }
   }, [setSubflows, setSubflowsLoading, setAppError]);
 
-  const setProjectCollection = useCallback((collection: "workflows" | "subflows" | "profiles" | "settings") => {
+  const setProjectCollection = useCallback((collection: ProjectCollection) => {
     setProjectCollectionState(collection);
     const projectId = currentProjectId();
-    if (projectId && (collection === "subflows" || collection === "settings" || collection === "profiles")) {
+    if (
+      projectId &&
+      (collection === "subflows" ||
+        collection === "settings" ||
+        collection === "profiles" ||
+        collection === "desktop_subflows" ||
+        collection === "desktop_settings")
+    ) {
       void loadSubflowsForProject(projectId);
     }
   }, [currentProjectId, loadSubflowsForProject]);

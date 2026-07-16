@@ -152,6 +152,19 @@ import { cryptoOperationSchema } from "./crypto_operation.js";
 import { switchFrameSchema } from "./switch_frame.js";
 import { switchToParentFrameSchema } from "./switch_to_parent_frame.js";
 import {
+  desktopLaunchAppSchema,
+  desktopClickSchema,
+  desktopTypeTextSchema,
+  desktopPressKeySchema,
+  desktopHotkeySchema,
+  desktopScrollSchema,
+  desktopScreenshotSchema,
+  desktopWaitSchema,
+  desktopHoverSchema,
+  desktopRightClickSchema,
+  desktopDoubleClickSchema,
+} from "./desktop_actions.js";
+import {
   createEmptyListSchema,
   createListManualSchema,
   splitTextToListSchema,
@@ -399,6 +412,17 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   crypto_operation: cryptoOperationSchema,
   switch_frame: switchFrameSchema,
   switch_to_parent_frame: switchToParentFrameSchema,
+  desktop_launch_app: desktopLaunchAppSchema,
+  desktop_click: desktopClickSchema,
+  desktop_type_text: desktopTypeTextSchema,
+  desktop_press_key: desktopPressKeySchema,
+  desktop_hotkey: desktopHotkeySchema,
+  desktop_scroll: desktopScrollSchema,
+  desktop_screenshot: desktopScreenshotSchema,
+  desktop_wait: desktopWaitSchema,
+  desktop_hover: desktopHoverSchema,
+  desktop_right_click: desktopRightClickSchema,
+  desktop_double_click: desktopDoubleClickSchema,
 };
 
 export type ValidationResult<T> =

@@ -69,6 +69,7 @@ export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "graph_defaults", label: "Graph" },
   { id: "run_policy", label: "Run Policy" },
   { id: "browser_launch", label: "Browser Launch" },
+  { id: "desktop_launch", label: "Desktop Launch" },
   { id: "environment", label: "Environment" },
 ];
 
@@ -375,6 +376,54 @@ export const workflowSettingsHelp: Record<
           fix: "Dùng node Wait hoặc Random Wait rõ ràng tại vị trí business flow cần pause.",
         },
       ],
+    },
+  },
+  desktop_launch: {
+    en: {
+      title: "Desktop Launch Help",
+      summary: "Desktop Launch configures desktop app automation executable paths and command-line arguments.",
+      uiLabels: enLabels,
+      bestFor: ["Specifying which application to run when starting desktop automation."],
+      notFor: ["Web browser automation configurations."],
+      precedence: ["Desktop settings apply to desktop automation workflows only."],
+      fieldGuide: [
+        {
+          name: "App executable path",
+          description: "The absolute path to the desktop application's executable binary file on your local system, which is required for the runner to start the desktop session.",
+          whenToUse: "Provide the absolute path to the desktop app you want to automate. For example: /usr/bin/gnome-calculator or C:\\Program Files\\...",
+        },
+      ],
+      safetyNotes: [],
+      commonMistakes: [
+        {
+          mistake: "Using relative paths instead of absolute paths.",
+          fix: "Provide the absolute path to the executable file, e.g. /usr/bin/calculator instead of calculator.",
+        }
+      ],
+      workflowExamples: [],
+    },
+    vi: {
+      title: "Cấu hình Desktop Launch",
+      summary: "Cấu hình Desktop Launch dùng để thiết lập đường dẫn ứng dụng desktop và đối số dòng lệnh.",
+      uiLabels: viLabels,
+      bestFor: ["Cấu hình ứng dụng khởi chạy khi chạy desktop automation."],
+      notFor: ["Cấu hình web browser automation."],
+      precedence: ["Cài đặt desktop chỉ áp dụng cho các luồng desktop automation."],
+      fieldGuide: [
+        {
+          name: "Đường dẫn ứng dụng",
+          description: "Đường dẫn tuyệt đối đến tệp thực thi (executable binary) của ứng dụng trên máy tính của bạn, cần thiết để hệ thống có thể khởi chạy ứng dụng chính xác.",
+          whenToUse: "Nhập đường dẫn tuyệt đối đến ứng dụng bạn muốn tự động hóa. Ví dụ: /usr/bin/gnome-calculator hoặc C:\\Program Files\\...",
+        },
+      ],
+      safetyNotes: [],
+      commonMistakes: [
+        {
+          mistake: "Sử dụng đường dẫn tương đối thay vì đường dẫn tuyệt đối.",
+          fix: "Cung cấp đường dẫn tuyệt đối đến tệp thực thi, ví dụ /usr/bin/calculator thay vì calculator.",
+        }
+      ],
+      workflowExamples: [],
     },
   },
   browser_launch: {

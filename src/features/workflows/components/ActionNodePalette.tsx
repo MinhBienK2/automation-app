@@ -310,6 +310,14 @@ export const actionDescriptions: Record<ActionType, string> = {
   extract_emails: "Extract all emails from a text output",
   switch_frame: "Switch context to an iframe",
   switch_to_parent_frame: "Switch context back to parent document",
+  desktop_launch_app: "Launch desktop application",
+  desktop_click: "Desktop mouse click",
+  desktop_type_text: "Desktop type text",
+  desktop_press_key: "Desktop press key",
+  desktop_hotkey: "Desktop send hotkey",
+  desktop_scroll: "Desktop mouse scroll",
+  desktop_screenshot: "Desktop take screenshot",
+  desktop_wait: "Desktop wait duration",
 };
 
 export function ActionNodePalette({

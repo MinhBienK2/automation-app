@@ -120,6 +120,7 @@ describe("appState helpers", () => {
       general: "saving",
       run_policy: "saving",
       browser_launch: "saving",
+      desktop_launch: "saving",
       graph_defaults: "saving",
       environment: "saving",
     });

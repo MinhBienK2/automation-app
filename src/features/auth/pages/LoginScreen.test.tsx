@@ -17,7 +17,7 @@ describe("LoginScreen remember credentials feature", () => {
       />
     );
 
-    const checkbox = screen.getByRole("checkbox", { name: /remember email/i });
+    const checkbox = screen.getByRole("checkbox", { name: /remember/i });
     expect(checkbox).toBeInTheDocument();
     expect(checkbox).not.toBeChecked();
   });
@@ -37,7 +37,7 @@ describe("LoginScreen remember credentials feature", () => {
 
     expect(screen.getByLabelText(/email address/i)).toHaveValue("user@example.com");
     expect(screen.getByLabelText(/password/i)).toHaveValue("");
-    expect(screen.getByRole("checkbox", { name: /remember email/i })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /remember/i })).toBeChecked();
   });
 
   test("saves email to localStorage on submit if checkbox is checked but not password", async () => {
@@ -52,7 +52,7 @@ describe("LoginScreen remember credentials feature", () => {
 
     const emailInput = screen.getByLabelText(/email address/i);
     const passwordInput = screen.getByLabelText(/password/i);
-    const checkbox = screen.getByRole("checkbox", { name: /remember email/i });
+    const checkbox = screen.getByRole("checkbox", { name: /remember/i });
     const submitBtn = screen.getByRole("button", { name: /sign in/i });
 
     await userEvent.type(emailInput, "newuser@example.com");
@@ -82,7 +82,7 @@ describe("LoginScreen remember credentials feature", () => {
 
     const emailInput = screen.getByLabelText(/email address/i);
     const passwordInput = screen.getByLabelText(/password/i);
-    const checkbox = screen.getByRole("checkbox", { name: /remember email/i });
+    const checkbox = screen.getByRole("checkbox", { name: /remember/i });
     const submitBtn = screen.getByRole("button", { name: /sign in/i });
 
     // Uncheck remember me

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import type {
   WorkflowWorkspaceAPI,
   WorkflowDialogMode,
+  ProjectCollection,
 } from "../../../shared/types/workspaceContracts";
 import type {
   WorkflowSummary,
@@ -60,6 +61,7 @@ export interface WorkflowWorkspaceDeps {
   setScreen: (screen: any) => void;
   setProjectCollection: (collection: any) => void;
   ensureProjectId: () => Promise<string>;
+  projectCollection: ProjectCollection;
 }
 
 export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorkspaceAPI {
@@ -91,6 +93,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     setScreen,
     setProjectCollection,
     ensureProjectId,
+    projectCollection,
   } = deps;
 
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
@@ -305,10 +308,12 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
           setAppError("Project not found");
           return;
         }
+        const isDesktop = projectCollection === "desktop_workflows";
         const created = await createWorkflowCommand(workflowNameDraft, {
           project_id: projectId,
-          browser_profile_id: selectedProfileIdDraft ?? undefined,
-        });
+          browser_profile_id: isDesktop ? undefined : (selectedProfileIdDraft ?? undefined),
+          automationMode: isDesktop ? "desktop" : "web",
+        } as any);
         closeWorkflowDialog();
         await loadWorkflows();
         await openWorkflow(created.id);

@@ -18,7 +18,14 @@ import { SearchInput } from "../../../components/ui/search-input";
 import { ConfirmDialog } from "../../../components/ui/confirm-dialog";
 import { FormField } from "../../../components/ui/form-field";
 
-export type ProjectCollection = "workflows" | "subflows" | "profiles" | "settings";
+export type ProjectCollection =
+  | "workflows"
+  | "subflows"
+  | "profiles"
+  | "settings"
+  | "desktop_workflows"
+  | "desktop_subflows"
+  | "desktop_settings";
 
 export type ProjectStats = {
   workflows: number;
@@ -41,18 +48,13 @@ export type ProjectsPageProps = {
   onDuplicateProject?: (projectId: string) => Promise<void>;
   onExportProject?: (projectId: string) => void;
   onDeleteProject?: (projectId: string) => void;
+  webWorkflowsCount?: number;
+  desktopWorkflowsCount?: number;
+  webSubflowsCount?: number;
+  desktopSubflowsCount?: number;
+  profilesCount?: number;
 };
 
-const projectCollections: Array<{
-  id: ProjectCollection;
-  label: string;
-  stat?: keyof ProjectStats;
-}> = [
-  { id: "workflows", label: "Workflows", stat: "workflows" },
-  { id: "subflows", label: "Subflows", stat: "subflows" },
-  { id: "profiles", label: "Profiles", stat: "profiles" },
-  { id: "settings", label: "Settings" },
-];
 
 export function ProjectsPage({
   projects,
@@ -69,6 +71,11 @@ export function ProjectsPage({
   onDuplicateProject,
   onExportProject,
   onDeleteProject,
+  webWorkflowsCount = 0,
+  desktopWorkflowsCount = 0,
+  webSubflowsCount = 0,
+  desktopSubflowsCount = 0,
+  profilesCount = 0,
 }: ProjectsPageProps) {
   const [browsing, setBrowsing] = useState(true);
 
@@ -99,13 +106,22 @@ export function ProjectsPage({
     };
   }, [openActionMenuId]);
 
-  const activeCollectionLabel =
-    projectCollections.find((collection) => collection.id === activeCollection)?.label ??
-    "Workflows";
 
   const selectedStats = selectedProject
     ? (projectStats?.[selectedProject.id] ?? { workflows: 0, subflows: 0, profiles: 0 })
     : null;
+
+  const workflowsCount = webWorkflowsCount !== undefined && webWorkflowsCount !== 0
+    ? webWorkflowsCount
+    : (selectedStats?.workflows ?? 0);
+
+  const subflowsCount = webSubflowsCount !== undefined && webSubflowsCount !== 0
+    ? webSubflowsCount
+    : (selectedStats?.subflows ?? 0);
+
+  const finalProfilesCount = profilesCount !== undefined && profilesCount !== 0
+    ? profilesCount
+    : (selectedStats?.profiles ?? 0);
 
   const visibleProjects = useMemo(() => {
     const normalized = gridSearchDraft.trim().toLocaleLowerCase();
@@ -346,36 +362,149 @@ export function ProjectsPage({
         </div>
       ) : (
         <section aria-label="Project detail" className="projects-detail-panel mt-4">
-          <nav aria-label="Project sections" className="tabs tabs-bordered w-full mb-4">
-            {projectCollections.map((collection) => {
-              const count = collection.stat
-                ? selectedStats?.[collection.stat] ?? 0
-                : null;
-              const isActive = activeCollection === collection.id;
-              return (
-                <button
-                  aria-current={isActive ? "page" : undefined}
-                  className={`tab font-semibold text-xs pb-3 ${isActive ? "tab-active text-primary border-primary" : "text-secondary"}`}
-                  key={collection.id}
-                  type="button"
-                  onClick={() => onCollectionChange(collection.id)}
-                >
-                  <span>{collection.label}</span>
-                  {count !== null && count > 0 ? (
-                    <Badge aria-hidden="true" variant="secondary" className="badge-sm ml-1.5 font-bold">
-                      {count}
-                    </Badge>
-                  ) : null}
-                </button>
-              );
-            })}
-          </nav>
-          <section
-            aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
-            className="project-collection-panel"
-          >
-            {children}
-          </section>
+          <div className="flex gap-6 w-full items-start">
+            {/* Grouped Navigation Sidebar */}
+            <nav aria-label="Project sections" className="w-56 shrink-0 flex flex-col gap-5 p-4 rounded-lg bg-base-200 border border-base-300">
+              {/* Web Browser Group */}
+              <div>
+                <h3 className="text-[10px] font-bold tracking-wider text-secondary uppercase mb-2.5 flex items-center gap-1.5">
+                  <span>🌐</span> WEB BROWSER
+                </h3>
+                <ul className="flex flex-col gap-1 text-xs font-semibold">
+                  <li>
+                    <button
+                      type="button"
+                      aria-label="Workflows"
+                      aria-current={activeCollection === "workflows" ? "page" : undefined}
+                      onClick={() => onCollectionChange("workflows")}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-all cursor-pointer ${
+                        activeCollection === "workflows"
+                          ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                          : "text-base-content hover:bg-base-300 border border-transparent"
+                      }`}
+                    >
+                      <span>Workflows</span>
+                      {workflowsCount > 0 && (
+                        <Badge variant="secondary" className="badge-sm font-bold">{workflowsCount}</Badge>
+                      )}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      aria-label="Subflows"
+                      aria-current={activeCollection === "subflows" ? "page" : undefined}
+                      onClick={() => onCollectionChange("subflows")}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-all cursor-pointer ${
+                        activeCollection === "subflows"
+                          ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                          : "text-base-content hover:bg-base-300 border border-transparent"
+                      }`}
+                    >
+                      <span>Subflows</span>
+                      {subflowsCount > 0 && (
+                        <Badge variant="secondary" className="badge-sm font-bold">{subflowsCount}</Badge>
+                      )}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      aria-label="Profiles"
+                      aria-current={activeCollection === "profiles" ? "page" : undefined}
+                      onClick={() => onCollectionChange("profiles")}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-all cursor-pointer ${
+                        activeCollection === "profiles"
+                          ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                          : "text-base-content hover:bg-base-300 border border-transparent"
+                      }`}
+                    >
+                      <span>Profiles</span>
+                      {finalProfilesCount > 0 && (
+                        <Badge variant="secondary" className="badge-sm font-bold">{finalProfilesCount}</Badge>
+                      )}
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Desktop App Group */}
+              <div>
+                <h3 className="text-[10px] font-bold tracking-wider text-secondary uppercase mb-2.5 flex items-center gap-1.5">
+                  <span>🖥️</span> DESKTOP APP
+                </h3>
+                <ul className="flex flex-col gap-1 text-xs font-semibold">
+                  <li>
+                    <button
+                      type="button"
+                      aria-label="Desktop Workflows"
+                      aria-current={activeCollection === "desktop_workflows" ? "page" : undefined}
+                      onClick={() => onCollectionChange("desktop_workflows")}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-all cursor-pointer ${
+                        activeCollection === "desktop_workflows"
+                          ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                          : "text-base-content hover:bg-base-300 border border-transparent"
+                      }`}
+                    >
+                      <span>Workflows</span>
+                      {desktopWorkflowsCount > 0 && (
+                        <Badge variant="secondary" className="badge-sm font-bold">{desktopWorkflowsCount}</Badge>
+                      )}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      aria-label="Desktop Subflows"
+                      aria-current={activeCollection === "desktop_subflows" ? "page" : undefined}
+                      onClick={() => onCollectionChange("desktop_subflows")}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-all cursor-pointer ${
+                        activeCollection === "desktop_subflows"
+                          ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                          : "text-base-content hover:bg-base-300 border border-transparent"
+                      }`}
+                    >
+                      <span>Subflows</span>
+                      {desktopSubflowsCount > 0 && (
+                        <Badge variant="secondary" className="badge-sm font-bold">{desktopSubflowsCount}</Badge>
+                      )}
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Project Settings Group */}
+              <div>
+                <h3 className="text-[10px] font-bold tracking-wider text-secondary uppercase mb-2.5 flex items-center gap-1.5">
+                  <span>⚙️</span> PROJECT SETTINGS
+                </h3>
+                <ul className="flex flex-col gap-1 text-xs font-semibold">
+                  <li>
+                    <button
+                      type="button"
+                      aria-current={activeCollection === "settings" ? "page" : undefined}
+                      onClick={() => onCollectionChange("settings")}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-all cursor-pointer ${
+                        activeCollection === "settings"
+                          ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                          : "text-base-content hover:bg-base-300 border border-transparent"
+                      }`}
+                    >
+                      <span>Settings</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </nav>
+
+            {/* Active Workspace Content Area */}
+            <section
+              aria-label={`${selectedProject.name} ${activeCollection}`}
+              className="project-collection-panel flex-grow min-w-0"
+            >
+              {children}
+            </section>
+          </div>
         </section>
       )}
 

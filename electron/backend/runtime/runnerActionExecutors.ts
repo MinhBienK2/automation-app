@@ -2675,6 +2675,39 @@ export function createRunnerActionExecutors(
       // No-op: quarantined nodes are skipped at compile time.
       // This executor exists only to satisfy the registry coverage assertion.
     },
+    desktop_launch_app: async () => {
+      throw new Error("desktop_launch_app is not supported in browser-based web runner");
+    },
+    desktop_click: async () => {
+      throw new Error("desktop_click is not supported in browser-based web runner");
+    },
+    desktop_type_text: async () => {
+      throw new Error("desktop_type_text is not supported in browser-based web runner");
+    },
+    desktop_press_key: async () => {
+      throw new Error("desktop_press_key is not supported in browser-based web runner");
+    },
+    desktop_hotkey: async () => {
+      throw new Error("desktop_hotkey is not supported in browser-based web runner");
+    },
+    desktop_scroll: async () => {
+      throw new Error("desktop_scroll is not supported in browser-based web runner");
+    },
+    desktop_screenshot: async () => {
+      throw new Error("desktop_screenshot is not supported in browser-based web runner");
+    },
+    desktop_wait: async () => {
+      throw new Error("desktop_wait is not supported in browser-based web runner");
+    },
+    desktop_hover: async () => {
+      throw new Error("desktop_hover is not supported in browser-based web runner");
+    },
+    desktop_right_click: async () => {
+      throw new Error("desktop_right_click is not supported in browser-based web runner");
+    },
+    desktop_double_click: async () => {
+      throw new Error("desktop_double_click is not supported in browser-based web runner");
+    },
   });
 }
 

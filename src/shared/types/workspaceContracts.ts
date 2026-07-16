@@ -26,7 +26,16 @@ export type OverviewFocus = "attention" | "recent_evidence" | "live_runs" | null
 export type WorkflowDialogMode = "create" | "edit" | null;
 export type SubflowBackTarget =
   | { type: "subflows" }
+  | { type: "desktop_subflows" }
   | { type: "workflow-detail"; workflowId: string; workflowName: string };
+export type ProjectCollection =
+  | "workflows"
+  | "subflows"
+  | "profiles"
+  | "settings"
+  | "desktop_workflows"
+  | "desktop_subflows"
+  | "desktop_settings";
 
 export interface AppNavigationAPI {
   sidebarCollapsed: boolean;
@@ -37,7 +46,7 @@ export interface AppNavigationAPI {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setOverviewFocus: (focus: OverviewFocus) => void;
   setProjectsBrowseMode: (mode: "grid" | "detail") => void;
-  openProjects: (collection?: "workflows" | "subflows" | "profiles" | "settings") => void;
+  openProjects: (collection?: ProjectCollection) => void;
   openOverview: (focus?: OverviewFocus) => void;
   openSettings: () => void;
   openSettingsHelp: () => void;
@@ -50,11 +59,11 @@ export interface AppNavigationAPI {
 export interface ProjectWorkspaceAPI {
   projects: Project[];
   selectedProjectId: string | null;
-  projectCollection: "workflows" | "subflows" | "profiles" | "settings";
+  projectCollection: ProjectCollection;
   browserProfiles: BrowserProfile[];
   
   setSelectedProjectId: (id: string | null) => void;
-  setProjectCollection: (collection: "workflows" | "subflows" | "profiles" | "settings") => void;
+  setProjectCollection: (collection: ProjectCollection) => void;
   setBrowserProfiles: (profiles: BrowserProfile[]) => void;
   setProjects: (projects: Project[]) => void;
 

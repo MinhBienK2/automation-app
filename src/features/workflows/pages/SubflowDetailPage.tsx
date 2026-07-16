@@ -136,6 +136,7 @@ export function SubflowDetailPage({
           runState={initialRunState}
           validationIssues={[]}
           ownerId={subflow.id}
+          automationMode={subflow.automation_mode}
           onChange={onGraphChange}
           onSaveGraph={onSaveGraph}
         />

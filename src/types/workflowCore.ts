@@ -185,7 +185,18 @@ export type ActionType =
   | "date_time_operation"
   | "crypto_operation"
   | "switch_frame"
-  | "switch_to_parent_frame";
+  | "switch_to_parent_frame"
+  | "desktop_launch_app"
+  | "desktop_click"
+  | "desktop_type_text"
+  | "desktop_press_key"
+  | "desktop_hotkey"
+  | "desktop_scroll"
+  | "desktop_screenshot"
+  | "desktop_wait"
+  | "desktop_hover"
+  | "desktop_right_click"
+  | "desktop_double_click";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -224,6 +235,7 @@ export type WorkflowSummary = {
   project_id?: string | null;
   browser_profile_id?: string | null;
   browser_profile_name?: string | null;
+  automation_mode?: "web" | "desktop";
   created_at: string;
   updated_at: string;
 };
@@ -233,6 +245,7 @@ export type Workflow = {
   name: string;
   project_id?: string | null;
   browser_profile_id?: string | null;
+  automation_mode?: "web" | "desktop";
   created_at: string;
   updated_at: string;
 };
@@ -251,6 +264,7 @@ export type WorkflowSettingsSectionId =
   | "general"
   | "run_policy"
   | "browser_launch"
+  | "desktop_launch"
   | "graph_defaults"
   | "environment";
 
@@ -377,6 +391,7 @@ export type BrowserProfileInput = {
 export type WorkflowCreateOptions = {
   project_id?: string | null;
   browser_profile_id?: string | null;
+  automationMode?: "web" | "desktop";
 };
 
 export type WorkflowSettingsEnvironment = {
@@ -412,12 +427,22 @@ export type WorkflowGraphMigrationNote = {
   message: string;
 };
 
+export type WorkflowSettingsDesktopLaunch = {
+  app_executable_path: string;
+  app_arguments: string[];
+  cua_driver_mode: "local" | "remote";
+  cua_server_url?: string | null;
+  window_width?: number | null;
+  window_height?: number | null;
+};
+
 export type WorkflowSettings = {
   workflow_id: string;
   version: number;
   general: WorkflowSettingsGeneral;
   run_policy: WorkflowSettingsRunPolicy;
   browser_launch: WorkflowSettingsBrowserLaunch;
+  desktop_launch?: WorkflowSettingsDesktopLaunch | null;
   graph_defaults: WorkflowSettingsGraphDefaults;
   environment: WorkflowSettingsEnvironment;
   migration_notes: WorkflowSettingsMigrationNote[];
@@ -1785,6 +1810,92 @@ export type ActionConfig =
   | {
       type: "switch_to_parent_frame";
       config: Record<string, never>;
+    }
+  | {
+      type: "desktop_launch_app";
+      config: {
+        app_executable_path: string;
+        app_arguments?: string[] | null;
+      };
+    }
+  | {
+      type: "desktop_click";
+      config: {
+        pid?: number | null;
+        x?: number | null;
+        y?: number | null;
+        element_index?: number | null;
+        button?: "left" | "right" | "double" | null;
+      };
+    }
+  | {
+      type: "desktop_type_text";
+      config: {
+        pid?: number | null;
+        text: string;
+        x?: number | null;
+        y?: number | null;
+        element_index?: number | null;
+      };
+    }
+  | {
+      type: "desktop_press_key";
+      config: {
+        key: string;
+        pid?: number | null;
+        window_id?: number | null;
+      };
+    }
+  | {
+      type: "desktop_hotkey";
+      config: {
+        keys: string[];
+      };
+    }
+  | {
+      type: "desktop_scroll";
+      config: {
+        pid?: number | null;
+        direction?: "up" | "down" | "left" | "right" | null;
+        amount?: number | null;
+      };
+    }
+  | {
+      type: "desktop_screenshot";
+      config: Record<string, never>;
+    }
+  | {
+      type: "desktop_wait";
+      config: {
+        duration_ms?: number | null;
+      };
+    }
+  | {
+      type: "desktop_hover";
+      config: {
+        pid?: number | null;
+        x?: number | null;
+        y?: number | null;
+        element_index?: number | null;
+      };
+    }
+  | {
+      type: "desktop_right_click";
+      config: {
+        pid?: number | null;
+        x?: number | null;
+        y?: number | null;
+        element_index?: number | null;
+      };
+    }
+  | {
+      type: "desktop_double_click";
+      config: {
+        pid?: number | null;
+        x?: number | null;
+        y?: number | null;
+        element_index?: number | null;
+      };
     }
   | {
       type: "quarantined";

@@ -37,7 +37,7 @@ export function createSubflowCommands(deps: CommandDeps) {
   return {
     async createSubflow(
       projectId: string,
-      input: { name: string; description?: string | null },
+      input: { name: string; description?: string | null; automationMode?: "web" | "desktop" },
     ): Promise<Subflow> {
       await requireProject(projectId);
       const name = input.name.trim();
@@ -47,6 +47,8 @@ export function createSubflowCommands(deps: CommandDeps) {
         name,
         input.description?.trim() ?? "",
         createDraftGraph(),
+        new Date(),
+        input.automationMode || "web"
       );
     },
 

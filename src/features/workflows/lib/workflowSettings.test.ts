@@ -76,11 +76,12 @@ describe("workflow settings model", () => {
   });
 
   test("defines sidebar sections and decision-guide help for each section", () => {
-    const visibleSectionIds = [
+    const visibleSectionIds: WorkflowSettingsSectionId[] = [
       "general",
       "graph_defaults",
       "run_policy",
       "browser_launch",
+      "desktop_launch",
       "environment",
     ];
     expect(workflowSettingsSections.map((section) => section.id)).toEqual(visibleSectionIds);
@@ -89,6 +90,7 @@ describe("workflow settings model", () => {
       "Graph",
       "Run Policy",
       "Browser Launch",
+      "Desktop Launch",
       "Environment",
     ]);
     expect(Object.keys(workflowSettingsHelp).sort()).toEqual([...visibleSectionIds].sort());
@@ -100,7 +102,7 @@ describe("workflow settings model", () => {
 
       for (const language of ["en", "vi"] as const) {
         const help = helpByLanguage[language];
-        const minimumFieldGuideItems = section.id === "browser_launch" ? 1 : 3;
+        const minimumFieldGuideItems = (section.id === "browser_launch" || section.id === "desktop_launch") ? 1 : 3;
         expect(help.title.length).toBeGreaterThan(10);
         expect(help.summary.length).toBeGreaterThan(80);
         expect(help.fieldGuide.length).toBeGreaterThanOrEqual(minimumFieldGuideItems);

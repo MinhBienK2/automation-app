@@ -476,6 +476,15 @@ export function VariableAutocompletePopover({
             }
           };
 
+          let labelName = row.fullName || "";
+          if (isJs && row.fullName) {
+            if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(row.fullName)) {
+              labelName = `outputs.${row.fullName}`;
+            } else {
+              labelName = `outputs["${row.fullName}"]`;
+            }
+          }
+
           return (
             <div
               key={row.id}
@@ -483,6 +492,9 @@ export function VariableAutocompletePopover({
                 rowRefs.current[row.id] = el;
               }}
               onClick={handleRowClick}
+              role={row.type === "leaf" ? "option" : undefined}
+              aria-selected={row.type === "leaf" ? isHighlighted : undefined}
+              aria-label={row.type === "leaf" && row.fullName && row.sourceName ? `${labelName} ${row.sourceName}` : undefined}
               style={{ paddingLeft: `${row.level * 14}px` }}
               className={`tree-row-line flex items-center justify-between rounded px-1.5 py-1 transition-colors cursor-pointer select-none ${
                 row.type === "group"

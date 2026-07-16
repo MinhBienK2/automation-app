@@ -10,6 +10,7 @@ import type {
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
 import type { BrowserWorkflowRunner } from "./runner.js";
+import { DesktopWorkflowRunner } from "../desktop/DesktopWorkflowRunner.js";
 import {
   browserProfileKey,
   beginRun,
@@ -271,7 +272,7 @@ export class RunManager {
     if (profileName) this.activeProfileRuns.set(profileName, runId);
     this.rememberSnapshot(snapshot);
 
-    const runRunner = this.createRunRunner();
+    const runRunner = this.createRunRunner(workflow.automation_mode);
     const timeoutMs = settings.run_policy.max_workflow_duration_ms ?? null;
     entry.timeoutHandle = timeoutMs
       ? setTimeout(() => {
@@ -483,7 +484,10 @@ export class RunManager {
     await finishRun(this.options.database, runId, graph, state);
   }
 
-  private createRunRunner(): RunnerCommandPort {
+  private createRunRunner(mode?: "web" | "desktop"): RunnerCommandPort {
+    if (mode === "desktop") {
+      return new DesktopWorkflowRunner() as any;
+    }
     return this.options.runner.createIsolatedRunRunner?.() ?? this.options.runner;
   }
 

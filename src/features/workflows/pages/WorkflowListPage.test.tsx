@@ -147,6 +147,7 @@ describe("Workflow list integration", () => {
         {
           project_id: project.id,
           browser_profile_id: "environment-staging",
+          automationMode: "web",
         },
       );
     });

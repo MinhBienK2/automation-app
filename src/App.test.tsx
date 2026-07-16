@@ -928,8 +928,9 @@ describe("App settings and graph autosave", () => {
     let overviewCalls = 0;
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
-      get_operations_overview: () => {
+      get_operations_overview: async () => {
         overviewCalls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 50));
         if (overviewCalls === 1) throw new Error("overview offline");
         return emptyOperationsOverview();
       },
@@ -1601,7 +1602,9 @@ describe("App settings and graph autosave", () => {
     const signInBtn = screen.getByRole("button", { name: /sign in/i });
 
     // Login as admin
+    await userEvent.clear(emailInput);
     await userEvent.type(emailInput, "admin@example.com");
+    await userEvent.clear(passwordInput);
     await userEvent.type(passwordInput, "adminpassword");
     await userEvent.click(signInBtn);
 
@@ -1630,7 +1633,9 @@ describe("App settings and graph autosave", () => {
     const newSignInBtn = screen.getByRole("button", { name: /sign in/i });
 
     // 4. Login as user
+    await userEvent.clear(newEmailInput);
     await userEvent.type(newEmailInput, "user@example.com");
+    await userEvent.clear(newPasswordInput);
     await userEvent.type(newPasswordInput, "userpassword");
     await userEvent.click(newSignInBtn);
 

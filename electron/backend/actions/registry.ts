@@ -254,6 +254,17 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("crypto_operation", "variables"),
   definition("switch_frame", "element_interaction"),
   definition("switch_to_parent_frame", "element_interaction"),
+  definition("desktop_launch_app", "navigation"),
+  definition("desktop_click", "element_interaction"),
+  definition("desktop_type_text", "keyboard"),
+  definition("desktop_press_key", "keyboard"),
+  definition("desktop_hotkey", "keyboard"),
+  definition("desktop_scroll", "element_interaction"),
+  definition("desktop_screenshot", "capture"),
+  definition("desktop_wait", "browser_context"),
+  definition("desktop_hover", "element_interaction"),
+  definition("desktop_right_click", "element_interaction"),
+  definition("desktop_double_click", "element_interaction"),
 ];
 
 const definitionsByType = new Map(actionDefinitions.map((definition) => [definition.type, definition]));

@@ -804,5 +804,23 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return { type: actionType, config: { iframe_xpath: "" } };
     case "switch_to_parent_frame":
       return { type: actionType, config: {} } as ActionConfig;
+    case "desktop_launch_app":
+      return { type: actionType, config: { app_executable_path: "", app_arguments: [] } } as ActionConfig;
+    case "desktop_click":
+      return { type: actionType, config: { pid: null, x: null, y: null, element_index: null, button: "left" } } as ActionConfig;
+    case "desktop_type_text":
+      return { type: actionType, config: { pid: null, text: "", x: null, y: null, element_index: null } } as ActionConfig;
+    case "desktop_press_key":
+      return { type: actionType, config: { key: "", pid: null, window_id: null } } as ActionConfig;
+    case "desktop_hotkey":
+      return { type: actionType, config: { keys: [] } } as ActionConfig;
+    case "desktop_scroll":
+      return { type: actionType, config: { pid: null, direction: "down", amount: null } } as ActionConfig;
+    case "desktop_screenshot":
+      return { type: actionType, config: {} } as ActionConfig;
+    case "desktop_wait":
+      return { type: actionType, config: { duration_ms: 1000 } } as ActionConfig;
+    default:
+      throw new Error(`Unsupported action type in defaultActionConfig: ${actionType}`);
   }
 }

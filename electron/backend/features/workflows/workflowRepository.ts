@@ -28,6 +28,7 @@ type WorkflowRow = {
   description: string;
   tags_json: string;
   settings_json: string | null;
+  automation_mode: string;
   created_at: string;
   updated_at: string;
 };
@@ -80,8 +81,15 @@ export class WorkflowRepository {
   }
 
   // --- Subflow Delegations ---
-  async createSubflow(projectId: string, name: string, description: string, graph: WorkflowGraph, now = new Date()): Promise<Subflow> {
-    return await this.subflowRepo.createSubflow(projectId, name, description, graph, now);
+  async createSubflow(
+    projectId: string,
+    name: string,
+    description: string,
+    graph: WorkflowGraph,
+    now = new Date(),
+    automationMode?: "web" | "desktop",
+  ): Promise<Subflow> {
+    return await this.subflowRepo.createSubflow(projectId, name, description, graph, now, automationMode);
   }
   async listSubflows(projectId: string): Promise<SubflowSummary[]> {
     return await this.subflowRepo.listSubflows(projectId);
@@ -116,11 +124,12 @@ export class WorkflowRepository {
     name: string,
     graph: WorkflowGraph,
     now = new Date(),
-    ownership: { projectId?: string | null; browserProfileId?: string | null } = {},
+    ownership: { projectId?: string | null; browserProfileId?: string | null; automationMode?: "web" | "desktop" } = {},
   ): Promise<Workflow> {
     const timestamp = now.toISOString();
     const id = crypto.randomUUID();
     const profileId = ownership.browserProfileId ?? null;
+    const automationMode = ownership.automationMode ?? "web";
     await this.database.execute(
       `INSERT INTO workflows (
         id,
@@ -130,15 +139,17 @@ export class WorkflowRepository {
         description,
         tags_json,
         settings_json,
+        automation_mode,
         created_at,
         updated_at,
         owner_id
-      ) VALUES ($1, $2, $3, $4, '', '[]', NULL, $5, $6, $7)`,
+      ) VALUES ($1, $2, $3, $4, '', '[]', NULL, $5, $6, $7, $8)`,
       [
         id,
         ownership.projectId ?? null,
         profileId,
         name,
+        automationMode,
         timestamp,
         timestamp,
         this.database.ownerId,
@@ -150,6 +161,7 @@ export class WorkflowRepository {
       name,
       project_id: ownership.projectId ?? null,
       browser_profile_id: profileId,
+      automation_mode: automationMode as "web" | "desktop",
       created_at: timestamp,
       updated_at: timestamp,
     };
@@ -162,6 +174,7 @@ export class WorkflowRepository {
               workflows.browser_profile_id,
               browser_profiles.name AS browser_profile_name,
               workflows.name,
+              workflows.automation_mode,
               workflows.created_at,
               workflows.updated_at
        FROM workflows
@@ -295,6 +308,7 @@ export class WorkflowRepository {
                 workflows.description,
                 workflows.tags_json,
                 workflows.settings_json,
+                workflows.automation_mode,
                 workflows.created_at,
                 workflows.updated_at
          FROM workflows
@@ -312,6 +326,7 @@ function rowToWorkflow(row: WorkflowRow): Workflow {
     name: row.name,
     project_id: row.project_id,
     browser_profile_id: row.browser_profile_id,
+    automation_mode: row.automation_mode as "web" | "desktop",
     created_at: row.created_at,
     updated_at: row.updated_at,
   };

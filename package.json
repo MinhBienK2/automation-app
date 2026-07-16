@@ -37,6 +37,7 @@
     "db:migrate-graphs": "npm run build:electron && node scripts/db-migrate-graphs.mjs",
     "db:rollback": "npm run build:electron && node scripts/db-rollback.mjs",
     "db:seed": "npm run build:electron && node scripts/db-seed.mjs",
+    "db:seed-test-workflow": "npm run build:electron && node scripts/create-test-workflow.mjs",
     "db:migrate-mongo:create": "npx migrate-mongo create",
     "db:migrate-mongo:up": "npx migrate-mongo up",
     "db:migrate-mongo:down": "npx migrate-mongo down",

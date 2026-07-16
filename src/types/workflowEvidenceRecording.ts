@@ -10,6 +10,7 @@ import type {
   WorkflowHumanPreset,
   WorkflowSettings,
   WorkflowSettingsBrowserLaunch,
+  WorkflowSettingsDesktopLaunch,
   WorkflowSettingsEnvironment,
   WorkflowSettingsGeneral,
   WorkflowSettingsGraphDefaults,
@@ -311,6 +312,7 @@ export type WorkflowPackageSettings = Partial<{
   general: WorkflowSettingsGeneral;
   run_policy: WorkflowSettingsRunPolicy;
   browser_launch: WorkflowSettingsBrowserLaunch;
+  desktop_launch: WorkflowSettingsDesktopLaunch | null;
   graph_defaults: WorkflowSettingsGraphDefaults;
   environment: WorkflowSettingsEnvironment;
 }>;

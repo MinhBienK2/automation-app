@@ -16,6 +16,7 @@ type SubflowRow = {
   name: string;
   description: string;
   tags_json: string;
+  automation_mode: string;
   created_at: string;
   updated_at: string;
 };
@@ -29,6 +30,7 @@ export class SubflowRepository {
     description: string,
     graph: WorkflowGraph,
     now = new Date(),
+    automationMode: "web" | "desktop" = "web",
   ): Promise<Subflow> {
     const timestamp = now.toISOString();
     const id = crypto.randomUUID();
@@ -39,11 +41,12 @@ export class SubflowRepository {
         name,
         description,
         tags_json,
+        automation_mode,
         created_at,
         updated_at,
         owner_id
-      ) VALUES ($1, $2, $3, $4, '[]', $5, $6, $7)`,
-      [id, projectId, name, description, timestamp, timestamp, this.database.ownerId],
+      ) VALUES ($1, $2, $3, $4, '[]', $5, $6, $7, $8)`,
+      [id, projectId, name, description, automationMode, timestamp, timestamp, this.database.ownerId],
     );
     await writeGraphToNormalizedTables(this.database, graph, "subflow", id, timestamp);
     return {
@@ -53,6 +56,7 @@ export class SubflowRepository {
       description,
       tags: [],
       graph,
+      automation_mode: automationMode,
       created_at: timestamp,
       updated_at: timestamp,
     };
@@ -60,7 +64,7 @@ export class SubflowRepository {
 
   async listSubflows(projectId: string): Promise<SubflowSummary[]> {
     const rows = await this.database.query(
-      `SELECT id, project_id, name, description, tags_json, created_at, updated_at
+      `SELECT id, project_id, name, description, tags_json, automation_mode, created_at, updated_at
        FROM subflows
        WHERE project_id = $1 AND owner_id = $2
        ORDER BY updated_at DESC, name ASC`,
@@ -89,6 +93,7 @@ export class SubflowRepository {
       description: row.description,
       tags: parseJson<string[]>(row.tags_json),
       graph: graph ?? { version: 2, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      automation_mode: row.automation_mode as "web" | "desktop",
       created_at: row.created_at,
       updated_at: row.updated_at,
     };
@@ -151,7 +156,7 @@ export class SubflowRepository {
   async duplicateSubflow(subflowId: string, name: string, now = new Date()): Promise<Subflow | null> {
     const subflow = await this.getSubflow(subflowId);
     if (!subflow) return null;
-    return await this.createSubflow(subflow.project_id, name, subflow.description, subflow.graph, now);
+    return await this.createSubflow(subflow.project_id, name, subflow.description, subflow.graph, now, subflow.automation_mode);
   }
 
   async deleteSubflow(subflowId: string): Promise<void> {
@@ -193,7 +198,7 @@ export class SubflowRepository {
   private async getSubflowRow(subflowId: string): Promise<SubflowRow | null> {
     return (
       (await this.database.queryOne(
-        `SELECT id, project_id, name, description, tags_json, created_at, updated_at
+        `SELECT id, project_id, name, description, tags_json, automation_mode, created_at, updated_at
          FROM subflows
          WHERE id = $1 AND owner_id = $2`,
         [subflowId, this.database.ownerId],
@@ -210,6 +215,7 @@ function rowToSubflowSummary(row: SubflowRow): SubflowSummary {
     description: row.description,
     tags: parseJson<string[]>(row.tags_json),
     used_by_count: 0,
+    automation_mode: row.automation_mode as "web" | "desktop",
     created_at: row.created_at,
     updated_at: row.updated_at,
   };

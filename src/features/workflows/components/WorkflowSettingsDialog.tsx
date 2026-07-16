@@ -21,7 +21,6 @@ import { SegmentedControl } from "../../../components/ui/segmented-control";
 import {
   type WorkflowSettingsHelpLanguage,
   workflowSettingsHelp,
-  workflowSettingsSections,
 } from "../lib/workflowSettings";
 import { HelpDisclosure } from "./HelpDisclosure";
 import { GeneralSettingsSection } from "./settings/GeneralSettingsSection";
@@ -29,6 +28,7 @@ import { RunPolicySettingsSection } from "./settings/RunPolicySettingsSection";
 import { BrowserLaunchSettingsSection } from "./settings/BrowserLaunchSettingsSection";
 import { GraphDefaultsSettingsSection } from "./settings/GraphDefaultsSettingsSection";
 import { EnvironmentSettingsSection } from "./settings/EnvironmentSettingsSection";
+import { DesktopLaunchSettingsSection } from "./settings/DesktopLaunchSettingsSection";
 
 type WorkflowSettingsDialogProps = {
   open: boolean;
@@ -64,9 +64,28 @@ export function WorkflowSettingsDialog({
   saveStatuses = {},
 }: WorkflowSettingsDialogProps) {
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const isDesktop = settings?.desktop_launch !== null && settings?.desktop_launch !== undefined;
+  const sections = isDesktop
+    ? [
+        { id: "general", label: "General" },
+        { id: "graph_defaults", label: "Graph" },
+        { id: "run_policy", label: "Run Policy" },
+        { id: "desktop_launch", label: "Desktop Launch" },
+        { id: "environment", label: "Environment" },
+      ]
+    : [
+        { id: "general", label: "General" },
+        { id: "graph_defaults", label: "Graph" },
+        { id: "run_policy", label: "Run Policy" },
+        { id: "browser_launch", label: "Browser Launch" },
+        { id: "environment", label: "Environment" },
+      ];
+
+  const currentActiveSection = isDesktop && activeSection === "browser_launch" ? "desktop_launch" : activeSection;
+
   const activeMeta =
-    workflowSettingsSections.find((section) => section.id === activeSection) ??
-    workflowSettingsSections[0];
+    sections.find((section) => section.id === currentActiveSection) ??
+    sections[0];
 
   const updateSection = <Section extends WorkflowSettingsSectionId>(
     section: Section,
@@ -129,16 +148,16 @@ export function WorkflowSettingsDialog({
                 className="menu bg-base-200 p-2 rounded-box w-full max-w-[220px] shrink-0 gap-1 h-fit"
                 role="tablist"
               >
-                {workflowSettingsSections.map((section) => (
+                {sections.map((section) => (
                   <li key={section.id}>
                     <button
                       role="tab"
                       type="button"
-                      data-active={activeSection === section.id ? "true" : "false"}
-                      aria-selected={activeSection === section.id}
-                      onClick={() => onActiveSectionChange(section.id)}
+                      data-active={currentActiveSection === section.id ? "true" : "false"}
+                      aria-selected={currentActiveSection === section.id}
+                      onClick={() => onActiveSectionChange(section.id as any)}
                       disabled={!settings}
-                      className={`text-xs font-semibold px-3 py-2 rounded-lg ${activeSection === section.id ? "active bg-primary text-primary-content" : "text-base-content hover:bg-base-300"}`}
+                      className={`text-xs font-semibold px-3 py-2 rounded-lg ${currentActiveSection === section.id ? "active bg-primary text-primary-content" : "text-base-content hover:bg-base-300"}`}
                     >
                       {section.label}
                     </button>
@@ -157,11 +176,11 @@ export function WorkflowSettingsDialog({
                     <div className="border-b border-base-300 pb-3 mb-4 flex justify-between items-start gap-4">
                       <div>
                         <h2 id="workflow-settings-section-title" className="text-base font-bold text-base-content">{activeMeta.label}</h2>
-                        {activeSection !== "environment" && (
-                          <p className="text-secondary text-xs mt-1 leading-relaxed">{workflowSettingsHelp[activeSection]?.en.summary}</p>
+                        {currentActiveSection !== "environment" && (workflowSettingsHelp as any)[currentActiveSection] && (
+                          <p className="text-secondary text-xs mt-1 leading-relaxed">{(workflowSettingsHelp as any)[currentActiveSection]?.en.summary}</p>
                         )}
                       </div>
-                      <WorkflowSettingsHelpButton section={activeSection} />
+                      <WorkflowSettingsHelpButton section={currentActiveSection as any} />
                     </div>
 
                     {error ? (
@@ -170,32 +189,38 @@ export function WorkflowSettingsDialog({
                       </Alert>
                     ) : null}
 
-                    {activeSection === "general" ? (
+                    {currentActiveSection === "general" ? (
                       <GeneralSettingsSection
                         value={settings.general}
                         onChange={(value) => updateSection("general", value)}
                       />
                     ) : null}
-                    {activeSection === "run_policy" ? (
+                    {currentActiveSection === "run_policy" ? (
                       <RunPolicySettingsSection
                         value={settings.run_policy}
                         onChange={(value) => updateSection("run_policy", value)}
                       />
                     ) : null}
-                    {activeSection === "browser_launch" ? (
+                    {currentActiveSection === "browser_launch" ? (
                       <BrowserLaunchSettingsSection
                         browserProfiles={browserProfiles}
                         selectedBrowserProfileId={selectedBrowserProfileId}
                         onBrowserProfileChange={onBrowserProfileChange}
                       />
                     ) : null}
-                    {activeSection === "graph_defaults" ? (
+                    {currentActiveSection === "desktop_launch" ? (
+                      <DesktopLaunchSettingsSection
+                        value={settings.desktop_launch}
+                        onChange={(value) => updateSection("desktop_launch", value)}
+                      />
+                    ) : null}
+                    {currentActiveSection === "graph_defaults" ? (
                       <GraphDefaultsSettingsSection
                         value={settings.graph_defaults}
                         onChange={(value) => updateSection("graph_defaults", value)}
                       />
                     ) : null}
-                    {activeSection === "environment" ? (
+                    {currentActiveSection === "environment" ? (
                       <EnvironmentSettingsSection
                         value={settings.environment}
                         onChange={(value) => updateSection("environment", value)}

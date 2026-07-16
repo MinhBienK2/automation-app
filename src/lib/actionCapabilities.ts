@@ -193,11 +193,23 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   crypto_operation: "implemented",
   switch_frame: "implemented",
   switch_to_parent_frame: "implemented",
+  desktop_launch_app: "implemented",
+  desktop_click: "implemented",
+  desktop_type_text: "implemented",
+  desktop_press_key: "implemented",
+  desktop_hotkey: "implemented",
+  desktop_scroll: "implemented",
+  desktop_screenshot: "implemented",
+  desktop_wait: "implemented",
 };
 
 export const allActionTypes = Object.keys(actionCapabilities) as ActionType[];
 
 export function isActionVisibleInPrimaryPalette(actionType: ActionType) {
+  if (actionType.startsWith("desktop_")) return false;
+  if (actionType.startsWith("extract_")) return false;
+  if (actionType === "count_elements" || actionType === "check_element_exists") return false;
+  if (actionType === "get_page_title" || actionType === "get_meta_content" || actionType === "get_current_url") return false;
   const capability = actionCapabilities[actionType];
   return capability === "implemented" || capability === "implemented_partial_requires_validation";
 }

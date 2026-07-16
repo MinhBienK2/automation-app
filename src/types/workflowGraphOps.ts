@@ -235,6 +235,7 @@ export type Subflow = {
   description: string;
   tags: string[];
   graph: WorkflowGraph;
+  automation_mode?: "web" | "desktop";
   created_at: string;
   updated_at: string;
 };

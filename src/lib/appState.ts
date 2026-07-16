@@ -183,6 +183,7 @@ export function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
     general: status,
     run_policy: status,
     browser_launch: status,
+    desktop_launch: status,
     graph_defaults: status,
     environment: status,
   } satisfies Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>;

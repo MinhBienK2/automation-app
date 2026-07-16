@@ -1189,6 +1189,25 @@ const actionValidators = createActionValidatorMap({
   switch_frame: (config) =>
     requiredActionString(config.config.iframe_xpath, "iframe_xpath", "Iframe XPath is required"),
   switch_to_parent_frame: () => null,
+  desktop_launch_app: (config) =>
+    requiredActionString(config.config.app_executable_path, "app_executable_path", "Application executable path is required"),
+  desktop_click: () => null,
+  desktop_type_text: (config) =>
+    requiredActionString(config.config.text, "text", "Text to type is required"),
+  desktop_press_key: (config) =>
+    requiredActionString(config.config.key, "key", "Key to press is required"),
+  desktop_hotkey: (config) => {
+    if (!Array.isArray(config.config.keys) || config.config.keys.length === 0) {
+      return validationError("keys", "At least one key is required for hotkey combination");
+    }
+    return null;
+  },
+  desktop_scroll: () => null,
+  desktop_screenshot: () => null,
+  desktop_wait: () => null,
+  desktop_hover: () => null,
+  desktop_right_click: () => null,
+  desktop_double_click: () => null,
 });
 
 export function validateActionConfig(config: ActionConfig): ActionValidationError | null {

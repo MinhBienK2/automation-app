@@ -1,6 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import type { DbAdapter } from "./dbAdapter.js";
-import { up } from "../../../migrations/001_initial_schema.js";
+import { up as up1 } from "../../../migrations/001_initial_schema.js";
+import { up as up2 } from "../../../migrations/002_drop_run_steps.js";
+import { up as up3 } from "../../../migrations/003_add_automation_mode.js";
 
 export class TestDbAdapter implements DbAdapter {
   private db: DatabaseSync;
@@ -28,7 +30,9 @@ export class TestDbAdapter implements DbAdapter {
         return callback(conn);
       },
     };
-    await up(conn);
+    await up1(conn);
+    await up2(conn);
+    await up3(conn);
     // Create default user so foreign keys are satisfied
     await this.query(
       `INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4)`,
@@ -74,6 +78,9 @@ export class TestDbAdapter implements DbAdapter {
 
     let translatedSql = sql.replace(/\$(\d+)/g, "?$1");
     translatedSql = translatedSql.replace(/COALESCE\((started_at|finished_at),\s*(started_at|finished_at)\)/gi, "COALESCE($1, $2)");
+    translatedSql = translatedSql.replace(/(DROP TABLE (?:IF EXISTS )?\w+)\s+CASCADE/gi, "$1");
+    translatedSql = translatedSql.replace(/ADD COLUMN IF NOT EXISTS/gi, "ADD COLUMN");
+    translatedSql = translatedSql.replace(/DROP COLUMN IF EXISTS/gi, "DROP COLUMN");
 
     const safeParams = params.map((p) => (p === undefined ? null : p));
 
@@ -96,6 +103,9 @@ export class TestDbAdapter implements DbAdapter {
 
   async execute(sql: string, params: any[] = []): Promise<{ changes: number }> {
     let translatedSql = sql.replace(/\$(\d+)/g, "?$1");
+    translatedSql = translatedSql.replace(/(DROP TABLE (?:IF EXISTS )?\w+)\s+CASCADE/gi, "$1");
+    translatedSql = translatedSql.replace(/ADD COLUMN IF NOT EXISTS/gi, "ADD COLUMN");
+    translatedSql = translatedSql.replace(/DROP COLUMN IF EXISTS/gi, "DROP COLUMN");
     const safeParams = params.map((p) => (p === undefined ? null : p));
     try {
       const stmt = this.db.prepare(translatedSql);

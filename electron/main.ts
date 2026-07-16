@@ -27,6 +27,7 @@ import {
   workflowIpcChannels,
   type WorkflowIpcChannelName,
 } from "./ipc.js";
+import { cuaDriverClient } from "./backend/desktop/CuaDriverClient.js";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 let mainWindow: BrowserWindow | null = null;
@@ -298,7 +299,10 @@ app.whenReady().then(async () => {
     });
   }, 30_000);
 
-  app.once("before-quit", () => clearInterval(schedulerInterval));
+  app.once("before-quit", () => {
+    clearInterval(schedulerInterval);
+    cuaDriverClient.stop();
+  });
   createMainWindow();
   setupAutoUpdater();
 

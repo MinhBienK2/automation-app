@@ -489,6 +489,7 @@ export function WorkflowDetailPage({
             selectionRequest={selectionRequest}
             defaultEdgeDelay={defaultEdgeDelay}
             ownerId={detail.workflow.id}
+            automationMode={detail.workflow.automation_mode}
             onCreateSubflowFromSelection={onCreateSubflowFromSelection}
             onLoadSubflowGraph={onLoadSubflowGraph}
             onChange={onGraphChange}

@@ -3,6 +3,7 @@ import type {
   AppNavigationAPI,
   AppScreen,
   OverviewFocus,
+  ProjectCollection,
   SubflowBackTarget,
 } from "../shared/types/workspaceContracts";
 import type {
@@ -40,7 +41,7 @@ export interface AppNavigationDeps {
   workflows: WorkflowSummary[];
   setWorkflows: React.Dispatch<React.SetStateAction<WorkflowSummary[]>>;
   openWorkflowSettings: (workflow: WorkflowSummary, sectionId?: any) => Promise<void>;
-  setProjectCollection: (collection: "workflows" | "subflows" | "profiles" | "settings") => void;
+  setProjectCollection: (collection: ProjectCollection) => void;
   setSelectedGraphNodeId: (nodeId: string | null) => void;
   setAppError: (error: string) => void;
 }
@@ -82,7 +83,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     setAppError,
   } = deps;
 
-  const performOpenProjects = useCallback((collection: "workflows" | "subflows" | "profiles" | "settings" = "workflows") => {
+  const performOpenProjects = useCallback((collection: ProjectCollection = "workflows") => {
     setScreen("projects");
     setProjectCollection(collection);
     setSidebarCollapsed(false);
@@ -94,7 +95,13 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
         selectedProjectId && loaded.projects.some((project: any) => project.id === selectedProjectId)
           ? selectedProjectId
           : loaded.projects[0]?.id ?? currentProjectId();
-      if (collection === "subflows" || collection === "settings" || collection === "profiles") {
+      if (
+        collection === "subflows" ||
+        collection === "settings" ||
+        collection === "profiles" ||
+        collection === "desktop_subflows" ||
+        collection === "desktop_settings"
+      ) {
         await loadSubflowsForProject(projectId);
       }
     })();
@@ -107,7 +114,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     setAppError,
   ]);
 
-  const openProjects = useCallback((collection: "workflows" | "subflows" | "profiles" | "settings" = "workflows") => {
+  const openProjects = useCallback((collection: ProjectCollection = "workflows") => {
     void requestGraphExitNavigation(() => performOpenProjects(collection));
   }, [requestGraphExitNavigation, performOpenProjects]);
 
@@ -180,7 +187,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
         return openWorkflow(target.workflowId);
       }
       setScreen("projects");
-      setProjectCollection("subflows");
+      setProjectCollection(target.type === "desktop_subflows" ? "desktop_subflows" : "subflows");
       setProjectsBrowseMode("detail");
       setSidebarCollapsed(false);
       setAppError("");

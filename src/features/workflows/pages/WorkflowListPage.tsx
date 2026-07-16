@@ -62,6 +62,7 @@ type WorkflowListPageProps = {
   onOpenWorkflow: (id: string) => void;
   onDeleteWorkflow: (id: string) => void;
   workflowDialogBusy?: boolean;
+  hideBrowserProfileField?: boolean;
 };
 
 export function WorkflowListPage({
@@ -88,6 +89,7 @@ export function WorkflowListPage({
   onOpenWorkflow,
   onDeleteWorkflow,
   workflowDialogBusy = false,
+  hideBrowserProfileField = false,
 }: WorkflowListPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
@@ -373,7 +375,7 @@ export function WorkflowListPage({
                     className="input-sm border-base-300 w-full"
                   />
                 </FormField>
-                {workflowDialogMode === "create" ? (
+                {workflowDialogMode === "create" && !hideBrowserProfileField ? (
                   <FormField label="Browser Profile" htmlFor="workflow-profile">
                     <Select
                       id="workflow-profile"
