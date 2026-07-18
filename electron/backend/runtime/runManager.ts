@@ -9,7 +9,7 @@ import type {
   WorkflowSettings,
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
-import type { BrowserWorkflowRunner } from "./runner.js";
+import type { BrowserWorkflowRunner } from "../browser/BrowserWorkflowRunner.js";
 import { DesktopWorkflowRunner } from "../desktop/DesktopWorkflowRunner.js";
 import {
   browserProfileKey,

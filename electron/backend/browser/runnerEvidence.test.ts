@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
+import type { RunnerActionRuntime } from "./BrowserActionExecutors.js";
 import {
   collectRunnerOutputs,
   recordRunnerEvidence,

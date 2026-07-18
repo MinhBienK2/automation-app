@@ -19,7 +19,7 @@ import {
   type BrowserDriver,
   type BrowserDriverContext,
   type BrowserDriverPage,
-} from "./runner";
+} from "./BrowserWorkflowRunner";
 
 const tempRoots: string[] = [];
 
@@ -32,7 +32,7 @@ afterEach(async () => {
 describe("BrowserWorkflowRunner", () => {
   test("keeps evidence artifact path helpers outside the runner module", () => {
     const runnerSource = readFileSync(
-      path.join(process.cwd(), "electron/backend/runtime/runner.ts"),
+      path.join(process.cwd(), "electron/backend/browser/BrowserWorkflowRunner.ts"),
       "utf8",
     );
 
@@ -1230,7 +1230,7 @@ describe("BrowserWorkflowRunner", () => {
 
   test("keeps scroll runner free of debug console logging", () => {
     const runnerSource = readFileSync(
-      path.join(process.cwd(), "electron/backend/runtime/runner.ts"),
+      path.join(process.cwd(), "electron/backend/browser/BrowserWorkflowRunner.ts"),
       "utf8",
     );
 
@@ -1239,7 +1239,7 @@ describe("BrowserWorkflowRunner", () => {
 
   test("keeps obsolete native scroll helper names out of the Scroll action path", () => {
     const runnerSource = readFileSync(
-      path.join(process.cwd(), "electron/backend/runtime/runner.ts"),
+      path.join(process.cwd(), "electron/backend/browser/BrowserWorkflowRunner.ts"),
       "utf8",
     );
 

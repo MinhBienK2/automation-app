@@ -46,7 +46,8 @@ import {
   type WorkflowSettingsSaveStatus,
 } from "./lib/appState";
 import { RecordingReviewDialog } from "./features/workflows/components/RecordingReviewDialog";
-import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
+import { WebSettingsDialog } from "./features/workflows/web/WebSettingsDialog";
+import { DesktopSettingsDialog } from "./features/workflows/desktop/DesktopSettingsDialog";
 import { UnsavedChangesDialog } from "./components/ui/unsaved-changes-dialog";
 import { AppPackageDialogs } from "./AppPackageDialogs";
 import {
@@ -1151,50 +1152,80 @@ function AppInner() {
           }
         }}
       />
-      <WorkflowSettingsDialog
-        open={workflowSettingsDialogOpen}
-        settings={workflowSettings}
-        activeSection={workflowSettingsActiveSection}
-        browserProfiles={selectedBrowserProfiles}
-        selectedBrowserProfileId={workflowProfileDraftId}
-        error={appError}
-        hasUnsavedChanges={Object.values(workflowSettingsSaveStatuses).some(
-          (status) => status === "unsaved",
-        )}
-        onOpenChange={(open) => {
-          if (open) {
-            setWorkflowSettingsDialogOpen(true);
-            return;
-          }
-          settingsWorkspace.closeWorkflowSettingsDialog();
-        }}
-        onActiveSectionChange={settingsWorkspace.setWorkflowSettingsActiveSection}
-        onBrowserProfileChange={(profileId) => {
-          setWorkflowProfileDraftId(profileId);
-          setWorkflowSettings((current) => {
-            const selectedProfile = selectedBrowserProfiles.find(
-              (profile) => profile.id === profileId,
-            );
-            return current && selectedProfile
-              ? { ...current, browser_launch: selectedProfile.browser_launch }
-              : current;
-          });
-          setWorkflowSettingsSaveStatuses((current) => ({
-            ...current,
-            browser_launch: "unsaved",
-          }));
-        }}
-        onSettingsChange={settingsWorkspace.changeWorkflowSettings}
-        onSaveSettings={async () => {
-          await settingsWorkspace.saveWorkflowSettingsAndClose();
-          if (workflowSettings) {
-            setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(workflowSettings));
-          }
-          showToast("Workflow settings saved.");
-        }}
-        onDiscardChanges={settingsWorkspace.discardWorkflowSettingsChanges}
-        saveStatuses={workflowSettingsSaveStatuses}
-      />
+      {workflowSettings?.desktop_launch !== null && workflowSettings?.desktop_launch !== undefined ? (
+        <DesktopSettingsDialog
+          open={workflowSettingsDialogOpen}
+          settings={workflowSettings}
+          activeSection={workflowSettingsActiveSection}
+          error={appError}
+          hasUnsavedChanges={Object.values(workflowSettingsSaveStatuses).some(
+            (status) => status === "unsaved",
+          )}
+          onOpenChange={(open) => {
+            if (open) {
+              setWorkflowSettingsDialogOpen(true);
+              return;
+            }
+            settingsWorkspace.closeWorkflowSettingsDialog();
+          }}
+          onActiveSectionChange={settingsWorkspace.setWorkflowSettingsActiveSection}
+          onSettingsChange={settingsWorkspace.changeWorkflowSettings}
+          onSaveSettings={async () => {
+            await settingsWorkspace.saveWorkflowSettingsAndClose();
+            if (workflowSettings) {
+              setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(workflowSettings));
+            }
+            showToast("Workflow settings saved.");
+          }}
+          onDiscardChanges={settingsWorkspace.discardWorkflowSettingsChanges}
+          saveStatuses={workflowSettingsSaveStatuses}
+        />
+      ) : (
+        <WebSettingsDialog
+          open={workflowSettingsDialogOpen}
+          settings={workflowSettings}
+          activeSection={workflowSettingsActiveSection}
+          browserProfiles={selectedBrowserProfiles}
+          selectedBrowserProfileId={workflowProfileDraftId}
+          error={appError}
+          hasUnsavedChanges={Object.values(workflowSettingsSaveStatuses).some(
+            (status) => status === "unsaved",
+          )}
+          onOpenChange={(open) => {
+            if (open) {
+              setWorkflowSettingsDialogOpen(true);
+              return;
+            }
+            settingsWorkspace.closeWorkflowSettingsDialog();
+          }}
+          onActiveSectionChange={settingsWorkspace.setWorkflowSettingsActiveSection}
+          onBrowserProfileChange={(profileId) => {
+            setWorkflowProfileDraftId(profileId);
+            setWorkflowSettings((current) => {
+              const selectedProfile = selectedBrowserProfiles.find(
+                (profile) => profile.id === profileId,
+              );
+              return current && selectedProfile
+                ? { ...current, browser_launch: selectedProfile.browser_launch }
+                : current;
+            });
+            setWorkflowSettingsSaveStatuses((current) => ({
+              ...current,
+              browser_launch: "unsaved",
+            }));
+          }}
+          onSettingsChange={settingsWorkspace.changeWorkflowSettings}
+          onSaveSettings={async () => {
+            await settingsWorkspace.saveWorkflowSettingsAndClose();
+            if (workflowSettings) {
+              setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(workflowSettings));
+            }
+            showToast("Workflow settings saved.");
+          }}
+          onDiscardChanges={settingsWorkspace.discardWorkflowSettingsChanges}
+          saveStatuses={workflowSettingsSaveStatuses}
+        />
+      )}
       <UnsavedChangesDialog
         open={graphExitDialogOpen}
         onKeepEditing={clearGraphExitNavigation}

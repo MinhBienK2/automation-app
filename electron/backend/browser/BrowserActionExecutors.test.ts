@@ -5,12 +5,12 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { executeRegisteredAction } from "../actions/execution.js";
-import type { BrowserDriverPage } from "../browser/sessionManager.js";
+import type { BrowserDriverPage } from "./sessionManager.js";
 import {
   createRunnerActionExecutors,
   type RunnerActionExecutorDependencies,
   type RunnerActionRuntime,
-} from "./runnerActionExecutors.js";
+} from "./BrowserActionExecutors.js";
 
 describe("runnerActionExecutors", () => {
   test("renders navigation templates and delegates allowlist enforcement before goto", async () => {
@@ -615,7 +615,7 @@ describe("runnerActionExecutors", () => {
     expect(scriptCallCount).toBe(0);
     expect(resolvers.has("result")).toBe(true);
 
-    const { resolveDynamicOutputs } = await import("./variables");
+    const { resolveDynamicOutputs } = await import("../runtime/variables");
     await resolveDynamicOutputs(runtime.outputs, "{{result}}");
 
     expect(scriptCallCount).toBe(1);
@@ -723,7 +723,7 @@ describe("runnerActionExecutors", () => {
     expect(scriptCallCount).toBe(0);
     expect(resolvers.has("result")).toBe(true);
 
-    const { resolveDynamicOutputs } = await import("./variables");
+    const { resolveDynamicOutputs } = await import("../runtime/variables");
     await resolveDynamicOutputs(runtime.outputs, "{{result}}");
 
     expect(scriptCallCount).toBe(1);

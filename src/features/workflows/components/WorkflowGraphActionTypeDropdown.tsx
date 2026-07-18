@@ -8,7 +8,7 @@ import {
   actionDescriptions,
   actionPickerGroups,
   actionPickerOptions,
-} from "./ActionNodePalette";
+} from "../web/WebActionNodePalette";
 
 export function actionTypeFromConfig(config: ActionConfig | null): ActionType | null {
   if (!config) {

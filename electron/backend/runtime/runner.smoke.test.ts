@@ -7,7 +7,7 @@ import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { defaultWorkflowSettings } from "../commands";
 import { createAppPaths } from "../db/database";
-import { BrowserWorkflowRunner } from "./runner";
+import { BrowserWorkflowRunner } from "../browser/BrowserWorkflowRunner";
 
 const tempRoots: string[] = [];
 const describeSmoke = process.env.RUN_CLOAKBROWSER_SMOKE === "1" ? describe : describe.skip;

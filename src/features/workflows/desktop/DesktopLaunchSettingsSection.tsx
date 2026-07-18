@@ -1,6 +1,6 @@
-import type { WorkflowSettingsDesktopLaunch } from "../../../../types/workflow";
-import { FormField } from "../../../../components/ui/form-field";
-import { Input } from "../../../../components/ui/input";
+import type { WorkflowSettingsDesktopLaunch } from "../../../types/workflow";
+import { FormField } from "../../../components/ui/form-field";
+import { Input } from "../../../components/ui/input";
 
 type DesktopLaunchSettingsSectionProps = {
   value: WorkflowSettingsDesktopLaunch | null | undefined;

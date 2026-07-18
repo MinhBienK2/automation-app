@@ -70,8 +70,8 @@ import { useWorkflowGraphShortcuts } from "./useWorkflowGraphShortcuts";
 import { useSelectionSubflowCreator } from "./useSelectionSubflowCreator";
 import { useWorkflowGraphDerivedState } from "./useWorkflowGraphDerivedState";
 import { GraphNodePalette } from "./WorkflowGraphPalettes";
-import { ActionNodePalette } from "./ActionNodePalette";
-import { DesktopActionNodePalette } from "./DesktopActionNodePalette";
+import { WebActionNodePalette } from "../web/WebActionNodePalette";
+import { DesktopActionNodePalette } from "../desktop/DesktopActionNodePalette";
 import { SubflowNodePalette, type SubflowAddMode } from "./SubflowNodePalette";
 import { NodeContextMenu, LinkContextMenu } from "./WorkflowGraphContextMenus";
 import { NodeHelpDialog } from "./NodeHelpDialog";
@@ -1154,7 +1154,7 @@ function WorkflowGraphEditorInner({
           onSelectAction={addActionNode}
         />
       ) : (
-        <ActionNodePalette
+        <WebActionNodePalette
           open={isActionPaletteOpen}
           onOpenChange={setIsActionPaletteOpen}
           onSelectAction={addActionNode}

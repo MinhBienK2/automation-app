@@ -1,6 +1,6 @@
-import { Select } from "../../../../components/ui/select";
-import { SettingsFieldGroup } from "../../../../components/ui/settings-field-group";
-import type { BrowserProfile } from "../../../../types/workflow";
+import { Select } from "../../../components/ui/select";
+import { SettingsFieldGroup } from "../../../components/ui/settings-field-group";
+import type { BrowserProfile } from "../../../types/workflow";
 
 type BrowserLaunchSettingsSectionProps = {
   browserProfiles: BrowserProfile[];

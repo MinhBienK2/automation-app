@@ -1,6 +1,6 @@
 import { migrateWorkflowGraph } from "../graph/migration.js";
 import { validateWorkflowGraph as validateGraph } from "../graph/compiler.js";
-import { BrowserWorkflowRunner } from "../runtime/runner.js";
+import { BrowserWorkflowRunner } from "../browser/BrowserWorkflowRunner.js";
 import { createScheduleCommandHandlers } from "./scheduling/scheduleCommands.js";
 import { RunManager } from "../runtime/runManager.js";
 import { IdentityRepository } from "./identities/identityRepository.js";

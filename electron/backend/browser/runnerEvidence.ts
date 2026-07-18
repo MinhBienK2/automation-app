@@ -3,7 +3,7 @@ import path from "node:path";
 import type { AppPaths } from "../db/database.js";
 import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { finalizeEvidenceOutputs } from "../features/evidence/model.js";
-import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
+import type { RunnerActionRuntime } from "./BrowserActionExecutors.js";
 
 export async function collectRunnerOutputs(runtime: RunnerActionRuntime) {
   try {

@@ -15,7 +15,7 @@ import {
   actionLabels,
 } from "../../../lib/workflowUi";
 
-export type ActionNodePaletteProps = {
+export type WebActionNodePaletteProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelectAction: (actionType: ActionType) => void;
@@ -320,11 +320,11 @@ export const actionDescriptions: Record<ActionType, string> = {
   desktop_wait: "Desktop wait duration",
 };
 
-export function ActionNodePalette({
+export function WebActionNodePalette({
   open,
   onOpenChange,
   onSelectAction,
-}: ActionNodePaletteProps) {
+}: WebActionNodePaletteProps) {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const normalizedQuery = query.trim().toLowerCase();
@@ -379,52 +379,87 @@ export function ActionNodePalette({
         </div>
 
         <div className="add-step-palette-body">
-          <div aria-label="Action categories" className="action-category-list">
-            {["All", "Common", ...actionPickerGroups.map((group) => group.label)].map((label) => (
-              <Button
-                aria-pressed={activeCategory === label && !normalizedQuery}
-                className={
-                  activeCategory === label && !normalizedQuery
-                    ? "action-category action-category-active"
-                    : "action-category"
-                }
-                key={label}
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  setActiveCategory(label);
-                  setQuery("");
-                }}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-
-          <div aria-label="Action results" className="action-result-list">
-            {visibleActions.length === 0 ? (
-              <p className="muted">No matching actions</p>
-            ) : (
-              visibleActions.map((actionType) => (
-                <Button
-                  className="action-result"
-                  data-value={actionType}
-                  key={actionType}
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    onSelectAction(actionType);
-                    resetPalette();
-                  }}
-                >
-                  <span>{actionLabels[actionType]}</span>
-                  <small>{actionDescriptions[actionType]}</small>
-                </Button>
-              ))
-            )}
-          </div>
+          <WebActionCategoryList
+            activeCategory={activeCategory}
+            normalizedQuery={normalizedQuery}
+            onSelectCategory={(label) => {
+              setActiveCategory(label);
+              setQuery("");
+            }}
+          />
+          <WebActionResultList
+            visibleActions={visibleActions}
+            onSelectAction={onSelectAction}
+            onReset={resetPalette}
+          />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function WebActionCategoryList({
+  activeCategory,
+  normalizedQuery,
+  onSelectCategory,
+}: {
+  activeCategory: string;
+  normalizedQuery: string;
+  onSelectCategory: (category: string) => void;
+}) {
+  return (
+    <div aria-label="Action categories" className="action-category-list">
+      {["All", "Common", ...actionPickerGroups.map((group) => group.label)].map((label) => (
+        <Button
+          aria-pressed={activeCategory === label && !normalizedQuery}
+          className={
+            activeCategory === label && !normalizedQuery
+              ? "action-category action-category-active"
+              : "action-category"
+          }
+          key={label}
+          type="button"
+          variant="ghost"
+          onClick={() => onSelectCategory(label)}
+        >
+          {label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+function WebActionResultList({
+  visibleActions,
+  onSelectAction,
+  onReset,
+}: {
+  visibleActions: ActionType[];
+  onSelectAction: (actionType: ActionType) => void;
+  onReset: () => void;
+}) {
+  return (
+    <div aria-label="Action results" className="action-result-list">
+      {visibleActions.length === 0 ? (
+        <p className="muted">No matching actions</p>
+      ) : (
+        visibleActions.map((actionType) => (
+          <Button
+            className="action-result"
+            data-value={actionType}
+            key={actionType}
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              onSelectAction(actionType);
+              onReset();
+            }}
+          >
+            <span>{actionLabels[actionType]}</span>
+            <small>{actionDescriptions[actionType]}</small>
+          </Button>
+        ))
+      )}
+    </div>
   );
 }

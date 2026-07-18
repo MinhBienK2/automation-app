@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
+import type { RunnerActionRuntime } from "../browser/BrowserActionExecutors.js";
 import { conditionMatches } from "./conditions.js";
 
 describe("conditions", () => {

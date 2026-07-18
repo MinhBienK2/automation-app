@@ -17,17 +17,18 @@ function randomProfileSeed() {
   return `local-${Date.now().toString(36)}`;
 }
 
-export function defaultWorkflowSettings({
-  workflowId,
-  workflowName,
-  createdAt = null,
-  updatedAt = null,
-}: {
-  workflowId: string;
-  workflowName: string;
+export function defaultWorkflowSettings(options: {
+  workflowId?: string;
+  workflowName?: string;
+  id?: string;
+  name?: string;
   createdAt?: string | null;
   updatedAt?: string | null;
 }): WorkflowSettings {
+  const workflowId = options.workflowId ?? options.id ?? "";
+  const workflowName = options.workflowName ?? options.name ?? "";
+  const createdAt = options.createdAt ?? null;
+  const updatedAt = options.updatedAt ?? null;
   const identityId = createDefaultBrowserIdentityId(workflowId);
   const persona = personaForSeed(identityId);
   return {

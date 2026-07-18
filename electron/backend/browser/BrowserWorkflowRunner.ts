@@ -22,11 +22,11 @@ import {
   type BrowserDriverPage,
   type RetainedSession,
 } from "../browser/sessionManager.js";
-import { collectNestedNodeIds } from "./nestedExecutionHelpers.js";
+import { collectNestedNodeIds } from "../runtime/nestedExecutionHelpers.js";
 import {
   executeRegisteredAction,
 } from "../actions/execution.js";
-import { hostnameAllowed } from "./domainPolicy.js";
+import { hostnameAllowed } from "../runtime/domainPolicy.js";
 import {
   actionConfigSummary,
   actionEvidenceModel,
@@ -38,19 +38,19 @@ import {
   subflowTraceFields,
   summarizeActionEffects,
   type ActionTrace,
-} from "./actionTrace.js";
+} from "../runtime/actionTrace.js";
 import {
   locatorFor,
   locatorForRuntimeElementRef,
   rankedCandidatesForTarget,
   selectRankedElementCandidate,
   type RuntimeElementRef,
-} from "./targetResolver.js";
+} from "../runtime/targetResolver.js";
 import {
   centerPoint,
   dragTargetPoint,
   type PointerBox,
-} from "./interactionPrimitives.js";
+} from "../runtime/interactionPrimitives.js";
 import {
   cloakBrowserHumanScrollLocatorIntoView,
   executePasteClipboardAction,
@@ -60,20 +60,20 @@ import {
   pressKeyHuman,
   registerDialogHandler,
   type CloakHumanScrollAdapter,
-} from "./interactionActions.js";
+} from "../runtime/interactionActions.js";
 import {
   sleep,
   waitForLocatorState,
-} from "./runtimeHelpers.js";
-import { createRunnerActionExecutors } from "./runnerActionExecutors.js";
-import { conditionMatches } from "./conditions.js";
+} from "../runtime/runtimeHelpers.js";
+import { createRunnerActionExecutors } from "./BrowserActionExecutors.js";
+import { conditionMatches } from "../runtime/conditions.js";
 import {
   captureFailureScreenshot,
   collectRunnerOutputs,
   recordRunnerEvidence,
   waitForRunnerDownload,
 } from "./runnerEvidence.js";
-import { resolveObjectTemplates } from "./variables.js";
+import { resolveObjectTemplates } from "../runtime/variables.js";
 
 
 export {
@@ -418,7 +418,7 @@ export class BrowserWorkflowRunner {
     } catch {
       resolvedAction = JSON.parse(JSON.stringify(action)) as ActionConfig;
     }
-    const { resolveDynamicOutputs } = await import("./variables.js");
+    const { resolveDynamicOutputs } = await import("../runtime/variables.js");
     await resolveDynamicOutputs(runtime.outputs, resolvedAction.config);
     if (resolvedAction.type === "check_conditions") {
       const config = resolvedAction.config as any;

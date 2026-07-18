@@ -11,7 +11,7 @@ import type {
   BrowserDriverContext,
   BrowserDriverLocator,
   BrowserDriverPage,
-} from "../browser/sessionManager.js";
+} from "./sessionManager.js";
 import {
   createActionExecutorMap,
   type ActionExecutorMap,
@@ -19,23 +19,23 @@ import {
 import type { AppPaths } from "../db/database.js";
 import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { isPlainRecord } from "../shared/records.js";
-import type { ActionTrace } from "./actionTrace.js";
+import type { ActionTrace } from "../runtime/actionTrace.js";
 import {
   currentPageHostname,
   hostnameAllowed,
-} from "./domainPolicy.js";
+} from "../runtime/domainPolicy.js";
 import {
   blurElementTarget,
   rightClickTarget,
   selectRadioTarget,
   submitFormTarget,
-} from "./interactionActions.js";
+} from "../runtime/interactionActions.js";
 import {
   parseVariableValue,
   renderTemplate,
   setVariables,
   writeVariableValue,
-} from "./variables.js";
+} from "../runtime/variables.js";
 import {
   assertElementState,
   assertRuntimeEnumValue,
@@ -46,9 +46,9 @@ import {
   waitUntil,
   weightedRandomChoice,
   withActionTimeout,
-} from "./runtimeHelpers.js";
-import { locatorFor, locatorForRuntimeElementRef, type RuntimeElementRef } from "./targetResolver.js";
-import { getPath, setPath, deletePath, hasPath } from "./objectHelpers.js";
+} from "../runtime/runtimeHelpers.js";
+import { locatorFor, locatorForRuntimeElementRef, type RuntimeElementRef } from "../runtime/targetResolver.js";
+import { getPath, setPath, deletePath, hasPath } from "../runtime/objectHelpers.js";
 
 export type RunnerActionRuntime = {
   runId: string;
@@ -2355,7 +2355,7 @@ export function createRunnerActionExecutors(
       const { output_name, mode, script, rules_group, evaluation_type } = action.config;
       const resolvers = (runtime.outputs as any).__dynamicResolvers;
       if (evaluation_type === "dynamic" && resolvers) {
-        const { findReferencedVariables } = await import("./variables.js");
+        const { findReferencedVariables } = await import("../runtime/variables.js");
         const refs = new Set<string>();
         if (mode === "script" && script) {
           findReferencedVariables(script, refs);
@@ -2410,7 +2410,7 @@ export function createRunnerActionExecutors(
       const { output_name, expression, evaluation_type } = action.config;
       const resolvers = (runtime.outputs as any).__dynamicResolvers;
       if (evaluation_type === "dynamic" && resolvers) {
-        const { findReferencedVariables } = await import("./variables.js");
+        const { findReferencedVariables } = await import("../runtime/variables.js");
         const refs = new Set<string>();
         if (expression) {
           findReferencedVariables(expression, refs);

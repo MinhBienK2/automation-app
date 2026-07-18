@@ -178,13 +178,18 @@ describe("workflow settings model", () => {
       path.join(process.cwd(), "src/features/workflows/lib/workflowSettings.ts"),
       "utf8",
     );
-    const dialogSource = readFileSync(
-      path.join(process.cwd(), "src/features/workflows/components/WorkflowSettingsDialog.tsx"),
+    const webDialogSource = readFileSync(
+      path.join(process.cwd(), "src/features/workflows/web/WebSettingsDialog.tsx"),
+      "utf8",
+    );
+    const desktopDialogSource = readFileSync(
+      path.join(process.cwd(), "src/features/workflows/desktop/DesktopSettingsDialog.tsx"),
       "utf8",
     );
 
     expect(settingsSource).not.toContain("Math.random");
-    expect(dialogSource).not.toContain("Math.random");
+    expect(webDialogSource).not.toContain("Math.random");
+    expect(desktopDialogSource).not.toContain("Math.random");
   });
 
   test("converts initial variables between rows and JSON text", () => {

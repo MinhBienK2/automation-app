@@ -6,7 +6,7 @@ import {
   createRunnerActionExecutors,
   type RunnerActionExecutorDependencies,
   type RunnerActionRuntime,
-} from "./runnerActionExecutors.js";
+} from "../browser/BrowserActionExecutors.js";
 
 function minimalRuntime(overrides: Partial<RunnerActionRuntime> = {}): RunnerActionRuntime {
   const page = overrides.page ?? {

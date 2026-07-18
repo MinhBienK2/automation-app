@@ -1,5 +1,5 @@
 import { locatorFor, locatorForRuntimeElementRef } from "./targetResolver.js";
-import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
+import type { RunnerActionRuntime } from "../browser/BrowserActionExecutors.js";
 import { resolveObjectTemplates, getDeepValue } from "./variables.js";
 
 export async function conditionMatches(runtime: RunnerActionRuntime, condition: unknown) {
