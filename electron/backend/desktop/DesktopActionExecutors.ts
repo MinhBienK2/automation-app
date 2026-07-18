@@ -28,13 +28,15 @@ async function resolveWindowId(pid?: number): Promise<number | undefined> {
 }
 
 async function runClick(config: any) {
-  const { pid, x, y, element_index, button } = config;
+  const { pid, x, y, element_index, button, window_id, delivery_mode } = config;
   await cuaDriverClient.callTool("click", {
     pid: toNumberOrUndefined(pid),
     x: toNumberOrUndefined(x),
     y: toNumberOrUndefined(y),
     element_index: toNumberOrUndefined(element_index),
-    button: button || "left"
+    button: button || "left",
+    window_id: toNumberOrUndefined(window_id),
+    delivery_mode: delivery_mode || "foreground"
   });
 }
 
@@ -91,6 +93,110 @@ async function runDoubleClick(config: any) {
   });
 }
 
+async function runLaunchApp(config: any, outputs: Record<string, unknown>) {
+  const appPath = config.app_executable_path;
+  const result = await cuaDriverClient.callTool("launch_app", {
+    name: appPath,
+    launch_path: appPath,
+    arguments: config.app_arguments || []
+  });
+  const pid = result?.structuredContent?.pid;
+  if (pid) {
+    outputs["last_launched_pid"] = pid;
+    // Wait for window to register and bring it to front to allow background delivery to succeed
+    for (let i = 0; i < 6; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      const winId = await resolveWindowId(pid);
+      if (winId) {
+        await cuaDriverClient.callTool("bring_to_front", { window_id: winId });
+        break;
+      }
+    }
+  }
+}
+
+async function runHover(config: any) {
+  await cuaDriverClient.callTool("move_cursor", {
+    pid: toNumberOrUndefined(config.pid),
+    x: toNumberOrUndefined(config.x) ?? 0,
+    y: toNumberOrUndefined(config.y) ?? 0,
+  });
+}
+
+async function runPressKey(config: any) {
+  const targetPid = toNumberOrUndefined(config.pid);
+  let winId = toNumberOrUndefined(config.window_id);
+  if (targetPid) {
+    const resolvedWinId = await resolveWindowId(targetPid);
+    if (resolvedWinId) {
+      winId = resolvedWinId;
+      await cuaDriverClient.callTool("bring_to_front", { window_id: winId });
+    }
+  }
+  await cuaDriverClient.callTool("press_key", {
+    key: config.key || "",
+    pid: targetPid,
+    window_id: winId,
+    delivery_mode: config.delivery_mode || "foreground"
+  });
+}
+
+async function runHotkey(config: any) {
+  const targetPid = toNumberOrUndefined(config.pid);
+  if (targetPid) {
+    const winId = await resolveWindowId(targetPid);
+    if (winId) {
+      await cuaDriverClient.callTool("bring_to_front", { window_id: winId });
+    }
+  }
+  await cuaDriverClient.callTool("hotkey", {
+    pid: targetPid,
+    keys: config.keys || [],
+    delivery_mode: config.delivery_mode || "foreground"
+  });
+}
+
+async function runScroll(config: any) {
+  await cuaDriverClient.callTool("scroll", {
+    pid: toNumberOrUndefined(config.pid),
+    direction: config.direction || "down",
+    amount: toNumberOrUndefined(config.amount)
+  });
+}
+
+async function runScreenshot(outputs: Record<string, unknown>) {
+  const state = await cuaDriverClient.callTool("get_desktop_state", {});
+  if (state?.content) outputs["screenshot_result"] = state.content;
+}
+
+async function runWait(config: any, signal?: AbortSignal) {
+  let durationMs = 1000;
+  if (config.duration_ms !== undefined && config.duration_ms !== null && config.duration_ms !== "") {
+    durationMs = Number(config.duration_ms);
+  } else if (config.timeout_ms !== undefined && config.timeout_ms !== null && config.timeout_ms !== "") {
+    durationMs = Number(config.timeout_ms);
+  }
+  if (isNaN(durationMs)) {
+    durationMs = 1000;
+  }
+  
+  if (signal?.aborted) return;
+  
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, durationMs);
+    
+    function onAbort() {
+      clearTimeout(timer);
+      reject(new Error("Aborted"));
+    }
+    
+    signal?.addEventListener("abort", onAbort);
+  });
+}
+
 export async function executeDesktopAction(
   action: { type: string; config: any },
   outputs: Record<string, unknown>,
@@ -99,38 +205,15 @@ export async function executeDesktopAction(
   const config = resolveObjectTemplates(action.config || {}, outputs);
 
   switch (action.type) {
-    case "desktop_launch_app": {
-      const appPath = config.app_executable_path;
-      const result = await cuaDriverClient.callTool("launch_app", {
-        name: appPath,
-        launch_path: appPath,
-        arguments: config.app_arguments || []
-      });
-      const pid = result?.structuredContent?.pid;
-      if (pid) {
-        outputs["last_launched_pid"] = pid;
-        // Wait for window to register and bring it to front to allow background delivery to succeed
-        for (let i = 0; i < 6; i++) {
-          await new Promise(r => setTimeout(r, 500));
-          const winId = await resolveWindowId(pid);
-          if (winId) {
-            await cuaDriverClient.callTool("bring_to_front", { window_id: winId });
-            break;
-          }
-        }
-      }
+    case "desktop_launch_app":
+      await runLaunchApp(config, outputs);
       break;
-    }
     case "click":
     case "desktop_click":
       await runClick(config);
       break;
     case "desktop_hover":
-      await cuaDriverClient.callTool("move_cursor", {
-        pid: toNumberOrUndefined(config.pid),
-        x: toNumberOrUndefined(config.x) ?? 0,
-        y: toNumberOrUndefined(config.y) ?? 0,
-      });
+      await runHover(config);
       break;
     case "desktop_right_click":
       await runRightClick(config);
@@ -143,83 +226,25 @@ export async function executeDesktopAction(
       await runType(config);
       break;
     case "press_key":
-    case "desktop_press_key": {
-      const targetPid = toNumberOrUndefined(config.pid);
-      let winId = toNumberOrUndefined(config.window_id);
-      if (targetPid) {
-        const resolvedWinId = await resolveWindowId(targetPid);
-        if (resolvedWinId) {
-          winId = resolvedWinId;
-          await cuaDriverClient.callTool("bring_to_front", { window_id: winId });
-        }
-      }
-      await cuaDriverClient.callTool("press_key", {
-        key: config.key || "",
-        pid: targetPid,
-        window_id: winId,
-        delivery_mode: config.delivery_mode || "foreground"
-      });
+    case "desktop_press_key":
+      await runPressKey(config);
       break;
-    }
     case "hotkey":
-    case "desktop_hotkey": {
-      const targetPid = toNumberOrUndefined(config.pid);
-      if (targetPid) {
-        const winId = await resolveWindowId(targetPid);
-        if (winId) {
-          await cuaDriverClient.callTool("bring_to_front", { window_id: winId });
-        }
-      }
-      await cuaDriverClient.callTool("hotkey", {
-        pid: targetPid,
-        keys: config.keys || [],
-        delivery_mode: config.delivery_mode || "foreground"
-      });
+    case "desktop_hotkey":
+      await runHotkey(config);
       break;
-    }
     case "scroll":
     case "desktop_scroll":
-      await cuaDriverClient.callTool("scroll", {
-        pid: toNumberOrUndefined(config.pid),
-        direction: config.direction || "down",
-        amount: toNumberOrUndefined(config.amount)
-      });
+      await runScroll(config);
       break;
     case "take_screenshot":
-    case "desktop_screenshot": {
-      const state = await cuaDriverClient.callTool("get_desktop_state", {});
-      if (state?.content) outputs["screenshot_result"] = state.content;
+    case "desktop_screenshot":
+      await runScreenshot(outputs);
       break;
-    }
     case "wait":
-    case "desktop_wait": {
-      let durationMs = 1000;
-      if (config.duration_ms !== undefined && config.duration_ms !== null && config.duration_ms !== "") {
-        durationMs = Number(config.duration_ms);
-      } else if (config.timeout_ms !== undefined && config.timeout_ms !== null && config.timeout_ms !== "") {
-        durationMs = Number(config.timeout_ms);
-      }
-      if (isNaN(durationMs)) {
-        durationMs = 1000;
-      }
-      
-      if (signal?.aborted) return;
-      
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          signal?.removeEventListener("abort", onAbort);
-          resolve();
-        }, durationMs);
-        
-        function onAbort() {
-          clearTimeout(timer);
-          reject(new Error("Aborted"));
-        }
-        
-        signal?.addEventListener("abort", onAbort);
-      });
+    case "desktop_wait":
+      await runWait(config, signal);
       break;
-    }
     default:
       throw new Error(`Unsupported desktop action: ${action.type}`);
   }

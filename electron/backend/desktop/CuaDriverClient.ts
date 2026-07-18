@@ -15,7 +15,9 @@ export class CuaDriverClient {
     if (this.childProcess) return;
 
     // Use the downloaded cua-driver path resolved dynamically from the user's home directory
-    const driverPath = path.join(os.homedir(), ".local", "bin", "cua-driver");
+    const overridePath = process.env.CUA_DRIVER_PATH;
+    const binaryName = os.platform() === "win32" ? "cua-driver.exe" : "cua-driver";
+    const driverPath = overridePath || path.join(os.homedir(), ".local", "bin", binaryName);
     
     try {
       this.childProcess = spawn(driverPath, ["mcp", "--no-overlay"], {
@@ -25,6 +27,12 @@ export class CuaDriverClient {
           CUA_DRIVER_TELEMETRY: "off"
         }
       });
+
+      if (this.childProcess.stdin) {
+        this.childProcess.stdin.on("error", (err) => {
+          console.error("CUA Driver stdin error:", err);
+        });
+      }
 
       this.childProcess.on("error", (err) => {
         console.error("CUA Driver process error:", err);
