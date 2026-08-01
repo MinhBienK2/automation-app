@@ -74,6 +74,7 @@ import {
   waitForRunnerDownload,
 } from "./runnerEvidence.js";
 import { resolveObjectTemplates } from "./variables.js";
+import { withLoopScope } from "./loopScope.js";
 
 
 export {
@@ -1054,19 +1055,20 @@ export class BrowserWorkflowRunner {
     predicate: () => Promise<boolean>,
     timeoutMs?: number | null,
   ): Promise<"predicate_false" | "max_attempts" | "timeout" | "break"> {
-    let attempts = 0;
-    const startedAt = Date.now();
-    while (await predicate()) {
-      if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
-      if (attempts >= maxAttempts) return "max_attempts";
-      runtime.outputs["system.loop.index"] = attempts;
-      runtime.outputs["system.loop.number"] = attempts + 1;
-      attempts += 1;
-      const control = await this.executeLoopBody(runtime, steps);
-      if (control === "break") return "break";
-      if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
-    }
-    return "predicate_false";
+    return withLoopScope(runtime.outputs, async (iteration) => {
+      let attempts = 0;
+      const startedAt = Date.now();
+      while (await predicate()) {
+        if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
+        if (attempts >= maxAttempts) return "max_attempts";
+        iteration(attempts);
+        attempts += 1;
+        const control = await this.executeLoopBody(runtime, steps);
+        if (control === "break") return "break";
+        if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
+      }
+      return "predicate_false";
+    });
   }
 
   private throwIfCancelled(signal?: AbortSignal) {

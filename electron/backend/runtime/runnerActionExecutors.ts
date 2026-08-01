@@ -20,6 +20,7 @@ import type { AppPaths } from "../db/database.js";
 import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { isPlainRecord } from "../shared/records.js";
 import type { ActionTrace } from "./actionTrace.js";
+import { withLoopScope } from "./loopScope.js";
 import {
   currentPageHostname,
   hostnameAllowed,
@@ -2082,12 +2083,13 @@ export function createRunnerActionExecutors(
       await deps.executeActions(runtime, choice.steps);
     },
     repeat_times: async (action) => {
-      for (let index = 0; index < action.config.times; index += 1) {
-        runtime.outputs["system.loop.index"] = index;
-        runtime.outputs["system.loop.number"] = index + 1;
-        const control = await deps.executeLoopBody(runtime, action.config.steps);
-        if (control === "break") break;
-      }
+      await withLoopScope(runtime.outputs, async (iteration) => {
+        for (let index = 0; index < action.config.times; index += 1) {
+          iteration(index);
+          const control = await deps.executeLoopBody(runtime, action.config.steps);
+          if (control === "break") break;
+        }
+      });
     },
     repeat_for_each: async (action) => {
       const items = action.config.array_variable
@@ -2142,15 +2144,16 @@ export function createRunnerActionExecutors(
         }
       }
 
-      let index = 0;
-      for (const item of processedItems) {
-        writeVariableValue(runtime.outputs, action.config.item_name, item);
-        runtime.outputs["system.loop.index"] = index;
-        runtime.outputs["system.loop.number"] = index + 1;
-        const control = await deps.executeLoopBody(runtime, action.config.steps);
-        index += 1;
-        if (control === "break") break;
-      }
+      await withLoopScope(runtime.outputs, async (iteration) => {
+        let index = 0;
+        for (const item of processedItems) {
+          writeVariableValue(runtime.outputs, action.config.item_name, item);
+          iteration(index);
+          const control = await deps.executeLoopBody(runtime, action.config.steps);
+          index += 1;
+          if (control === "break") break;
+        }
+      });
     },
     retry_block: async (action) => {
       await deps.executeRetry(runtime, action.config.max_attempts, action.config.delay_ms ?? 0, action.config.steps, action.config.failed_steps ?? []);

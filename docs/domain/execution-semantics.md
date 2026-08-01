@@ -39,6 +39,7 @@
 
 - `set_variable`: template render → type parse → write to output store. Objects are stored natively without flattening; expressions and condition checking resolve nested properties dynamically at runtime using deep path lookups (`getDeepValue`).
 - `repeat_for_each`: manual items or `array_variable`. Missing/non-array → fail before loop.
+- Loop iteration state: `system.loop.index` (0-based) and `system.loop.number` (1-based) are broadcast into the run's output store by `repeat_times`, `repeat_for_each`, and the predicate loop driver (`while_loop`, `repeat_until`). They are **scoped per loop**: entering a nested loop remembers the enclosing loop's values and restores them on exit, so an outer loop's body reads its own index both before and after a nested loop runs — including when the inner loop exits via `break_loop`. When the outermost loop finishes there is no enclosing loop to restore, so its final iteration's values remain in the run's outputs.
 - `execute_js`: requires Run Policy `execute_js_enabled`. Returns value to `output_name`.
 - `domain_allowlist`: promoted to run-scope policy. Enforced after template render, before navigation.
 - Run Policy `max_workflow_duration_ms` → run-level timer → cancel + timeout reason.

@@ -14,6 +14,7 @@ Preserve these unless the task explicitly changes them.
 - Run Policy can reject Run JavaScript before page script evaluation.
 - Set Viewport updates runtime width and height only.
 - Domain allowlist becomes run-scope navigation policy. Disallowed URLs fail after template rendering, before navigation.
+- `system.loop.index` (0-based) / `system.loop.number` (1-based) are scoped per loop: a nested loop restores its parent's values on exit, so an outer loop body always reads its own index. Only one module assigns them; loop implementations broadcast through it.
 
 ## Browser Launch
 

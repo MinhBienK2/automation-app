@@ -2012,6 +2012,160 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
+  test("restores the outer loop's system.loop.index after a nested loop completes", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("outer", "Outer loop", {
+            type: "repeat_for_each",
+            config: {
+              item_name: "letter",
+              items: ["a", "b"],
+              steps: [
+                {
+                  type: "repeat_times",
+                  config: { times: 3, steps: [{ type: "graph_noop", config: {} }] },
+                },
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      {
+                        name: "seen_{{letter}}",
+                        value_type: "text",
+                        value: "{{system.loop.index}}/{{system.loop.number}}",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      seen_a: "0/1",
+      seen_b: "1/2",
+    });
+  });
+
+  test("scopes system.loop.index correctly across three levels of nesting", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const captureInto = (name: string) => ({
+      type: "set_variable" as const,
+      config: {
+        variables: [{ name, value_type: "text" as const, value: "{{system.loop.index}}" }],
+      },
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("outer", "Outer loop", {
+            type: "repeat_for_each",
+            config: {
+              item_name: "outer_item",
+              items: ["a", "b"],
+              steps: [
+                {
+                  type: "repeat_for_each",
+                  config: {
+                    item_name: "middle_item",
+                    items: ["x", "y"],
+                    steps: [
+                      {
+                        type: "repeat_times",
+                        config: { times: 4, steps: [{ type: "graph_noop", config: {} }] },
+                      },
+                      captureInto("middle_{{outer_item}}_{{middle_item}}"),
+                    ],
+                  },
+                },
+                captureInto("outer_{{outer_item}}"),
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      middle_a_x: "0",
+      middle_a_y: "1",
+      middle_b_x: "0",
+      middle_b_y: "1",
+      outer_a: "0",
+      outer_b: "1",
+    });
+  });
+
+  test("leaves the outer loop's system.loop.index intact when an inner loop breaks", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("outer", "Outer loop", {
+            type: "repeat_for_each",
+            config: {
+              item_name: "letter",
+              items: ["a", "b"],
+              steps: [
+                {
+                  type: "repeat_times",
+                  config: {
+                    times: 5,
+                    steps: [{ type: "break_loop", config: {} }],
+                  },
+                },
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      {
+                        name: "seen_{{letter}}",
+                        value_type: "text",
+                        value: "{{system.loop.index}}",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      seen_a: "0",
+      seen_b: "1",
+    });
+  });
+
   test("supports repeat_for_each with start_index, end_index, max_loops, and min_loops", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
