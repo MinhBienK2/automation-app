@@ -6,19 +6,27 @@ import type {
   GraphPort,
   GraphPortDirection,
   GraphValidationIssue,
-  RouterGraphCase,
-  RouterGraphConfig,
-  VariableAssignment,
   WorkflowCondition,
   WorkflowGraph,
-  SwitchGraphCase,
-  SwitchGraphConfig,
 } from "../../../src/types/workflow.js";
 import { validateActionConfig } from "../actions/validation.js";
+import {
+  nodeCondition,
+  routerGraphConfigOrNull,
+  setVariableActionConfig,
+  stringArrayOrNull,
+  switchGraphConfig,
+  switchGraphConfigOrNull,
+  unsupportedGraphNodeTypeMessage,
+} from "./nodeConfigReaders.js";
+import {
+  outputNameRequired,
+  outputVariableNameRequired,
+  sourceOutputRequired,
+} from "../shared/validationMessages.js";
 import { validateWorkflowGraph, type WorkflowGraphValidationOptions } from "./validateGraph.js";
 import { graphHasExecutableSteps } from "./graphTopology.js";
 import {
-  arrayField,
   asRecord,
   stringField,
   validationError,
@@ -337,7 +345,7 @@ export function pushNodeSemanticIssues(
       }
       break;
     case "set_variable": {
-      const validation = validateActionConfig(setVariableActionConfig(node));
+      const validation = validateActionConfig(setVariableActionConfig(node, () => stringField(node.config, "name") ?? ""));
       if (validation) issues.push(error(node.id, null, validation.message));
       break;
     }
@@ -354,7 +362,7 @@ export function pushNodeSemanticIssues(
     case "check_conditions": {
       const output_name = stringField(node.config, "output_name");
       if (!output_name) {
-        issues.push(error(node.id, null, "Output variable name is required"));
+        issues.push(error(node.id, null, outputVariableNameRequired));
       } else {
         const validation = validateActionConfig({
           type: "check_conditions",
@@ -372,7 +380,7 @@ export function pushNodeSemanticIssues(
     case "calculate_value": {
       const output_name = stringField(node.config, "output_name");
       if (!output_name) {
-        issues.push(error(node.id, null, "Output variable name is required"));
+        issues.push(error(node.id, null, outputVariableNameRequired));
       } else {
         const validation = validateActionConfig({
           type: "calculate_value",
@@ -501,11 +509,11 @@ export function pushNodeSemanticIssues(
       break;
     }
     case "transform_variable":
-      if (!stringField(node.config, "source_name")) issues.push(error(node.id, null, "Source output is required"));
+      if (!stringField(node.config, "source_name")) issues.push(error(node.id, null, sourceOutputRequired));
       if (!stringField(node.config, "target_name")) issues.push(error(node.id, null, "Target output is required"));
       break;
     case "assert_output":
-      if (!stringField(node.config, "name")) issues.push(error(node.id, null, "Output name is required"));
+      if (!stringField(node.config, "name")) issues.push(error(node.id, null, outputNameRequired));
       if (!stringField(node.config, "value")) issues.push(error(node.id, null, "Expected output value is required"));
       break;
     case "domain_allowlist":
@@ -858,54 +866,8 @@ function pushRandomChoiceSemanticIssues(
   warnMissingContinuation(graph, node, "done", "Random Choice done continuation is unconnected; workflow ends successfully here", issues);
 }
 
-function switchGraphConfig(node: GraphNode): SwitchGraphConfig {
-  const switchConfigValue = switchGraphConfigOrNull(node);
-  if (!switchConfigValue || switchConfigValue.cases.length === 0) {
-    throw validationError("cases", "Switch cases are required");
-  }
-  return switchConfigValue;
-}
 
-function switchGraphConfigOrNull(node: GraphNode): SwitchGraphConfig | null {
-  const record = asRecord(node.config);
-  const rawCases = Array.isArray(record.cases) ? record.cases : [];
-  const cases = rawCases.map((item, index): SwitchGraphCase => {
-    if (typeof item === "string") {
-      return {
-        id: String(index + 1),
-        value: item,
-      };
-    }
-    const caseRecord = asRecord(item);
-    return {
-      id: stringField(caseRecord, "id") ?? String(index + 1),
-      value: stringField(caseRecord, "value") ?? "",
-    };
-  });
-  return {
-    expression: stringField(record, "expression") ?? "",
-    cases,
-  };
-}
 
-function routerGraphConfigOrNull(node: GraphNode): RouterGraphConfig | null {
-  const record = asRecord(node.config);
-  if (record.mode != null && record.mode !== "first_match") return null;
-  const rawCases = Array.isArray(record.cases) ? record.cases : [];
-  const cases = rawCases.map((item): RouterGraphCase => {
-    const caseValue = asRecord(item);
-    return {
-      id: stringField(caseValue, "id") ?? "",
-      label: typeof caseValue.label === "string" ? caseValue.label : "",
-      condition: caseValue.condition as WorkflowCondition,
-    };
-  });
-  return {
-    mode: "first_match",
-    cases,
-    default_label: stringField(record, "default_label") ?? "Default",
-  };
-}
 
 function randomChoiceGraphConfigOrNull(node: GraphNode): { choices: Array<{ id: string; label: string; weight: number }> } | null {
   const record = asRecord(node.config);
@@ -959,11 +921,6 @@ function pushConditionIssue(node: GraphNode, issues: GraphValidationIssue[]) {
   }
 }
 
-function nodeCondition(node: GraphNode): WorkflowCondition {
-  const condition = asRecord(node.config).condition;
-  if (!condition) throw validationError("condition", "Condition is required");
-  return condition as WorkflowCondition;
-}
 
 function validateWorkflowCondition(condition: WorkflowCondition) {
   const conditionRecord = condition as { kind?: unknown; target_ref?: unknown };
@@ -997,37 +954,11 @@ function validateWorkflowCondition(condition: WorkflowCondition) {
   }
 }
 
-function unsupportedGraphNodeTypeMessage(nodeType: unknown) {
-  return `Unsupported graph node type: ${typeof nodeType === "string" && nodeType ? nodeType : "unknown"}`;
-}
 
 function conditionKindLabel(kind: unknown) {
   return typeof kind === "string" && kind ? kind : "unknown";
 }
 
-function setVariableActionConfig(node: GraphNode): ActionConfig {
-  const variables = asRecord(node.config).variables;
-  if (Array.isArray(variables)) {
-    return {
-      type: "set_variable",
-      config: {
-        name: null,
-        value: null,
-        value_type: null,
-        variables: variables as VariableAssignment[],
-      },
-    };
-  }
-  return {
-    type: "set_variable",
-    config: {
-      name: stringField(node.config, "name") ?? "",
-      value: stringField(node.config, "value") ?? "",
-      value_type: null,
-      variables: [],
-    },
-  };
-}
 
 function numberField(config: unknown, field: string): number | null {
   const value = asRecord(config)[field];
@@ -1039,13 +970,6 @@ function positiveNumberField(config: unknown, field: string): boolean {
   return value != null && value > 0;
 }
 
-function stringArrayOrNull(config: unknown, field: string): string[] | null {
-  const values = arrayField(config, field)
-    .filter((value) => typeof value === "string")
-    .map((value) => (value as string).trim())
-    .filter(Boolean);
-  return values.length > 0 ? values : null;
-}
 
 function positive(value: number | null | undefined) {
   return value != null && value > 0;

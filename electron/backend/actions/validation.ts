@@ -1,4 +1,15 @@
 import path from "node:path";
+import {
+  outputNameRequired,
+  outputVariableNameRequired,
+  propertyKeyRequired,
+  regexPatternRequired,
+  sourceListVariableNameRequired,
+  sourceOutputRequired,
+  sourceVariableNameRequired,
+  valueTypeMustBeVariableValueType,
+  variableNameRequired,
+} from "../shared/validationMessages.js";
 import type {
   ActionConfig,
   WorkflowCondition,
@@ -93,7 +104,7 @@ const actionValidators = createActionValidatorMap({
   find_element: (config) =>
     firstValidation(
       validateElementTarget(config.config),
-      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputNameRequired),
       validateOptionalEnumValue(
         config.config.rank,
         ["first", "nearest_viewport_center", "largest_visible_area"],
@@ -289,10 +300,10 @@ const actionValidators = createActionValidatorMap({
   count_elements: (config) => validateDataCaptureConfig(config.config),
   extract_regex_matches: (config) =>
     firstValidation(
-      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
-      requiredActionString(config.config.pattern, "pattern", "Regex pattern is required"),
+      requiredActionString(config.config.source_name, "source_name", sourceOutputRequired),
+      requiredActionString(config.config.pattern, "pattern", regexPatternRequired),
       regexPatternValidation(config.config.pattern, config.config.flags),
-      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputNameRequired),
     ),
   extract_text_content: (config) => validateDataCaptureConfig(config.config),
   extract_inner_html: (config) => validateDataCaptureConfig(config.config),
@@ -345,34 +356,34 @@ const actionValidators = createActionValidatorMap({
     ),
   get_page_title: (config) =>
     firstValidation(
-      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputNameRequired),
       optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
     ),
   extract_page_links: (config) =>
     firstValidation(
-      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputNameRequired),
       optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
     ),
   get_meta_content: (config) =>
     firstValidation(
       requiredActionString(config.config.meta_name, "meta_name", "Meta name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputNameRequired),
       optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
     ),
   extract_numbers: (config) =>
     firstValidation(
-      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      requiredActionString(config.config.source_name, "source_name", sourceOutputRequired),
+      requiredActionString(config.config.output_name, "output_name", outputNameRequired),
     ),
   extract_urls: (config) =>
     firstValidation(
-      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      requiredActionString(config.config.source_name, "source_name", sourceOutputRequired),
+      requiredActionString(config.config.output_name, "output_name", outputNameRequired),
     ),
   extract_emails: (config) =>
     firstValidation(
-      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      requiredActionString(config.config.source_name, "source_name", sourceOutputRequired),
+      requiredActionString(config.config.output_name, "output_name", outputNameRequired),
     ),
   take_screenshot: (config) =>
     safeArtifactNameValidation(
@@ -382,14 +393,14 @@ const actionValidators = createActionValidatorMap({
     ),
   write_text_file: (config) =>
     firstValidation(
-      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
+      requiredActionString(config.config.source_name, "source_name", sourceOutputRequired),
       requiredActionString(config.config.path, "path", "Text file path is required"),
       safeArtifactNameValidation(
         config.config.path,
         "path",
         "Text file path must be a safe artifact name",
       ),
-      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputNameRequired),
     ),
   go_back: () => null,
   go_forward: () => null,
@@ -417,12 +428,12 @@ const actionValidators = createActionValidatorMap({
     const variables = config.config.variables ?? [];
     if (variables.length > 0) {
       return variables.some((row) => !row.name.trim())
-        ? validationError("variables", "Variable name is required")
+        ? validationError("variables", variableNameRequired)
         : null;
     }
     return config.config.name?.trim()
       ? null
-      : validationError("name", "Variable name is required");
+      : validationError("name", variableNameRequired);
   },
   set_json_variables: (config) => {
     try {
@@ -438,7 +449,7 @@ const actionValidators = createActionValidatorMap({
     const operation = config.config.operation;
     const needsValue = ["add", "subtract", "multiply", "divide"].includes(operation);
     return firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       validateRequiredEnumValue(
         operation,
         ["increment", "decrement", "add", "subtract", "multiply", "divide"],
@@ -452,19 +463,19 @@ const actionValidators = createActionValidatorMap({
   },
   set_number_variable: (config) =>
     firstValidation(
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
       requiredActionString(config.config.value, "value", "Value is required"),
     ),
   generate_random_number: (config) =>
     firstValidation(
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
       requiredActionString(config.config.min, "min", "Minimum value is required"),
       requiredActionString(config.config.max, "max", "Maximum value is required"),
     ),
   parse_text_to_number: (config) =>
     firstValidation(
       requiredActionString(config.config.source, "source", "Source text is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   math_operation: (config) => {
     const operation = config.config.operation;
@@ -480,7 +491,7 @@ const actionValidators = createActionValidatorMap({
       needsOperand2
         ? requiredActionString(config.config.operand2, "operand2", "Second operand is required")
         : null,
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     );
   },
   round_number: (config) =>
@@ -492,7 +503,7 @@ const actionValidators = createActionValidatorMap({
         "mode",
         "Rounding mode must be round, floor, or ceil",
       ),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   format_number: (config) =>
     firstValidation(
@@ -503,7 +514,7 @@ const actionValidators = createActionValidatorMap({
         "format",
         "Format must be decimal, currency, or percent",
       ),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   compare_numbers: (config) =>
     firstValidation(
@@ -515,14 +526,14 @@ const actionValidators = createActionValidatorMap({
         "Operator is invalid",
       ),
       requiredActionString(config.config.operand2, "operand2", "Second operand is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_number_range: (config) =>
     firstValidation(
       requiredActionString(config.config.value, "value", "Value to check is required"),
       requiredActionString(config.config.min, "min", "Minimum bound is required"),
       requiredActionString(config.config.max, "max", "Maximum bound is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_number_property: (config) =>
     firstValidation(
@@ -533,14 +544,14 @@ const actionValidators = createActionValidatorMap({
         "property",
         "Property is invalid",
       ),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   update_text_variable: (config) => {
     const operation = config.config.operation;
     const needsValue = ["append", "prepend", "replace"].includes(operation);
     const needsSearch = operation === "replace";
     return firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       validateRequiredEnumValue(
         operation,
         ["append", "prepend", "replace", "uppercase", "lowercase", "trim"],
@@ -556,21 +567,21 @@ const actionValidators = createActionValidatorMap({
     );
   },
   set_text_variable: (config) =>
-    requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
   append_text: (config) =>
-    requiredActionString(config.config.name, "name", "Variable name is required"),
+    requiredActionString(config.config.name, "name", variableNameRequired),
   prepend_text: (config) =>
-    requiredActionString(config.config.name, "name", "Variable name is required"),
+    requiredActionString(config.config.name, "name", variableNameRequired),
   replace_text: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       requiredActionString(config.config.search_pattern, "search_pattern", "Search pattern is required"),
     ),
   trim_text: (config) =>
-    requiredActionString(config.config.name, "name", "Variable name is required"),
+    requiredActionString(config.config.name, "name", variableNameRequired),
   change_text_case: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       validateRequiredEnumValue(
         config.config.to_case,
         ["upper", "lower"],
@@ -580,40 +591,40 @@ const actionValidators = createActionValidatorMap({
     ),
   slice_text: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   regex_extract: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.pattern, "pattern", "Regex pattern is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.pattern, "pattern", regexPatternRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   get_text_length: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_text_empty: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_text_contains: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
       requiredActionString(config.config.substring, "substring", "Substring is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_text_regex_matches: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.pattern, "pattern", "Regex pattern is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.pattern, "pattern", regexPatternRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   update_flag_variable: (config) => {
     return firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       validateRequiredEnumValue(
         config.config.operation,
         ["toggle", "set_true", "set_false"],
@@ -624,15 +635,15 @@ const actionValidators = createActionValidatorMap({
   },
   set_boolean_variable: (config) =>
     firstValidation(
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
       requiredActionString(config.config.value, "value", "Value is required"),
     ),
   generate_random_boolean: (config) =>
-    requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
   parse_to_boolean: (config) =>
     firstValidation(
       requiredActionString(config.config.source, "source", "Source is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   boolean_logical_op: (config) => {
     const operation = config.config.operation;
@@ -648,7 +659,7 @@ const actionValidators = createActionValidatorMap({
       needsOperand2
         ? requiredActionString(config.config.operand2, "operand2", "Operand 2 is required")
         : null,
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     );
   },
   compare_booleans: (config) =>
@@ -661,7 +672,7 @@ const actionValidators = createActionValidatorMap({
         "Operator is invalid",
       ),
       requiredActionString(config.config.operand2, "operand2", "Operand 2 is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_boolean_property: (config) =>
     firstValidation(
@@ -672,7 +683,7 @@ const actionValidators = createActionValidatorMap({
         "property",
         "Property is invalid",
       ),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   update_list_variable: (config) => {
     const operation = config.config.operation;
@@ -680,7 +691,7 @@ const actionValidators = createActionValidatorMap({
     const needsValueType = ["push", "unshift", "push_unique", "merge", "merge_unique"].includes(operation);
     const needsIndex = operation === "remove_by_index";
     return firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       validateRequiredEnumValue(
         operation,
         listVariableOperations,
@@ -695,7 +706,7 @@ const actionValidators = createActionValidatorMap({
             config.config.value_type,
             ["text", "json", "number", "boolean"],
             "value_type",
-            "Value type must be text, json, number, or boolean",
+            valueTypeMustBeVariableValueType,
           )
         : null,
       needsIndex
@@ -706,32 +717,32 @@ const actionValidators = createActionValidatorMap({
     );
   },
   create_empty_list: (config) =>
-    requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
   create_list_manual: (config) =>
     firstValidation(
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
       validateRequiredEnumValue(
         config.config.value_type,
         ["text", "json", "number", "boolean"],
         "value_type",
-        "Value type must be text, json, number, or boolean",
+        valueTypeMustBeVariableValueType,
       ),
     ),
   split_text_to_list: (config) =>
     firstValidation(
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
       requiredActionString(config.config.source_text, "source_text", "Source text is required"),
       requiredActionString(config.config.delimiter, "delimiter", "Delimiter is required"),
     ),
   generate_number_range: (config) =>
     firstValidation(
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
       requiredActionString(String(config.config.start ?? ""), "start", "Start value is required"),
       requiredActionString(String(config.config.end ?? ""), "end", "End value is required"),
     ),
   add_to_list: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       validateRequiredEnumValue(
         config.config.position,
         ["end", "start", "unique_end"],
@@ -742,34 +753,34 @@ const actionValidators = createActionValidatorMap({
         config.config.value_type,
         ["text", "json", "number", "boolean"],
         "value_type",
-        "Value type must be text, json, number, or boolean",
+        valueTypeMustBeVariableValueType,
       ),
       requiredActionString(config.config.value, "value", "Value is required"),
     ),
   remove_from_list_by_index: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       requiredActionString(String(config.config.index ?? ""), "index", "Index is required"),
     ),
   remove_from_list_by_value: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       validateRequiredEnumValue(
         config.config.value_type,
         ["text", "json", "number", "boolean"],
         "value_type",
-        "Value type must be text, json, number, or boolean",
+        valueTypeMustBeVariableValueType,
       ),
       requiredActionString(config.config.value, "value", "Value is required"),
     ),
   merge_lists: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       requiredActionString(config.config.value, "value", "Value is required"),
     ),
   get_list_item: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
       validateRequiredEnumValue(
         config.config.position,
         ["first", "last", "index"],
@@ -779,86 +790,86 @@ const actionValidators = createActionValidatorMap({
       config.config.position === "index"
         ? requiredActionString(String(config.config.index ?? ""), "index", "Index is required")
         : null,
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   get_list_length: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   slice_list: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
       requiredActionString(String(config.config.start ?? ""), "start", "Start index is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   join_list: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
       requiredActionString(config.config.separator, "separator", "Separator is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   filter_list: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   map_list_property: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
-      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
+      requiredActionString(config.config.property_key, "property_key", propertyKeyRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   sort_reverse_list: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
       validateRequiredEnumValue(
         config.config.action,
         ["sort_asc", "sort_desc", "reverse"],
         "action",
         "Action must be sort_asc, sort_desc, or reverse",
       ),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   execute_list_script: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
       requiredActionString(config.config.script, "script", "Script code is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_list_empty: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_list_contains: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
       validateRequiredEnumValue(
         config.config.value_type,
         ["text", "json", "number", "boolean"],
         "value_type",
-        "Value type must be text, json, number, or boolean",
+        valueTypeMustBeVariableValueType,
       ),
       requiredActionString(config.config.value, "value", "Value to check is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_list_any_match: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_list_all_match: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source list variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceListVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   create_empty_object: (config) =>
-    requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+    requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
   create_object_manual: (config) => {
     const fields = config.config.fields ?? [];
     return firstValidation(
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
       fields.some((row) => !row.key.trim())
         ? validationError("fields", "Field key is required")
         : null,
@@ -867,73 +878,73 @@ const actionValidators = createActionValidatorMap({
   parse_json_to_object: (config) =>
     firstValidation(
       requiredActionString(config.config.source_text, "source_text", "Source text is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   set_object_property: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
-      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
+      requiredActionString(config.config.property_key, "property_key", propertyKeyRequired),
       validateRequiredEnumValue(
         config.config.value_type,
         ["text", "json", "number", "boolean"],
         "value_type",
-        "Value type must be text, json, number, or boolean",
+        valueTypeMustBeVariableValueType,
       ),
       requiredActionString(config.config.value, "value", "Value is required"),
     ),
   remove_object_property: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
-      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
+      requiredActionString(config.config.property_key, "property_key", propertyKeyRequired),
     ),
   merge_objects: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       requiredActionString(config.config.value, "value", "Value to merge is required"),
     ),
   rename_object_property: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Variable name is required"),
+      requiredActionString(config.config.name, "name", variableNameRequired),
       requiredActionString(config.config.old_key, "old_key", "Old key is required"),
       requiredActionString(config.config.new_key, "new_key", "New key is required"),
     ),
   get_object_property: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.property_key, "property_key", propertyKeyRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   get_object_keys: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   get_object_values: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   stringify_object: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   execute_object_script: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
       requiredActionString(config.config.script, "script", "Script code is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_object_key_exists: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.property_key, "property_key", "Property key is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.property_key, "property_key", propertyKeyRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   check_object_empty: (config) =>
     firstValidation(
-      requiredActionString(config.config.source, "source", "Source variable name is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.source, "source", sourceVariableNameRequired),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   assert_element: (config) =>
     firstValidation(
@@ -1033,12 +1044,12 @@ const actionValidators = createActionValidatorMap({
       : validationError("status", "Stop workflow status must be success or failure"),
   transform_variable: (config) =>
     firstValidation(
-      requiredActionString(config.config.source_name, "source_name", "Source output is required"),
+      requiredActionString(config.config.source_name, "source_name", sourceOutputRequired),
       requiredActionString(config.config.target_name, "target_name", "Target output is required"),
     ),
   assert_output: (config) =>
     firstValidation(
-      requiredActionString(config.config.name, "name", "Output name is required"),
+      requiredActionString(config.config.name, "name", outputNameRequired),
       validateRequiredEnumValue(
         config.config.match_mode,
         ["contains", "equals"],
@@ -1101,7 +1112,7 @@ const actionValidators = createActionValidatorMap({
   check_conditions: (config) => {
     const { output_name, mode, script, rules_group, evaluation_type } = config.config;
     if (!output_name || !output_name.trim()) {
-      return validationError("output_name", "Output variable name is required");
+      return validationError("output_name", outputVariableNameRequired);
     }
     if (evaluation_type && !["static", "dynamic"].includes(evaluation_type)) {
       return validationError("evaluation_type", "Evaluation type must be static or dynamic");
@@ -1122,7 +1133,7 @@ const actionValidators = createActionValidatorMap({
   calculate_value: (config) => {
     const { output_name, expression, evaluation_type } = config.config;
     if (!output_name || !output_name.trim()) {
-      return validationError("output_name", "Output variable name is required");
+      return validationError("output_name", outputVariableNameRequired);
     }
     if (evaluation_type && !["static", "dynamic"].includes(evaluation_type)) {
       return validationError("evaluation_type", "Evaluation type must be static or dynamic");
@@ -1135,17 +1146,17 @@ const actionValidators = createActionValidatorMap({
   read_text_file: (config) =>
     firstValidation(
       requiredActionString(config.config.path, "path", "File path is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   parse_csv_excel: (config) =>
     firstValidation(
       requiredActionString(config.config.path, "path", "File path is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   write_csv_excel: (config) =>
     firstValidation(
       requiredActionString(config.config.path, "path", "File path is required"),
-      requiredActionString(config.config.source_name, "source_name", "Source variable name is required"),
+      requiredActionString(config.config.source_name, "source_name", sourceVariableNameRequired),
     ),
   file_operation: (config) => {
     if (!["exists", "delete", "rename", "move"].includes(config.config.operation)) {
@@ -1162,7 +1173,7 @@ const actionValidators = createActionValidatorMap({
   http_request: (config) =>
     firstValidation(
       requiredActionString(config.config.url, "url", "URL is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
       optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
     ),
   date_time_operation: (config) => {
@@ -1170,7 +1181,7 @@ const actionValidators = createActionValidatorMap({
       return validationError("operation", "Date-time operation is invalid");
     }
     if (!config.config.output_name || !config.config.output_name.trim()) {
-      return validationError("output_name", "Output variable name is required");
+      return validationError("output_name", outputVariableNameRequired);
     }
     if (config.config.operation === "add_subtract") {
       if (config.config.offset_value == null) {
@@ -1185,7 +1196,7 @@ const actionValidators = createActionValidatorMap({
   crypto_operation: (config) =>
     firstValidation(
       requiredActionString(config.config.value, "value", "Value to hash/decode is required"),
-      requiredActionString(config.config.output_name, "output_name", "Output variable name is required"),
+      requiredActionString(config.config.output_name, "output_name", outputVariableNameRequired),
     ),
   switch_frame: (config) =>
     requiredActionString(config.config.iframe_xpath, "iframe_xpath", "Iframe XPath is required"),
@@ -1437,7 +1448,7 @@ function validateDataCaptureConfig(config: {
 }) {
   return firstValidation(
     validateElementTargetSource(config),
-    requiredActionString(config.output_name, "output_name", "Output name is required"),
+    requiredActionString(config.output_name, "output_name", outputNameRequired),
     optionalPositive(config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
   );
 }

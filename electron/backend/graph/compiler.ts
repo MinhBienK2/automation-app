@@ -5,18 +5,14 @@ import type {
   CompiledWorkflowGraph,
   GraphEdge,
   GraphNode,
-  RouterGraphCase,
   RouterGraphConfig,
   VariableAssignment,
   ObjectFieldAssignment,
   ProfileEnvironment,
-  WorkflowCondition,
   WorkflowGraph,
   WorkflowRunFromSelectedMode,
   WorkflowSettings,
   LogicRuleGroup,
-  SwitchGraphCase,
-  SwitchGraphConfig,
 } from "../../../src/types/workflow.js";
 import {
   validateWorkflowGraph as validateWorkflowGraphModule,
@@ -24,7 +20,26 @@ import {
 } from "./validateGraph.js";
 import { migrateWorkflowGraph } from "./migration.js";
 import {
-  arrayField,
+  nodeCondition,
+  routerGraphConfigOrNull,
+  setVariableActionConfig,
+  stringArrayOrNull,
+  switchGraphConfig,
+  unsupportedGraphNodeTypeMessage,
+} from "./nodeConfigReaders.js";
+import {
+  outputNameRequired,
+  outputVariableNameRequired,
+  propertyKeyRequired,
+  regexPatternRequired,
+  resultOutputVariableNameRequired,
+  sourceListVariableNameRequired,
+  sourceOutputRequired,
+  sourceVariableNameRequired,
+  targetListVariableNameRequired,
+  variableNameRequired,
+} from "../shared/validationMessages.js";
+import {
   asRecord,
   numberField,
   stringField,
@@ -428,7 +443,7 @@ function compilePath(
       break;
     }
     case "set_variable":
-      steps.push(step(node, setVariableActionConfig(node), options));
+      steps.push(step(node, setVariableActionConfig(node, () => requiredString(node.config, "name", variableNameRequired)), options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "set_json_variables":
@@ -442,7 +457,7 @@ function compilePath(
       steps.push(step(node, {
         type: "check_conditions",
         config: {
-          output_name: requiredString(node.config, "output_name", "Output variable name is required"),
+          output_name: requiredString(node.config, "output_name", outputVariableNameRequired),
           mode: stringField(node.config, "mode") === "script" ? "script" : "visual",
           script: stringField(node.config, "script") ?? undefined,
           rules_group: asRecord(node.config).rules_group as LogicRuleGroup | undefined,
@@ -455,7 +470,7 @@ function compilePath(
       steps.push(step(node, {
         type: "calculate_value",
         config: {
-          output_name: requiredString(node.config, "output_name", "Output variable name is required"),
+          output_name: requiredString(node.config, "output_name", outputVariableNameRequired),
           expression: requiredString(node.config, "expression", "Expression is required"),
           evaluation_type: stringField(node.config, "evaluation_type") === "dynamic" ? "dynamic" : "static",
         },
@@ -463,7 +478,7 @@ function compilePath(
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "update_number_variable": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const operation = requiredString(node.config, "operation", "Operation must be increment, decrement, add, subtract, multiply, or divide") as any;
       const value = stringField(node.config, "value");
       steps.push(step(node, {
@@ -474,7 +489,7 @@ function compilePath(
       break;
     }
     case "set_number_variable": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       const value = stringField(node.config, "value") ?? "";
       steps.push(step(node, {
         type: "set_number_variable",
@@ -484,7 +499,7 @@ function compilePath(
       break;
     }
     case "generate_random_number": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       const min = stringField(node.config, "min") ?? "0";
       const max = stringField(node.config, "max") ?? "100";
       const integer = asRecord(node.config).integer !== false;
@@ -498,7 +513,7 @@ function compilePath(
     case "parse_text_to_number": {
       const source = stringField(node.config, "source") ?? "";
       const fallback = stringField(node.config, "fallback");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "parse_text_to_number",
         config: { source, fallback, output_name },
@@ -510,7 +525,7 @@ function compilePath(
       const operand1 = stringField(node.config, "operand1") ?? "";
       const operation = requiredString(node.config, "operation", "Operation is required") as any;
       const operand2 = stringField(node.config, "operand2");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "math_operation",
         config: { operand1, operation, operand2, output_name },
@@ -522,7 +537,7 @@ function compilePath(
       const source = stringField(node.config, "source") ?? "";
       const mode = requiredString(node.config, "mode", "Rounding mode is required") as any;
       const decimals = stringField(node.config, "decimals") ?? "0";
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "round_number",
         config: { source, mode, decimals, output_name },
@@ -536,7 +551,7 @@ function compilePath(
       const decimals = stringField(node.config, "decimals");
       const currency_code = stringField(node.config, "currency_code");
       const locale = stringField(node.config, "locale");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "format_number",
         config: { source, format, decimals, currency_code, locale, output_name },
@@ -548,7 +563,7 @@ function compilePath(
       const operand1 = stringField(node.config, "operand1") ?? "";
       const operator = requiredString(node.config, "operator", "Operator is required") as any;
       const operand2 = stringField(node.config, "operand2") ?? "";
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "compare_numbers",
         config: { operand1, operator, operand2, output_name },
@@ -561,7 +576,7 @@ function compilePath(
       const min = stringField(node.config, "min") ?? "";
       const max = stringField(node.config, "max") ?? "";
       const inclusive = asRecord(node.config).inclusive !== false;
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "check_number_range",
         config: { value, min, max, inclusive, output_name },
@@ -572,7 +587,7 @@ function compilePath(
     case "check_number_property": {
       const value = stringField(node.config, "value") ?? "";
       const property = requiredString(node.config, "property", "Property is required") as any;
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "check_number_property",
         config: { value, property, output_name },
@@ -581,7 +596,7 @@ function compilePath(
       break;
     }
     case "update_text_variable": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const operation = requiredString(node.config, "operation", "Operation must be append, prepend, replace, uppercase, lowercase, or trim") as any;
       const value = stringField(node.config, "value");
       const search_pattern = stringField(node.config, "search_pattern");
@@ -593,7 +608,7 @@ function compilePath(
       break;
     }
     case "set_text_variable": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       const value = stringField(node.config, "value");
       steps.push(step(node, {
         type: "set_text_variable",
@@ -603,7 +618,7 @@ function compilePath(
       break;
     }
     case "append_text": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const value = stringField(node.config, "value");
       steps.push(step(node, {
         type: "append_text",
@@ -613,7 +628,7 @@ function compilePath(
       break;
     }
     case "prepend_text": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const value = stringField(node.config, "value");
       steps.push(step(node, {
         type: "prepend_text",
@@ -623,7 +638,7 @@ function compilePath(
       break;
     }
     case "replace_text": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const search_pattern = requiredString(node.config, "search_pattern", "Search pattern is required");
       const replacement = stringField(node.config, "replacement");
       steps.push(step(node, {
@@ -634,7 +649,7 @@ function compilePath(
       break;
     }
     case "trim_text": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       steps.push(step(node, {
         type: "trim_text",
         config: { name },
@@ -643,7 +658,7 @@ function compilePath(
       break;
     }
     case "change_text_case": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const to_case = requiredString(node.config, "to_case", "Invalid text case option") as any;
       steps.push(step(node, {
         type: "change_text_case",
@@ -653,10 +668,10 @@ function compilePath(
       break;
     }
     case "slice_text": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
       const start = requiredString(String(asRecord(node.config).start ?? ""), "start", "Start value is required");
       const end = stringField(node.config, "end") ?? (typeof asRecord(node.config).end === "number" ? asRecord(node.config).end : null) as any;
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "slice_text",
         config: { source, start, end, output_name },
@@ -665,10 +680,10 @@ function compilePath(
       break;
     }
     case "regex_extract": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const pattern = requiredString(node.config, "pattern", "Regex pattern is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const pattern = requiredString(node.config, "pattern", regexPatternRequired);
       const group_index = stringField(node.config, "group_index") ?? (typeof asRecord(node.config).group_index === "number" ? asRecord(node.config).group_index : null) as any;
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "regex_extract",
         config: { source, pattern, group_index, output_name },
@@ -677,8 +692,8 @@ function compilePath(
       break;
     }
     case "get_text_length": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "get_text_length",
         config: { source, output_name },
@@ -687,8 +702,8 @@ function compilePath(
       break;
     }
     case "check_text_empty": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "check_text_empty",
         config: { source, output_name },
@@ -697,9 +712,9 @@ function compilePath(
       break;
     }
     case "check_text_contains": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
       const substring = requiredString(node.config, "substring", "Substring is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "check_text_contains",
         config: { source, substring, output_name },
@@ -708,9 +723,9 @@ function compilePath(
       break;
     }
     case "check_text_regex_matches": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const pattern = requiredString(node.config, "pattern", "Regex pattern is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const pattern = requiredString(node.config, "pattern", regexPatternRequired);
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "check_text_regex_matches",
         config: { source, pattern, output_name },
@@ -719,7 +734,7 @@ function compilePath(
       break;
     }
     case "update_flag_variable": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const operation = requiredString(node.config, "operation", "Operation must be toggle, set_true, or set_false") as any;
       steps.push(step(node, {
         type: "update_flag_variable",
@@ -729,7 +744,7 @@ function compilePath(
       break;
     }
     case "set_boolean_variable": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       const value = requiredString(node.config, "value", "Value is required");
       steps.push(step(node, {
         type: "set_boolean_variable",
@@ -739,7 +754,7 @@ function compilePath(
       break;
     }
     case "generate_random_boolean": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       const probability = stringField(node.config, "probability") ?? (typeof asRecord(node.config).probability === "number" ? asRecord(node.config).probability : null) as any;
       steps.push(step(node, {
         type: "generate_random_boolean",
@@ -751,7 +766,7 @@ function compilePath(
     case "parse_to_boolean": {
       const source = requiredString(node.config, "source", "Source is required");
       const fallback = stringField(node.config, "fallback");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "parse_to_boolean",
         config: { source, fallback, output_name },
@@ -763,7 +778,7 @@ function compilePath(
       const operand1 = requiredString(node.config, "operand1", "Operand 1 is required");
       const operation = requiredString(node.config, "operation", "Operation is required") as any;
       const operand2 = stringField(node.config, "operand2");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "boolean_logical_op",
         config: { operand1, operation, operand2, output_name },
@@ -775,7 +790,7 @@ function compilePath(
       const operand1 = requiredString(node.config, "operand1", "Operand 1 is required");
       const operator = requiredString(node.config, "operator", "Operator is required") as any;
       const operand2 = requiredString(node.config, "operand2", "Operand 2 is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "compare_booleans",
         config: { operand1, operator, operand2, output_name },
@@ -786,7 +801,7 @@ function compilePath(
     case "check_boolean_property": {
       const source = requiredString(node.config, "source", "Source is required");
       const property = requiredString(node.config, "property", "Property is required") as any;
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "check_boolean_property",
         config: { source, property, output_name },
@@ -795,7 +810,7 @@ function compilePath(
       break;
     }
     case "update_list_variable": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const operation = requiredString(node.config, "operation", "Operation must be push, unshift, push_unique, pop, shift, remove_by_index, or remove_by_value") as any;
       const value = stringField(node.config, "value");
       const value_type = stringField(node.config, "value_type") as any;
@@ -808,7 +823,7 @@ function compilePath(
       break;
     }
     case "create_empty_list": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "create_empty_list",
         config: { output_name },
@@ -817,7 +832,7 @@ function compilePath(
       break;
     }
     case "create_list_manual": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       const value_type = requiredString(node.config, "value_type", "Item value type is required") as any;
       const items = (asRecord(node.config).items as string[]) ?? [];
       steps.push(step(node, {
@@ -828,7 +843,7 @@ function compilePath(
       break;
     }
     case "split_text_to_list": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       const source_text = stringField(node.config, "source_text") ?? "";
       const delimiter = stringField(node.config, "delimiter") ?? "";
       steps.push(step(node, {
@@ -839,7 +854,7 @@ function compilePath(
       break;
     }
     case "generate_number_range": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       const start = stringField(node.config, "start") ?? 0;
       const end = stringField(node.config, "end") ?? 0;
       const stepVal = stringField(node.config, "step") ?? null;
@@ -851,7 +866,7 @@ function compilePath(
       break;
     }
     case "add_to_list": {
-      const name = requiredString(node.config, "name", "Target list variable name is required");
+      const name = requiredString(node.config, "name", targetListVariableNameRequired);
       const position = requiredString(node.config, "position", "Position is required") as any;
       const value_type = requiredString(node.config, "value_type", "Value type is required") as any;
       const value = stringField(node.config, "value") ?? "";
@@ -863,7 +878,7 @@ function compilePath(
       break;
     }
     case "remove_from_list_by_index": {
-      const name = requiredString(node.config, "name", "Target list variable name is required");
+      const name = requiredString(node.config, "name", targetListVariableNameRequired);
       const index = stringField(node.config, "index") ?? (typeof asRecord(node.config).index === "number" ? asRecord(node.config).index : "") as any;
       steps.push(step(node, {
         type: "remove_from_list_by_index",
@@ -873,7 +888,7 @@ function compilePath(
       break;
     }
     case "remove_from_list_by_value": {
-      const name = requiredString(node.config, "name", "Target list variable name is required");
+      const name = requiredString(node.config, "name", targetListVariableNameRequired);
       const value_type = requiredString(node.config, "value_type", "Value type is required") as any;
       const value = stringField(node.config, "value") ?? "";
       steps.push(step(node, {
@@ -884,7 +899,7 @@ function compilePath(
       break;
     }
     case "merge_lists": {
-      const name = requiredString(node.config, "name", "Target list variable name is required");
+      const name = requiredString(node.config, "name", targetListVariableNameRequired);
       const value = stringField(node.config, "value") ?? "";
       const unique = !!asRecord(node.config).unique;
       steps.push(step(node, {
@@ -895,10 +910,10 @@ function compilePath(
       break;
     }
     case "get_list_item": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
       const position = requiredString(node.config, "position", "Position is required") as any;
       const index = stringField(node.config, "index") ?? (typeof asRecord(node.config).index === "number" ? asRecord(node.config).index : null) as any;
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: "get_list_item",
         config: { source, position, index, output_name },
@@ -907,8 +922,8 @@ function compilePath(
       break;
     }
     case "get_list_length": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: "get_list_length",
         config: { source, output_name },
@@ -917,10 +932,10 @@ function compilePath(
       break;
     }
     case "slice_list": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
       const start = stringField(node.config, "start") ?? 0;
       const end = stringField(node.config, "end") ?? null;
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: "slice_list",
         config: { source, start, end, output_name },
@@ -929,9 +944,9 @@ function compilePath(
       break;
     }
     case "join_list": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
       const separator = stringField(node.config, "separator") ?? "";
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: "join_list",
         config: { source, separator, output_name },
@@ -942,9 +957,9 @@ function compilePath(
     case "filter_list":
     case "check_list_any_match":
     case "check_list_all_match": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
       const rules_group = (asRecord(node.config).rules_group ?? null) as any;
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: node.node_type as any,
         config: { source, rules_group, output_name },
@@ -953,9 +968,9 @@ function compilePath(
       break;
     }
     case "map_list_property": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
       const property_key = stringField(node.config, "property_key") ?? "";
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: "map_list_property",
         config: { source, property_key, output_name },
@@ -964,10 +979,10 @@ function compilePath(
       break;
     }
     case "sort_reverse_list": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
       const action = requiredString(node.config, "action", "Action is required") as any;
       const sort_key = stringField(node.config, "sort_key") ?? null;
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: "sort_reverse_list",
         config: { source, action, sort_key, output_name },
@@ -976,9 +991,9 @@ function compilePath(
       break;
     }
     case "execute_list_script": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
       const script = stringField(node.config, "script") ?? "";
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: "execute_list_script",
         config: { source, script, output_name },
@@ -987,8 +1002,8 @@ function compilePath(
       break;
     }
     case "check_list_empty": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: "check_list_empty",
         config: { source, output_name },
@@ -997,10 +1012,10 @@ function compilePath(
       break;
     }
     case "check_list_contains": {
-      const source = requiredString(node.config, "source", "Source list variable name is required");
+      const source = requiredString(node.config, "source", sourceListVariableNameRequired);
       const value_type = requiredString(node.config, "value_type", "Value type is required") as any;
       const value = stringField(node.config, "value") ?? "";
-      const output_name = requiredString(node.config, "output_name", "Result output variable name is required");
+      const output_name = requiredString(node.config, "output_name", resultOutputVariableNameRequired);
       steps.push(step(node, {
         type: "check_list_contains",
         config: { source, value_type, value, output_name },
@@ -1009,7 +1024,7 @@ function compilePath(
       break;
     }
     case "create_empty_object": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "create_empty_object",
         config: { output_name },
@@ -1018,7 +1033,7 @@ function compilePath(
       break;
     }
     case "create_object_manual": {
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       const fields = (asRecord(node.config).fields as ObjectFieldAssignment[]) ?? [];
       steps.push(step(node, {
         type: "create_object_manual",
@@ -1029,7 +1044,7 @@ function compilePath(
     }
     case "parse_json_to_object": {
       const source_text = stringField(node.config, "source_text") ?? "";
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "parse_json_to_object",
         config: { source_text, output_name },
@@ -1038,8 +1053,8 @@ function compilePath(
       break;
     }
     case "set_object_property": {
-      const name = requiredString(node.config, "name", "Variable name is required");
-      const property_key = requiredString(node.config, "property_key", "Property key is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
+      const property_key = requiredString(node.config, "property_key", propertyKeyRequired);
       const value_type = requiredString(node.config, "value_type", "Value type is required") as any;
       const value = stringField(node.config, "value") ?? "";
       steps.push(step(node, {
@@ -1050,8 +1065,8 @@ function compilePath(
       break;
     }
     case "remove_object_property": {
-      const name = requiredString(node.config, "name", "Variable name is required");
-      const property_key = requiredString(node.config, "property_key", "Property key is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
+      const property_key = requiredString(node.config, "property_key", propertyKeyRequired);
       steps.push(step(node, {
         type: "remove_object_property",
         config: { name, property_key },
@@ -1060,7 +1075,7 @@ function compilePath(
       break;
     }
     case "merge_objects": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const value = stringField(node.config, "value") ?? "";
       const deep = !!asRecord(node.config).deep;
       steps.push(step(node, {
@@ -1071,7 +1086,7 @@ function compilePath(
       break;
     }
     case "rename_object_property": {
-      const name = requiredString(node.config, "name", "Variable name is required");
+      const name = requiredString(node.config, "name", variableNameRequired);
       const old_key = requiredString(node.config, "old_key", "Old key is required");
       const new_key = requiredString(node.config, "new_key", "New key is required");
       steps.push(step(node, {
@@ -1082,9 +1097,9 @@ function compilePath(
       break;
     }
     case "get_object_property": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const property_key = requiredString(node.config, "property_key", "Property key is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const property_key = requiredString(node.config, "property_key", propertyKeyRequired);
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "get_object_property",
         config: { source, property_key, output_name },
@@ -1093,8 +1108,8 @@ function compilePath(
       break;
     }
     case "get_object_keys": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "get_object_keys",
         config: { source, output_name },
@@ -1103,8 +1118,8 @@ function compilePath(
       break;
     }
     case "get_object_values": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "get_object_values",
         config: { source, output_name },
@@ -1113,8 +1128,8 @@ function compilePath(
       break;
     }
     case "stringify_object": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "stringify_object",
         config: { source, output_name },
@@ -1123,9 +1138,9 @@ function compilePath(
       break;
     }
     case "execute_object_script": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
       const script = stringField(node.config, "script") ?? "";
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "execute_object_script",
         config: { source, script, output_name },
@@ -1134,9 +1149,9 @@ function compilePath(
       break;
     }
     case "check_object_key_exists": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const property_key = requiredString(node.config, "property_key", "Property key is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const property_key = requiredString(node.config, "property_key", propertyKeyRequired);
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "check_object_key_exists",
         config: { source, property_key, output_name },
@@ -1145,8 +1160,8 @@ function compilePath(
       break;
     }
     case "check_object_empty": {
-      const source = requiredString(node.config, "source", "Source variable name is required");
-      const output_name = requiredString(node.config, "output_name", "Output variable name is required");
+      const source = requiredString(node.config, "source", sourceVariableNameRequired);
+      const output_name = requiredString(node.config, "output_name", outputVariableNameRequired);
       steps.push(step(node, {
         type: "check_object_empty",
         config: { source, output_name },
@@ -1158,7 +1173,7 @@ function compilePath(
       steps.push(step(node, {
         type: "transform_variable",
         config: {
-          source_name: requiredString(node.config, "source_name", "Source output is required"),
+          source_name: requiredString(node.config, "source_name", sourceOutputRequired),
           target_name: requiredString(node.config, "target_name", "Target output is required"),
           expression: stringField(node.config, "expression") ?? "",
         },
@@ -1169,7 +1184,7 @@ function compilePath(
       steps.push(step(node, {
         type: "assert_output",
         config: {
-          name: requiredString(node.config, "name", "Output name is required"),
+          name: requiredString(node.config, "name", outputNameRequired),
           match_mode: stringField(node.config, "match") === "contains" ? "contains" : "equals",
           value: requiredString(node.config, "value", "Expected output value is required"),
         },
@@ -1513,24 +1528,6 @@ function routerGraphConfig(node: GraphNode): RouterGraphConfig {
   return router;
 }
 
-function routerGraphConfigOrNull(node: GraphNode): RouterGraphConfig | null {
-  const record = asRecord(node.config);
-  if (record.mode != null && record.mode !== "first_match") return null;
-  const rawCases = Array.isArray(record.cases) ? record.cases : [];
-  const cases = rawCases.map((item): RouterGraphCase => {
-    const caseValue = asRecord(item);
-    return {
-      id: stringField(caseValue, "id") ?? "",
-      label: typeof caseValue.label === "string" ? caseValue.label : "",
-      condition: caseValue.condition as WorkflowCondition,
-    };
-  });
-  return {
-    mode: "first_match",
-    cases,
-    default_label: stringField(record, "default_label") ?? "Default",
-  };
-}
 
 type RandomChoiceGraphConfig = {
   choices: Array<{ id: string; label: string; weight: number }>;
@@ -1555,39 +1552,8 @@ function randomChoiceGraphConfig(node: GraphNode): RandomChoiceGraphConfig {
   };
 }
 
-function nodeCondition(node: GraphNode): WorkflowCondition {
-  const condition = asRecord(node.config).condition;
-  if (!condition) throw validationError("condition", "Condition is required");
-  return condition as WorkflowCondition;
-}
 
-function unsupportedGraphNodeTypeMessage(nodeType: unknown) {
-  return `Unsupported graph node type: ${typeof nodeType === "string" && nodeType ? nodeType : "unknown"}`;
-}
 
-function setVariableActionConfig(node: GraphNode): ActionConfig {
-  const variables = asRecord(node.config).variables;
-  if (Array.isArray(variables)) {
-    return {
-      type: "set_variable",
-      config: {
-        name: null,
-        value: null,
-        value_type: null,
-        variables: variables as VariableAssignment[],
-      },
-    };
-  }
-  return {
-    type: "set_variable",
-    config: {
-      name: requiredString(node.config, "name", "Variable name is required"),
-      value: stringField(node.config, "value") ?? "",
-      value_type: null,
-      variables: [],
-    },
-  };
-}
 
 function requiredString(config: unknown, field: string, message: string) {
   const value = stringField(config, field);
@@ -1618,47 +1584,12 @@ function stringArray(config: unknown, field: string, message: string): string[] 
   return values;
 }
 
-function stringArrayOrNull(config: unknown, field: string): string[] | null {
-  const values = arrayField(config, field)
-    .filter((value) => typeof value === "string")
-    .map((value) => (value as string).trim())
-    .filter(Boolean);
-  return values.length > 0 ? values : null;
-}
 
 function closeBrowserConfig(config: unknown): boolean {
   return asRecord(config).close_browser === true;
 }
 
-function switchGraphConfig(node: GraphNode): SwitchGraphConfig {
-  const switchConfigValue = switchGraphConfigOrNull(node);
-  if (!switchConfigValue || switchConfigValue.cases.length === 0) {
-    throw validationError("cases", "Switch cases are required");
-  }
-  return switchConfigValue;
-}
 
-function switchGraphConfigOrNull(node: GraphNode): SwitchGraphConfig | null {
-  const record = asRecord(node.config);
-  const rawCases = Array.isArray(record.cases) ? record.cases : [];
-  const cases = rawCases.map((item, index): SwitchGraphCase => {
-    if (typeof item === "string") {
-      return {
-        id: String(index + 1),
-        value: item,
-      };
-    }
-    const caseRecord = asRecord(item);
-    return {
-      id: stringField(caseRecord, "id") ?? String(index + 1),
-      value: stringField(caseRecord, "value") ?? "",
-    };
-  });
-  return {
-    expression: stringField(record, "expression") ?? "",
-    cases,
-  };
-}
 
 function isActionConfig(value: unknown): value is ActionConfig {
   return Boolean(

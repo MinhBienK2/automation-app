@@ -11,6 +11,8 @@ Domain code defines workflow/action/run types and business validation.
 - `electron/backend/graph/compiler.ts`
 - `electron/backend/actions/registry.ts`
 - `electron/backend/actions/validation.ts`
+- `electron/backend/graph/nodeConfigReaders.ts`
+- `electron/backend/shared/validationMessages.ts`
 - `electron/backend/commands.ts`
 - `electron/backend/graph/compiler.test.ts`
 - `electron/backend/actions/validation.test.ts`
@@ -25,6 +27,8 @@ Domain code defines workflow/action/run types and business validation.
 - Orchestration schedule and batch request validation.
 - Builder assist input/output types.
 - Graph-to-action compilation and settings prelude compilation in `electron/backend/graph/compiler.ts`.
+- Readers that turn a graph node's loosely-typed `config` record into structured shapes belong in `electron/backend/graph/nodeConfigReaders.ts`, not in the compiler or the node-semantics validator. Both read the same persisted shapes, so a reader defined in either one drifts.
+- User-facing validation text that appears in more than one module belongs in `electron/backend/shared/validationMessages.ts`. A message authored once stays at its call site.
 
 ## Does Not Belong Here
 
