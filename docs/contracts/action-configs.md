@@ -30,7 +30,20 @@ Every user-addable action type must have:
 - Backend validation when fields have constraints.
 - Runner execution or an explicit unsupported error. Silent success for stubbed actions is not allowed.
 - Backend action registry metadata for owner, palette visibility, and audit risk.
-- Backend action validation and execution coverage in the `electron/backend/actions/` registries.
+
+Three of these sync points are now enforced by the compiler rather than by this
+checklist, so forgetting them fails the build and names the missing action type:
+
+- **Registry metadata** — `ActionRegistryCoverage` in `electron/backend/actions/registry.ts` proves every `ActionType` has a definition.
+- **Execution** — `ActionExecutorMap` is a total map over `ActionType`, so the runner's executor map cannot omit one.
+- **Schema and completeness validator** — `assertActionRegistryCoverage()` runs at module load and checks both halves for every registered type.
+
+The rest of the list is still hand-maintained, and several entries fail
+*silently* when omitted rather than loudly: the palette group catalog (action
+becomes invisible), the config-field update switch (edits become no-ops), the
+field renderers (empty inspector body), the trace summary (trace loses its
+label), and step help (a fallback generator synthesizes filler text, so the
+omission passes the help test too). Tracked in #31.
 
 Browser identity actions such as profile, proxy, user-agent, and download-directory settings are not part of the in-run action contract. Browser identity belongs in project browser profiles selected by Workflow Settings Browser Launch.
 

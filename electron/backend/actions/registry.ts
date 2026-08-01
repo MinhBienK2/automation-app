@@ -70,7 +70,7 @@ const graphInternalActionTypes = new Set<ActionType>([
   "check_boolean_property",
 ]);
 
-export const actionDefinitions: ActionDefinition[] = [
+export const actionDefinitions = [
   definition("navigate", "navigation"),
   definition("wait", "browser_context"),
   definition("random_wait", "browser_context"),
@@ -259,7 +259,28 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("crypto_operation", "variables"),
   definition("switch_frame", "element_interaction"),
   definition("switch_to_parent_frame", "element_interaction"),
-];
+] satisfies readonly ActionDefinition[];
+
+/**
+ * Compile-time proof that every `ActionType` has a definition.
+ *
+ * `definition()` preserves the literal type it is given, so this is the union of
+ * types actually registered above rather than `ActionType` widened.
+ */
+type RegisteredActionType = (typeof actionDefinitions)[number]["type"];
+
+/**
+ * Adding a member to `ActionType` without registering a definition for it makes
+ * the default type argument violate the `extends never` constraint, and the
+ * resulting error names the missing type. This replaces the hand-typed array of
+ * all action types that the registry test used to assert, which went stale
+ * silently every time an action type was added.
+ */
+type AssertEveryActionTypeIsRegistered<
+  MissingFromRegistry extends never = Exclude<ActionType, RegisteredActionType>,
+> = MissingFromRegistry;
+
+export type ActionRegistryCoverage = AssertEveryActionTypeIsRegistered;
 
 const definitionsByType = new Map(actionDefinitions.map((definition) => [definition.type, definition]));
 
@@ -279,11 +300,11 @@ export function unsupportedActionTypeMessage(actionType: unknown) {
   }`;
 }
 
-function definition(
-  type: ActionType,
+function definition<Type extends ActionType>(
+  type: Type,
   owner: ActionOwner,
   auditRisk: ActionDefinition["auditRisk"] = "normal",
-): ActionDefinition {
+): ActionDefinition & { type: Type } {
   return {
     type,
     owner,
