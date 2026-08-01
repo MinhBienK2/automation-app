@@ -3,6 +3,7 @@ import type {
   ActionConfig,
   WorkflowCondition,
 } from "../../../src/types/workflow.js";
+import { listVariableOperations } from "../../../src/types/actionEnums.js";
 import {
   actionDefinitions,
   getActionDefinition,
@@ -682,9 +683,9 @@ const actionValidators = createActionValidatorMap({
       requiredActionString(config.config.name, "name", "Variable name is required"),
       validateRequiredEnumValue(
         operation,
-        ["push", "unshift", "push_unique", "pop", "shift", "remove_by_index", "remove_by_value", "merge", "merge_unique"],
+        listVariableOperations,
         "operation",
-        "Operation must be push, unshift, push_unique, pop, shift, remove_by_index, remove_by_value, merge, or merge_unique",
+        `Operation must be ${listVariableOperations.slice(0, -1).join(", ")}, or ${listVariableOperations.at(-1)}`,
       ),
       needsValue
         ? requiredActionString(config.config.value, "value", "Value is required")
@@ -1191,6 +1192,20 @@ const actionValidators = createActionValidatorMap({
   switch_to_parent_frame: () => null,
 });
 
+/**
+ * The authority on whether an Action Config is complete enough to run.
+ *
+ * This is one of two tiers of the same interface. `parseActionConfigShape` in
+ * `./schemas/index.js` answers the narrower question "can this persisted JSON be
+ * read as an Action Config of its declared type?", which the graph load path
+ * uses to decide what to quarantine. This function answers "is it runnable?",
+ * which is what the authoring path and the compile path enforce.
+ *
+ * The two are asymmetric by design: this tier is strictly stricter. A freshly
+ * dropped `click` node has an empty element target, so the load path must accept
+ * it while this tier reports it. `actionConfigTiers.test.ts` pins that
+ * relationship so it stays deliberate.
+ */
 export function validateActionConfig(config: ActionConfig): ActionValidationError | null {
   const definition = getActionDefinition((config as { type?: unknown }).type);
   if (!definition) {
@@ -1209,15 +1224,32 @@ export function validateActionConfig(config: ActionConfig): ActionValidationErro
   return validator(config);
 }
 
-export function assertActionValidatorCoverage(
+/**
+ * The single module-load coverage assertion over the action registry.
+ *
+ * Every registered action type needs both tiers: a shape schema (absent only for
+ * `quarantined`, which has no authorable config) and a completeness validator.
+ * Previously these were two separate assertions in two modules, one of which
+ * only ran under test. Adding an action type and forgetting either half now
+ * fails at import time with the missing type named.
+ */
+export function assertActionRegistryCoverage(
   validators: Partial<Record<ActionType, unknown>> = actionValidators,
 ): asserts validators is ActionValidatorMap {
   for (const definition of actionDefinitions) {
     if (typeof validators[definition.type] !== "function") {
       throw new Error(`Action ${definition.type} is registered without a validation handler`);
     }
+    if (definition.type !== "quarantined" && !definition.configSchema) {
+      throw new Error(
+        `Action type "${definition.type}" is registered without a Zod schema. ` +
+          `Add a schema in electron/backend/actions/schemas/ and register it in index.ts.`,
+      );
+    }
   }
 }
+
+assertActionRegistryCoverage();
 
 function createActionValidatorMap(validators: ActionValidatorMap): ActionValidatorMap {
   return validators;

@@ -3,7 +3,7 @@ import type {
   WorkflowGraphMigrationNote,
 } from "../../../src/types/workflow.js";
 import { runMigrations } from "../graph/migrations/index.js";
-import { validateActionConfig } from "../actions/schemas/index.js";
+import { parseActionConfigShape } from "../actions/schemas/index.js";
 import { quarantineNode } from "../graph/quarantine.js";
 
 export type GraphLoadResult = {
@@ -32,7 +32,7 @@ export function processGraphOnLoad(graph: WorkflowGraph): GraphLoadResult {
     if (node.node_type !== "action") continue;
     if (node.config === null) continue; // draft placeholder — skip validation
 
-    const result = validateActionConfig(node);
+    const result = parseActionConfigShape(node);
     if (result.ok) continue;
 
     const message =

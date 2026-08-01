@@ -126,11 +126,39 @@ graph as a single JSON blob for export/import.
 
 Every `ActionConfig` variant has a Zod schema registered in
 `electron/backend/actions/schemas/` (one file per action type plus
-`common.ts` for shared sub-schemas). `assertSchemaCoverage()` at module load
-fails the build if any `ActionType` is missing a schema. On load, invalid or
+`common.ts` for shared sub-schemas). Each schema is attached to its
+`ActionDefinition.configSchema`, and `assertActionRegistryCoverage()` — the
+single module-load coverage assertion — fails the build if any `ActionType` is
+missing either its schema or its completeness validator. On load, invalid or
 unknown action configs are converted to `quarantined` placeholder nodes
 rather than crashing; the original payload is preserved verbatim inside the
 quarantined config.
+
+### Two validation tiers
+
+Validation has two tiers, and they are **deliberately asymmetric**:
+
+| Tier | Function | Question | Enforced by |
+| --- | --- | --- | --- |
+| Shape | `parseActionConfigShape` (schema registry) | Can this persisted JSON be read as an Action Config of its declared type? | Graph load path, graph migration pass |
+| Completeness | `validateActionConfig` (validation registry) | Is this config complete enough to run? | Authoring/IPC path, graph node semantics, compile path |
+
+The completeness tier is strictly stricter and is the authority on runnability.
+The shape tier must stay looser because the load path *quarantines* what it
+rejects: a freshly dropped node carries an empty config (`click` defaults to
+`{ target: null }`), so a strict load path would destroy every in-progress node
+on reload. The authoring path instead *reports* incompleteness in the inspector,
+which is non-destructive.
+
+Do not "reconcile" the two verdicts. `electron/backend/actions/actionConfigTiers.test.ts`
+pins the relationship: shape accepts the draft, completeness reports it, and the
+completeness tier never accepts what the shape tier rejects. Conditional
+per-field requirements (for example `update_list_variable`'s per-operation
+required fields) belong in the completeness tier for the same reason.
+
+Closed value sets shared by the `ActionConfig` union and the Zod schemas are
+declared once in `src/types/actionEnums.ts` and derived by both, so they cannot
+drift.
 
 Preserve the current v2 graph JSON contract unless a schema change is intentionally designed.
 

@@ -1,6 +1,5 @@
 import type { z } from "zod";
 import type { ActionConfig, GraphNode } from "../../../../src/types/workflow.js";
-import { actionDefinitions } from "../registry.js";
 
 import { navigateSchema } from "./navigate.js";
 import { clickSchema } from "./click.js";
@@ -406,11 +405,21 @@ export type ValidationResult<T> =
   | { ok: false; reason: "no_schema" | "invalid"; issues: z.ZodIssue[] };
 
 /**
- * Validate a workflow node's action config against its Zod schema.
- * With all schemas registered (PR 1.4), `no_schema` only fires for
- * truly unknown types — which are now quarantined rather than passed through.
+ * Parse a workflow node's action config into a typed Action Config.
+ *
+ * This is the **shape** tier: it answers "can this persisted JSON be read as an
+ * Action Config of its declared type?" and nothing more. It deliberately accepts
+ * configs that are not yet runnable — a freshly dropped `click` node has an
+ * empty element target, and quarantining those on load would destroy work in
+ * progress.
+ *
+ * Whether a config is *complete enough to run* is the other tier of the same
+ * interface: `validateActionConfig` in `../validation.js`. That one is the
+ * authority, and it is what the authoring and compile paths enforce. The two
+ * tiers are asymmetric on purpose; `actionConfigTiers.test.ts` pins the
+ * asymmetry so it cannot drift into an accident.
  */
-export function validateActionConfig(node: GraphNode): ValidationResult<ActionConfig> {
+export function parseActionConfigShape(node: GraphNode): ValidationResult<ActionConfig> {
   const config = node.config as { type?: unknown } | null;
   if (!config || typeof config.type !== "string") {
     return { ok: false, reason: "no_schema", issues: [] };
@@ -423,21 +432,3 @@ export function validateActionConfig(node: GraphNode): ValidationResult<ActionCo
     : { ok: false, reason: "invalid", issues: parsed.error.issues };
 }
 
-/**
- * Module-load assertion: every registered action type (except `quarantined`)
- * must have a corresponding Zod schema. This prevents schema drift when new
- * action types are added to the registry without a schema.
- */
-assertSchemaCoverage();
-
-function assertSchemaCoverage(): void {
-  for (const definition of actionDefinitions) {
-    if (definition.type === "quarantined") continue;
-    if (!actionSchemas[definition.type]) {
-      throw new Error(
-        `Action type "${definition.type}" is registered without a Zod schema. ` +
-          `Add a schema in electron/backend/actions/schemas/ and register it in index.ts.`,
-      );
-    }
-  }
-}

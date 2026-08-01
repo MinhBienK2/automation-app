@@ -11,7 +11,7 @@ import { setVariableSchema } from "./set_variable.js";
 import { callSubflowSchema } from "./call_subflow.js";
 import { takeScreenshotSchema } from "./take_screenshot.js";
 import { executeJsSchema } from "./execute_js.js";
-import { validateActionConfig, actionSchemas } from "./index.js";
+import { parseActionConfigShape, actionSchemas } from "./index.js";
 import type { WorkflowNode } from "../../../../src/types/workflow.js";
 
 function node(config: unknown): WorkflowNode {
@@ -232,9 +232,9 @@ describe("execute_js schema", () => {
   });
 });
 
-describe("validateActionConfig", () => {
+describe("parseActionConfigShape", () => {
   test("valid action returns ok", () => {
-    const result = validateActionConfig(node({
+    const result = parseActionConfigShape(node({
       type: "navigate",
       config: { url: "https://example.com" },
     }));
@@ -242,7 +242,7 @@ describe("validateActionConfig", () => {
   });
 
   test("invalid action returns invalid", () => {
-    const result = validateActionConfig(node({
+    const result = parseActionConfigShape(node({
       type: "navigate",
       config: {},
     }));
@@ -251,7 +251,7 @@ describe("validateActionConfig", () => {
   });
 
   test("unknown action type now returns no_schema (will be quarantined by graphLoader)", () => {
-    const result = validateActionConfig(node({
+    const result = parseActionConfigShape(node({
       type: "totally_fake_action",
       config: { direction: "down" },
     }));
@@ -260,7 +260,7 @@ describe("validateActionConfig", () => {
   });
 
   test("null config returns no_schema", () => {
-    const result = validateActionConfig(node(null));
+    const result = parseActionConfigShape(node(null));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("no_schema");
   });

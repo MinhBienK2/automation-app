@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { ActionConfig } from "../../../src/types/workflow.js";
+import { actionSchemas } from "./schemas/index.js";
 
 export type ActionType = ActionConfig["type"];
 
@@ -20,6 +21,10 @@ export type ActionDefinition = {
   owner: ActionOwner;
   hiddenFromPalette: boolean;
   auditRisk: "normal" | "high";
+  /**
+   * The action's shape schema, taken from the schema registry at construction.
+   * Absent only for `quarantined`, which has no authorable config.
+   */
   configSchema?: z.ZodSchema;
   deprecated?: {
     since: string;
@@ -284,5 +289,6 @@ function definition(
     owner,
     hiddenFromPalette: graphInternalActionTypes.has(type),
     auditRisk,
+    configSchema: actionSchemas[type],
   };
 }

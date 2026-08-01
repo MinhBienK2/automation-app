@@ -3,13 +3,13 @@
 import { describe, expect, test } from "vitest";
 import type { ActionConfig } from "../../../src/types/workflow";
 import {
-  assertActionValidatorCoverage,
+  assertActionRegistryCoverage,
   validateActionConfig,
 } from "./validation";
 
 describe("backend action validation registry", () => {
   test("validates action configs through registry-owned validators", () => {
-    assertActionValidatorCoverage();
+    assertActionRegistryCoverage();
 
     expect(
       validateActionConfig({

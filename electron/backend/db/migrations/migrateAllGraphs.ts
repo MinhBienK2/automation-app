@@ -2,7 +2,7 @@ import type { DbAdapter } from "../dbAdapter.js";
 import crypto from "node:crypto";
 import type { WorkflowGraph } from "../../../../src/types/workflow.js";
 import { runMigrations } from "../../graph/migrations/index.js";
-import { validateActionConfig } from "../../actions/schemas/index.js";
+import { parseActionConfigShape } from "../../actions/schemas/index.js";
 import { quarantineNode } from "../../graph/quarantine.js";
 import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "../../features/workflows/normalizedGraphRepository.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
@@ -166,7 +166,7 @@ async function migrateGraphRow(
   for (let i = 0; i < processed.nodes.length; i++) {
     const node = processed.nodes[i];
     if (node.node_type !== "action") continue;
-    const result = validateActionConfig(node);
+    const result = parseActionConfigShape(node);
     if (result.ok) continue;
 
     const message =
