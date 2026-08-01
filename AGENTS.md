@@ -31,6 +31,20 @@ For complex, big changes and high-risk changes. The appropriate component will b
 ## After Changes
 - Update the relevant `docs/` detail doc only when the change affects contracts or observable behavior. **skip** with request if spec, plan, or verification only.
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live as GitHub issues in `MinhBienK2/tik-automation`, driven by the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — `CONTEXT.md` at the repo root plus ADRs in `docs/adr/`. See `docs/agents/domain.md`.
+
 # RTK - Rust Token Killer (Google Antigravity)
 
 **Usage**: Token-optimized CLI proxy for shell commands.
