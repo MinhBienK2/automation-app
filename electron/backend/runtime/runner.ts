@@ -17,9 +17,7 @@ import {
   browserIdentityEvidence,
   retainedProfileKey,
   type BrowserDriver,
-  type BrowserDriverContext,
   type BrowserDriverLocator,
-  type BrowserDriverPage,
   type RetainedSession,
 } from "../browser/sessionManager.js";
 import { collectNestedNodeIds } from "./nestedExecutionHelpers.js";
@@ -65,13 +63,17 @@ import {
   sleep,
   waitForLocatorState,
 } from "./runtimeHelpers.js";
-import { createRunnerActionExecutors } from "./runnerActionExecutors.js";
+import {
+  createRunnerActionExecutors,
+  type RunnerActionRuntime,
+} from "./runnerActionExecutors.js";
 import { conditionMatches } from "./conditions.js";
 import {
   captureFailureScreenshot,
   collectRunnerOutputs,
   recordRunnerEvidence,
   waitForRunnerDownload,
+  type RunEvidenceArtifact,
 } from "./runnerEvidence.js";
 import { resolveObjectTemplates } from "./variables.js";
 import { withLoopScope } from "./loopScope.js";
@@ -80,9 +82,7 @@ import { withLoopScope } from "./loopScope.js";
 export {
   createCloakBrowserDriver,
   type BrowserDriver,
-  type BrowserDriverContext,
   type BrowserDriverLocator,
-  type BrowserDriverPage,
   type BrowserLaunchOptions,
 } from "../browser/sessionManager.js";
 export type { BrowserDriverFrameLocator } from "../browser/sessionManager.js";
@@ -110,27 +110,17 @@ export type RunnerRunRequest = {
   onProgress?: (state: Partial<RunState>) => void;
 };
 
-type Runtime = {
-  runId: string;
-  settings: WorkflowSettings;
-  context: BrowserDriverContext;
-  page: BrowserDriverPage;
+/**
+ * The runner's full run state: everything an executor can read
+ * (`RunnerActionRuntime`) plus the fields only the runner itself touches.
+ * Declared as an extension rather than a second copy of the shared fields.
+ */
+type Runtime = RunnerActionRuntime & {
   domainPolicy: { allowed_domains: string[] } | null;
-  outputs: Record<string, unknown>;
-  elementRefs: Map<string, RuntimeElementRef>;
   traces: ActionTrace[];
-  evidence: EvidenceArtifact[];
-  clipboard: string;
-  currentStepId: string | null;
-  currentStepNumber: number | null;
-  currentStepName: string | null;
-  currentActionType: string | null;
-  currentActionSummary: string | null;
-  currentStepMetadata: CompiledStepMetadata | null;
+  evidence: RunEvidenceArtifact[];
   liveState: RunState;
   onProgress?: (state: Partial<RunState>) => void;
-  activeFrameXpath?: string | null;
-  signal?: AbortSignal;
   failedStepInfo?: {
     step_id: string;
     step_name: string;
@@ -140,16 +130,6 @@ type Runtime = {
     parent_step_id?: string | null;
     parent_step_ids?: string[] | null;
   } | null;
-};
-
-type EvidenceArtifact = {
-  run_id: string;
-  node_id: string | null;
-  step_number: number | null;
-  action_type: string;
-  artifact_kind: "screenshot" | "download";
-  path: string;
-  created_at: string;
 };
 
 class RunnerStop extends Error {

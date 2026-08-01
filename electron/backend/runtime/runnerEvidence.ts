@@ -5,6 +5,25 @@ import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { finalizeEvidenceOutputs } from "../features/evidence/model.js";
 import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
 
+export type RunEvidenceArtifact = {
+  run_id: string;
+  node_id: string | null;
+  step_number: number | null;
+  action_type: string;
+  artifact_kind: "screenshot" | "download";
+  path: string;
+  created_at: string;
+};
+
+/**
+ * Evidence collection is a runner-level concern, not an executor-level one: the
+ * executor module never reads `evidence`. This is the narrow extra fact these
+ * functions need on top of what an executor is given.
+ */
+export type RunnerEvidenceRuntime = RunnerActionRuntime & {
+  evidence: RunEvidenceArtifact[];
+};
+
 export async function collectRunnerOutputs(runtime: RunnerActionRuntime) {
   try {
     const pageOutputs = await runtime.page.evaluate<Record<string, unknown>>(
@@ -18,7 +37,7 @@ export async function collectRunnerOutputs(runtime: RunnerActionRuntime) {
 
 export async function captureFailureScreenshot(
   appPaths: AppPaths,
-  runtime: RunnerActionRuntime,
+  runtime: RunnerEvidenceRuntime,
 ) {
   if (!runtime.page.screenshot) return;
   const artifact = resolveEvidenceArtifact({
@@ -44,7 +63,7 @@ export async function captureFailureScreenshot(
 
 export async function waitForRunnerDownload(
   appPaths: AppPaths,
-  runtime: RunnerActionRuntime,
+  runtime: RunnerEvidenceRuntime,
   outputName: string,
   timeoutMs: number | null | undefined,
 ) {
@@ -79,7 +98,7 @@ export async function waitForRunnerDownload(
 }
 
 export function recordRunnerEvidence(
-  runtime: RunnerActionRuntime,
+  runtime: RunnerEvidenceRuntime,
   artifact: {
     actionType: string;
     artifactKind: "screenshot" | "download";

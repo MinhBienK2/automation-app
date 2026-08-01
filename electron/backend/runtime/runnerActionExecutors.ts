@@ -4,7 +4,6 @@ import type {
   ActionConfig,
   CompiledNestedAction,
   CompiledStepMetadata,
-  RunState,
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import type {
@@ -19,7 +18,6 @@ import {
 import type { AppPaths } from "../db/database.js";
 import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { isPlainRecord } from "../shared/records.js";
-import type { ActionTrace } from "./actionTrace.js";
 import { withLoopScope } from "./loopScope.js";
 import {
   currentPageHostname,
@@ -51,24 +49,22 @@ import {
 import { locatorFor, locatorForRuntimeElementRef, type RuntimeElementRef } from "./targetResolver.js";
 import { getPath, setPath, deletePath, hasPath } from "./objectHelpers.js";
 
+/**
+ * What an action executor is given.
+ *
+ * This is the narrow half of the runner's run state — the fields an executor can
+ * actually read. `traces`, `evidence`, `liveState`, `domainPolicy` and
+ * `onProgress` were part of this shape and referenced zero times across the whole
+ * executor module; they stay on the runner's own `Runtime`, which extends this
+ * type rather than restating it, so the shared fields are declared once.
+ */
 export type RunnerActionRuntime = {
   runId: string;
   settings: WorkflowSettings;
   context: BrowserDriverContext;
   page: BrowserDriverPage;
-  domainPolicy: { allowed_domains: string[] } | null;
   outputs: Record<string, unknown>;
   elementRefs: Map<string, RuntimeElementRef>;
-  traces: ActionTrace[];
-  evidence: Array<{
-    run_id: string;
-    node_id: string | null;
-    step_number: number | null;
-    action_type: string;
-    artifact_kind: "screenshot" | "download";
-    path: string;
-    created_at: string;
-  }>;
   clipboard: string;
   currentStepNumber: number | null;
   currentStepId: string | null;
@@ -76,23 +72,28 @@ export type RunnerActionRuntime = {
   currentActionType: string | null;
   currentActionSummary: string | null;
   currentStepMetadata: CompiledStepMetadata | null;
-  liveState: RunState;
-  onProgress?: (state: Partial<RunState>) => void;
   activeFrameXpath?: string | null;
   signal?: AbortSignal;
 };
 
-export type RunnerActionExecutorDependencies = {
+/**
+ * Generic over the caller's runtime so the flow-control callbacks can round-trip
+ * the runner's own richer state without widening what the executors themselves
+ * can read: an executor body only ever sees `RunnerActionRuntime` members.
+ */
+export type RunnerActionExecutorDependencies<
+  Runtime extends RunnerActionRuntime = RunnerActionRuntime,
+> = {
   appPaths: AppPaths;
   random: () => number;
   sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
-  enforceNavigationPolicy: (runtime: RunnerActionRuntime, url: string) => Promise<void>;
+  enforceNavigationPolicy: (runtime: Runtime, url: string) => Promise<void>;
   executeWait: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     action: Extract<ActionConfig, { type: "wait" }>,
   ) => Promise<void>;
   locatorForAction: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     config: {
       target?: ActionTargetConfig["target"];
       target_ref?: string | null;
@@ -104,15 +105,15 @@ export type RunnerActionExecutorDependencies = {
     fallbackXpath?: string,
   ) => Promise<BrowserDriverLocator>;
   executeFindElement: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     action: Extract<ActionConfig, { type: "find_element" }>,
   ) => Promise<void>;
   executeDragAndDrop: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     action: Extract<ActionConfig, { type: "drag_and_drop" }>,
   ) => Promise<void>;
   executeScroll: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     action: Extract<ActionConfig, { type: "scroll" }>,
   ) => Promise<void>;
   pressKeyHuman: (
@@ -126,48 +127,48 @@ export type RunnerActionExecutorDependencies = {
     signal?: AbortSignal,
   ) => Promise<void>;
   executePasteClipboard: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     action: Extract<ActionConfig, { type: "paste_clipboard" }>,
   ) => Promise<void>;
   locatorForCustomSelectTrigger: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     action: Extract<ActionConfig, { type: "select_custom_option" }>,
   ) => Promise<BrowserDriverLocator>;
   registerDialogHandler: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     behavior: "accept" | "dismiss",
     promptText?: string,
   ) => void;
   waitForDownload: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     outputName: string,
     timeoutMs: number | null | undefined,
   ) => Promise<string>;
   executeActions: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     actions: CompiledNestedAction[],
   ) => Promise<void>;
   executeLoopBody: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     steps: CompiledNestedAction[],
   ) => Promise<"completed" | "break" | "continue">;
   executeRetry: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     attempts: number,
     delayMs: number,
     steps: CompiledNestedAction[],
     failedSteps: CompiledNestedAction[],
   ) => Promise<void>;
   executeLoop: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     steps: CompiledNestedAction[],
     maxAttempts: number,
     predicate: () => Promise<boolean>,
     timeoutMs?: number | null,
   ) => Promise<"predicate_false" | "max_attempts" | "timeout" | "break">;
-  conditionMatches: (runtime: RunnerActionRuntime, condition: unknown) => Promise<boolean>;
+  conditionMatches: (runtime: Runtime, condition: unknown) => Promise<boolean>;
   recordEvidence: (
-    runtime: RunnerActionRuntime,
+    runtime: Runtime,
     artifact: {
       actionType: string;
       artifactKind: "screenshot" | "download";
@@ -212,9 +213,9 @@ function getMockValueForVariable(name: string): string {
   return `mock_${name}`;
 }
 
-export function createRunnerActionExecutors(
-  runtime: RunnerActionRuntime,
-  deps: RunnerActionExecutorDependencies,
+export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>(
+  runtime: Runtime,
+  deps: RunnerActionExecutorDependencies<Runtime>,
 ): ActionExecutorMap {
   const cleanFlattenedKeys = (outputs: Record<string, unknown>, varName: string) => {
     const prefix = varName + ".";

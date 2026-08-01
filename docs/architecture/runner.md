@@ -12,6 +12,19 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Evidence and artifacts: `electron/backend/evidence/` (`artifacts.ts`, `model.ts`)
 - Helper modules: `electron/backend/runtime/` (`actionTrace`, `targetResolver`, `interactionPrimitives`, `interactionActions`, `runtimeHelpers`, `conditions`, `runnerEvidence`, `domainPolicy`, `variables`)
 - Unit and smoke tests: `runner.test.ts`, `runner.smoke.test.ts`, `sessionManager.test.ts`
+- Shared executor test fixtures: `electron/backend/runtime/testSupport/executorFixtures.ts` (kept outside a `*.test.ts` name so the fixtures are type-checked against the real runtime and dependency shapes)
+
+## Runtime Shapes
+
+The run state is declared once and narrowed by tier, not restated:
+
+- `RunnerActionRuntime` (`runnerActionExecutors.ts`) is what an action executor is given — the fields an executor can read.
+- `Runtime` (`runner.ts`) extends it with the runner-only fields: `domainPolicy`, `traces`, `evidence`, `liveState`, `onProgress`, `failedStepInfo`.
+- `RunnerEvidenceRuntime` (`runnerEvidence.ts`) extends it with `evidence`, the one extra fact evidence recording needs.
+
+`RunnerActionExecutorDependencies` is generic over the caller's runtime, so the
+flow-control callbacks round-trip the runner's own richer state without widening
+what an executor body can read.
 
 ## Current Behavior
 
