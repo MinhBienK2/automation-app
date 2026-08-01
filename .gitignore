@@ -35,8 +35,6 @@ vite.config.js
 *.sln
 *.sw?
 
-CLAUDE.md
-
 .worktrees/
 .stitch/
 .gitnexus
