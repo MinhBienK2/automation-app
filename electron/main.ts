@@ -99,13 +99,16 @@ function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
   >) {
     ipcMain.handle(channel, async (_event, ...args: unknown[]) => {
       try {
+        // `WorkflowIpcContract` in ./ipcContract.ts proves every channel name is
+        // a handler name, so this lookup is total. Without that proof a missing
+        // handler surfaced here as an oblique TS7053 on the indexed access.
         const handler = handlers[methodName] as (...handlerArgs: unknown[]) => unknown;
         const value = await handler(...args);
 
         // Auto ensure default project/profiles model exists on login/me
         if (methodName === "login" || methodName === "me") {
-          if (value && typeof (handlers as any).ensureProjectModelReady === "function") {
-            await (handlers as any).ensureProjectModelReady();
+          if (value) {
+            await handlers.ensureProjectModelReady();
           }
         }
 

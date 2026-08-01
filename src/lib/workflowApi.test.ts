@@ -1,4 +1,6 @@
 import { describe, expect, test } from "vitest";
+import * as workflowApi from "./workflowApi";
+import { workflowIpcChannels } from "../../electron/ipc";
 import {
   resetWorkflowBridge,
   workflowBridgeMock,
@@ -716,3 +718,51 @@ function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {
     human_preset: "default",
   };
 }
+
+describe("workflow api / ipc channel parity", () => {
+  /**
+   * The renderer wrappers are the one of the four command lists that no type
+   * constrains: the channel map, the backend handlers and the bridge type are
+   * tied together by `WorkflowIpcContract` in electron/ipcContract.ts, but a
+   * wrapper can be forgotten or renamed freely. This asserts the correspondence
+   * that the compiler cannot.
+   */
+  const wrappersIntentionallyAbsent = new Set([
+    // Read/written directly off `window.workflowApi` with optional chaining, by
+    // App.tsx and useThemePreferences. Those call sites must tolerate the bridge
+    // being absent, which the throwing wrappers in this module deliberately do
+    // not. Giving them wrappers means deciding how absence is expressed.
+    "getAppSettings",
+    "saveAppSettings",
+  ]);
+
+  test("every IPC channel has a renderer wrapper, or is a documented exception", () => {
+    const wrappers = new Set(
+      Object.entries(workflowApi)
+        .filter(([, value]) => typeof value === "function")
+        .map(([name]) => name),
+    );
+
+    const missing = Object.keys(workflowIpcChannels).filter(
+      (channel) => !wrappers.has(channel) && !wrappersIntentionallyAbsent.has(channel),
+    );
+
+    expect(missing).toEqual([]);
+  });
+
+  test("no renderer wrapper is named for a channel that does not exist", () => {
+    const channels = new Set(Object.keys(workflowIpcChannels));
+    const orphaned = Object.entries(workflowApi)
+      .filter(([, value]) => typeof value === "function")
+      .map(([name]) => name)
+      .filter((name) => !channels.has(name));
+
+    expect(orphaned).toEqual([]);
+  });
+
+  test("the documented exceptions really are absent", () => {
+    for (const name of wrappersIntentionallyAbsent) {
+      expect(name in workflowApi).toBe(false);
+    }
+  });
+});
