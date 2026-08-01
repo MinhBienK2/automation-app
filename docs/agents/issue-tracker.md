@@ -1,6 +1,8 @@
 # Issue tracker: GitHub
 
-Issues and PRDs for this repo live as GitHub issues in `MinhBienK2/tik-automation`. Use the `gh` CLI for all operations.
+Issues and PRDs for this repo live as GitHub issues in `MinhBienK2/automation-app`. Use the `gh` CLI for all operations.
+
+> Note: the `origin` remote still points at the repo's former name, `MinhBienK2/tik-automation`. GitHub redirects it, so `gh` resolves correctly from inside a clone — but prefer the canonical `MinhBienK2/automation-app` in any explicit `gh api repos/<owner>/<repo>/…` path.
 
 ## Conventions
 

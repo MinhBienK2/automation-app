@@ -35,7 +35,7 @@ For complex, big changes and high-risk changes. The appropriate component will b
 
 ### Issue tracker
 
-Issues and PRDs live as GitHub issues in `MinhBienK2/tik-automation`, driven by the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues and PRDs live as GitHub issues in `MinhBienK2/automation-app`, driven by the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
