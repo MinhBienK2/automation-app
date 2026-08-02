@@ -24,7 +24,10 @@ export function SearchInput({
       <label htmlFor={inputId} className="sr-only">
         {label}
       </label>
-      <div className="absolute left-3 text-fg-muted pointer-events-none">
+      {/* z-10: daisyUI's `.input` is `position: relative` with an opaque
+          background, so as a later positioned sibling it paints over this
+          icon. The trailing clear button is unaffected (it comes after). */}
+      <div className="absolute left-3 z-10 text-fg-muted pointer-events-none">
         <Search size={16} aria-hidden="true" />
       </div>
       <Input

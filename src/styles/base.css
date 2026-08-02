@@ -476,6 +476,21 @@ details.dropdown summary.select::-webkit-details-marker {
 }
 
 /* Toggle Switch Overrides */
+
+/* daisyUI reads `--border` as a border WIDTH, but the token block above
+   defines `--border` as a colour and does so UNLAYERED, so it beats daisyUI's
+   layered `--border: 1px`. That makes `.toggle`'s
+   `width: calc(var(--size) * 2 - (var(--border) + var(--toggle-p)) * 2)`
+   invalid and collapses the switch to an ~8px sliver. Restoring the width on
+   `.toggle` itself is enough: a declaration matching the element always beats
+   the value inherited from `:root`, in both themes.
+   NOTE: the same collision invalidates the `border: var(--border) solid …`
+   shorthand daisyUI sets on .btn/.input/.select/.textarea/.checkbox/.badge —
+   harmless today only because the rules below re-declare those borders. */
+.toggle {
+  --border: 1px;
+}
+
 .toggle {
   border: 1.5px solid var(--border-emphasized) !important;
   background-color: var(--surface-elevated) !important;
@@ -616,6 +631,13 @@ details.dropdown summary.select::-webkit-details-marker {
   background-color: var(--surface-elevated) !important;
   color: var(--fg-secondary) !important;
   border-color: var(--border) !important;
+}
+
+/* `.badge` above forces `border: 1px solid transparent !important`, and every
+   variant here restores a border-color — except the outline variant, which had
+   none, so it rendered as bare text with an invisible ring. */
+.badge-outline {
+  border-color: var(--border-emphasized) !important;
 }
 
 @import "./auth.css";
