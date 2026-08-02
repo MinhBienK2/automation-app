@@ -46,3 +46,12 @@ docs/superpowers/
 graphify-out/
 
 **/__pycache__/*
+# design-sync (claude.ai/design) — generated build output and machine state.
+# The durable inputs under .design-sync/ (config.json, NOTES.md,
+# conventions.md, previews/, overrides/, build-ds-pkg.mjs) ARE committed.
+.ds-sync/
+.ds-pkg/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

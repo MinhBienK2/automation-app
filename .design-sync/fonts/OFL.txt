@@ -1,0 +1,9 @@
+Inter, Plus Jakarta Sans and JetBrains Mono are licensed under the
+SIL Open Font License, Version 1.1.
+
+Full license text: https://openfontlicense.org/open-font-license-official-text/
+
+Upstream sources:
+  Inter              https://fonts.google.com/specimen/Inter
+  Plus Jakarta Sans  https://fonts.google.com/specimen/Plus+Jakarta+Sans
+  JetBrains Mono     https://fonts.google.com/specimen/JetBrains+Mono
