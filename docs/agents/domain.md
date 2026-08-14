@@ -12,7 +12,13 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 
 ## This repo's existing docs
 
-Neither `CONTEXT.md` nor `docs/adr/` exists yet — `/domain-modeling` will create them lazily. Until then, the existing hand-written docs are the domain material: start at the router `docs/task-routes.md`, then `docs/domain/` (product model, workflow lifecycle, execution semantics, invariants), `docs/contracts/`, and `docs/architecture/`.
+`CONTEXT.md` exists at the repo root and is the glossary — read it for the vocabulary, especially the Execution Surface terms that separate web from desktop work.
+
+`docs/adr/` exists. Read the ADRs touching your area before changing it; `0001-desktop-execution-surface.md` fixes where the web and desktop run flows separate and records what is explicitly forbidden.
+
+Alongside those, the hand-written docs remain the behavioural material: start at the router `docs/task-routes.md`, then `docs/domain/` (product model, workflow lifecycle, execution semantics, invariants, and `domain/desktop/` for the Desktop Surface), `docs/contracts/`, and `docs/architecture/`.
+
+`docs/research/` holds measured findings about third-party tools. Prefer it over vendor documentation where the two disagree — it exists because they did.
 
 ## File structure
 

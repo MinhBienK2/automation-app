@@ -89,6 +89,13 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 - **Verify**: `src/features/workflows/components/RunStatusBar.tsx`, `RunIssuePanel.tsx`, `RunMonitorDrawer.tsx`, `src/features/runs/`, `src/lib/workflowUi.ts`, `electron/backend/runtime/runManager.ts`
 - **Checks**: `npm test -- src/features/workflows/pages/`, `npm test -- electron/backend/commands.test.ts`
 
+### Work On Desktop Automation (Desktop Surface)
+- **Read**: `adr/0001-desktop-execution-surface.md` first — it fixes the seam between the web and desktop run flows. Then `architecture/desktop-runner.md`, plus the `domain/desktop/` file for the area: `capability-tiers.md`, `locator-model.md`, `desktop-target.md`, `action-family.md`, `secrets-and-evidence.md`
+- **Verify**: `electron/backend/surfaces/desktop/`, `electron/backend/actions/schemas/desktop/`, `electron/backend/runtime/surface.ts`
+- **Background**: `research/cua-driver-windows.md` holds the measured driver behaviour. Read it before trusting any `cua-driver` documentation — several documented behaviours did not hold on Windows.
+- **Checks**: focused desktop surface tests, `npx tsc --noEmit`, `npm run build:electron`
+- **Do not**: make the desktop driver implement `BrowserDriver*` types — ADR-0001 forbids it, with reasons.
+
 ### Fix A Bug
 - **Read**: route for the affected area; `domain/cross-feature-impact-map.md` if cross-layer
 - **Checks**: add the smallest focused failing test first, then run affected route checks.
