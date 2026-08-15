@@ -110,6 +110,16 @@ export function setWorkflowDesktopTarget(workflowId: string, targetId: string) {
   return bridge().setWorkflowDesktopTarget(workflowId, targetId);
 }
 
+/**
+ * Opens the application and reads its window once, for the element picker.
+ *
+ * Slow by nature — it launches a real application and waits for a window — and
+ * refused outright while a run is driving the same Desktop Target.
+ */
+export function inspectDesktopTarget(targetId: string) {
+  return bridge().inspectDesktopTarget(targetId);
+}
+
 export function listBrowserProfiles(projectId: string) {
   return bridge().listBrowserProfiles(projectId);
 }

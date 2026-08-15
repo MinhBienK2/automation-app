@@ -18,9 +18,9 @@ import { migrations } from "./migrations/migrations.js";
  */
 function toAnonymousPlaceholders(
   sql: string,
-  params: unknown[],
-): { sql: string; params: unknown[] } {
-  const ordered: unknown[] = [];
+  params: any[],
+): { sql: string; params: any[] } {
+  const ordered: any[] = [];
   const translated = sql.replace(/\$(\d+)/g, (_match, digits: string) => {
     ordered.push(params[Number(digits) - 1]);
     return "?";
@@ -33,7 +33,7 @@ function toAnonymousPlaceholders(
     : { sql: translated, params: ordered };
 }
 
-const nullForUndefined = (value: unknown) => (value === undefined ? null : value);
+const nullForUndefined = (value: any) => (value === undefined ? null : value);
 
 export class TestDbAdapter implements DbAdapter {
   private db: DatabaseSync;

@@ -12,6 +12,7 @@
  */
 
 import type { CommandError } from "../../runtime/runManager.js";
+import type { DesktopInspection } from "../../surfaces/desktop/inspector.js";
 import type { DesktopTargetRepository } from "./desktopTargetRepository.js";
 import type {
   DesktopTarget,
@@ -33,6 +34,12 @@ export type DesktopTargetCommandDeps = {
    * application the run is not actually using.
    */
   activeDesktopTargetConflict: (targetId: string) => CommandError | null;
+  /**
+   * Launches the application and reads its tree once, for the element picker.
+   * Lives in `surfaces/desktop/` and arrives as a callback for the same reason
+   * the run's opener does — this layer never imports a driver.
+   */
+  inspectDesktopTarget: (target: DesktopTarget) => Promise<DesktopInspection>;
 };
 
 export function createDesktopTargetCommands(deps: DesktopTargetCommandDeps) {
@@ -123,12 +130,31 @@ export function createDesktopTargetCommands(deps: DesktopTargetCommandDeps) {
     return updated;
   }
 
+  /**
+   * Opens the application so the operator can pick an element out of it.
+   *
+   * Takes the same refusal as editing does, and for a stronger reason: this one
+   * *drives* the application. Two sessions in one window means a picker
+   * launching, snapshotting and then closing an application a run is in the
+   * middle of using.
+   */
+  async function inspectDesktopTarget(targetId: string): Promise<DesktopInspection> {
+    const conflict = deps.activeDesktopTargetConflict(targetId);
+    if (conflict) throw conflict;
+
+    const target = await desktopTargets.getDesktopTarget(targetId);
+    if (!target) throw commandError("Desktop Target not found", "desktop_target_id");
+
+    return await deps.inspectDesktopTarget(target);
+  }
+
   return {
     listDesktopTargets,
     createDesktopTarget,
     updateDesktopTarget,
     deleteDesktopTarget,
     setWorkflowDesktopTarget,
+    inspectDesktopTarget,
   };
 }
 

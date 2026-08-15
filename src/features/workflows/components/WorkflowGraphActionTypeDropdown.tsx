@@ -3,7 +3,7 @@ import type { ActionConfig, ActionType, ExecutionSurfaceKind } from "../../../ty
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { useWorkflowSurface } from "../state/WorkflowSurfaceContext";
+import { useWorkflowSurfaceKind } from "../state/WorkflowSurfaceContext";
 import { actionLabels } from "../../../lib/workflowUi";
 import {
   actionDescriptions,
@@ -43,7 +43,7 @@ export function ActionTypeDropdown({
   /** Overrides the open workflow's surface. Tests and previews only. */
   surface?: ExecutionSurfaceKind;
 }) {
-  const contextSurface = useWorkflowSurface();
+  const contextSurface = useWorkflowSurfaceKind();
   const surface = surfaceOverride ?? contextSurface;
   // The other family is hidden rather than disabled: a workflow cannot mix
   // surfaces, so a greyed-out list of actions that can never be enabled is

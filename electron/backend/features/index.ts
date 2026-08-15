@@ -5,6 +5,8 @@ import { createScheduleCommandHandlers } from "./scheduling/scheduleCommands.js"
 import { RunManager } from "../runtime/runManager.js";
 import { DesktopTargetRepository } from "./projects/desktopTargetRepository.js";
 import { createDesktopSurfaceOpener } from "../surfaces/desktop/surfaceOpener.js";
+import { createDesktopInspector } from "../surfaces/desktop/inspector.js";
+import type { CapabilityTier } from "../../../src/types/desktopTargets.js";
 import { IdentityRepository } from "./identities/identityRepository.js";
 import { createProjectCommandCascades } from "./projects/projectCommandCascades.js";
 import { ProjectPackageService } from "./projects/projectPackageService.js";
@@ -53,8 +55,14 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
   // The composition root is the only place `runtime/` and `surfaces/desktop/`
   // meet, which is what keeps the runner free of any desktop import (ADR-0001).
+  const recordObservedTier = (targetId: string, tier: CapabilityTier) =>
+    desktopTargetRepository.recordObservedTier(targetId, tier);
+
   const openDesktopSurfaceFor = createDesktopSurfaceOpener({
-    onTierObserved: (targetId, tier) => desktopTargetRepository.recordObservedTier(targetId, tier),
+    onTierObserved: recordObservedTier,
+  });
+  const inspectDesktopTargetWindow = createDesktopInspector({
+    onTierObserved: recordObservedTier,
   });
 
   const runManager = new RunManager({
@@ -197,6 +205,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     assignWorkflowDesktopTarget: (workflowId, targetId) =>
       repository.assignWorkflowDesktopTarget(workflowId, targetId),
     activeDesktopTargetConflict: (targetId) => runManager.activeDesktopTargetConflict(targetId),
+    inspectDesktopTarget: (target) => inspectDesktopTargetWindow(target),
   });
   const subflowCommands = createSubflowCommands(deps);
   const packageCommands = createPackageCommands(deps);

@@ -23,6 +23,7 @@ const methodNames: BridgeMethodName[] = [
   "updateDesktopTarget",
   "deleteDesktopTarget",
   "setWorkflowDesktopTarget",
+  "inspectDesktopTarget",
   "createBrowserProfile",
   "updateBrowserProfile",
   "deleteBrowserProfile",

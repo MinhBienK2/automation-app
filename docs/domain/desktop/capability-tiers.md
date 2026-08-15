@@ -68,6 +68,10 @@ An authoring-time probe measures the window that happens to be open then, and
 the tier is a property of the individual window, so the answer would be a guess
 dressed as a measurement by the time a run used it.
 
+The element picker is the exception, and it is not really one: it launches the
+application at the operator's request and reads its window, so what it sees is
+a measurement of the same kind a run makes. It is recorded the same way.
+
 ## The Pixel tier is opt-in per step
 
 Pixel addressing is never chosen automatically. It is not a graceful fallback; it is a different, more fragile contract, and silently switching to it converts a loud failure into a workflow that clicks the wrong thing.

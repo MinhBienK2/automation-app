@@ -4,6 +4,7 @@ import { AdvancedActionFields } from "./ActionConfigAdvancedFields";
 import { BrowserActionFields } from "./ActionConfigBrowserFields";
 import { CaptureActionFields } from "./ActionConfigCaptureFields";
 import { CoreActionFields } from "./ActionConfigCoreFields";
+import { DesktopActionFields } from "./ActionConfigDesktopFields";
 import { ElementActionFields } from "./ActionConfigElementFields";
 import { LogicActionFields } from "./ActionConfigLogicFields";
 import { OutputActionFields } from "./ActionConfigOutputFields";
@@ -22,6 +23,10 @@ type ActionFieldsProps = {
 type ActionFieldRenderer = (props: ActionFieldsProps) => ReactNode | null;
 
 const actionFieldRenderers: ActionFieldRenderer[] = [
+  // First, and it claims every `desktop_*` type: the renderers below are web
+  // shapes, and one of them matching a desktop action would be a form of
+  // fields that step does not have.
+  DesktopActionFields,
   CoreActionFields,
   ElementActionFields,
   CaptureActionFields,

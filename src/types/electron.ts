@@ -24,6 +24,7 @@ import type {
   SettingsValidationIssue,
   BrowserProfile,
   BrowserProfileInput,
+  DesktopInspection,
   DesktopTarget,
   DesktopTargetInput,
   BrowserProfileCleanupResult,
@@ -95,6 +96,11 @@ export type WorkflowElectronBridge = {
   ): Promise<DesktopTarget>;
   deleteDesktopTarget(targetId: string): Promise<void>;
   setWorkflowDesktopTarget(workflowId: string, targetId: string): Promise<Workflow>;
+  /**
+   * Launches the application and reads its window once, for the element picker.
+   * The tree comes back without element values — see `PickerElement`.
+   */
+  inspectDesktopTarget(targetId: string): Promise<DesktopInspection>;
   setWorkflowBrowserProfile(
     workflowId: string,
     profileId: string,

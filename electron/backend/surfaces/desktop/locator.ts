@@ -67,7 +67,7 @@ export function ancestorsOf(
  * but anything may sit between them. That is the point: unnamed layout
  * containers come and go, and a locator should not break when they do.
  */
-function ancestorChainMatches(
+export function ancestorChainMatches(
   required: AncestorStep[],
   chain: SnapshotElement[],
 ): boolean {

@@ -18,6 +18,7 @@ export const workflowIpcChannels = {
   updateDesktopTarget: "workflow:updateDesktopTarget",
   deleteDesktopTarget: "workflow:deleteDesktopTarget",
   setWorkflowDesktopTarget: "workflow:setWorkflowDesktopTarget",
+  inspectDesktopTarget: "workflow:inspectDesktopTarget",
   createSubflow: "workflow:createSubflow",
   listSubflows: "workflow:listSubflows",
   listProjectSubflowUsages: "workflow:listProjectSubflowUsages",

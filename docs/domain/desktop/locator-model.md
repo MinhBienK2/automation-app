@@ -99,3 +99,15 @@ Deliberately **not** shared code. A web locator resolves against a DOM with CSS,
 The operator does not hand-write these. Recording is out of scope for this effort, so authoring needs an **element picker**: snapshot the window, present the tree, let the operator choose, and generate the most stable locator that uniquely identifies it — preferring `automationId`, then name plus ancestry, then an ordinal, showing which one it settled on and why.
 
 Locator resolution and the picker are the same algorithm run in opposite directions. Build them together or they will disagree.
+
+### How it is built
+
+`surfaces/desktop/picker.ts`, beside the resolver, and three things keep the two halves one model:
+
+- **Every suggestion is resolved before it is returned.** `suggestDesktopLocator` ends by calling `resolveDesktopLocator` on what it just wrote and checking it comes back to the same element. A disagreement is a bug in the picker, but the operator finds out in the dialog rather than on a run three weeks later.
+- **The suggestion is computed in the backend, for every element, up front.** The renderer displays a locator and never composes one. Writing the algorithm twice — once to resolve, once to author — is precisely how the two drift apart. The cost is quadratic in the tree; a 410-element File Explorer window is the largest measured, and it is nothing next to the launch that produced it.
+- **`ancestry` means the chain did the narrowing.** A locator that carries ancestors it never needed matched by name, and recording it as ancestry would hide the day the name stops being unique.
+
+Authoring launches the application, reads one snapshot, and closes it again (`surfaces/desktop/inspector.ts`). There is no way around the launch: a Desktop Locator resolves against a live tree, and there is no live tree until something is running. The tree is redacted on the way out — `PickerElement` has no `value` field, because a `Document`'s value is the operator's whole open file, and no `element_token`, because it has expired by the time anyone clicks.
+
+A picking session takes the same Desktop Target lock a run does. It drives the application, and a picker that launched, snapshotted and then closed an application mid-run would be worse than a refusal.

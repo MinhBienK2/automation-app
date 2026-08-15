@@ -757,6 +757,25 @@ function AppInner() {
       )
     : projectsWorkspace.desktopTargets;
 
+  // The element picker has to launch the application to read a tree out of it,
+  // so the inspector needs the workflow's Desktop Target, not only its surface.
+  const openWorkflowDesktopTargetId =
+    workflowsWorkspace.detail?.workflow.desktop_target_id ?? null;
+  const openWorkflowSurface = useMemo(
+    () => ({
+      kind: workflowsWorkspace.detail?.workflow.surface ?? ("web" as const),
+      desktopTargetId: openWorkflowDesktopTargetId,
+      desktopTargetName: selectedDesktopTargets.find(
+        (target) => target.id === openWorkflowDesktopTargetId,
+      )?.name,
+    }),
+    [
+      workflowsWorkspace.detail?.workflow.surface,
+      openWorkflowDesktopTargetId,
+      selectedDesktopTargets,
+    ],
+  );
+
   const projectStats = useMemo(() => {
     const stats: Record<string, { workflows: number; subflows: number; profiles: number }> = {};
     for (const project of projectsWorkspace.projects) {
@@ -845,7 +864,7 @@ function AppInner() {
       onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
       screen={nav.screen}
     >
-      <WorkflowSurfaceProvider value={workflowsWorkspace.detail?.workflow.surface ?? "web"}>
+      <WorkflowSurfaceProvider value={openWorkflowSurface}>
       {nav.screen === "overview" ? (
         <OperationsOverviewPage
           overview={operationsOverview}

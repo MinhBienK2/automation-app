@@ -56,6 +56,7 @@ const workflowApi: WorkflowElectronBridge = {
   deleteDesktopTarget: (targetId) => invokeWorkflow("deleteDesktopTarget", targetId),
   setWorkflowDesktopTarget: (workflowId, targetId) =>
     invokeWorkflow("setWorkflowDesktopTarget", workflowId, targetId),
+  inspectDesktopTarget: (targetId) => invokeWorkflow("inspectDesktopTarget", targetId),
   setWorkflowBrowserProfile: (workflowId, profileId) =>
     invokeWorkflow("setWorkflowBrowserProfile", workflowId, profileId),
   resetBrowserProfileIdentity: (profileId) =>

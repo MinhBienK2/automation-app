@@ -94,6 +94,61 @@ export type DesktopTarget = {
   updated_at: string;
 };
 
+/**
+ * One node of the tree the element picker draws.
+ *
+ * Deliberately not the driver's snapshot element, and the two omissions are the
+ * point. `value` is missing because that is where a `Document` element keeps
+ * the operator's whole open file, the largest incidental-secret source in the
+ * system. `element_token` is missing because it is scoped to a snapshot that
+ * has expired by the time anyone clicks, so keeping it would only invite
+ * someone to store it.
+ */
+export type PickerElement = {
+  index: number;
+  role: string;
+  label?: string;
+  automationId?: string;
+  depth: number;
+  parentIndex?: number;
+  /** Lets the picker show where an element is, and offer a pixel fallback. */
+  frame?: { x: number; y: number; w: number; h: number };
+  /**
+   * The locator that would be written for this element, computed where the
+   * resolver lives rather than in the renderer. Writing the suggestion twice —
+   * once to resolve, once to author — is how the two halves drift apart.
+   */
+  suggestion: LocatorSuggestion;
+};
+
+export type PickerTree = {
+  elements: PickerElement[];
+  /** Why the tree is empty, when it is. */
+  degradedReason?: string;
+};
+
+/** What one authoring look at a Desktop Target's window produced. */
+export type DesktopInspection = {
+  tier: CapabilityTier;
+  tree: PickerTree;
+  warnings: string[];
+};
+
+/**
+ * A locator the picker wrote, with the reasoning it used.
+ *
+ * The explanation is not decoration: `locator-model.md` asks the picker to show
+ * which identifier it settled on *and why*, because the difference between "the
+ * only button with that name" and "the second of four identical buttons" is the
+ * difference between a step that lasts and one that breaks on the next release.
+ */
+export type LocatorSuggestion = {
+  locator: DesktopLocator;
+  matchedBy: "automation_id" | "name" | "ancestry" | "ordinal";
+  explanation: string;
+  fragile: boolean;
+};
+
 export type DesktopTargetInput = {
   name: string;
   description?: string | null;
