@@ -3,6 +3,8 @@ import { validateWorkflowGraph as validateGraph } from "../graph/compiler.js";
 import { BrowserWorkflowRunner } from "../runtime/runner.js";
 import { createScheduleCommandHandlers } from "./scheduling/scheduleCommands.js";
 import { RunManager } from "../runtime/runManager.js";
+import { DesktopTargetRepository } from "./projects/desktopTargetRepository.js";
+import { createDesktopSurfaceOpener } from "../surfaces/desktop/surfaceOpener.js";
 import { IdentityRepository } from "./identities/identityRepository.js";
 import { createProjectCommandCascades } from "./projects/projectCommandCascades.js";
 import { ProjectPackageService } from "./projects/projectPackageService.js";
@@ -26,6 +28,7 @@ import { createFeatureHelpers } from "./featureHelpers.js";
 
 import { createWorkflowCommands } from "./workflows/workflowCommands.js";
 import { createProjectCommands } from "./projects/projectCommands.js";
+import { createDesktopTargetCommands } from "./projects/desktopTargetCommands.js";
 import { createSubflowCommands } from "./workflows/subflowCommands.js";
 import { createPackageCommands } from "./workflows/packageCommands.js";
 import { createRecordingCommands } from "./recording/recordingCommands.js";
@@ -46,7 +49,33 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     driver: context.recorderDriver,
     usesDefaultDriver: context.recorderUsesDefaultDriver,
   });
-  const runManager = new RunManager({ database: context.database, runner });
+  const desktopTargetRepository = new DesktopTargetRepository(context.database);
+
+  // The composition root is the only place `runtime/` and `surfaces/desktop/`
+  // meet, which is what keeps the runner free of any desktop import (ADR-0001).
+  const openDesktopSurfaceFor = createDesktopSurfaceOpener({
+    onTierObserved: (targetId, tier) => desktopTargetRepository.recordObservedTier(targetId, tier),
+  });
+
+  const runManager = new RunManager({
+    database: context.database,
+    runner,
+    openDesktopSurface: async ({ workflow, runId, retention, signal }) => {
+      if (workflow.surface !== "desktop") return null;
+      if (!workflow.desktop_target_id) {
+        throw new Error(
+          `"${workflow.name}" is a desktop workflow with no Desktop Target chosen. Pick the application it drives in Workflow Settings.`,
+        );
+      }
+      const target = await desktopTargetRepository.getDesktopTarget(workflow.desktop_target_id);
+      if (!target) {
+        throw new Error(
+          `The Desktop Target "${workflow.desktop_target_id}" no longer exists. Choose another in Workflow Settings.`,
+        );
+      }
+      return openDesktopSurfaceFor({ target, runId, retention, signal });
+    },
+  });
 
   const settingsService = new WorkflowSettingsService({
     directoryReadable,
@@ -161,6 +190,14 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
   const workflowCommands = createWorkflowCommands(deps);
   const projectCommands = createProjectCommands(deps);
+  const desktopTargetCommands = createDesktopTargetCommands({
+    desktopTargets: desktopTargetRepository,
+    requireProject: helpers.requireProject,
+    requireWorkflow: helpers.requireWorkflow,
+    assignWorkflowDesktopTarget: (workflowId, targetId) =>
+      repository.assignWorkflowDesktopTarget(workflowId, targetId),
+    activeDesktopTargetConflict: (targetId) => runManager.activeDesktopTargetConflict(targetId),
+  });
   const subflowCommands = createSubflowCommands(deps);
   const packageCommands = createPackageCommands(deps);
   const recordingCommands = createRecordingCommands(deps);
@@ -172,6 +209,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
   return {
     ...projectCommands,
+    ...desktopTargetCommands,
     ...subflowCommands,
     ...workflowCommands,
     ...settingsCommands,

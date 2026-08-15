@@ -9,9 +9,33 @@
  *   elements are optional here for that reason, not for convenience. These
  *   change when the driver changes.
  * - **Domain shapes** (`DesktopTarget`, `DesktopLocator`, `WindowBinding`, …)
- *   are ours, defined in `docs/domain/desktop/`. These change when a product
- *   decision changes, and a driver release must never force one open.
+ *   are ours, specified in `docs/domain/desktop/`. These change when a product
+ *   decision changes, and a driver release must never force one open. The ones
+ *   that cross the IPC boundary are declared in `src/types/desktopTargets.ts`
+ *   and re-exported below; `WindowBinding` stays here because it is runtime
+ *   state that is never stored and never leaves the backend.
  */
+
+/**
+ * The domain half now lives in `src/types/desktopTargets.ts`, because a Desktop
+ * Target crosses the IPC boundary: the Projects UI creates one, the run
+ * lifecycle resolves it. Re-exported here so this module stays the single
+ * import for the surface, and so the split stays a fact about *where a shape
+ * changes from* rather than a second place to declare it.
+ */
+export type {
+  AccessibilityHints,
+  AncestorStep,
+  CapabilityTier,
+  DesktopLaunchSpec,
+  DesktopLocator,
+  DesktopTarget,
+  NameMatch,
+  ReadyCondition,
+  WindowSelector,
+} from "../../../../src/types/desktopTargets.js";
+
+import type { DesktopLocator } from "../../../../src/types/desktopTargets.js";
 
 /** A rectangle, in the units of whatever reported it. */
 export type Rect = { x: number; y: number; w: number; h: number };
@@ -58,35 +82,6 @@ export type ElementSnapshot = {
   elements_complete?: boolean;
 };
 
-/** How a locator matches an accessible name. */
-export type NameMatch =
-  | { kind: "exact"; value: string }
-  | { kind: "prefix"; value: string }
-  | { kind: "pattern"; value: string };
-
-/** One step of the stored ancestor chain. Named ancestors only. */
-export type AncestorStep = {
-  role: string;
-  name?: NameMatch;
-};
-
-/**
- * The durable description of an element, resolved against a fresh snapshot.
- *
- * Deliberately not the driver's `element_token`, which embeds a snapshot id
- * and is rejected once stale.
- */
-export type DesktopLocator = {
-  role: string;
-  name?: NameMatch;
-  /** Nearest-first. Intermediate unnamed containers are not represented. */
-  ancestors?: AncestorStep[];
-  /** Disambiguates identical siblings. Positional, so a last resort. */
-  ordinal?: number;
-  /** Short-circuits the whole match when present on both sides. */
-  automationId?: string;
-};
-
 /**
  * What a desktop step points at.
  *
@@ -112,54 +107,6 @@ export type LocatorResolution =
   | { ok: false; reason: "degraded"; detail: string }
   | { ok: false; reason: "not_found"; detail: string }
   | { ok: false; reason: "ambiguous"; detail: string; candidates: SnapshotElement[] };
-
-/** How much of a window is machine-addressable. */
-export type CapabilityTier = "element" | "chrome" | "pixel";
-
-/**
- * Project-owned description of an application a workflow drives.
- *
- * Owns no persistent storage — desktop applications do not accept a private
- * profile directory. See `docs/domain/desktop/desktop-target.md`.
- */
-export type DesktopTarget = {
-  id: string;
-  project_id: string;
-  name: string;
-  launch: DesktopLaunchSpec;
-  window: WindowSelector;
-  /** Per-app switches that make a tree appear at all. */
-  accessibility?: { env?: Record<string, string> };
-  /** Last probe result. Advisory only — the tier is re-read every run. */
-  observed_tier?: CapabilityTier;
-};
-
-export type DesktopLaunchSpec = {
-  kind: "app_id" | "executable";
-  /** "calc" | "C:\\Tools\\ledger.exe" */
-  value: string;
-  args?: string[];
-  ready?: ReadyCondition;
-};
-
-/**
- * How the runner knows an application finished starting.
- *
- * One kind, deliberately. "A window matching the selector appeared" is the only
- * readiness signal the driver actually gives us, and inventing richer ones —
- * a process idle check, a probe for a named element — would mean writing
- * behaviour against a driver nobody has measured. The union stays open so a
- * second kind can arrive once there is something real to base it on.
- */
-export type ReadyCondition = { kind: "window"; timeout_ms?: number };
-
-/** How a Desktop Target picks its window out of everything the process owns. */
-export type WindowSelector = {
-  /** The same matcher a Desktop Locator uses for an element name. */
-  title?: NameMatch;
-  /** When several match, 0-based by z-order. */
-  ordinal?: number;
-};
 
 /**
  * One window as the driver lists it.

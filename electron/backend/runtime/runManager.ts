@@ -9,7 +9,7 @@ import type {
   WorkflowSettings,
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
-import type { BrowserWorkflowRunner } from "./runner.js";
+import type { BrowserWorkflowRunner, OpenedSurface } from "./runner.js";
 import {
   browserProfileKey,
   beginRun,
@@ -45,10 +45,25 @@ type RunEntry = {
 };
 
 type RunConflict = {
-  reason: "active_batch" | "active_workflow" | "active_profile";
+  reason: "active_batch" | "active_workflow" | "active_profile" | "active_desktop_target";
   message: string;
   field: string;
 };
+
+/**
+ * Opens the surface for a desktop run.
+ *
+ * Injected rather than imported: ADR-0001 keeps `runtime/` from reaching into
+ * `surfaces/desktop/`, so the composition root binds a Desktop Target into a
+ * closure and hands the result down. `null` means this workflow does not want a
+ * desktop surface, which is every workflow that predates one.
+ */
+export type DesktopSurfaceProvider = (request: {
+  workflow: WorkflowSummary;
+  runId: string;
+  retention: "close" | "retain";
+  signal: AbortSignal;
+}) => Promise<(() => Promise<OpenedSurface>) | null>;
 
 export const idleRunState: RunState = {
   status: "idle",
@@ -80,6 +95,14 @@ export class RunManager {
   private readonly sessionRunSnapshots = new Map<string, WorkflowRunSnapshot>();
   private readonly activeWorkflowRuns = new Map<string, string>();
   private readonly activeProfileRuns = new Map<string, string>();
+  /**
+   * The Desktop Target lock. Not the whole machine: two desktop runs driving
+   * different applications do not contend for the accessibility tree, and
+   * serialising all desktop work would make batches useless. Not narrower
+   * either — two runs driving the same application interleave keystrokes into
+   * shared state. See `docs/domain/desktop/desktop-target.md`.
+   */
+  private readonly activeDesktopTargetRuns = new Map<string, string>();
   private latestRunSnapshot: WorkflowRunSnapshot | null = null;
   private currentBatchRunState: RunState | null = null;
   private currentBatchAbortController: AbortController | null = null;
@@ -89,6 +112,7 @@ export class RunManager {
     private readonly options: {
       database: DbAdapter;
       runner: RunnerCommandPort;
+      openDesktopSurface?: DesktopSurfaceProvider;
     },
   ) {
     if (this.options.database.ownerId) {
@@ -98,7 +122,11 @@ export class RunManager {
     }
   }
 
-  activeRunConflict(workflowId: string, settings: WorkflowSettings): RunConflict | null {
+  activeRunConflict(
+    workflowId: string,
+    settings: WorkflowSettings,
+    desktopTargetId?: string | null,
+  ): RunConflict | null {
     if (this.currentBatchAbortController) {
       return {
         reason: "active_batch",
@@ -121,7 +149,25 @@ export class RunManager {
         field: "browser_launch.profile_name",
       };
     }
+    if (desktopTargetId && this.activeDesktopTargetRuns.has(desktopTargetId)) {
+      return {
+        reason: "active_desktop_target",
+        message:
+          "This desktop application is already being driven by another run. Two runs sharing one application interleave keystrokes into the same windows.",
+        field: "desktop_target_id",
+      };
+    }
     return null;
+  }
+
+  /** Whether a run currently holds the lock on this Desktop Target. */
+  activeDesktopTargetConflict(targetId: string): RunConflict | null {
+    if (!this.activeDesktopTargetRuns.has(targetId)) return null;
+    return {
+      reason: "active_desktop_target",
+      message: "Stop the run driving this application before changing or deleting its Desktop Target",
+      field: "desktop_target_id",
+    };
   }
 
   hasActiveWorkflowRuns() {
@@ -269,6 +315,8 @@ export class RunManager {
     this.runEntries.set(runId, entry);
     this.activeWorkflowRuns.set(workflowId, runId);
     if (profileName) this.activeProfileRuns.set(profileName, runId);
+    const desktopTargetId = workflow.desktop_target_id ?? null;
+    if (desktopTargetId) this.activeDesktopTargetRuns.set(desktopTargetId, runId);
     this.rememberSnapshot(snapshot);
 
     const runRunner = this.createRunRunner();
@@ -293,6 +341,7 @@ export class RunManager {
       reuseRetainedSession,
       retainedSessionWorkflowId,
       browserProfileId: workflow.browser_profile_id,
+      workflow,
     });
     return this.sessionRunSnapshots.get(runId) ?? snapshot;
   }
@@ -576,6 +625,7 @@ export class RunManager {
     reuseRetainedSession,
     retainedSessionWorkflowId,
     browserProfileId,
+    workflow,
   }: {
     runId: string;
     workflowId: string;
@@ -590,14 +640,32 @@ export class RunManager {
     reuseRetainedSession: boolean;
     retainedSessionWorkflowId?: string;
     browserProfileId?: string | null;
+    workflow: WorkflowSummary;
   }) {
     const retainedSessionOwnerWorkflowId = retainedSessionWorkflowId ?? workflowId;
     try {
+      // Resolved before the run starts so a missing Desktop Target fails as a
+      // run that never began, rather than as a step that could not act.
+      //
+      // Guarded on the surface rather than left to the provider to decline: a
+      // web run must not gain even the microtask an `await` costs, because a
+      // browser run reports its first step before this method yields.
+      const openSurface =
+        workflow.surface === "desktop"
+          ? await this.options.openDesktopSurface?.({
+              workflow,
+              runId,
+              retention: settings.run_policy.browser_retention === "close" ? "close" : "retain",
+              signal: abortController.signal,
+            })
+          : null;
+
       let terminalState = await runRunner.run({
         runId,
         graph: compiledGraph,
         settings,
         mode: "run_workflow",
+        ...(openSurface ? { openSurface } : {}),
         targetStepId: targetStepId ?? undefined,
         reuseRetainedSession,
         retainedSessionWorkflowId: retainedSessionOwnerWorkflowId,
@@ -715,6 +783,11 @@ export class RunManager {
     }
     if (profileName && this.activeProfileRuns.get(profileName) === runId) {
       this.activeProfileRuns.delete(profileName);
+    }
+    // Keyed by run id on purpose: a lock is only ever released by the run that
+    // took it, so a slow teardown cannot free a target another run just claimed.
+    for (const [targetId, holder] of this.activeDesktopTargetRuns) {
+      if (holder === runId) this.activeDesktopTargetRuns.delete(targetId);
     }
   }
 }

@@ -26,10 +26,17 @@ export type RunnerEvidenceRuntime = RunnerActionRuntime & {
 };
 
 export async function collectRunnerOutputs(runtime: RunnerActionRuntime) {
+  // `__wamOutputs` is a browser-page convention and there is no desktop
+  // equivalent — a window has no global object to read. Checked rather than
+  // caught: relying on `requireWebSurface` to throw would make the normal
+  // desktop path an exception, and hide a genuine web failure behind it.
+  if (runtime.surface.kind !== "web") {
+    return finalizeEvidenceOutputs(runtime.outputs);
+  }
+
   try {
-    // Inside the try on purpose: a surface with no page — or a page that
-    // refuses to evaluate — means there are no page outputs to merge, not that
-    // collecting outputs failed.
+    // Inside the try on purpose: a page that refuses to evaluate means there
+    // are no page outputs to merge, not that collecting outputs failed.
     const pageOutputs = await requireWebSurface(runtime.surface).page.evaluate<Record<string, unknown>>(
       "() => globalThis.window?.__wamOutputs ?? {}",
     );
@@ -43,6 +50,11 @@ export async function captureFailureScreenshot(
   appPaths: AppPaths,
   runtime: RunnerEvidenceRuntime,
 ) {
+  // This runs from inside the runner's catch block, so it must not throw: an
+  // exception here would replace the failure the operator actually needs to
+  // read with a surface-mismatch error about capturing it.
+  if (runtime.surface.kind !== "web") return;
+
   const web = requireWebSurface(runtime.surface);
   if (!web.page.screenshot) return;
   const artifact = resolveEvidenceArtifact({

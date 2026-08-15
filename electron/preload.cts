@@ -48,6 +48,14 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("updateBrowserProfile", profileId, input),
   deleteBrowserProfile: (profileId) =>
     invokeWorkflow("deleteBrowserProfile", profileId),
+  listDesktopTargets: (projectId) => invokeWorkflow("listDesktopTargets", projectId),
+  createDesktopTarget: (projectId, input) =>
+    invokeWorkflow("createDesktopTarget", projectId, input),
+  updateDesktopTarget: (targetId, input) =>
+    invokeWorkflow("updateDesktopTarget", targetId, input),
+  deleteDesktopTarget: (targetId) => invokeWorkflow("deleteDesktopTarget", targetId),
+  setWorkflowDesktopTarget: (workflowId, targetId) =>
+    invokeWorkflow("setWorkflowDesktopTarget", workflowId, targetId),
   setWorkflowBrowserProfile: (workflowId, profileId) =>
     invokeWorkflow("setWorkflowBrowserProfile", workflowId, profileId),
   resetBrowserProfileIdentity: (profileId) =>

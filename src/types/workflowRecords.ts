@@ -25,6 +25,9 @@ export type WorkflowSummary = {
   project_id?: string | null;
   browser_profile_id?: string | null;
   browser_profile_name?: string | null;
+  /** Set only on a desktop workflow, and only once one has been chosen. */
+  desktop_target_id?: string | null;
+  desktop_target_name?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -35,6 +38,7 @@ export type Workflow = {
   surface: ExecutionSurfaceKind;
   project_id?: string | null;
   browser_profile_id?: string | null;
+  desktop_target_id?: string | null;
   created_at: string;
   updated_at: string;
 };

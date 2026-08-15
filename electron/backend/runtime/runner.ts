@@ -12,7 +12,7 @@ import type {
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import type { AppPaths } from "../db/database.js";
-import { requireWebSurface } from "./surface.js";
+import { requireWebSurface, type ExecutionSurface } from "./surface.js";
 import {
   BrowserSessionManager,
   browserIdentityEvidence,
@@ -99,6 +99,21 @@ type RunnerOptions = {
   usesDefaultDriver?: boolean;
 };
 
+/**
+ * A surface the runner did not open itself.
+ *
+ * This is how the Desktop Surface reaches the runner without `runtime/`
+ * importing `surfaces/desktop/` — ADR-0001 forbids that, and the ban is what
+ * keeps this module surface-independent. The caller binds a Desktop Target into
+ * a closure; the runner only ever sees a surface and a way to close it.
+ */
+export type OpenedSurface = {
+  surface: ExecutionSurface;
+  /** Shown to the operator before the first action — a degraded tier, say. */
+  warnings?: string[];
+  close(): Promise<void>;
+};
+
 export type RunnerRunRequest = {
   runId?: string | null;
   graph: CompiledWorkflowGraph;
@@ -109,6 +124,12 @@ export type RunnerRunRequest = {
   retainedSessionWorkflowId?: string | null;
   signal?: AbortSignal;
   onProgress?: (state: Partial<RunState>) => void;
+  /**
+   * Supplied for a non-web run. Its presence is what makes this a desktop run:
+   * the browser is never launched, and none of the retained-session machinery
+   * applies, because a desktop application is not ours to retain.
+   */
+  openSurface?: () => Promise<OpenedSurface>;
 };
 
 /**
@@ -192,9 +213,7 @@ export class BrowserWorkflowRunner {
   }
 
   async run(request: RunnerRunRequest): Promise<RunState> {
-    const launch = request.reuseRetainedSession
-      ? await this.sessionManager.reuseRetainedSession(request)
-      : await this.sessionManager.launchFreshSession(request);
+    const opened = await this.openSurface(request);
     const retainedWorkflowId = request.retainedSessionWorkflowId ?? null;
     const retainedProfileName = retainedProfileKey(request.settings);
     const outputs: Record<string, unknown> = {};
@@ -218,7 +237,7 @@ export class BrowserWorkflowRunner {
     const runtime: Runtime = {
       runId: request.runId ?? randomUUID(),
       settings: request.settings,
-      surface: { kind: "web", context: launch.context, page: launch.page },
+      surface: opened.surface,
       domainPolicy: request.graph.domain_policy ?? null,
       outputs,
       elementRefs: new Map(),
@@ -236,12 +255,20 @@ export class BrowserWorkflowRunner {
       signal: request.signal,
       failedStepInfo: null,
     };
-    runtime.outputs.browser_identity = await browserIdentityEvidence(
-      request.settings,
-      runtime.runId,
-    );
+    if (runtime.surface.kind === "web") {
+      runtime.outputs.browser_identity = await browserIdentityEvidence(
+        request.settings,
+        runtime.runId,
+      );
+    }
+    if (opened.warnings?.length) {
+      // Surfaced as an output rather than a log line: the operator reads the
+      // run, not the console, and a degraded tier explains failures that
+      // otherwise look like a broken locator.
+      runtime.outputs.__surface_warnings = opened.warnings;
+    }
 
-    let closeBrowser = request.settings.run_policy.browser_retention === "close";
+    let closeSurface = request.settings.run_policy.browser_retention === "close";
 
     try {
       await this.applyEnvironment(runtime, request.settings);
@@ -266,7 +293,7 @@ export class BrowserWorkflowRunner {
       state.status = "success";
     } catch (error) {
       if (error instanceof RunnerStop) {
-        closeBrowser = closeBrowser || error.closeBrowser;
+        closeSurface = closeSurface || error.closeBrowser;
         state.status =
           error.status === "success"
             ? "success"
@@ -310,7 +337,11 @@ export class BrowserWorkflowRunner {
       state.current_step_id = null;
       state.current_step_number = null;
 
-      if (closeBrowser) {
+      if (runtime.surface.kind !== "web") {
+        // Retention for a non-web surface belongs to whoever opened it: only
+        // that side knows what "keep it open" means for the thing it opened.
+        if (closeSurface) await opened.close();
+      } else if (closeSurface) {
         await webSurfaceOf(runtime).context.close();
         this.sessionManager.forgetContext(webSurfaceOf(runtime).context);
       } else {
@@ -348,6 +379,31 @@ export class BrowserWorkflowRunner {
 
   getRetainedSessionStates() {
     return this.sessionManager.getRetainedSessionStates();
+  }
+
+  /**
+   * The one place a run acquires something to act on.
+   *
+   * A caller that supplied an opener has already decided what the surface is,
+   * so the browser is never launched — which is what stops a desktop run from
+   * quietly starting a browser it will never use.
+   */
+  private async openSurface(request: RunnerRunRequest): Promise<OpenedSurface> {
+    if (request.openSurface) return request.openSurface();
+
+    const launch = request.reuseRetainedSession
+      ? await this.sessionManager.reuseRetainedSession(request)
+      : await this.sessionManager.launchFreshSession(request);
+
+    return {
+      surface: { kind: "web", context: launch.context, page: launch.page },
+      // Web teardown is the session manager's, and it distinguishes closing
+      // from retaining — a distinction this shape has no room for.
+      close: async () => {
+        await launch.context.close();
+        this.sessionManager.forgetContext(launch.context);
+      },
+    };
   }
 
   private async applyEnvironment(_runtime: Runtime, _settings: WorkflowSettings) {}

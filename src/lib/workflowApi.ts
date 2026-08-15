@@ -10,6 +10,7 @@ import type {
   OperationsOverviewRequest,
   ProjectPackage,
   BrowserProfileInput,
+  DesktopTargetInput,
   WorkflowBrowserConfig,
   WorkflowCreateOptions,
   WorkflowDeleteOptions,
@@ -87,6 +88,26 @@ export function importProjectPackage(packageValue: ProjectPackage) {
 
 export function deleteProject(projectId: string) {
   return bridge().deleteProject(projectId);
+}
+
+export function listDesktopTargets(projectId: string) {
+  return bridge().listDesktopTargets(projectId);
+}
+
+export function createDesktopTarget(projectId: string, input: DesktopTargetInput) {
+  return bridge().createDesktopTarget(projectId, input);
+}
+
+export function updateDesktopTarget(targetId: string, input: Partial<DesktopTargetInput>) {
+  return bridge().updateDesktopTarget(targetId, input);
+}
+
+export function deleteDesktopTarget(targetId: string) {
+  return bridge().deleteDesktopTarget(targetId);
+}
+
+export function setWorkflowDesktopTarget(workflowId: string, targetId: string) {
+  return bridge().setWorkflowDesktopTarget(workflowId, targetId);
 }
 
 export function listBrowserProfiles(projectId: string) {
