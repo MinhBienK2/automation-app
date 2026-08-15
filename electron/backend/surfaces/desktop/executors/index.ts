@@ -19,11 +19,17 @@ import type { VariableScope } from "../../../runtime/actionRuntime.js";
 import { requireDesktopSurface } from "../../../runtime/surface.js";
 import type { DesktopSurface, ExecutionSurface } from "../../../runtime/surface.js";
 import type { StatePredicate } from "../driverClient.js";
+import { captureDesktopScreenshot, isSensitiveStep } from "../evidence.js";
 import { resolveDesktopLocator } from "../locator.js";
 import { snapshotWarnings, tierOf } from "../snapshot.js";
 import type { DesktopLocator, NameMatch } from "../types.js";
 
-type DesktopRuntime = VariableScope & { surface: ExecutionSurface };
+type DesktopRuntime = VariableScope & {
+  surface: ExecutionSurface;
+  runId: string;
+  currentStepNumber: number | null;
+  currentStepId: string | null;
+};
 
 /** What a resolved step carries into the driver call. */
 type ResolvedTarget = {
@@ -50,7 +56,29 @@ type StepConfig = {
   timeout_ms?: number | null;
 };
 
-export function createDesktopActionExecutors<Runtime extends DesktopRuntime>(runtime: Runtime) {
+/**
+ * What the desktop family needs from the runner beyond a surface.
+ *
+ * Only the evidence path, and only because writing an artifact the run does not
+ * record would look like success. Everything else a desktop action does is
+ * expressible against the driver alone.
+ */
+export type DesktopExecutorDependencies<Runtime> = {
+  evidenceDir: string;
+  recordEvidence: (
+    runtime: Runtime,
+    artifact: {
+      actionType: string;
+      artifactKind: "screenshot" | "download";
+      relativePath: string;
+    },
+  ) => void;
+};
+
+export function createDesktopActionExecutors<Runtime extends DesktopRuntime>(
+  runtime: Runtime,
+  deps: DesktopExecutorDependencies<Runtime>,
+) {
   // Narrowed once, here, exactly as the web family does at its own entry.
   const desktop = requireDesktopSurface(runtime.surface);
 
@@ -118,15 +146,7 @@ export function createDesktopActionExecutors<Runtime extends DesktopRuntime>(run
 
     desktop_wait_for: async (action) => waitForState(desktop, runtime, action.config.expect),
 
-    desktop_screenshot: async () => {
-      // Evidence handling — where the file lands, and whether a sensitive step
-      // suppresses it — belongs to the runner's evidence path, which has no
-      // desktop branch yet. Capturing here would write an artifact nothing
-      // records.
-      throw new Error(
-        "desktop_screenshot needs the desktop evidence path, which has not landed yet.",
-      );
-    },
+    desktop_screenshot: async (action) => screenshot(desktop, runtime, deps, action.config),
 
     desktop_focus_window: async () => {
       await desktop.driver.bringToFront(desktop.binding, runtime.signal);
@@ -137,6 +157,43 @@ export function createDesktopActionExecutors<Runtime extends DesktopRuntime>(run
       await verify(desktop, action.config, runtime);
     },
   } satisfies Partial<ActionExecutorMap>;
+}
+
+/**
+ * A window screenshot, or a recorded reason there is none.
+ *
+ * A suppressed capture is the policy working, not a failure, so it is written
+ * into the step rather than thrown. Without that, a reader cannot tell a
+ * sensitive step from one whose screenshot broke.
+ */
+async function screenshot(
+  desktop: DesktopSurface,
+  runtime: DesktopRuntime,
+  deps: DesktopExecutorDependencies<never>,
+  config: { path?: string | null; sensitive?: boolean | null; output_name?: string | null },
+): Promise<void> {
+  const capture = await captureDesktopScreenshot({
+    surface: desktop,
+    evidenceDir: deps.evidenceDir,
+    runId: runtime.runId,
+    stepNumber: runtime.currentStepNumber,
+    nodeId: runtime.currentStepId,
+    requestedName: config.path,
+    sensitive: isSensitiveStep({ flag: config.sensitive }),
+    signal: runtime.signal,
+  });
+
+  if (!capture.captured) {
+    if (config.output_name) runtime.outputs[config.output_name] = capture.reason;
+    return;
+  }
+
+  (deps.recordEvidence as (r: unknown, a: unknown) => void)(runtime, {
+    actionType: "desktop_screenshot",
+    artifactKind: "screenshot",
+    relativePath: capture.relativePath,
+  });
+  if (config.output_name) runtime.outputs[config.output_name] = capture.relativePath;
 }
 
 async function waitForState(

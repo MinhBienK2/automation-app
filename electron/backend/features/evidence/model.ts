@@ -5,7 +5,19 @@ export type EvidenceCategory =
   | "browser_identity"
   | "network_posture"
   | "action_trace"
+  /** What a browser page showed. */
   | "page_observation"
+  /**
+   * What an application window showed.
+   *
+   * A separate value in the *same* filter, not a separate Explorer view:
+   * ADR-0001 shares the evidence model across surfaces, and a reader comparing
+   * a web run to a desktop one should not have to change screens. It is
+   * distinct from `page_observation` because the two answer differently when
+   * something is missing — a page observation can be re-read from a URL, a
+   * window observation cannot be re-read from anywhere.
+   */
+  | "window_observation"
   | "generated_output"
   | "sensitive_redacted";
 
@@ -27,6 +39,7 @@ const evidenceCategories: EvidenceCategory[] = [
   "network_posture",
   "action_trace",
   "page_observation",
+  "window_observation",
   "generated_output",
   "sensitive_redacted",
 ];

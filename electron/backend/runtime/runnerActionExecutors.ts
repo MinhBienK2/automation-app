@@ -62,7 +62,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
   // missing executor stays a build failure. Its entries narrow to the desktop
   // surface themselves and throw if a desktop step is reached in a web run,
   // which the compiler cannot prevent until a workflow carries its surface.
-  const desktopFamily = createDesktopActionExecutorsLazily(runtime);
+  const desktopFamily = createDesktopActionExecutorsLazily(runtime, deps);
 
   return createActionExecutorMap({
     ...desktopFamily,
@@ -1293,12 +1293,16 @@ async function evaluateSingleRule(rule: any, runtime: RunnerActionRuntime): Prom
  */
 function createDesktopActionExecutorsLazily<Runtime extends RunnerActionRuntime>(
   runtime: Runtime,
+  deps: RunnerActionExecutorDependencies<Runtime>,
 ) {
   const lazy = <K extends keyof ReturnType<typeof createDesktopActionExecutors>>(
     key: K,
   ): ActionExecutorMap[K & keyof ActionExecutorMap] =>
     (async (action: never) => {
-      const family = createDesktopActionExecutors(runtime);
+      const family = createDesktopActionExecutors(runtime, {
+        evidenceDir: deps.appPaths.evidenceDir,
+        recordEvidence: deps.recordEvidence,
+      });
       await (family[key] as (a: never) => Promise<void>)(action);
     }) as ActionExecutorMap[K & keyof ActionExecutorMap];
 

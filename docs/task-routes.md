@@ -95,7 +95,7 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 - **Checks**: `npm test -- src/features/workflows/pages/`, `npm test -- electron/backend/commands.test.ts`
 
 ### Work On Desktop Automation (Desktop Surface)
-- **Read**: `adr/0001-desktop-execution-surface.md` first — it fixes the seam between the web and desktop run flows. Then `architecture/desktop-runner.md`, plus the `domain/desktop/` file for the area: `capability-tiers.md`, `locator-model.md`, `desktop-target.md`, `action-family.md`, `secrets-and-evidence.md`
+- **Read**: `adr/0001-desktop-execution-surface.md` first — it fixes the seam between the web and desktop run flows. Then `architecture/desktop-runner.md`, plus the `domain/desktop/` file for the area: `capability-tiers.md`, `locator-model.md`, `desktop-target.md`, `action-family.md`, `secrets-and-evidence.md`, `evidence-model.md`, `scheduling.md`
 - **Verify**: `electron/backend/surfaces/desktop/`, `electron/backend/actions/schemas/desktop/`, `electron/backend/runtime/surface.ts`
 - **Background**: `research/cua-driver-windows.md` holds the measured driver behaviour. Read it before trusting any `cua-driver` documentation — several documented behaviours did not hold on Windows.
 - **Checks**: focused desktop surface tests, `npx tsc --noEmit`, `npm run build:electron`

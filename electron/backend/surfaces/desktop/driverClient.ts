@@ -186,6 +186,45 @@ export class DesktopDriverClient {
     return parsed.snapshot;
   }
 
+  /**
+   * A picture of the bound window, and nothing else on the screen.
+   *
+   * Deliberately **not** returning the tree that comes back with it. The same
+   * call carries an Element Snapshot, and a `Document`'s `value` is the whole
+   * open file — the largest incidental-secret source in the system. Dropping it
+   * here means no caller can persist it by accident
+   * (`docs/domain/desktop/secrets-and-evidence.md`).
+   *
+   * The window scope is the Driver Session's, fixed at session start and not
+   * widenable, so this cannot capture the operator's other windows.
+   *
+   * **The image field is unmeasured.** `include_screenshot: true` was exercised
+   * during research but its response shape was never recorded, so three
+   * plausible names are read and an unreadable answer says so rather than
+   * writing an empty file that looks like evidence.
+   */
+  async captureWindow(binding: WindowBinding, signal?: AbortSignal): Promise<string> {
+    const result = await this.call(
+      "get_window_state",
+      { ...scopeOf(binding), include_screenshot: true },
+      signal,
+    );
+
+    const payload = asRecord(result.payload);
+    const image = payload.screenshot ?? payload.image ?? payload.screenshot_base64;
+
+    if (typeof image !== "string" || image === "") {
+      throw new DesktopDriverError(
+        "malformed_response",
+        "get_window_state returned no readable screenshot. The image field name is inferred rather than measured; check it on Windows before trusting this path.",
+      );
+    }
+
+    // Both a bare base64 body and a data URL have been seen from tools of this
+    // shape; the caller wants bytes either way.
+    return image.startsWith("data:") ? (image.split(",", 2)[1] ?? "") : image;
+  }
+
   async bringToFront(binding: WindowBinding, signal?: AbortSignal): Promise<DriverAck> {
     return (await this.call("bring_to_front", scopeOf(binding), signal)).ack;
   }

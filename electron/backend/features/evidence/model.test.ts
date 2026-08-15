@@ -42,6 +42,7 @@ describe("evidence model", () => {
         "network_posture",
         "action_trace",
         "page_observation",
+        "window_observation",
         "generated_output",
         "sensitive_redacted",
       ],

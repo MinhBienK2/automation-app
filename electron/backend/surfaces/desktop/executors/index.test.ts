@@ -1,5 +1,8 @@
 // @vitest-environment node
 
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 import { executeRegisteredAction } from "../../../actions/execution.js";
 import { DesktopDriverClient } from "../driverClient.js";
@@ -67,8 +70,21 @@ const SEVEN = {
   locator: { role: "Button", name: { kind: "exact" as const, value: "Seven" } },
 };
 
-async function run(runtime: ReturnType<typeof runtimeFor>, action: unknown) {
-  await executeRegisteredAction(createDesktopActionExecutors(runtime), action as ActionConfig);
+const recordedEvidence: Array<{ actionType: string; relativePath: string }> = [];
+
+function executorDeps(evidenceDir = "/tmp/desktop-evidence-unused") {
+  return {
+    evidenceDir,
+    recordEvidence: (_runtime: unknown, artifact: { actionType: string; relativePath: string }) =>
+      void recordedEvidence.push(artifact),
+  };
+}
+
+async function run(runtime: ReturnType<typeof runtimeFor>, action: unknown, evidenceDir?: string) {
+  await executeRegisteredAction(
+    createDesktopActionExecutors(runtime, executorDeps(evidenceDir) as never),
+    action as ActionConfig,
+  );
 }
 
 describe("element-addressed actions", () => {
@@ -229,19 +245,41 @@ describe("surface mismatch", () => {
       context: {},
     } as never);
 
-    expect(() => createDesktopActionExecutors(webRuntime)).toThrow(/belongs to exactly one surface/);
+    expect(() => createDesktopActionExecutors(webRuntime, executorDeps() as never)).toThrow(
+      /belongs to exactly one surface/,
+    );
   });
 });
 
 describe("screenshots", () => {
-  test("refuse to run until the desktop evidence path exists", async () => {
-    // Capturing an artifact nothing records would look like it worked.
-    const { surface } = surfaceWith({});
-    const spy = vi.fn();
+  test("write the window image and record it as evidence", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "desktop-executor-evidence-"));
+    const { surface } = surfaceWith({
+      get_window_state: {
+        structuredJson: { ...CALCULATOR, screenshot: Buffer.from("png").toString("base64") },
+      },
+    });
+    recordedEvidence.length = 0;
 
-    await expect(
-      run(runtimeFor(surface), { type: "desktop_screenshot", config: {} }),
-    ).rejects.toThrow(/evidence path/);
-    expect(spy).not.toHaveBeenCalled();
+    await run(runtimeFor(surface), { type: "desktop_screenshot", config: {} }, dir);
+
+    expect(recordedEvidence).toHaveLength(1);
+    expect(recordedEvidence[0].actionType).toBe("desktop_screenshot");
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  test("a sensitive step records no artifact at all", async () => {
+    // The image is never taken, not taken and discarded: a captured image
+    // exists in the driver's memory and its logs before we could drop it.
+    const { surface, calls } = surfaceWith({});
+    recordedEvidence.length = 0;
+
+    await run(runtimeFor(surface), {
+      type: "desktop_screenshot",
+      config: { sensitive: true, output_name: "shot" },
+    });
+
+    expect(recordedEvidence).toHaveLength(0);
+    expect(calls).toHaveLength(0);
   });
 });
