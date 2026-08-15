@@ -64,12 +64,28 @@ describe("argument construction", () => {
     expect(() => JSON.stringify(argsOf(callTool))).not.toThrow();
   });
 
-  test("names the bound window on every window-scoped call", async () => {
+  test("names the bound window on every window-scoped call, as integers", async () => {
+    // Ids are strings inside the application, because they arrive as bigint and
+    // `JSON.stringify` refuses those. On the wire they must be numbers: the
+    // driver answers "Missing required integer field pid." to a string.
     const { transport, callTool } = transportOf(SNAPSHOT_REPLY);
 
     await new DesktopDriverClient(transport).getWindowState(BINDING);
 
-    expect(argsOf(callTool)).toMatchObject({ pid: "4212", window_id: "131204" });
+    expect(argsOf(callTool)).toMatchObject({ pid: 4212, window_id: 131204 });
+  });
+
+  test("refuses an id the driver could not read as an integer", async () => {
+    const { transport, callTool } = transportOf(SNAPSHOT_REPLY);
+
+    await expect(
+      new DesktopDriverClient(transport).getWindowState({
+        pid: "not-a-pid",
+        windowId: "131204",
+        attached: false,
+      }),
+    ).rejects.toBeInstanceOf(DesktopDriverError);
+    expect(callTool).not.toHaveBeenCalled();
   });
 
   test("addresses elements by token, never by the bare index the driver rejects", async () => {
@@ -270,16 +286,48 @@ describe("secrets", () => {
 });
 
 describe("verifyState", () => {
-  test("sends the predicates ANDed, as the driver expects them", async () => {
-    const { transport, callTool } = transportOf({ structuredJson: { satisfied: true } });
+  test("sends the predicates ANDed, in the shape the driver accepts", async () => {
+    // Measured. The earlier guess was a tagged union and the driver rejected it
+    // outright: "unknown field `kind`, expected `window` or `element`".
+    const { transport, callTool } = transportOf({
+      structuredJson: JSON.stringify({ status: "satisfied", stable: true }),
+    });
 
     const verdict = await new DesktopDriverClient(transport).verifyState(BINDING, [
-      { kind: "window_exists" },
-      { kind: "element_value", locatorText: "Edit", expected: "hello" },
+      { window: { exists: true } },
+      { element: { selector: { role: "Edit" }, value_equals: "hello" } },
     ]);
 
     expect(argsOf(callTool).expect).toHaveLength(2);
     expect(verdict.satisfied).toBe(true);
+  });
+
+  test("reads an unsatisfied verdict as a verdict, not as an unreadable answer", async () => {
+    const { transport } = transportOf({
+      structuredJson: JSON.stringify({ status: "unsatisfied", stable: true }),
+    });
+
+    const verdict = await new DesktopDriverClient(transport).verifyState(BINDING, [
+      { window: { exists: true } },
+    ]);
+
+    expect(verdict).toMatchObject({ satisfied: false });
+    expect(verdict.unverified).toBeUndefined();
+  });
+
+  test("anything other than a verdict reports unverified", async () => {
+    // "unknown" is a real status the driver returns, and it is not a failure —
+    // it is the driver declining to answer, which the caller must not read as
+    // either outcome.
+    const { transport } = transportOf({
+      structuredJson: JSON.stringify({ status: "unknown", stable: false }),
+    });
+
+    const verdict = await new DesktopDriverClient(transport).verifyState(BINDING, [
+      { window: { exists: true } },
+    ]);
+
+    expect(verdict).toMatchObject({ satisfied: false, unverified: true });
   });
 
   test("rejects an empty predicate set instead of verifying nothing", async () => {
@@ -293,7 +341,7 @@ describe("verifyState", () => {
 
   test("rejects more than the eight predicates the driver accepts", async () => {
     const { transport } = transportOf();
-    const nine = Array.from({ length: 9 }, () => ({ kind: "window_exists" as const }));
+    const nine = Array.from({ length: 9 }, () => ({ window: { exists: true } }));
 
     await expect(new DesktopDriverClient(transport).verifyState(BINDING, nine)).rejects.toThrow(
       /8/,

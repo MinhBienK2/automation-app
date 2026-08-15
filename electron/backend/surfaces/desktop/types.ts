@@ -130,15 +130,22 @@ export type LocatorResolution =
  *
  * `pid` and `window_id` are `bigint` in the SDK and arrive as number or string
  * over JSON, so both are normalised to string at the parse boundary.
+ *
+ * `pid` is optional because `launch_app`'s window entries omit it — the pid
+ * belongs to the launch, one level up. The pairs of near-duplicate fields are
+ * the driver's own two spellings, measured on different tools.
  */
 export type DriverWindow = {
   window_id: string;
-  pid: string;
+  pid?: string;
   title?: string;
   is_minimized?: boolean;
+  minimized?: boolean;
   is_on_screen?: boolean;
   z_order?: number;
-  bounds?: Rect;
+  z_index?: number;
+  /** Long names here; an element's `frame` uses short ones. Both measured. */
+  bounds?: { x: number; y: number; width: number; height: number };
 };
 
 /**

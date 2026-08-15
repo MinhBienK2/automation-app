@@ -14,6 +14,14 @@ The existing evidence model redacts by key pattern. A key pattern cannot see ins
 
 So the policy covers **the tree first, screenshots second**. Getting this backwards would have shipped a leak that looked handled.
 
+It happened again on 2026-08-15, on the first day the client ran against a real driver. A probe called `launch_app({name: "notepad"})`; Notepad restored a tab holding API recovery keys, and the tree's `value` carried the file through the probe's own output. Same mechanism, same application, a different operator's secret. That is not a coincidence to note — it is what "restores the previous tabs" means in practice, and it is why **Notepad is not a safe application to demonstrate anything with**.
+
+### The tree comes back twice
+
+`get_window_state` also returns **`tree_markdown`**: the whole tree a second time, rendered as markdown, 38 KB for a File Explorer window. It sits in the same payload as `elements`, and it carries the same labels. The driver's own `_note` says to prefer the structured side.
+
+Nothing in this document knew about that field when it was written, which is the argument for the enforcement being structural rather than procedural: `parseSnapshot` validates against a Zod object schema, and Zod strips what the schema does not name. `tree_markdown` never reaches a caller — not because anyone decided to drop it, but because nothing asked for it. A policy of "remember not to persist the tree" would have missed a field nobody knew existed.
+
 ## Element snapshots are never evidence by default
 
 An Element Snapshot is working state for resolving a locator. It is not a record of what happened, and it is the richest source of incidental secrets in the system.

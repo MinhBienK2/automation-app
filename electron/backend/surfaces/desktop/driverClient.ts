@@ -79,10 +79,38 @@ export type ClickRequest =
   | { elementToken: string; button?: "left" | "right" | "middle"; count?: number }
   | { x: number; y: number; button?: "left" | "right" | "middle"; count?: number };
 
+/**
+ * What `verify_state` accepts, measured against the driver.
+ *
+ * The earlier guess was a tagged union — `{ kind: "window_exists" }` and
+ * friends — and the driver rejects it outright: *"unknown field `kind`,
+ * expected `window` or `element`"*. It is two optional sub-records instead, and
+ * the field names are snake_case on the wire (`label_contains`, not
+ * `labelContains`, which is its own separate rejection).
+ *
+ * Absence cannot be asserted. `exists: false` is refused upstream, because an
+ * element walk is not exhaustive on every platform and "I did not find it" is
+ * not "it is not there".
+ */
 export type StatePredicate =
-  | { kind: "window_exists" }
-  | { kind: "element_present"; locatorText: string }
-  | { kind: "element_value"; locatorText: string; expected: string };
+  | { window: { exists?: boolean; bounds?: BoundsExpectation } }
+  | {
+      element: {
+        selector: { role?: string; label_contains?: string };
+        exists?: boolean;
+        value_equals?: string;
+        enabled?: boolean;
+        selected?: boolean;
+      };
+    };
+
+export type BoundsExpectation = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  tolerance?: number;
+};
 
 export type VerifyVerdict = {
   satisfied: boolean;
@@ -205,8 +233,12 @@ export class DesktopDriverClient {
       );
     }
 
-    this.lastTier = tierOf(parsed.snapshot);
-    return parsed.snapshot;
+    // `degraded` rides the envelope, not the payload — measured. Folding it in
+    // here is what lets `tierOf` stay a pure function of a snapshot.
+    const snapshot = result.degraded ? { ...parsed.snapshot, degraded: true } : parsed.snapshot;
+
+    this.lastTier = tierOf(snapshot);
+    return snapshot;
   }
 
   /**
@@ -221,10 +253,10 @@ export class DesktopDriverClient {
    * The window scope is the Driver Session's, fixed at session start and not
    * widenable, so this cannot capture the operator's other windows.
    *
-   * **The image field is unmeasured.** `include_screenshot: true` was exercised
-   * during research but its response shape was never recorded, so three
-   * plausible names are read and an unreadable answer says so rather than
-   * writing an empty file that looks like evidence.
+   * Measured: the image is an entry in the envelope's `images` array as
+   * `{ mimeType, dataBase64 }`. The payload carries only `screenshot_width`,
+   * `screenshot_height` and `screenshot_mime_type` — the earlier guesses at a
+   * payload field named `screenshot` or `image` were all wrong.
    */
   async captureWindow(binding: WindowBinding, signal?: AbortSignal): Promise<string> {
     const result = await this.call(
@@ -233,13 +265,14 @@ export class DesktopDriverClient {
       signal,
     );
 
-    const payload = asRecord(result.payload);
-    const image = payload.screenshot ?? payload.image ?? payload.screenshot_base64;
+    const image = result.images.find(
+      (entry) => typeof entry?.dataBase64 === "string" && entry.dataBase64 !== "",
+    )?.dataBase64;
 
-    if (typeof image !== "string" || image === "") {
+    if (image === undefined) {
       throw new DesktopDriverError(
         "malformed_response",
-        "get_window_state returned no readable screenshot. The image field name is inferred rather than measured; check it on Windows before trusting this path.",
+        `get_window_state returned no image (${result.images.length} attachments).`,
       );
     }
 
@@ -354,12 +387,15 @@ export class DesktopDriverClient {
   /**
    * The authority on whether an action worked.
    *
-   * **Unmeasured on both sides.** The research measured only that `verify_state`
-   * takes `expect: Array<StatePredicate>`, 1–8, ANDed. Neither the predicate
-   * shape below nor the verdict shape has been seen from a real driver, and a
-   * wrong field panics the host — so this is the first call to exercise when
-   * the slice runs on Windows. An unreadable answer reports `unverified`
-   * rather than assuming either verdict.
+   * Measured on both sides now. The verdict is a `status` string on the
+   * payload — `satisfied`, and per-predicate outcomes beside it — and the same
+   * verdict also rides the envelope as a typed `verification` record with a
+   * numeric status. The string is read because it is the one that survives the
+   * JSON round trip through the utility process intact.
+   *
+   * An unreadable answer still reports `unverified` rather than assuming
+   * either verdict: this is the call every action's success rests on, and
+   * "I could not tell" is a third outcome, not a failure.
    */
   async verifyState(
     binding: WindowBinding,
@@ -385,18 +421,19 @@ export class DesktopDriverClient {
       signal,
     );
 
-    const payload = asRecord(result.payload);
-    const satisfied = payload.satisfied ?? payload.ok ?? payload.passed;
+    const status = asRecord(result.payload).status;
 
-    if (typeof satisfied !== "boolean") {
-      return {
-        satisfied: false,
-        unverified: true,
-        detail: `verify_state returned no readable verdict (${summarisePayload(result.payload)}).`,
-      };
-    }
+    // `satisfied` and `unsatisfied` are verdicts. Anything else — `unknown`,
+    // an error payload, a shape this build does not recognise — is the driver
+    // declining to answer, and saying so is the whole point of this method.
+    if (status === "satisfied") return { satisfied: true, detail: clampMessage(result.text) };
+    if (status === "unsatisfied") return { satisfied: false, detail: clampMessage(result.text) };
 
-    return { satisfied, detail: clampMessage(result.text) };
+    return {
+      satisfied: false,
+      unverified: true,
+      detail: `verify_state returned no readable verdict (${summarisePayload(result.payload)}).`,
+    };
   }
 
   /** `parseWindowList` accepts both the bare array and the `{ windows }` envelope. */
@@ -429,19 +466,31 @@ export class DesktopDriverClient {
 type DriverResult = {
   payload: unknown;
   text?: string;
+  /** Base64 images the driver attached. `get_window_state` puts the window shot here. */
+  images: Array<{ mimeType?: string; dataBase64?: string }>;
+  /** The driver's own degradation flag, which rides on the envelope. */
+  degraded: boolean;
   ack: DriverAck;
 };
 
 /**
- * Unwraps whichever envelope the tool used. Both shapes have been observed:
- * a `structuredJson` object, and a `content` array carrying JSON as text.
+ * Unwraps the `ToolResult` envelope.
+ *
+ * Measured, having previously been inferred, and three of the inferences were
+ * wrong. `structuredJson` is a **string** of JSON, not an object — reading it
+ * directly gave every caller a string where it expected a record. `degraded`
+ * sits on the envelope, not inside the payload. And the screenshot arrives as
+ * `images[]`, not as a field of the payload at all.
+ *
+ * The `content`/`text` fallback is kept: it costs nothing and covers the older
+ * envelope shape the research recorded.
  */
 function interpret(raw: unknown): DriverResult {
   const record = asRecord(raw);
   const driverReportedError = record.isError === true;
   const text = textOf(record);
 
-  let payload: unknown = record.structuredJson;
+  let payload: unknown = parseStructured(record.structuredJson);
   if (payload === undefined && text !== undefined) {
     try {
       payload = JSON.parse(text);
@@ -456,13 +505,28 @@ function interpret(raw: unknown): DriverResult {
   return {
     payload,
     text,
+    images: Array.isArray(record.images)
+      ? (record.images as Array<{ mimeType?: string; dataBase64?: string }>)
+      : [],
+    degraded: record.degraded === true,
     // Clamped: status text is short, and anything long enough to matter is a
     // payload that got loose rather than a message worth recording.
     ack: { driverReportedError, message: clampMessage(text), verified: false },
   };
 }
 
+function parseStructured(structured: unknown): unknown {
+  if (typeof structured !== "string") return structured;
+  try {
+    return JSON.parse(structured);
+  } catch {
+    return undefined;
+  }
+}
+
 function textOf(record: Record<string, unknown>): string | undefined {
+  if (typeof record.text === "string" && record.text !== "") return record.text;
+
   const content = record.content;
   if (!Array.isArray(content)) return undefined;
 
@@ -515,9 +579,29 @@ function pixelArgs(request: { x?: unknown; y?: unknown }): Record<string, unknow
   return { x: request.x, y: request.y };
 }
 
-/** Every binding-scoped call names its window; the ids are already strings. */
+/**
+ * Every binding-scoped call names its window.
+ *
+ * The ids are **numbers** on the wire. They are normalised to strings at the
+ * parse boundary because they arrive as `bigint` and `JSON.stringify` refuses
+ * those — but sending them back as strings is refused too: measured, the driver
+ * answers "Missing required integer field pid." Converting here rather than
+ * storing numbers keeps one representation inside the application and one on
+ * the wire, which is the seam this function is.
+ */
 function scopeOf(binding: WindowBinding): Record<string, unknown> {
-  return { pid: binding.pid, window_id: binding.windowId };
+  return { pid: numericId(binding.pid, "pid"), window_id: numericId(binding.windowId, "window_id") };
+}
+
+function numericId(value: string, field: string): number {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new DesktopDriverError(
+      "invalid_request",
+      `${field} must be an integer the driver can read; got "${value}".`,
+    );
+  }
+  return parsed;
 }
 
 function requireText(value: unknown, field: string): string {

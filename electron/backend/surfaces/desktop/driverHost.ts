@@ -7,24 +7,36 @@
  * process, the active run fails with a reason, and Mission Control survives.
  * See ADR-0001 and `docs/architecture/desktop-runner.md`.
  *
- * Status: `@trycua/cua-driver` is not a dependency yet — it ships a 25 MB
- * platform binary and there is nothing to run against until the thin slice
- * (#48) runs on Windows. The package is therefore resolved at runtime, and
- * nothing spawns this process yet.
+ * Status: `@trycua/cua-driver` is deliberately not a declared dependency — it
+ * ships a 25 MB platform binary — so the package is resolved at runtime.
  */
 
-import { createRequire } from "node:module";
 import { createHostDispatcher } from "./protocol.js";
 import type { HostDriver, HostPort } from "./protocol.js";
 
 const DRIVER_PACKAGE = "@trycua/cua-driver";
 
-/** `CaptureScope.Window`. Immutable for the life of a session, by design. */
-const CAPTURE_SCOPE_WINDOW = "Window";
+/**
+ * `CaptureScope.Window`. A **numeric** enum member, not the string "Window":
+ * the package's own enum is `{ Auto: 0, Window: 1, Desktop: 2 }` and the string
+ * is rejected. Immutable for the life of a session, by design — a session that
+ * escalates to desktop scope can only get window scope back by ending and
+ * starting a new one.
+ */
+const CAPTURE_SCOPE_WINDOW = 1;
+
+/**
+ * A session id the driver will accept.
+ *
+ * `StartSessionInput.session` is required, and passing `undefined` fails deep
+ * inside the native bridge with "The \"src\" argument must be of type string",
+ * which names nothing an operator or a log reader could act on.
+ */
+const ANONYMOUS_SESSION = "mission-control";
 
 type CuaDriverLike = {
   callTool(tool: string, argumentsJson: string, asyncOpts?: { signal?: AbortSignal }): Promise<unknown>;
-  startSession?(input: { session?: string; captureScope: string }): Promise<unknown>;
+  startSession?(input: { session: string; captureScope: number }): Promise<unknown>;
 };
 
 export type CuaDriverModule = {
@@ -51,19 +63,32 @@ export async function createHostDriver(
   const driver = await CuaDriver.create();
 
   await driver.startSession?.({
-    session: options.sessionId,
+    session: options.sessionId ?? ANONYMOUS_SESSION,
     captureScope: CAPTURE_SCOPE_WINDOW,
   });
 
   return {
-    callTool: (tool, argumentsJson, signal) => driver.callTool(tool, argumentsJson, { signal }),
+    // `asyncOpts` is omitted entirely when there is no signal, never passed as
+    // `{ signal: undefined }`. The SDK's generated wrapper reads
+    // `asyncOpts?.signal.aborted` — optional on the options, not on the signal —
+    // so the undefined form throws inside `@ubjs/core` before the tool is
+    // called at all. Measured; every call without a run signal died here.
+    callTool: (tool, argumentsJson, signal) =>
+      signal
+        ? driver.callTool(tool, argumentsJson, { signal })
+        : driver.callTool(tool, argumentsJson),
   };
 }
 
 async function defaultLoad(): Promise<CuaDriverModule> {
-  // Resolved at runtime so the backend type-checks and packages without the
-  // platform binary present.
-  return createRequire(import.meta.url)(DRIVER_PACKAGE) as CuaDriverModule;
+  // Dynamic import, not `createRequire`. The package is `"type": "module"` and
+  // its exports map declares only an `import` condition, so `require()` raises
+  // ERR_PACKAGE_PATH_NOT_EXPORTED — measured, after this line had been written
+  // the other way and never run.
+  //
+  // Still resolved at runtime, so the backend type-checks and packages without
+  // the platform binary present.
+  return (await import(/* @vite-ignore */ DRIVER_PACKAGE)) as CuaDriverModule;
 }
 
 export async function startDriverHost(port: HostPort, sessionId?: string): Promise<void> {

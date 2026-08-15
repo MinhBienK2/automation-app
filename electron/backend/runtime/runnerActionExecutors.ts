@@ -13,6 +13,7 @@ import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { isPlainRecord } from "../shared/records.js";
 import { locatorFor, locatorForRuntimeElementRef } from "./targetResolver.js";
 import { requireWebSurface } from "./surface.js";
+import type { ExecutionSurface, WebSurface } from "./surface.js";
 import { createDesktopActionExecutors } from "../surfaces/desktop/executors/index.js";
 import {
   currentPageHostname,
@@ -55,9 +56,12 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
   runtime: Runtime,
   deps: RunnerActionExecutorDependencies<Runtime>,
 ): ActionExecutorMap {
-  // Narrowed once, here. Every entry below is a web action, so none of them
-  // branches on the surface again.
-  const web = requireWebSurface(runtime.surface);
+  // Narrowed on first use, not here. Every entry below is a web action and none
+  // of them branches on the surface — but *building* the map must not require a
+  // web surface, because a desktop run builds the same map. Narrowing eagerly
+  // meant every desktop run died before its first step with "a web action was
+  // dispatched on the desktop surface", naming a step that had not run.
+  const web = lazyWebSurface(runtime);
   // The desktop family is registered so the registry stays complete and a
   // missing executor stays a build failure. Its entries narrow to the desktop
   // surface themselves and throw if a desktop step is reached in a web run,
@@ -1281,6 +1285,27 @@ async function evaluateSingleRule(rule: any, runtime: RunnerActionRuntime): Prom
     default:
       return false;
   }
+}
+
+/**
+ * The web surface, narrowed on access rather than at construction.
+ *
+ * The mirror of `createDesktopActionExecutorsLazily`, and needed for the same
+ * reason: both families live in one map, and building the map must not commit
+ * to either surface. A proxy rather than getters because the web executors
+ * *assign* to `page` — opening a tab replaces it — and those writes have to
+ * reach the real surface, not a copy of it.
+ */
+function lazyWebSurface(runtime: { surface: ExecutionSurface }): WebSurface {
+  return new Proxy({} as WebSurface, {
+    get: (_target, property) =>
+      (requireWebSurface(runtime.surface) as unknown as Record<PropertyKey, unknown>)[property],
+    set: (_target, property, value) => {
+      (requireWebSurface(runtime.surface) as unknown as Record<PropertyKey, unknown>)[property] =
+        value;
+      return true;
+    },
+  });
 }
 
 /**

@@ -14,17 +14,43 @@ import { matchesName } from "./locator.js";
 import { describeIssues } from "./payloads.js";
 import type { DriverWindow, WindowBinding, WindowSelector } from "./types.js";
 
-/** Accepts either shape: `list_windows` returns a bare array, `launch_app` an envelope. */
-const idSchema = z.union([z.string(), z.number()]).transform((v) => String(v));
+/** Accepts either shape: `list_windows` returns an envelope, `launch_app` another. */
+const idSchema = z
+  .union([z.string(), z.number(), z.bigint()])
+  .transform((v) => String(v));
 
+/**
+ * Measured, and three fields differ from what was assumed.
+ *
+ * `pid` is **optional**: `launch_app`'s window entries carry none, because the
+ * pid is a property of the launch, one level up. Only `list_windows` puts a pid
+ * on each window, and the caller supplies it either way.
+ *
+ * `bounds` is `{x, y, width, height}` here — but an *element*'s `frame` is
+ * `{x, y, w, h}`. The two are genuinely different shapes in the same driver, so
+ * this schema takes the long names and `snapshot.ts` keeps the short ones.
+ *
+ * `z_index`, not `z_order`. Both are accepted: the ordering is only ever used
+ * as a tiebreak, and refusing a window list over a renamed sort key would be a
+ * poor trade.
+ */
 const windowSchema = z.object({
   window_id: idSchema,
-  pid: idSchema,
+  pid: idSchema.optional(),
   title: z.string().optional(),
   is_minimized: z.boolean().optional(),
+  minimized: z.boolean().optional(),
   is_on_screen: z.boolean().optional(),
   z_order: z.number().optional(),
-  bounds: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }).optional(),
+  z_index: z.number().optional(),
+  bounds: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number(),
+    })
+    .optional(),
 });
 
 export type WindowListParse =
@@ -78,8 +104,13 @@ export function selectWindow(
   context: BindingContext,
   selector: WindowSelector,
 ): WindowSelection {
-  const owned = windows.filter((w) => w.pid === context.pid);
-  const visible = owned.filter((w) => w.is_minimized !== true && w.is_on_screen !== false);
+  // A window with no pid of its own came from `launch_app`, whose reply is
+  // already scoped to the process it launched. Requiring one there would reject
+  // the reply that is *most* certainly the right process.
+  const owned = windows.filter((w) => w.pid === undefined || w.pid === context.pid);
+  const visible = owned.filter(
+    (w) => w.is_minimized !== true && w.minimized !== true && w.is_on_screen !== false,
+  );
 
   if (visible.length === 0) {
     return {
@@ -113,7 +144,9 @@ export function selectWindow(
 
   // Z-order, not list order: the driver's ordering is not part of any contract,
   // and an ordinal that moves between runs is worse than no ordinal.
-  const byZOrder = [...titled].sort((a, b) => (a.z_order ?? 0) - (b.z_order ?? 0));
+  const byZOrder = [...titled].sort(
+    (a, b) => (a.z_order ?? a.z_index ?? 0) - (b.z_order ?? b.z_index ?? 0),
+  );
 
   if (selector.ordinal !== undefined) {
     const picked = byZOrder[selector.ordinal];

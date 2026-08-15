@@ -139,19 +139,37 @@ Rules that keep the split honest:
 
 The driver-facing half of `surfaces/desktop/` is built and unit-tested with no driver present: `types.ts`, `payloads.ts`, `locator.ts`, `snapshot.ts`, `windowBinding.ts`, `driverClient.ts` and `protocol.ts`. Every one of them is pure or transport-injected, which is why they can be tested on Linux against payloads captured on Windows.
 
-Not built yet, and each blocked on something specific:
+The run lifecycle is built and has run: `RunManager` opens a desktop surface for
+a desktop workflow, `surfaceOpener.ts` adapts a Desktop Session into the
+runner's `OpenedSurface`, the Desktop Target lock is held for the length of the
+run, and `desktop_screenshot` writes an evidence artifact. A workflow's surface
+is chosen at creation, the palette filters by it, and `ActionConfigDesktopFields`
+plus the element picker are how a desktop step gets authored.
 
-- **`driverHost.ts` is an entry point nothing spawns.** The lazy start belongs to the run lifecycle, which has no desktop path yet. `@trycua/cua-driver` is deliberately not a dependency — it ships a 25 MB platform binary and nothing exercises it until the slice runs on Windows — so the host resolves it at runtime.
-- **A workflow carries its surface, but nothing sets it to `desktop` yet.** The column, the type, the repository and `WorkflowCreateOptions` all take it; there is no picker at creation, so every workflow is still `web`. `isActionAvailableOnSurface` is the palette filter, with one known gap: `set_variable`, `http_request` and the date, crypto and file families are surface-independent but classified `implemented`, so a desktop workflow is not offered them yet.
-- **`desktop_screenshot` refuses to run.** Evidence capture has no desktop path, and writing an artifact the run does not record would look like success.
-- **Nothing binds a window or starts the host.** `RunManager` has no desktop branch: no launch, no Window Binding, no Desktop Target lock, no host lifecycle.
-- **`DesktopLaunchSpec.ready` is not implemented.** Waiting for an application to finish starting is runner behaviour, and there is no desktop run path to hang it on; `desktop_wait_for` and the launch sequence arrive together.
+The slice ran on Windows 11 on 2026-08-15: six steps against Character Map,
+twice, the second time after the application was closed, reopened and resized.
+Numbers in [the research findings](../research/cua-driver-windows.md#the-thin-slice-end-to-end).
 
-Three things the code assumes rather than knows, all of them cheap to confirm on the first Windows run and expensive to discover late:
+**Everything this section used to call unmeasured has now been measured, and
+most of it was wrong.** `verify_state` takes `{window}`/`{element}` records
+rather than a tagged union; the screenshot arrives as an envelope attachment
+rather than a payload field; `structuredJson` is a string; ids must be integers
+on the wire; the package is ESM-only, so the host's `createRequire` could never
+have loaded it. The corrected shapes are in the research document, and the
+lesson worth keeping is narrower than "measure early": *every test in this
+directory passed against the inference*, because the tests and the client were
+written from the same guess. Fakes cannot falsify an assumption they share.
 
-- **`verify_state` is unmeasured on both sides.** Only `expect: Array<StatePredicate>`, 1–8 ANDed, was measured; neither the predicate shape nor the verdict shape has been seen. The client reports `unverified` rather than guessing a verdict, but the request could still panic the host.
-- **Which tools require `DesktopScope`.** The panic was measured once, on `typeText`. The client sends `scope` with the input-synthesis tools only.
-- **What `list_apps` returns.** `classifyLaunch` needs pids from before a launch to tell a single-instance hand-off from a real launch, and the client's reading of that payload is inferred.
+Still not built:
+
+- **`DesktopLaunchSpec.ready` is honoured only as a timeout.** `session.ts`
+  polls `list_windows` until a window matching the selector appears, which is
+  the `kind: "window"` condition; no other readiness condition exists to
+  implement, and the timeout is the whole of the contract.
+- **Opt-in Element Snapshot capture for debugging**, specified in
+  `secrets-and-evidence.md`. It needs a per-step flag, a redaction pass over
+  element values, and a place in the Explorer that reads as "debug", not
+  "evidence".
 
 The moves under `surfaces/web/` and `actions/schemas/web/` are pure relocations. They are mechanical, they touch many import paths, and they should land as their own commit with no behavioural change, separate from anything desktop.
 
@@ -172,7 +190,7 @@ Sequence — each step separately reviewable:
 2. ~~**Lift control flow** into `runtime/controlFlow/`.~~ Done — and the compilation proof is stronger than planned: control flow takes a `VariableScope`, so it could not reference a page even if someone tried.
 3. ~~**Introduce the union.**~~ Done. `ExecutionSurface` sits on `SurfaceActing`, not on the base runtime.
 4. ~~**Add the desktop family.**~~ Done: ten actions, Zod schemas under `actions/schemas/desktop/`, executors under `surfaces/desktop/executors/`, all covered by the single registry.
-5. **Bind the surface to the workflow** — persistence, the picker at creation, the palette filter — then the run lifecycle: launch, bind, host, lock. ← next
+5. ~~**Bind the surface to the workflow**~~ — persistence, the picker at creation, the palette filter — ~~then the run lifecycle: launch, bind, host, lock.~~ Done, and the slice ran against it.
 
 Steps 1 and 2 carry the risk; step 3 is where the type system does the work. Do not merge them.
 

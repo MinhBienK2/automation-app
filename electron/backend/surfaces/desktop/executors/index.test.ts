@@ -28,12 +28,25 @@ const CALCULATOR = {
   ],
 };
 
+/**
+ * `structuredJson` is a **string** of JSON on the wire, not an object. Encoded
+ * centrally here so every fixture below reads as the payload it is, and none of
+ * them can quietly assert a shape the driver does not send.
+ */
+function asEnvelope(reply: unknown): unknown {
+  const record = reply as { structuredJson?: unknown };
+  if (record && typeof record === "object" && typeof record.structuredJson === "object") {
+    return { ...record, structuredJson: JSON.stringify(record.structuredJson) };
+  }
+  return reply;
+}
+
 function surfaceWith(replies: Record<string, unknown>, fallback: unknown = { ok: true }) {
   const calls: Array<{ tool: string; args: Record<string, unknown> }> = [];
   const transport: DriverTransport = {
     callTool: async (tool, args) => {
       calls.push({ tool, args });
-      return tool in replies ? replies[tool] : fallback;
+      return asEnvelope(tool in replies ? replies[tool] : fallback);
     },
   };
 
@@ -151,7 +164,7 @@ describe("verification", () => {
   test("a stated expectation is checked, and a failed check fails the action", async () => {
     const { surface } = surfaceWith({
       get_window_state: { structuredJson: CALCULATOR },
-      verify_state: { structuredJson: { satisfied: false } },
+      verify_state: { structuredJson: { status: "unsatisfied" } },
     });
 
     await expect(
@@ -167,7 +180,7 @@ describe("verification", () => {
     // answer that cannot be read is not evidence of anything.
     const { surface } = surfaceWith({
       get_window_state: { structuredJson: CALCULATOR },
-      verify_state: { structuredJson: { something_else: true } },
+      verify_state: { structuredJson: { status: "unknown" } },
     });
 
     await expect(
@@ -185,7 +198,7 @@ describe("verification", () => {
         isError: true,
         content: [{ type: "text", text: "The operation completed successfully. (0x00000000)" }],
       },
-      verify_state: { structuredJson: { satisfied: true } },
+      verify_state: { structuredJson: { status: "satisfied" } },
     });
 
     await expect(
@@ -201,7 +214,7 @@ describe("the trace a step leaves", () => {
   test("names the element, how it matched, the tier and the verdict", async () => {
     const { surface } = surfaceWith({
       get_window_state: { structuredJson: CALCULATOR },
-      verify_state: { structuredJson: { satisfied: true } },
+      verify_state: { structuredJson: { status: "satisfied" } },
     });
     const runtime = runtimeFor(surface);
 
@@ -375,9 +388,12 @@ describe("surface mismatch", () => {
 describe("screenshots", () => {
   test("write the window image and record it as evidence", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "desktop-executor-evidence-"));
+    // The image is an envelope attachment, not a payload field — measured. The
+    // payload carries only the dimensions and the mime type.
     const { surface } = surfaceWith({
       get_window_state: {
-        structuredJson: { ...CALCULATOR, screenshot: Buffer.from("png").toString("base64") },
+        structuredJson: { ...CALCULATOR, screenshot_width: 320, screenshot_mime_type: "image/png" },
+        images: [{ mimeType: "image/png", dataBase64: Buffer.from("png").toString("base64") }],
       },
     });
     recordedEvidence.length = 0;

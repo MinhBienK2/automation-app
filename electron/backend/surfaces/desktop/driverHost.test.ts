@@ -23,7 +23,25 @@ describe("createHostDriver", () => {
 
     await createHostDriver({ sessionId: "run-42", load });
 
-    expect(startSession).toHaveBeenCalledWith({ session: "run-42", captureScope: "Window" });
+    // `CaptureScope.Window` is 1. The enum is numeric and the string "Window"
+    // is not accepted — measured, after this line asserted the string.
+    expect(startSession).toHaveBeenCalledWith({ session: "run-42", captureScope: 1 });
+  });
+
+  test("always names a session, because the driver requires one", async () => {
+    // `StartSessionInput.session` is required. Passing undefined fails inside
+    // the native bridge with 'The "src" argument must be of type string',
+    // which names nothing anyone could act on.
+    const startSession = vi.fn(async () => ({}));
+    const load = moduleWith({ callTool: vi.fn(async () => ({})), startSession });
+
+    await createHostDriver({ load });
+
+    expect(startSession).toHaveBeenCalledWith({
+      session: expect.any(String),
+      captureScope: 1,
+    });
+    expect(startSession.mock.calls[0][0].session).not.toBe("");
   });
 
   test("passes the run's signal through to the driver", async () => {

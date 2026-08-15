@@ -157,8 +157,7 @@ export function ScheduleFormDialog({
               This is a desktop workflow. Each run opens{" "}
               {selectedWorkflow.desktop_target_name ?? "its application"} on your screen — your
               mouse and keyboard stay yours, but the window will appear over whatever you are
-              doing. Whether a locked screen can still be automated has not been measured, so do
-              not rely on this running overnight.
+              doing. A locked screen is fine; a signed-out or restarted machine is not.
             </Alert>
           ) : null}
 

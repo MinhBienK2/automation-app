@@ -388,8 +388,57 @@ async function verify(
   }
 }
 
+/**
+ * The authored predicate, translated into the one the driver accepts.
+ *
+ * These were the same shape until the driver was measured, and the cast that
+ * assumed so sent `{ kind: "window_exists" }` into a tool that answers
+ * *"unknown field `kind`, expected `window` or `element`"*. Keeping them
+ * separate is the better arrangement anyway: a saved workflow should not carry
+ * `cua-driver`'s wire format, or a driver release would invalidate stored
+ * graphs.
+ *
+ * The driver's element selector is **weaker than a Desktop Locator** — role and
+ * a label substring, with no ancestry, ordinal or automation id. So a stated
+ * expectation can be less precise than the step's own target. That is a real
+ * limit, and it is why verification says "something matching this is there"
+ * rather than "the element I acted on changed".
+ */
 function predicatesOf(expect: unknown[] | null | undefined): StatePredicate[] {
-  return (expect ?? []) as StatePredicate[];
+  return (expect ?? []).map(toDriverPredicate);
+}
+
+function toDriverPredicate(authored: unknown): StatePredicate {
+  const predicate = authored as {
+    kind?: string;
+    locator?: LocatorConfig;
+    expected?: string;
+  };
+
+  switch (predicate.kind) {
+    case "element_present":
+      return { element: { selector: selectorOf(predicate.locator), exists: true } };
+    case "element_value":
+      return {
+        element: { selector: selectorOf(predicate.locator), value_equals: predicate.expected ?? "" },
+      };
+    // `window_exists`, and anything a future build authored that this one does
+    // not know: the window being there is the weakest true statement available,
+    // and it is better than sending a shape the driver rejects outright.
+    default:
+      return { window: { exists: true } };
+  }
+}
+
+function selectorOf(locator: LocatorConfig | undefined): {
+  role?: string;
+  label_contains?: string;
+} {
+  if (!locator) return {};
+  return {
+    ...(locator.role ? { role: locator.role } : {}),
+    ...(locator.name?.value ? { label_contains: locator.name.value } : {}),
+  };
 }
 
 function requireElement(target: ResolvedTarget, actionType: string): string {

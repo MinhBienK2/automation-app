@@ -185,6 +185,122 @@ This matters because the existing evidence model redacts by **key pattern**, whi
 - `start_recording` / `stop_recording` / `replay_trajectory` exist, which makes a desktop recorder considerably cheaper than assumed when it was ruled out of scope.
 - `verify_state` accepts `expect: Array<StatePredicate>` (1–8, ANDed) — a way to confirm an action's effect instead of trusting its return value.
 
+## Second session: what the wire actually looks like
+
+Everything above came from probing the SDK. The section below came from running
+Mission Control's own client against it for the first time (#48), and it is
+mostly a list of things the client had inferred and got wrong. None of them
+could have been caught by a test, because every test had been written against
+the same inference.
+
+**The package is ESM-only.** `createRequire(...)("@trycua/cua-driver")` raises
+`ERR_PACKAGE_PATH_NOT_EXPORTED`: `"type": "module"`, and the exports map
+declares only an `import` condition. The driver host must use dynamic `import()`.
+
+**`startSession` needs a session id, and a numeric scope.**
+`StartSessionInput.session` is required — passing `undefined` fails inside the
+native bridge with *"The `src` argument must be of type string"*, which names
+nothing. `captureScope` is the enum `{Auto: 0, Window: 1, Desktop: 2}`; the
+string `"Window"` is not accepted.
+
+**`asyncOpts` must be omitted, not passed as `{signal: undefined}`.** The
+generated wrapper reads `asyncOpts?.signal.aborted` — optional on the options,
+not on the signal — so every call made without a run signal threw inside
+`@ubjs/core` before reaching the tool.
+
+**`structuredJson` is a string of JSON**, not an object. Reading it directly
+hands every caller a string where it expected a record.
+
+**Ids must be integers on the wire.** They arrive as `bigint` and are stored as
+strings — `JSON.stringify` refuses bigint — but sending the string back is
+refused: *"Missing required integer field pid."*
+
+**`degraded` rides the envelope, not the payload.** A healthy
+`get_window_state` payload has no `degraded` or `escalation` key at all.
+
+**The screenshot is an envelope attachment.** `include_screenshot: true` puts
+`{mimeType, dataBase64}` in `images[]`; the payload carries only
+`screenshot_width`, `screenshot_height` and `screenshot_mime_type`. Every
+guessed payload field name was wrong.
+
+**`verify_state` predicates are not a tagged union.**
+
+```
+expect: [{ window: { exists: true } }]
+expect: [{ element: { selector: { role: "Button", label_contains: "Save" }, exists: true } }]
+```
+
+`{kind: "window_exists"}` is rejected with *"unknown field `kind`, expected
+`window` or `element`"*, and `labelContains` with *"expected `role` or
+`label_contains`"* — the wire is snake_case throughout. The verdict comes back
+as `status: "satisfied" | "unsatisfied" | ...` on the payload, and again as a
+typed `verification` record on the envelope. The selector is **weaker than a
+Desktop Locator**: role and a label substring, no ancestry, no ordinal, no
+automation id.
+
+**Window entries and element frames use different rectangles.** A window's
+`bounds` is `{x, y, width, height}`; an element's `frame` is `{x, y, w, h}`.
+`launch_app`'s window entries carry **no pid** — the pid belongs to the launch —
+and the sort key is `z_index`, not `z_order`.
+
+**`tree_markdown`.** `get_window_state` returns the whole tree a second time as
+38 KB of markdown, beside the structured `elements`. The driver's own `_note`
+says to prefer `elements`. It is a second copy of the same leak the tree is:
+`secrets-and-evidence.md` was written before anyone had seen this field.
+
+**A missing required field did not panic.** `type_text` without `pid` returned
+`isError: true` and the process survived, as did `verify_state` with an empty
+`expect`. That does not disprove the panic measured in #39 — it was seen once,
+on a different field — but the risk is smaller than that finding implied, and
+the utility process is now insurance rather than a necessity.
+
+## The thin slice, end to end
+
+Character Map (classic Win32, 15 elements, tier Element), driven through the
+real runner and the real client — not a probe.
+
+```
+run 1  success  4.9s  typed="omega"  verdict="reached shared control flow"
+run 2  success  4.2s  after the app was closed, reopened and resized to 520x700
+```
+
+Six steps: click an element, type into it, read the text back, photograph the
+window, compare with `check_text_contains`, branch on the result with
+`if_condition`. The last two are surface-independent executors that take a
+`VariableScope` and **could not reach a page if they tried** — which is the
+evidence for the map's constraint #4 that no amount of documentation provides.
+
+The screenshot landed at `runs/<id>/screenshots/004-shot-window.png` and was
+recorded as an evidence item.
+
+**The cursor does not move.** Five consecutive runs, position read from outside
+the driver with `System.Windows.Forms.Cursor`:
+
+```
+run 1..5   1368,390 -> 1368,390   no movement
+```
+
+A single earlier run showed movement and was not reproducible in five attempts,
+on a machine with a person sitting at it. The click's own report explains why
+there should be none: `route: "accessibility"`, `delivery: {mode: "background"}`
+— a UIA Invoke or a `PostMessage`, never synthetic input to the desktop.
+
+**A locked workstation changes nothing.** The same slice on a loop across a
+lock and an unlock, with `LogonUI.exe` as the lock signal:
+
+```
+07:32:29 unlocked  success  omega
+07:32:34 locked    success  omega     <- Win+L here
+...      locked    success  omega     (13 consecutive runs, no failures)
+07:33:38 locked    success  omega
+```
+
+The lock screen is a separate desktop (`Winlogon`); the application's window is
+still on the user's own desktop underneath it, and UIA reads the window rather
+than the screen. This settles the question `scheduling.md` left open: overnight
+scheduling is viable. Signed-out and restarted machines were not tested, and
+are a different question.
+
 ## Unresolved
 
 1. **`isError` is unreliable.** The same element click returned `isError=true` with the text `"The operation completed successfully. (0x00000000)"` — a Win32 success code surfaced as failure — and `isError=false` on another run. Conditions not isolated. Treat `verify_state` as the source of truth.

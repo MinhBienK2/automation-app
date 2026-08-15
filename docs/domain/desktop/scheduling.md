@@ -35,16 +35,22 @@ Keeping the application open between rows would be faster. It would also mean ro
 
 Applications the run **attached** to rather than launched are never terminated, between rows or at the end. The run did not start them and cannot know what else they hold.
 
-## Not settled: the locked screen
+## Settled: a locked workstation still works
 
-**Whether UIA can read a window while the workstation is locked has not been measured.** It decides whether overnight scheduling is viable at all, and it cannot be answered from Linux.
+Measured on Windows 11 on 2026-08-15, and the answer is yes.
 
-Until it is measured:
+The full slice — launch Character Map, snapshot it, click an element, type into it, read the value back — ran on a loop across a lock and an unlock. Thirteen consecutive runs completed while `LogonUI.exe` was present, every one of them `success` with the expected value read back, and not one behaved differently from the unlocked runs either side of it.
 
-- The schedule dialog says so, rather than implying a nightly schedule will work.
-- Nothing in the code assumes either answer.
+That makes sense once stated: the lock screen lives on the `Winlogon` desktop, and the application's window is still on the user's own desktop underneath it. UIA is reading the window, not the screen. It is also why this had to be measured rather than reasoned about — the same fact could equally have implied the opposite.
 
-The measurement is cheap on the Windows machine that runs the thin slice ([#48](https://github.com/MinhBienK2/automation-app/issues/48)): lock the workstation, run a schedule, read the result. It should be done in the same session, because a "yes" and a "no" lead to visibly different products — a "no" makes desktop scheduling a working-hours feature and should be said that way in the UI.
+So **overnight scheduling is viable**, and desktop automation is not a working-hours-only feature.
+
+Two things this does *not* say, and the dialog should not either:
+
+- **A signed-out or restarted machine is a different question.** The session must still exist. Locked is not logged out.
+- **Nothing was measured about a screensaver, sleep, or hibernation.** The measurement covers `Win+L`, which is the case an operator actually chooses when they leave the desk.
+
+What it changes for the operator: the schedule dialog no longer needs to warn that overnight running is unproven. It still warns that the window will appear on the screen — which is the other half of the problem, and the half locking does not solve, because the window is there again the moment they unlock.
 
 ## What did not change
 

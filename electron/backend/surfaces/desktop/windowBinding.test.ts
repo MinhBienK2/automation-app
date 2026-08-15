@@ -26,13 +26,35 @@ const OTHER_APP = win({ window_id: "990001", pid: "8800", title: "Calculator" })
 
 describe("parseWindowList", () => {
   test("normalises bigint-shaped ids to strings so nothing downstream mixes types", () => {
+    // A window's `bounds` uses the long names. An element's `frame` uses the
+    // short ones. Both measured, in the same driver, on the same day.
     const result = parseWindowList([
-      { window_id: 131204, pid: 4212, title: "notes.txt - Notepad", bounds: { x: 0, y: 0, w: 800, h: 600 } },
+      {
+        window_id: 131204,
+        pid: 4212,
+        title: "notes.txt - Notepad",
+        bounds: { x: 0, y: 0, width: 800, height: 600 },
+      },
     ]);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.windows[0]).toMatchObject({ window_id: "131204", pid: "4212" });
+  });
+
+  test("accepts a window with no pid, which is how launch_app reports them", () => {
+    // The pid belongs to the launch, one level up, so its window entries carry
+    // none. Requiring one rejected the reply most certainly from the right
+    // process, and every desktop run failed at binding.
+    const result = parseWindowList({
+      pid: 4212,
+      windows: [{ window_id: 131204, title: "Home - File Explorer", z_index: 3 }],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.windows[0]).toMatchObject({ window_id: "131204" });
+    expect(result.windows[0].pid).toBeUndefined();
   });
 
   test("accepts the envelope `launch_app` returns as well as a bare array", () => {
