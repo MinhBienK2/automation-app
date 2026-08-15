@@ -245,13 +245,30 @@ export function createFeatureHelpers(
     return row?.last_run_at ?? null;
   }
 
-  function activeRunConflict(workflowId: string, settings: WorkflowSettings) {
-    return runManager.activeRunConflict(workflowId, settings);
+  function activeRunConflict(
+    workflowId: string,
+    settings: WorkflowSettings,
+    desktopTargetId?: string | null,
+  ) {
+    return runManager.activeRunConflict(workflowId, settings, desktopTargetId);
   }
 
+  /**
+   * Why a scheduled occurrence cannot start now.
+   *
+   * The Desktop Target is included, so two schedules pointed at one application
+   * skip rather than interleave keystrokes into its windows. Skipping is the
+   * right outcome and not merely the convenient one: queueing a desktop run
+   * means an application window opening on the operator's screen at an
+   * unpredictable later moment, which is worse than the run not happening. The
+   * skip is recorded with its reason, so it is visible rather than silent.
+   */
   async function schedulerConflictReason(workflowId: string) {
     const settings = await getSettings(workflowId);
-    return activeRunConflict(workflowId, settings)?.reason ?? null;
+    const workflow = await repository.getWorkflowSummary(workflowId);
+    return (
+      activeRunConflict(workflowId, settings, workflow?.desktop_target_id)?.reason ?? null
+    );
   }
 
   async function assertCanChangeBrowserIdentityProfile(
