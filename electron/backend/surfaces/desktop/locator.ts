@@ -8,18 +8,15 @@
  * Spec: `docs/domain/desktop/locator-model.md`.
  */
 
+import { tierOf } from "./snapshot.js";
 import type {
   AncestorStep,
-  CapabilityTier,
   DesktopLocator,
   ElementSnapshot,
   LocatorResolution,
   NameMatch,
   SnapshotElement,
 } from "./types.js";
-
-/** Frame controls every window exposes, which alone mean nothing is reachable. */
-const WINDOW_CHROME_LABELS = new Set(["minimize", "maximize", "restore", "close"]);
 
 export function matchesName(name: NameMatch | undefined, label: string | undefined): boolean {
   if (!name) return true;
@@ -91,26 +88,14 @@ function ancestorChainMatches(
   return true;
 }
 
-/**
- * Classifies a snapshot so the caller can tell "the element moved" from
- * "the window stopped exposing anything", which need different repairs.
- */
-export function tierOf(snapshot: ElementSnapshot): CapabilityTier {
-  if (snapshot.degraded || snapshot.escalation?.recommended === "px") return "pixel";
-  if (snapshot.elements.length === 0) return "pixel";
-
-  const meaningful = snapshot.elements.filter(
-    (e) => !WINDOW_CHROME_LABELS.has((e.label ?? "").toLowerCase()),
-  );
-
-  return meaningful.length === 0 ? "chrome" : "element";
-}
-
 export function resolveDesktopLocator(
   locator: DesktopLocator,
   snapshot: ElementSnapshot,
 ): LocatorResolution {
-  if (snapshot.degraded || snapshot.escalation?.recommended === "px") {
+  // One tier verdict, taken from `snapshot.ts`. Re-deriving it here is how a
+  // window with no tree at all ends up reported as a missing element, which
+  // sends the operator to re-author a step that was never wrong.
+  if (tierOf(snapshot) === "pixel") {
     return {
       ok: false,
       reason: "degraded",

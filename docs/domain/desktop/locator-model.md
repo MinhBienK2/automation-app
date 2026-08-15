@@ -77,10 +77,12 @@ It is positional, so it breaks when items are added or reordered — exactly the
 ## Pixel addressing is a separate kind, not a field
 
 ```ts
-type DesktopTarget =
+type DesktopStepTarget =
   | { kind: "element"; locator: DesktopLocator }
   | { kind: "pixel"; x: number; y: number; origin: "window" };
 ```
+
+Named `DesktopStepTarget`, not `DesktopTarget`: [CONTEXT.md](../../../CONTEXT.md) reserves *Desktop Target* for the project-owned application description in [desktop-target.md](desktop-target.md). What a step points at and what a workflow drives are different things, and one name for both would resolve to the wrong one in half the places it is read.
 
 A discriminated union rather than optional coordinates on `DesktopLocator`, because the two carry different reliability contracts and the type should not let a step be quietly half-specified. Coordinates are **window-relative** — screen-relative coordinates break when the window moves, which is not a failure worth inheriting.
 

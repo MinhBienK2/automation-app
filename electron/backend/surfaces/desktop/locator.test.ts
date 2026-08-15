@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import { ancestorsOf, matchesName, resolveDesktopLocator, tierOf } from "./locator.js";
+import { ancestorsOf, matchesName, resolveDesktopLocator } from "./locator.js";
 import type { ElementSnapshot, SnapshotElement } from "./types.js";
 
 /**
@@ -36,12 +36,6 @@ const CALCULATOR: SnapshotElement[] = [
   { depth: 3, element_index: 3, element_token: "s00000001:3", role: "Text", label: "Display is 0" },
   { depth: 4, element_index: 27, element_token: "s00000001:27", role: "Button", label: "Seven", frame: { x: 4, y: 405, w: 97, h: 63 } },
   { depth: 4, element_index: 28, element_token: "s00000001:28", role: "Button", label: "Eight" },
-];
-
-const CHROME_ONLY: SnapshotElement[] = [
-  { depth: 5, element_index: 0, element_token: "s00000002:0", role: "Button", label: "Minimize" },
-  { depth: 5, element_index: 1, element_token: "s00000002:1", role: "Button", label: "Restore" },
-  { depth: 5, element_index: 2, element_token: "s00000002:2", role: "Button", label: "Close" },
 ];
 
 describe("matchesName", () => {
@@ -96,34 +90,6 @@ describe("ancestorsOf", () => {
     ];
 
     expect(ancestorsOf(orphan[0], orphan)).toEqual([]);
-  });
-});
-
-describe("tierOf", () => {
-  test("a usable tree is the element tier", () => {
-    expect(tierOf(snapshot(CALCULATOR))).toBe("element");
-  });
-
-  test("frame controls alone are the chrome tier — this is the Electron case", () => {
-    expect(tierOf(snapshot(CHROME_ONLY))).toBe("chrome");
-  });
-
-  test("the driver's own degraded flag wins over element count", () => {
-    const degraded = snapshot(CALCULATOR, { degraded: true, degraded_reason: "ax_tree_empty" });
-
-    expect(tierOf(degraded)).toBe("pixel");
-  });
-
-  test("an escalation recommending pixels is honoured even when undegraded", () => {
-    const escalating = snapshot(CALCULATOR, {
-      escalation: { reason: "non-AX surface", recommended: "px" },
-    });
-
-    expect(tierOf(escalating)).toBe("pixel");
-  });
-
-  test("an empty tree is the pixel tier", () => {
-    expect(tierOf(snapshot([]))).toBe("pixel");
   });
 });
 
@@ -258,6 +224,20 @@ describe("resolveDesktopLocator", () => {
     if (result.ok) return;
     expect(result.reason).toBe("degraded");
     expect(result.detail).toContain("ax_tree_empty");
+  });
+
+  test("an empty tree with no degraded flag is still degraded, not a missing element", () => {
+    // The UWP collapse case does not always set the flag. An empty tree is a
+    // window that lost its provider, and saying "element not found" would send
+    // the operator to re-author a step that is fine.
+    const result = resolveDesktopLocator(
+      { role: "Button", name: { kind: "exact", value: "Seven" } },
+      snapshot([]),
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe("degraded");
   });
 
   test("a genuinely absent element is not_found and names what was sought", () => {

@@ -43,7 +43,7 @@ A WinUI application exposed nothing; Electron applications exposed their frame w
 Mapping:
 
 - `degraded: false` and elements beyond frame controls → **Element**
-- `degraded: false` but only frame controls (`Minimize`, `Restore`, `Close`) → **Chrome**
+- `degraded: false` but only frame controls (`Minimize`, `Maximize`, `Restore`, `Close`) → **Chrome**
 - `degraded: true`, or `escalation.recommended === "px"` → **Pixel**
 
 `elements_complete: false` appears even on healthy snapshots. Treat it as "the tree may be partial", surface it as a warning on the authored step, and do not use it for tiering.

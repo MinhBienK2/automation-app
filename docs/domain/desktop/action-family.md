@@ -27,7 +27,7 @@ Ten actions. Enough to express real work, small enough to get the contracts righ
 
 ```ts
 type DesktopActionCommon = {
-  target: DesktopTarget;        // element locator or pixel — see locator-model.md
+  target: DesktopStepTarget;    // element locator or pixel — see locator-model.md
   verify?: VerifyExpectation;   // what must hold afterwards
   timeout_ms?: number;
 };
