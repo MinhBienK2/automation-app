@@ -9,6 +9,7 @@ import { DesktopDriverClient } from "../driverClient.js";
 import type { DriverTransport } from "../driverClient.js";
 import { createDesktopActionExecutors } from "./index.js";
 import type { VariableScope } from "../../../runtime/actionRuntime.js";
+import type { SurfaceStepTrace } from "../../../runtime/actionTrace.js";
 import type { ActionConfig } from "../../../../src/types/workflow.js";
 
 /**
@@ -48,6 +49,7 @@ function surfaceWith(replies: Record<string, unknown>, fallback: unknown = { ok:
 
 function runtimeFor(surface: ReturnType<typeof surfaceWith>["surface"]): VariableScope & {
   surface: typeof surface;
+  currentSurfaceTrace: SurfaceStepTrace | null;
 } {
   return {
     runId: "run-1",
@@ -60,6 +62,8 @@ function runtimeFor(surface: ReturnType<typeof surfaceWith>["surface"]): Variabl
     currentStepName: "Click Seven",
     currentActionType: null,
     currentActionSummary: null,
+    currentActionSensitive: null,
+    currentSurfaceTrace: null,
     currentStepMetadata: null,
     surface,
   };
@@ -190,6 +194,123 @@ describe("verification", () => {
         config: { target: SEVEN, expect: [{ kind: "window_exists" }] },
       }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("the trace a step leaves", () => {
+  test("names the element, how it matched, the tier and the verdict", async () => {
+    const { surface } = surfaceWith({
+      get_window_state: { structuredJson: CALCULATOR },
+      verify_state: { structuredJson: { satisfied: true } },
+    });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, {
+      type: "desktop_click",
+      config: { target: SEVEN, expect: [{ kind: "window_exists" }] },
+    });
+
+    expect(runtime.currentSurfaceTrace).toEqual({
+      role: "Button",
+      label: "Seven",
+      matched: "name",
+      tier: "element",
+      verified: true,
+    });
+  });
+
+  test("carries no value, however the element was read", async () => {
+    // The leak #46 found is a `Document` element's `value` being the whole open
+    // file. A trace that carried it would put that into every run's steps.
+    const { surface } = surfaceWith({
+      get_window_state: {
+        structuredJson: {
+          ...CALCULATOR,
+          elements: [{ ...CALCULATOR.elements[0], value: "sk-live-not-for-the-trace" }],
+        },
+      },
+    });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, {
+      type: "desktop_read_text",
+      config: {
+        target: { kind: "element", locator: { role: "Text", name: { kind: "prefix", value: "Display" } } },
+        output_name: "reading",
+      },
+    });
+
+    expect(JSON.stringify(runtime.currentSurfaceTrace)).not.toContain("sk-live");
+  });
+
+  test("survives the failure it exists to explain", async () => {
+    // The step that most needs a trace is the one that threw, and the useful
+    // half — what the window was like when it looked — is known before the
+    // resolution fails.
+    const { surface } = surfaceWith({ get_window_state: { structuredJson: CALCULATOR } });
+    const runtime = runtimeFor(surface);
+
+    await expect(
+      run(runtime, {
+        type: "desktop_click",
+        config: {
+          target: { kind: "element", locator: { role: "Button", name: { kind: "exact", value: "Nine" } } },
+        },
+      }),
+    ).rejects.toThrow();
+
+    expect(runtime.currentSurfaceTrace).toEqual({ tier: "element" });
+  });
+
+  test("a step with nothing to check reads as unverified, not as success", async () => {
+    const { surface } = surfaceWith({ get_window_state: { structuredJson: CALCULATOR } });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, { type: "desktop_click", config: { target: SEVEN } });
+
+    expect(runtime.currentSurfaceTrace).toMatchObject({ verified: "unverified" });
+  });
+
+  test("a pixel step is marked as one, so its fragility is visible later", async () => {
+    const { surface } = surfaceWith({});
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, {
+      type: "desktop_click",
+      config: { target: { kind: "pixel", x: 120, y: 240, origin: "window" } },
+    });
+
+    expect(runtime.currentSurfaceTrace).toMatchObject({ matched: "pixel" });
+  });
+
+  test("records the ordinal that disambiguated, not the name that did not", async () => {
+    // A step that used to match by name and now matches by ordinal is one
+    // layout change away from acting on the wrong element.
+    const { surface } = surfaceWith({
+      get_window_state: {
+        structuredJson: {
+          snapshot_id: "s2",
+          element_count: 2,
+          elements: [
+            { depth: 4, element_index: 1, element_token: "s2:1", role: "Button", label: "Seven" },
+            { depth: 4, element_index: 2, element_token: "s2:2", role: "Button", label: "Seven" },
+          ],
+        },
+      },
+    });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, {
+      type: "desktop_click",
+      config: {
+        target: {
+          kind: "element",
+          locator: { role: "Button", name: { kind: "exact", value: "Seven" }, ordinal: 1 },
+        },
+      },
+    });
+
+    expect(runtime.currentSurfaceTrace).toMatchObject({ matched: "ordinal" });
   });
 });
 

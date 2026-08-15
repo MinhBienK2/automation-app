@@ -107,32 +107,11 @@ export function isPasswordElement(element: SnapshotElement | null | undefined): 
 }
 
 /**
- * The trace a desktop step leaves behind.
+ * The trace a desktop step leaves behind is `SurfaceStepTrace`, declared in
+ * `runtime/actionTrace.ts` and written by the executors as a step proceeds.
  *
- * Everything here is derived from the resolution, never copied from the
- * snapshot: `label` is the element's accessible name, which the operator
- * authored the locator against, and `value` is deliberately absent. A trace
- * that carried `value` would put document contents into run steps, which is
- * exactly the leak #46 found.
+ * It lives there rather than here because ADR-0001 runs the dependency one way:
+ * the runner composes the step's trace and must not import a surface to do it.
+ * Its shape is the enforcement of #46 — there is no `value` field, so document
+ * contents cannot reach a run's steps.
  */
-export type DesktopStepTrace = {
-  role: string;
-  label?: string;
-  /** How the element was found, for a step that later stops matching. */
-  matched: "automation_id" | "name" | "ancestry" | "ordinal" | "pixel";
-  tier: "element" | "chrome" | "pixel";
-  verified: boolean | "unverified";
-  warnings?: string[];
-};
-
-export function describeResolvedElement(
-  element: SnapshotElement,
-  tier: DesktopStepTrace["tier"],
-): Pick<DesktopStepTrace, "role" | "label" | "matched" | "tier"> {
-  return {
-    role: element.role,
-    label: element.label,
-    matched: element.automation_id ? "automation_id" : "name",
-    tier,
-  };
-}

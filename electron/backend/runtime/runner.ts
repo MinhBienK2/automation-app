@@ -32,6 +32,7 @@ import {
   actionSummaryTraceField,
   actionTraceMode,
   pushActionTrace,
+  surfaceTraceField,
   runtimeErrorDiagnostics,
   snapshotOutputs,
   subflowTraceFields,
@@ -262,6 +263,7 @@ export class BrowserWorkflowRunner {
       currentActionType: null,
       currentActionSummary: null,
       currentActionSensitive: null,
+      currentSurfaceTrace: null,
       currentStepMetadata: null,
       liveState: state,
       onProgress: request.onProgress,
@@ -431,6 +433,9 @@ export class BrowserWorkflowRunner {
     const startedAt = new Date().toISOString();
     const outputSnapshot = snapshotOutputs(runtime.outputs);
     const evidenceStartIndex = runtime.evidence.length;
+    // Cleared here rather than after the push: a step that throws before it
+    // resolves anything must not inherit the last step's element.
+    runtime.currentSurfaceTrace = null;
     try {
       await this.executeAction(runtime, step.config);
       pushActionTrace(runtime, {
@@ -443,6 +448,7 @@ export class BrowserWorkflowRunner {
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
+        ...surfaceTraceField(runtime),
       });
     } catch (error) {
       pushActionTrace(runtime, {
@@ -457,6 +463,9 @@ export class BrowserWorkflowRunner {
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
+        // A failed step is where this matters most: the locator it did resolve,
+        // and the verdict that came back false, are the whole diagnosis.
+        ...surfaceTraceField(runtime),
         reason: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -630,6 +639,7 @@ export class BrowserWorkflowRunner {
     const nodeId = action.graph_node_id ?? runtime.currentStepId ?? "nested";
     const outputSnapshot = snapshotOutputs(runtime.outputs);
     const evidenceStartIndex = runtime.evidence.length;
+    runtime.currentSurfaceTrace = null;
     try {
       await this.executeAction(runtime, action);
       pushActionTrace(runtime, {
@@ -643,6 +653,7 @@ export class BrowserWorkflowRunner {
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
+        ...surfaceTraceField(runtime),
       });
     } catch (error) {
       pushActionTrace(runtime, {
@@ -658,6 +669,7 @@ export class BrowserWorkflowRunner {
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
+        ...surfaceTraceField(runtime),
         reason: error instanceof Error ? error.message : String(error),
       });
       throw error;

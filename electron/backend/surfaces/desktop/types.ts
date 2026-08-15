@@ -102,8 +102,25 @@ export type DesktopStepTarget =
  * and the locator was never at fault, and ambiguity means the locator is
  * under-specified.
  */
+/**
+ * Which of the locator's identifiers actually did the work.
+ *
+ * Reported rather than inferred from the locator, because a locator that
+ * carries an `automationId` and an ordinal does not say which one narrowed the
+ * field. It lands in the step's trace: a step that used to match by name and
+ * now matches by ordinal is one resize away from acting on the wrong element,
+ * and that drift is invisible unless the run records it.
+ */
+export type LocatorMatchKind = "automation_id" | "name" | "ancestry" | "ordinal";
+
 export type LocatorResolution =
-  | { ok: true; element: SnapshotElement; elementToken: string; snapshotId: string }
+  | {
+      ok: true;
+      element: SnapshotElement;
+      elementToken: string;
+      snapshotId: string;
+      matchedBy: LocatorMatchKind;
+    }
   | { ok: false; reason: "degraded"; detail: string }
   | { ok: false; reason: "not_found"; detail: string }
   | { ok: false; reason: "ambiguous"; detail: string; candidates: SnapshotElement[] };

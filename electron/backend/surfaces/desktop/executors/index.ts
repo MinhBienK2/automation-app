@@ -15,6 +15,7 @@
  */
 
 import type { ActionExecutorMap } from "../../../actions/execution.js";
+import type { SurfaceStepTrace } from "../../../runtime/actionTrace.js";
 import type { VariableScope } from "../../../runtime/actionRuntime.js";
 import { requireDesktopSurface } from "../../../runtime/surface.js";
 import type { DesktopSurface, ExecutionSurface } from "../../../runtime/surface.js";
@@ -29,7 +30,29 @@ type DesktopRuntime = VariableScope & {
   runId: string;
   currentStepNumber: number | null;
   currentStepId: string | null;
+  /**
+   * Filled in as the step proceeds, read by the runner when it closes the step
+   * out. Written field by field rather than at the end, because the step that
+   * most needs a trace is the one that throws before reaching it.
+   */
+  currentSurfaceTrace: SurfaceStepTrace | null;
 };
+
+/**
+ * The half of the runtime the resolution helpers write to.
+ *
+ * Narrower than `DesktopRuntime` on purpose: these functions read variables and
+ * leave a trace, and nothing else about a run is theirs to touch.
+ */
+type StepScope = VariableScope & { currentSurfaceTrace: SurfaceStepTrace | null };
+
+/**
+ * Merged rather than assigned. The tier is known before the element is, and the
+ * verdict after it, so each writer contributes the part it learned.
+ */
+function noteTrace(runtime: StepScope, fields: Partial<SurfaceStepTrace>): void {
+  runtime.currentSurfaceTrace = { ...(runtime.currentSurfaceTrace ?? {}), ...fields };
+}
 
 /** What a resolved step carries into the driver call. */
 type ResolvedTarget = {
@@ -139,8 +162,14 @@ export function createDesktopActionExecutors<Runtime extends DesktopRuntime>(
 
     desktop_read_text: async (action) => {
       const snapshot = await desktop.driver.getWindowState(desktop.binding, runtime.signal);
-      const element = resolveOrThrow(snapshot, action.config, "desktop_read_text");
+      const warnings = snapshotWarnings(snapshot);
+      noteTrace(runtime, {
+        tier: tierOf(snapshot),
+        ...(warnings.length > 0 ? { warnings } : {}),
+      });
+      const element = resolveOrThrow(snapshot, action.config, "desktop_read_text", runtime);
       // Reading is the assertion; there is nothing further to verify.
+      noteTrace(runtime, { verified: true });
       runtime.outputs[action.config.output_name] = (element.value ?? element.label ?? "").trim();
     },
 
@@ -198,7 +227,7 @@ async function screenshot(
 
 async function waitForState(
   desktop: DesktopSurface,
-  runtime: VariableScope,
+  runtime: StepScope,
   expect: unknown[] | null | undefined,
 ): Promise<void> {
   const verdict = await desktop.driver.verifyState(
@@ -206,6 +235,7 @@ async function waitForState(
     predicatesOf(expect),
     runtime.signal,
   );
+  noteTrace(runtime, { verified: verdict.unverified ? "unverified" : verdict.satisfied });
   if (verdict.satisfied) return;
 
   throw new Error(
@@ -221,11 +251,12 @@ async function waitForState(
  */
 async function walkMenu(
   desktop: DesktopSurface,
-  runtime: VariableScope,
+  runtime: StepScope,
   path: string[],
 ): Promise<void> {
   for (const item of path) {
     const snapshot = await desktop.driver.getWindowState(desktop.binding, runtime.signal);
+    noteTrace(runtime, { tier: tierOf(snapshot) });
     const resolution = resolveDesktopLocator(
       { role: "MenuItem", name: { kind: "exact", value: item } },
       snapshot,
@@ -233,6 +264,13 @@ async function walkMenu(
     if (!resolution.ok) {
       throw new Error(`desktop_invoke_menu could not find "${item}": ${resolution.detail}`);
     }
+    // Overwritten each level, so the trace names the item the walk stopped at
+    // — which for a failure is the level before the one that was missing.
+    noteTrace(runtime, {
+      role: resolution.element.role,
+      ...(resolution.element.label !== undefined ? { label: resolution.element.label } : {}),
+      matched: resolution.matchedBy,
+    });
     await desktop.driver.click(
       desktop.binding,
       { elementToken: resolution.elementToken },
@@ -244,7 +282,7 @@ async function walkMenu(
 /** Resolve the target, synthesise the input, confirm the effect. */
 async function typeInto(
   desktop: DesktopSurface,
-  runtime: VariableScope,
+  runtime: StepScope,
   config: StepConfig,
   act: () => Promise<unknown>,
 ): Promise<void> {
@@ -260,25 +298,40 @@ async function typeInto(
 async function resolveStep(
   desktop: DesktopSurface,
   config: StepConfig,
-  runtime: VariableScope,
+  runtime: StepScope,
 ): Promise<ResolvedTarget> {
   if (config.target.kind === "pixel") {
+    // A coordinate has no role, no label and no tier to report. Recording that
+    // it was pixel-addressed is the whole trace, and it is the one a reader of
+    // a broken workflow most needs: this step was always going to be fragile.
+    noteTrace(runtime, { matched: "pixel" });
     return { x: config.target.x, y: config.target.y, warnings: [] };
   }
 
   const snapshot = await desktop.driver.getWindowState(desktop.binding, runtime.signal);
-  const element = resolveOrThrow(snapshot, config, runtime.currentActionType ?? "desktop action");
+  const warnings = snapshotWarnings(snapshot);
+  // Noted before resolving, so a step that fails to find its element still says
+  // what state the window was in when it looked.
+  noteTrace(runtime, {
+    tier: tierOf(snapshot),
+    ...(warnings.length > 0 ? { warnings } : {}),
+  });
 
-  return {
-    elementToken: element.element_token,
-    warnings: snapshotWarnings(snapshot),
-  };
+  const element = resolveOrThrow(
+    snapshot,
+    config,
+    runtime.currentActionType ?? "desktop action",
+    runtime,
+  );
+
+  return { elementToken: element.element_token, warnings };
 }
 
 function resolveOrThrow(
   snapshot: Awaited<ReturnType<DesktopSurface["driver"]["getWindowState"]>>,
   config: StepConfig,
   actionType: string,
+  runtime: StepScope,
 ) {
   if (config.target.kind !== "element") {
     throw new Error(`${actionType} needs an element target, not a pixel one.`);
@@ -295,6 +348,12 @@ function resolveOrThrow(
     );
   }
 
+  noteTrace(runtime, {
+    role: resolution.element.role,
+    ...(resolution.element.label !== undefined ? { label: resolution.element.label } : {}),
+    matched: resolution.matchedBy,
+  });
+
   return resolution.element;
 }
 
@@ -306,12 +365,20 @@ function resolveOrThrow(
 async function verify(
   desktop: DesktopSurface,
   config: StepConfig,
-  runtime: VariableScope,
+  runtime: StepScope,
 ): Promise<void> {
   const predicates = predicatesOf(config.expect);
-  if (predicates.length === 0) return;
+  if (predicates.length === 0) {
+    // A step with nothing to check reads as unverified rather than as success.
+    // The driver's own `isError` has been observed `true` for a click that
+    // worked, so silence is the only honest answer here.
+    noteTrace(runtime, { verified: "unverified" });
+    return;
+  }
 
   const verdict = await desktop.driver.verifyState(desktop.binding, predicates, runtime.signal);
+  noteTrace(runtime, { verified: verdict.unverified ? "unverified" : verdict.satisfied });
+
   if (!verdict.satisfied) {
     throw new Error(
       verdict.unverified

@@ -31,6 +31,7 @@ import type {
   BrowserDriverLocator,
   BrowserDriverPage,
 } from "../browser/sessionManager.js";
+import type { SurfaceStepTrace } from "./actionTrace.js";
 import type { ExecutionSurface } from "./surface.js";
 import type { AppPaths } from "../db/database.js";
 import type { RuntimeElementRef } from "./targetResolver.js";
@@ -69,6 +70,17 @@ export type VariableScope = {
  */
 export type SurfaceActing = VariableScope & {
   surface: ExecutionSurface;
+  /**
+   * What the surface did to carry out the current step — the resolved element,
+   * how it matched, the Capability Tier, the verify verdict.
+   *
+   * Written by the executor and read by the runner when it pushes the step's
+   * trace, for the same reason `currentActionSensitive` is here: the runner
+   * composes the trace and never sees the action's config or its driver. The
+   * runner clears it before each step, so a trace can never carry the previous
+   * step's element.
+   */
+  currentSurfaceTrace: SurfaceStepTrace | null;
 };
 
 /** The shape a surface-acting executor receives. */

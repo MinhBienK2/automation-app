@@ -13,6 +13,7 @@ import type {
   AncestorStep,
   DesktopLocator,
   ElementSnapshot,
+  LocatorMatchKind,
   LocatorResolution,
   NameMatch,
   SnapshotElement,
@@ -113,7 +114,7 @@ export function resolveDesktopLocator(
       (e) => e.automation_id === locator.automationId,
     );
     if (byAutomationId.length === 1) {
-      return resolved(byAutomationId[0], snapshot);
+      return resolved(byAutomationId[0], snapshot, "automation_id");
     }
     if (byAutomationId.length > 1) {
       return pickOrFail(byAutomationId, locator, snapshot, `automationId "${locator.automationId}"`);
@@ -152,7 +153,14 @@ export function resolveDesktopLocator(
   }
 
   if (withAncestors.length === 1) {
-    return resolved(withAncestors[0], snapshot);
+    // "ancestry" only when the chain is what narrowed the field. A locator that
+    // carries ancestors it never needed matched by name, and saying otherwise
+    // would hide the day the name stops being unique.
+    return resolved(
+      withAncestors[0],
+      snapshot,
+      withAncestors.length === candidates.length ? "name" : "ancestry",
+    );
   }
 
   return pickOrFail(withAncestors, locator, snapshot, describeName(locator.name));
@@ -179,7 +187,7 @@ function pickOrFail(
         detail: `Ordinal ${locator.ordinal} is out of range; ${candidates.length} elements matched ${what}.`,
       };
     }
-    return resolved(picked, snapshot);
+    return resolved(picked, snapshot, "ordinal");
   }
 
   return {
@@ -192,12 +200,17 @@ function pickOrFail(
   };
 }
 
-function resolved(element: SnapshotElement, snapshot: ElementSnapshot): LocatorResolution {
+function resolved(
+  element: SnapshotElement,
+  snapshot: ElementSnapshot,
+  matchedBy: LocatorMatchKind,
+): LocatorResolution {
   return {
     ok: true,
     element,
     elementToken: element.element_token,
     snapshotId: snapshot.snapshot_id,
+    matchedBy,
   };
 }
 

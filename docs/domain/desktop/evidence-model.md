@@ -17,6 +17,16 @@ A desktop run produces four kinds of thing. They are not four kinds of evidence.
 
 The line between the middle two is the one worth stating: evidence is what the workflow was asked to collect, trace is what the system did to collect it. A locator that resolved by ancestry rather than by name is not a finding about the world; it is a fact about the run, and it belongs on the step where a later failure can be compared against it.
 
+### Where the trace actually lands
+
+`SurfaceStepTrace` in `runtime/actionTrace.ts`, carried on the step's existing `ActionTrace` as `surface_trace`, and shown as four more rows in the run monitor's step metadata — not a desktop panel of its own.
+
+It lives in `runtime/` rather than in `surfaces/desktop/` because ADR-0001 runs the dependency one way: the runner composes a step's trace and must not import a surface to do it. Every field is optional, so a web step's trace is byte-identical to what it was before this surface existed.
+
+The executor writes it **field by field as the step proceeds** rather than assembling it at the end. The tier is known when the snapshot comes back, the element when the locator resolves, the verdict after the action — and the step that most needs a trace is the one that throws part-way through. A failed resolution still records the tier the window was at, which is what separates "the button moved" from "this window stopped exposing a tree".
+
+`matchedBy` is reported by `resolveDesktopLocator` rather than guessed from the locator afterwards. A locator carrying both an `automationId` and an ordinal does not say which one narrowed the field, and a step that used to match by name and now matches by ordinal is one layout change away from acting on the wrong element.
+
 ## Element Snapshots are structurally unable to be persisted
 
 [#46](https://github.com/MinhBienK2/automation-app/issues/46) decided snapshots are never evidence by default. A policy is not enough here, because the leak is one line of code away: `get_window_state` returns the tree and the screenshot in the *same payload*, and a `Document` element's `value` is the whole open file.

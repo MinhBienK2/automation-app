@@ -238,6 +238,76 @@ function variableMutationPreview(trace: any): string | null {
   return `(${parts.join(", ")})`;
 }
 
+/**
+ * How the surface carried out the step, as opposed to what the step found.
+ *
+ * A desktop step is the only thing that fills this today, and these four facts
+ * are what a broken workflow is diagnosed from six weeks later: which element
+ * answered, which identifier found it, what the window was exposing, and
+ * whether anything confirmed the action landed. Rendered as more rows in the
+ * existing metadata grid rather than a panel of its own — the run reads the
+ * same whichever surface produced it, which is ADR-0001's default.
+ */
+function SurfaceTraceRows({ trace }: { trace: Record<string, any> }) {
+  const element = [trace.role, trace.label && `"${trace.label}"`].filter(Boolean).join(" ");
+
+  return (
+    <>
+      {element && (
+        <>
+          <div><strong>Element:</strong></div>
+          <div>{element}</div>
+        </>
+      )}
+      {trace.matched && (
+        <>
+          <div><strong>Matched By:</strong></div>
+          <div>{MATCH_LABELS[trace.matched] ?? trace.matched}</div>
+        </>
+      )}
+      {trace.tier && (
+        <>
+          <div><strong>Window Tier:</strong></div>
+          <div>{TIER_LABELS[trace.tier] ?? trace.tier}</div>
+        </>
+      )}
+      {trace.verified !== undefined && (
+        <>
+          <div><strong>Verified:</strong></div>
+          <div>
+            {trace.verified === true
+              ? "Yes"
+              : trace.verified === "unverified"
+                ? "No verdict available"
+                : "No"}
+          </div>
+        </>
+      )}
+      {Array.isArray(trace.warnings) && trace.warnings.length > 0 && (
+        <>
+          <div><strong>Window Warnings:</strong></div>
+          <div>{trace.warnings.join(" ")}</div>
+        </>
+      )}
+    </>
+  );
+}
+
+/** Spelled out, because "ordinal" on its own does not say why it matters. */
+const MATCH_LABELS: Record<string, string> = {
+  automation_id: "Automation ID",
+  name: "Name",
+  ancestry: "Name and ancestry",
+  ordinal: "Position among identical matches",
+  pixel: "Screen position — breaks if the window moves",
+};
+
+const TIER_LABELS: Record<string, string> = {
+  element: "Element — full accessibility tree",
+  chrome: "Chrome — window frame only",
+  pixel: "Pixel — no accessibility tree",
+};
+
 export function RunMonitorDrawer({
   open,
   graph,
@@ -465,6 +535,9 @@ export function RunMonitorDrawer({
                                 <div><strong>Summary:</strong></div>
                                 <div>{trace.action_summary}</div>
                               </>
+                            )}
+                            {trace.surface_trace && (
+                              <SurfaceTraceRows trace={trace.surface_trace} />
                             )}
                           </div>
                         )}
