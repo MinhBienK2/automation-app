@@ -1329,9 +1329,11 @@ describe("runnerActionExecutors", () => {
     const runtime = minimalRuntime();
     const mockLocator = {
       textContent: async () => "Plain text",
-      innerHTML: async () => "<span>HTML</span>",
+      // `BrowserDriverLocator` exposes no innerHTML method, so the executors
+      // read both HTML properties off the element inside `evaluate`.
       evaluate: async (fn: any, arg?: any) => {
         const mockEl = {
+          innerHTML: "<span>HTML</span>",
           outerHTML: "<div>Outer</div>",
           attributes: [
             { name: "class", value: "test-class" },

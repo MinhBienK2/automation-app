@@ -134,8 +134,9 @@ describe("TemplateTextField", () => {
     const trigger = screen.getByRole("button", { name: /Insert variable for Test Placement/i });
     await user.click(trigger);
 
-    // Get the popover element
-    const popover = screen.getByRole("listbox", { name: "Test Placement variables" });
+    // The panel is a dialog — it holds a search box and tabs as well as the
+    // option list, and only the panel carries the computed position.
+    const popover = screen.getByRole("dialog", { name: "Test Placement variables" });
     
     // The popover top position should be less than rect.top (312) because it was pushed upwards
     const topValue = parseFloat(popover.style.top);

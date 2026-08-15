@@ -13,12 +13,17 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps) {
-  const [rememberMe, setRememberMe] = useState(true);
+  // Only the email is ever restored, and only when the operator asked for it.
+  // A password never comes back from storage — see the submit handler, which
+  // clears any `remembered_password` an earlier build may have left behind.
+  const [rememberMe, setRememberMe] = useState(
+    () => localStorage.getItem("remember_me") === "true",
+  );
   const [email, setEmail] = useState(() => {
     const savedEmail = localStorage.getItem("remembered_email");
-    return localStorage.getItem("remember_me") === "true" && savedEmail ? savedEmail : "admin@gmail.com";
+    return localStorage.getItem("remember_me") === "true" && savedEmail ? savedEmail : "";
   });
-  const [password, setPassword] = useState("admin");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -102,7 +107,7 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
                 onCheckedChange={setRememberMe}
                 disabled={isFieldsDisabled}
               />
-              <span className="text-sm">Remember</span>
+              <span className="text-sm">Remember email</span>
             </label>
           </div>
 

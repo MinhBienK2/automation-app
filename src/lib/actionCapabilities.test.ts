@@ -2,6 +2,12 @@ import { describe, expect, test } from "vitest";
 import { actionCapabilities, isActionVisibleInPrimaryPalette } from "./actionCapabilities";
 import { actionLabels, actionOptions, allActionOptions } from "./workflowUi";
 import type { ActionType } from "../types/workflow";
+import {
+  dataNodeGroups,
+  endNodeGroups,
+  logicNodeGroups,
+  variableNodeGroups,
+} from "../features/workflows/components/WorkflowGraphPalettes";
 
 describe("action capability registry", () => {
   const removedActions = [
@@ -69,13 +75,32 @@ describe("action capability registry", () => {
     }
   });
 
-  test("keeps primary action options aligned with capability visibility", () => {
-    const actionTypes = Object.keys(actionLabels) as ActionType[];
-
-    for (const actionType of actionTypes) {
-      expect(actionOptions.includes(actionType)).toBe(
-        isActionVisibleInPrimaryPalette(actionType),
-      );
+  test("offers nothing in the primary palette that is not implemented", () => {
+    // One-directional on purpose. The reverse does not hold: an implemented
+    // action may be offered only as a graph node — every extraction action is,
+    // and `ActionNodePalette` keeps an explicit list of them.
+    for (const actionType of actionOptions) {
+      expect(isActionVisibleInPrimaryPalette(actionType)).toBe(true);
     }
+  });
+
+  test("leaves no implemented action unreachable from any palette", () => {
+    // The failure this guards against is silent: an action ships with an
+    // executor and a label, is added to no palette, and simply cannot be
+    // used. Nothing else fails when that happens.
+    const graphPaletteNodes = new Set(
+      [...logicNodeGroups, ...variableNodeGroups, ...dataNodeGroups, ...endNodeGroups].flatMap(
+        (group) => group.nodes as string[],
+      ),
+    );
+
+    const unreachable = (Object.keys(actionLabels) as ActionType[]).filter(
+      (actionType) =>
+        isActionVisibleInPrimaryPalette(actionType) &&
+        !actionOptions.includes(actionType) &&
+        !graphPaletteNodes.has(actionType),
+    );
+
+    expect(unreachable).toEqual([]);
   });
 });

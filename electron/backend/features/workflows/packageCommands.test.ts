@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
+import { CURRENT_WORKFLOW_GRAPH_VERSION } from "../../graph/migration.js";
 import {
   createTestHandlers,
   workflowGraphCallingSubflow,
@@ -201,7 +202,7 @@ describe("Package commands integration", () => {
     expect(importedSubflowId).not.toBe(subflow.id);
     expect(await projectHandlers.getSubflowGraph(importedSubflowId ?? "")).toEqual({
       ...subflowGraph,
-      version: 8,
+      version: CURRENT_WORKFLOW_GRAPH_VERSION,
       migration_notes: [],
     });
     expect(

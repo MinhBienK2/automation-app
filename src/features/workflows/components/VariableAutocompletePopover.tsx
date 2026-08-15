@@ -277,15 +277,18 @@ export function VariableAutocompletePopover({
     return () => document.removeEventListener("mousedown", handler);
   }, [open, onClose]);
 
+  /**
+   * How a variable reads in the field it is being inserted into. Also the
+   * accessible name of its row, so what a screen reader announces is what
+   * clicking actually inserts.
+   */
+  function variableReference(name: string): string {
+    if (!isJs) return name;
+    return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? `outputs.${name}` : `outputs["${name}"]`;
+  }
+
   function insertVariable(name: string) {
-    let token = `{{${name}}}`;
-    if (isJs) {
-      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name)) {
-        token = `outputs.${name}`;
-      } else {
-        token = `outputs["${name}"]`;
-      }
-    }
+    const token = isJs ? variableReference(name) : `{{${name}}}`;
     const input = inputRef.current;
     const start = input?.selectionStart ?? value.length;
     const end = input?.selectionEnd ?? value.length;
@@ -375,7 +378,7 @@ export function VariableAutocompletePopover({
         width: "360px",
         height: popoverCoords.height ? `${popoverCoords.height}px` : "100vh",
       }}
-      role="listbox"
+      role="dialog"
       aria-label={`${label} variables`}
     >
       {/* Drawer Header */}
@@ -462,7 +465,16 @@ export function VariableAutocompletePopover({
       </div>
 
       {/* Tree view options */}
-      <div className="variable-picker-options variable-tree-container overflow-y-auto flex flex-col gap-0.5 pr-0.5">
+      {/*
+        The listbox is the option list itself, not the whole panel: the panel
+        also holds a search box, tabs and filter pills, and a listbox may not
+        contain those.
+      */}
+      <div
+        className="variable-picker-options variable-tree-container overflow-y-auto flex flex-col gap-0.5 pr-0.5"
+        role="listbox"
+        aria-label={`${label} variable options`}
+      >
         {visibleRows.map((row, index) => {
           const isHighlighted = index === activeIndex;
           const isExpanded = expandedPaths[row.id] !== false;
@@ -483,6 +495,17 @@ export function VariableAutocompletePopover({
                 rowRefs.current[row.id] = el;
               }}
               onClick={handleRowClick}
+              // Every row is an option: a leaf inserts, a group or folder
+              // expands. Named by what it inserts plus where it came from,
+              // because "token" alone does not say which token.
+              role="option"
+              aria-selected={isHighlighted}
+              aria-label={
+                row.type === "leaf" && row.fullName
+                  ? `${variableReference(row.fullName)} ${row.sourceName ?? ""}`.trim()
+                  : row.label
+              }
+              {...(row.type === "leaf" ? {} : { "aria-expanded": isExpanded })}
               style={{ paddingLeft: `${row.level * 14}px` }}
               className={`tree-row-line flex items-center justify-between rounded px-1.5 py-1 transition-colors cursor-pointer select-none ${
                 row.type === "group"

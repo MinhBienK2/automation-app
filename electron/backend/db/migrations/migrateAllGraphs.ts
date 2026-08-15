@@ -16,6 +16,64 @@ export type MigrationReport = {
 
 type IdRow = { id: string };
 
+type GraphTarget = {
+  kind: "workflow" | "subflow";
+  table: "workflows" | "subflows";
+  label: string;
+  assemble: AssembleFn;
+};
+
+/** Workflows and subflows migrate identically; only the table differs. */
+const GRAPH_TARGETS: GraphTarget[] = [
+  { kind: "workflow", table: "workflows", label: "Workflow", assemble: assembleGraphFromTables },
+  { kind: "subflow", table: "subflows", label: "Subflow", assemble: assembleSubflowGraphFromTables },
+];
+
+/**
+ * Writes one row's outcome to `migration_log`, or to the console where that
+ * table does not exist. Postgres supplies its own id; SQLite autoincrements.
+ */
+async function recordMigration(
+  tx: DbAdapter,
+  hasMigrationLog: boolean,
+  target: GraphTarget,
+  rowId: string,
+  result: RowMigrationResult,
+): Promise<void> {
+  if (!hasMigrationLog) {
+    console.log(
+      `[migrateAllGraphs] ${target.label} ${rowId} migrated from version ${result.fromVersion} to ${result.toVersion}`,
+    );
+    return;
+  }
+
+  const params = [
+    target.table,
+    rowId,
+    result.startedAt,
+    result.finishedAt,
+    result.fromVersion,
+    result.toVersion,
+    JSON.stringify(result.applied),
+    result.failure ? JSON.stringify(result.failure) : null,
+  ];
+
+  if (tx.ownerId) {
+    await tx.execute(
+      `INSERT INTO migration_log (id, target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [crypto.randomUUID(), ...params],
+    );
+    return;
+  }
+
+  await tx.execute(
+    `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    params,
+  );
+}
+
 /**
  * Eagerly migrate every workflow and subflow graph on startup.
  * Safe for both SQLite (legacy) and PostgreSQL (DbAdapter).
@@ -45,77 +103,19 @@ export async function migrateAllGraphs(db: DbAdapter): Promise<MigrationReport> 
   }
 
   await db.transaction(async (tx) => {
-    const workflows = await tx.query("SELECT id FROM workflows WHERE owner_id = $1", [tx.ownerId]) as IdRow[];
-    const subflows = await tx.query("SELECT id FROM subflows WHERE owner_id = $1", [tx.ownerId]) as IdRow[];
+    for (const target of GRAPH_TARGETS) {
+      const rows = (await tx.query(
+        `SELECT id FROM ${target.table} WHERE owner_id = $1`,
+        [tx.ownerId],
+      )) as IdRow[];
 
-    for (const row of workflows) {
-      scanned++;
-      const result = await migrateGraphRow(tx, row.id, "workflow", assembleGraphFromTables);
-      if (result.migrated) migrated++;
-      if (result.failed) failed++;
-      if (result.migrated || result.failed) {
-        if (hasMigrationLog) {
-          const params = [
-            "workflows",
-            row.id,
-            result.startedAt,
-            result.finishedAt,
-            result.fromVersion,
-            result.toVersion,
-            JSON.stringify(result.applied),
-            result.failure ? JSON.stringify(result.failure) : null,
-          ];
-          if (tx.ownerId) {
-            await tx.execute(
-              `INSERT INTO migration_log (id, target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-              [crypto.randomUUID(), ...params]
-            );
-          } else {
-            await tx.execute(
-              `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-              params
-            );
-          }
-        } else {
-          console.log(`[migrateAllGraphs] Workflow ${row.id} migrated from version ${result.fromVersion} to ${result.toVersion}`);
-        }
-      }
-    }
-
-    for (const row of subflows) {
-      scanned++;
-      const result = await migrateGraphRow(tx, row.id, "subflow", assembleSubflowGraphFromTables);
-      if (result.migrated) migrated++;
-      if (result.failed) failed++;
-      if (result.migrated || result.failed) {
-        if (hasMigrationLog) {
-          const params = [
-            "subflows",
-            row.id,
-            result.startedAt,
-            result.finishedAt,
-            result.fromVersion,
-            result.toVersion,
-            JSON.stringify(result.applied),
-            result.failure ? JSON.stringify(result.failure) : null,
-          ];
-          if (tx.ownerId) {
-            await tx.execute(
-              `INSERT INTO migration_log (id, target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-              [crypto.randomUUID(), ...params]
-            );
-          } else {
-            await tx.execute(
-              `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-              params
-            );
-          }
-        } else {
-          console.log(`[migrateAllGraphs] Subflow ${row.id} migrated from version ${result.fromVersion} to ${result.toVersion}`);
+      for (const row of rows) {
+        scanned++;
+        const result = await migrateGraphRow(tx, row.id, target.kind, target.assemble);
+        if (result.migrated) migrated++;
+        if (result.failed) failed++;
+        if (result.migrated || result.failed) {
+          await recordMigration(tx, hasMigrationLog, target, row.id, result);
         }
       }
     }
