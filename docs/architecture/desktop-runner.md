@@ -107,6 +107,9 @@ electron/backend/
       localEnvironment.ts
       executors/              web action executors
     desktop/
+      types.ts                driver shapes and domain shapes, kept apart
+      payloads.ts             leak-safe descriptions of driver payloads
+      protocol.ts             the request/response wire, both halves
       driverHost.ts           utility-process entry point
       driverClient.ts         typed layer over cua-driver
       windowBinding.ts        Desktop Target -> (pid, window_id)
@@ -127,6 +130,22 @@ Rules that keep the split honest:
 - `runtime/` imports from neither `surfaces/web/` nor `surfaces/desktop/`. It knows the union, not its members.
 - `surfaces/web/` and `surfaces/desktop/` never import each other.
 - `actions/registry.ts` stays single. It is the one place both families meet, and its `assertActionExecutorCoverage()` and `assertSchemaCoverage()` are what make a missing desktop executor or schema a build failure rather than a runtime surprise.
+
+### What exists today
+
+The driver-facing half of `surfaces/desktop/` is built and unit-tested with no driver present: `types.ts`, `payloads.ts`, `locator.ts`, `snapshot.ts`, `windowBinding.ts`, `driverClient.ts` and `protocol.ts`. Every one of them is pure or transport-injected, which is why they can be tested on Linux against payloads captured on Windows.
+
+Not built yet, and each blocked on something specific:
+
+- **`driverHost.ts` is an entry point nothing spawns.** The lazy start belongs to the run lifecycle, which has no desktop path yet. `@trycua/cua-driver` is deliberately not a dependency — it ships a 25 MB platform binary and nothing exercises it until the slice runs on Windows — so the host resolves it at runtime.
+- **`executors/` and `actions/schemas/desktop/` are absent**, because adding them means introducing the surface union, and the sequence below puts #32 first.
+- **`DesktopLaunchSpec.ready` is not implemented.** Waiting for an application to finish starting is runner behaviour, and there is no desktop run path to hang it on; `desktop_wait_for` and the launch sequence arrive together.
+
+Three things the code assumes rather than knows, all of them cheap to confirm on the first Windows run and expensive to discover late:
+
+- **`verify_state` is unmeasured on both sides.** Only `expect: Array<StatePredicate>`, 1–8 ANDed, was measured; neither the predicate shape nor the verdict shape has been seen. The client reports `unverified` rather than guessing a verdict, but the request could still panic the host.
+- **Which tools require `DesktopScope`.** The panic was measured once, on `typeText`. The client sends `scope` with the input-synthesis tools only.
+- **What `list_apps` returns.** `classifyLaunch` needs pids from before a launch to tell a single-instance hand-off from a real launch, and the client's reading of that payload is inferred.
 
 The moves under `surfaces/web/` and `actions/schemas/web/` are pure relocations. They are mechanical, they touch many import paths, and they should land as their own commit with no behavioural change, separate from anything desktop.
 
