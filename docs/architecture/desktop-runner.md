@@ -142,7 +142,9 @@ The driver-facing half of `surfaces/desktop/` is built and unit-tested with no d
 Not built yet, and each blocked on something specific:
 
 - **`driverHost.ts` is an entry point nothing spawns.** The lazy start belongs to the run lifecycle, which has no desktop path yet. `@trycua/cua-driver` is deliberately not a dependency — it ships a 25 MB platform binary and nothing exercises it until the slice runs on Windows — so the host resolves it at runtime.
-- **`executors/` and `actions/schemas/desktop/` are absent.** The union is in place, so this is now the next step rather than a blocked one: the desktop family needs Zod schemas, executors that narrow with `requireDesktopSurface`, and `ActionType` union entries.
+- **A workflow does not yet carry its surface.** The ten `desktop_*` actions exist with schemas, executors and registry entries, but nothing stops one being dropped into a web workflow except the error `requireDesktopSurface` throws at run time. The palette filter `action-family.md` describes needs a surface on the workflow, which needs persistence and a picker at creation time.
+- **`desktop_screenshot` refuses to run.** Evidence capture has no desktop path, and writing an artifact the run does not record would look like success.
+- **Nothing binds a window or starts the host.** `RunManager` has no desktop branch: no launch, no Window Binding, no Desktop Target lock, no host lifecycle.
 - **`DesktopLaunchSpec.ready` is not implemented.** Waiting for an application to finish starting is runner behaviour, and there is no desktop run path to hang it on; `desktop_wait_for` and the launch sequence arrive together.
 
 Three things the code assumes rather than knows, all of them cheap to confirm on the first Windows run and expensive to discover late:
@@ -169,7 +171,8 @@ Sequence — each step separately reviewable:
 1. ~~**Land #32.**~~ Done. Narrow interfaces, one runtime shape declared once, in-memory browser driver exported for shared test use.
 2. ~~**Lift control flow** into `runtime/controlFlow/`.~~ Done — and the compilation proof is stronger than planned: control flow takes a `VariableScope`, so it could not reference a page even if someone tried.
 3. ~~**Introduce the union.**~~ Done. `ExecutionSurface` sits on `SurfaceActing`, not on the base runtime.
-4. **Add the desktop family**, following #31's one-module-per-action shape if #31 has landed by then. ← next
+4. ~~**Add the desktop family.**~~ Done: ten actions, Zod schemas under `actions/schemas/desktop/`, executors under `surfaces/desktop/executors/`, all covered by the single registry.
+5. **Bind the surface to the workflow** — persistence, the picker at creation, the palette filter — then the run lifecycle: launch, bind, host, lock. ← next
 
 Steps 1 and 2 carry the risk; step 3 is where the type system does the work. Do not merge them.
 

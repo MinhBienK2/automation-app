@@ -13,6 +13,7 @@ import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { isPlainRecord } from "../shared/records.js";
 import { locatorFor, locatorForRuntimeElementRef } from "./targetResolver.js";
 import { requireWebSurface } from "./surface.js";
+import { createDesktopActionExecutors } from "../surfaces/desktop/executors/index.js";
 import {
   currentPageHostname,
   hostnameAllowed,
@@ -57,8 +58,14 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
   // Narrowed once, here. Every entry below is a web action, so none of them
   // branches on the surface again.
   const web = requireWebSurface(runtime.surface);
+  // The desktop family is registered so the registry stays complete and a
+  // missing executor stays a build failure. Its entries narrow to the desktop
+  // surface themselves and throw if a desktop step is reached in a web run,
+  // which the compiler cannot prevent until a workflow carries its surface.
+  const desktopFamily = createDesktopActionExecutorsLazily(runtime);
 
   return createActionExecutorMap({
+    ...desktopFamily,
     // Data-only and flow-control actions come from a module that cannot
     // reach a page: `createDataActionExecutors` takes a `VariableScope`.
     ...createDataActionExecutors(runtime, deps),
@@ -1267,4 +1274,37 @@ async function evaluateSingleRule(rule: any, runtime: RunnerActionRuntime): Prom
     default:
       return false;
   }
+}
+
+/**
+ * Desktop executors bound lazily.
+ *
+ * `createDesktopActionExecutors` narrows to the desktop surface at its entry,
+ * which would throw the moment a web run built its executor map. So the
+ * narrowing is deferred to the call: a web run that never dispatches a desktop
+ * action never pays for it, and one that does gets the honest error.
+ */
+function createDesktopActionExecutorsLazily<Runtime extends RunnerActionRuntime>(
+  runtime: Runtime,
+) {
+  const lazy = <K extends keyof ReturnType<typeof createDesktopActionExecutors>>(
+    key: K,
+  ): ActionExecutorMap[K & keyof ActionExecutorMap] =>
+    (async (action: never) => {
+      const family = createDesktopActionExecutors(runtime);
+      await (family[key] as (a: never) => Promise<void>)(action);
+    }) as ActionExecutorMap[K & keyof ActionExecutorMap];
+
+  return {
+    desktop_click: lazy("desktop_click"),
+    desktop_set_value: lazy("desktop_set_value"),
+    desktop_type_text: lazy("desktop_type_text"),
+    desktop_press_key: lazy("desktop_press_key"),
+    desktop_hotkey: lazy("desktop_hotkey"),
+    desktop_read_text: lazy("desktop_read_text"),
+    desktop_wait_for: lazy("desktop_wait_for"),
+    desktop_screenshot: lazy("desktop_screenshot"),
+    desktop_focus_window: lazy("desktop_focus_window"),
+    desktop_invoke_menu: lazy("desktop_invoke_menu"),
+  };
 }

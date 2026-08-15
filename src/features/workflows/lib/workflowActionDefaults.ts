@@ -1,4 +1,8 @@
-import type { ActionConfig, ActionType } from "../../../types/workflow";
+import type {
+  ActionConfig,
+  ActionType,
+  DesktopStepTargetConfig,
+} from "../../../types/workflow";
 
 export function defaultActionConfig(actionType: ActionType): ActionConfig {
   switch (actionType) {
@@ -804,5 +808,36 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return { type: actionType, config: { iframe_xpath: "" } };
     case "switch_to_parent_frame":
       return { type: actionType, config: {} } as ActionConfig;
+
+    // Desktop Surface. A new step starts with an unbound element target: the
+    // operator picks the element from a live snapshot rather than typing a
+    // role and a name by hand.
+    case "desktop_click":
+      return { type: actionType, config: { target: emptyDesktopTarget(), button: "left", count: 1 } };
+    case "desktop_set_value":
+      return { type: actionType, config: { target: emptyDesktopTarget(), value: "" } };
+    case "desktop_type_text":
+      return { type: actionType, config: { target: emptyDesktopTarget(), text: "" } };
+    case "desktop_press_key":
+      return { type: actionType, config: { target: emptyDesktopTarget(), key: "" } };
+    case "desktop_hotkey":
+      return { type: actionType, config: { target: emptyDesktopTarget(), keys: [] } };
+    case "desktop_read_text":
+      return { type: actionType, config: { target: emptyDesktopTarget(), output_name: "" } };
+    case "desktop_wait_for":
+      return {
+        type: actionType,
+        config: { target: emptyDesktopTarget(), expect: [{ kind: "window_exists" }] },
+      };
+    case "desktop_screenshot":
+      return { type: actionType, config: { output_name: null, sensitive: false } };
+    case "desktop_focus_window":
+      return { type: actionType, config: {} };
+    case "desktop_invoke_menu":
+      return { type: actionType, config: { target: emptyDesktopTarget(), path: [] } };
   }
+}
+
+function emptyDesktopTarget(): DesktopStepTargetConfig {
+  return { kind: "element", locator: { role: "" } };
 }

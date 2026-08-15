@@ -310,6 +310,16 @@ export const actionDescriptions: Record<ActionType, string> = {
   extract_emails: "Extract all emails from a text output",
   switch_frame: "Switch context to an iframe",
   switch_to_parent_frame: "Switch context back to parent document",
+  desktop_click: "Click a resolved desktop element or window position",
+  desktop_set_value: "Set a control's value directly, without typing",
+  desktop_type_text: "Type into the focused desktop control",
+  desktop_press_key: "Press a single key, with modifiers",
+  desktop_hotkey: "Press a key chord",
+  desktop_read_text: "Read an element's text into an output",
+  desktop_wait_for: "Wait until a desktop state predicate holds",
+  desktop_screenshot: "Capture the bound application window",
+  desktop_focus_window: "Bring the bound window forward",
+  desktop_invoke_menu: "Drive a menu path in the bound window",
 };
 
 export function ActionNodePalette({

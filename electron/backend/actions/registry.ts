@@ -259,6 +259,16 @@ export const actionDefinitions = [
   definition("crypto_operation", "variables"),
   definition("switch_frame", "element_interaction"),
   definition("switch_to_parent_frame", "element_interaction"),
+  definition("desktop_click", "element_interaction"),
+  definition("desktop_set_value", "form"),
+  definition("desktop_type_text", "keyboard"),
+  definition("desktop_press_key", "keyboard"),
+  definition("desktop_hotkey", "keyboard"),
+  definition("desktop_read_text", "capture"),
+  definition("desktop_wait_for", "browser_context"),
+  definition("desktop_screenshot", "capture"),
+  definition("desktop_focus_window", "element_interaction"),
+  definition("desktop_invoke_menu", "element_interaction"),
 ] satisfies readonly ActionDefinition[];
 
 /**

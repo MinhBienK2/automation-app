@@ -31,6 +31,48 @@ import type {
 } from "./workflowActionShapes.js";
 import type { CompiledNestedAction } from "./workflowGraphOps.js";
 
+/**
+ * What a desktop step points at, and what must hold afterwards.
+ *
+ * The driver never reports success reliably — `isError` has been observed true
+ * for a successful click — so a desktop action confirms its own effect. Where
+ * no meaningful predicate exists, the run records that it could not verify
+ * rather than claiming a success it did not confirm.
+ *
+ * See `docs/domain/desktop/action-family.md`.
+ */
+export type DesktopStepTargetConfig =
+  | { kind: "element"; locator: DesktopLocatorConfig }
+  | { kind: "pixel"; x: number; y: number; origin: "window" };
+
+export type DesktopNameMatchConfig = {
+  kind: "exact" | "prefix" | "pattern";
+  value: string;
+};
+
+export type DesktopLocatorConfig = {
+  role: string;
+  name?: DesktopNameMatchConfig | null;
+  /** Nearest-first, named ancestors only. */
+  ancestors?: Array<{ role: string; name?: DesktopNameMatchConfig | null }> | null;
+  /** Positional, so a last resort. */
+  ordinal?: number | null;
+  automation_id?: string | null;
+};
+
+export type DesktopPredicateConfig =
+  | { kind: "window_exists" }
+  | { kind: "element_present"; locator: DesktopLocatorConfig }
+  | { kind: "element_value"; locator: DesktopLocatorConfig; expected: string };
+
+export type DesktopStepConfig = {
+  target: DesktopStepTargetConfig;
+  /** Extra predicates ANDed with the action's own default verification. */
+  expect?: DesktopPredicateConfig[] | null;
+  timeout_ms?: number | null;
+  sensitive?: boolean | null;
+};
+
 export type ActionConfig =
   | {
       type: "navigate";
@@ -1299,6 +1341,53 @@ export type ActionConfig =
   | {
       type: "switch_to_parent_frame";
       config: Record<string, never>;
+    }
+  | {
+      type: "desktop_click";
+      config: DesktopStepConfig & {
+        button?: "left" | "right" | "middle" | null;
+        count?: number | null;
+      };
+    }
+  | {
+      type: "desktop_set_value";
+      config: DesktopStepConfig & { value: string };
+    }
+  | {
+      type: "desktop_type_text";
+      config: DesktopStepConfig & { text: string };
+    }
+  | {
+      type: "desktop_press_key";
+      config: DesktopStepConfig & { key: string; modifiers?: string[] | null };
+    }
+  | {
+      type: "desktop_hotkey";
+      config: DesktopStepConfig & { keys: string[] };
+    }
+  | {
+      type: "desktop_read_text";
+      config: DesktopStepConfig & { output_name: string };
+    }
+  | {
+      type: "desktop_wait_for";
+      config: DesktopStepConfig & { expect: DesktopPredicateConfig[] };
+    }
+  | {
+      type: "desktop_screenshot";
+      config: {
+        output_name?: string | null;
+        sensitive?: boolean | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "desktop_focus_window";
+      config: { timeout_ms?: number | null };
+    }
+  | {
+      type: "desktop_invoke_menu";
+      config: DesktopStepConfig & { path: string[] };
     }
   | {
       type: "quarantined";

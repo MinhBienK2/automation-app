@@ -3,7 +3,13 @@ import type { ActionType } from "../types/workflow.js";
 export type ActionCapability =
   | "implemented"
   | "implemented_partial_requires_validation"
-  | "graph_internal";
+  | "graph_internal"
+  /**
+   * Implemented, but on the Desktop Surface. A workflow belongs to exactly one
+   * surface, so these are offered by the desktop palette and never by the
+   * primary one — which is a web palette.
+   */
+  | "desktop_surface";
 
 export const actionCapabilities: Record<ActionType, ActionCapability> = {
   navigate: "implemented",
@@ -193,6 +199,16 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   crypto_operation: "implemented",
   switch_frame: "implemented",
   switch_to_parent_frame: "implemented",
+  desktop_click: "desktop_surface",
+  desktop_set_value: "desktop_surface",
+  desktop_type_text: "desktop_surface",
+  desktop_press_key: "desktop_surface",
+  desktop_hotkey: "desktop_surface",
+  desktop_read_text: "desktop_surface",
+  desktop_wait_for: "desktop_surface",
+  desktop_screenshot: "desktop_surface",
+  desktop_focus_window: "desktop_surface",
+  desktop_invoke_menu: "desktop_surface",
 };
 
 export const allActionTypes = Object.keys(actionCapabilities) as ActionType[];

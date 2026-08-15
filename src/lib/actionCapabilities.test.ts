@@ -44,8 +44,16 @@ describe("action capability registry", () => {
   });
 
   test("does not keep hidden launch-time or planned capability classes", () => {
+    // The guard is against classes that describe an intention — "planned",
+    // "coming soon" — not against genuine ones. `desktop_surface` says where an
+    // action runs, which is a fact about it today.
     expect(new Set(Object.values(actionCapabilities))).toEqual(
-      new Set(["implemented", "implemented_partial_requires_validation", "graph_internal"]),
+      new Set([
+        "implemented",
+        "implemented_partial_requires_validation",
+        "graph_internal",
+        "desktop_surface",
+      ]),
     );
   });
 
