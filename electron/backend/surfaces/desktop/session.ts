@@ -8,17 +8,20 @@
  * job is the waiting, and then choosing among what appeared.
  *
  * Everything that decides is pure and already tested elsewhere: `selectWindow`
- * chooses, `classifyLaunch` tells a real launch from a single-instance hand-off,
- * `tierOf` reads the Capability Tier. What lives here is the sequencing, the
- * timeout, and the teardown — the parts that have no pure form.
+ * chooses, `classifyLaunch` tells a real launch from a single-instance hand-off.
+ * What lives here is the sequencing, the timeout, and the teardown — the parts
+ * that have no pure form.
+ *
+ * Binding deliberately takes **no** Element Snapshot. The Capability Tier comes
+ * from the snapshots the run takes anyway, because on a window affected by the
+ * UIA collapse defect a probe is one of the two reads it will ever answer.
  *
  * Specs: `docs/domain/desktop/desktop-target.md` (launch, binding, retention),
- * `docs/domain/desktop/capability-tiers.md` (probe every run, never infer).
+ * `docs/domain/desktop/capability-tiers.md` (read every snapshot, never infer).
  */
 
 import { DesktopDriverClient } from "./driverClient.js";
 import type { DriverTransport } from "./driverClient.js";
-import { snapshotWarnings, tierOf } from "./snapshot.js";
 import { classifyLaunch, selectWindow } from "./windowBinding.js";
 import type { CapabilityTier, DesktopTarget, DriverWindow, WindowBinding } from "./types.js";
 import type { DesktopSurface } from "../../runtime/surface.js";
@@ -57,8 +60,15 @@ export type DesktopSessionDependencies = {
 
 export type DesktopSession = {
   surface: DesktopSurface;
-  /** Probed at bind. Advisory: a window can degrade mid-run, so actions re-read it. */
-  tier: CapabilityTier;
+  /**
+   * What the run's own snapshots showed, or `null` if it never took one — a
+   * wholly pixel-addressed workflow never looks, and reporting a tier it did
+   * not measure would be a guess.
+   *
+   * A function rather than a value because binding no longer knows: the answer
+   * arrives with the first action. See `DesktopDriverClient.observedTier`.
+   */
+  observedTier(): CapabilityTier | null;
   /** What the operator should know before the first action runs. */
   warnings: string[];
   close(): Promise<void>;
@@ -92,12 +102,11 @@ export async function openDesktopSession(
 
   try {
     const binding = await launchAndBind(driver, target, { sleep, now, signal });
-    const probe = await probeTier(driver, binding, signal);
 
     return {
       surface: { kind: "desktop", driver, binding },
-      tier: probe.tier,
-      warnings: [...probe.warnings, ...attachmentWarnings(binding)],
+      observedTier: () => driver.observedTier,
+      warnings: attachmentWarnings(binding),
       close: () => closeSession(driver, binding, host, request.retention ?? "close", signal),
     };
   } catch (error) {
@@ -144,31 +153,6 @@ async function launchAndBind(
   }
 
   return selection.binding;
-}
-
-/**
- * One snapshot, for its tier only.
- *
- * A window that will not answer is reported at the Pixel tier rather than
- * failing the launch: that window is precisely what a pixel-addressed workflow
- * exists for, and refusing here would make the lowest tier unreachable.
- */
-async function probeTier(
-  driver: DesktopDriverClient,
-  binding: WindowBinding,
-  signal?: AbortSignal,
-): Promise<{ tier: CapabilityTier; warnings: string[] }> {
-  try {
-    const snapshot = await driver.getWindowState(binding, signal);
-    return { tier: tierOf(snapshot), warnings: snapshotWarnings(snapshot) };
-  } catch (error) {
-    return {
-      tier: "pixel",
-      warnings: [
-        `The window did not return an accessibility tree, so only pixel addressing is available: ${messageOf(error)}`,
-      ],
-    };
-  }
 }
 
 /**
@@ -247,8 +231,4 @@ function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
       { once: true },
     );
   });
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

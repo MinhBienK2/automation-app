@@ -76,7 +76,7 @@ function fakeHost(replies: Record<string, ToolReply | Queue>) {
 
 const WINDOW = { window_id: "131204", pid: "4212", title: "Untitled - Notepad" };
 
-/** A tree with named elements, so the probe reports the Element tier. */
+/** A tree with named elements, so a snapshot of it reads as the Element tier. */
 const HEALTHY_TREE = {
   snapshot_id: "snap-1",
   element_count: 2,
@@ -209,18 +209,34 @@ describe("openDesktopSession", () => {
     expect(session.surface.binding.attached).toBe(true);
   });
 
-  test("probes the capability tier once at bind, so the operator sees it before acting", async () => {
-    const { host } = fakeHost(healthyReplies());
+  test("takes no snapshot at bind, so a window with two reads in it keeps both", async () => {
+    // The UIA collapse defect (#49) gives some windows about two reads before
+    // the provider stops answering. A probe here would spend one of them to
+    // learn a tier the first action re-reads anyway.
+    const { host, calls } = fakeHost(healthyReplies());
 
     const session = await openDesktopSession(
       { target: NOTEPAD, runId: "run-1" },
       { startHost: async () => host },
     );
 
-    expect(session.tier).toBe("element");
+    expect(calls.map((c) => c.tool)).not.toContain("get_window_state");
+    expect(session.observedTier()).toBeNull();
   });
 
-  test("binds a degraded window at the pixel tier rather than refusing the run", async () => {
+  test("reports the tier the run's own snapshots showed", async () => {
+    const { host } = fakeHost(healthyReplies());
+
+    const session = await openDesktopSession(
+      { target: NOTEPAD, runId: "run-1" },
+      { startHost: async () => host },
+    );
+    await session.surface.driver.getWindowState(session.surface.binding);
+
+    expect(session.observedTier()).toBe("element");
+  });
+
+  test("a window that answers with no tree reads as the pixel tier", async () => {
     const { host } = fakeHost(
       healthyReplies({
         get_window_state: {
@@ -237,22 +253,25 @@ describe("openDesktopSession", () => {
       { target: NOTEPAD, runId: "run-1" },
       { startHost: async () => host },
     );
+    await session.surface.driver.getWindowState(session.surface.binding);
 
-    expect(session.tier).toBe("pixel");
-    expect(session.warnings.join(" ")).toContain("UIA provider returned no elements");
+    expect(session.observedTier()).toBe("pixel");
   });
 
-  test("a failed probe leaves the session usable at the pixel tier", async () => {
-    // The tier is advisory. A window that will not answer a snapshot is exactly
-    // the window a pixel-tier workflow exists for.
+  test("a snapshot that could not be read leaves the tier unknown rather than guessed", async () => {
+    // "The window has no tree" and "the driver answered with something this
+    // build cannot parse" are different facts, and only the first is a tier.
     const { host } = fakeHost(healthyReplies({ get_window_state: { nonsense: true } }));
 
     const session = await openDesktopSession(
       { target: NOTEPAD, runId: "run-1" },
       { startHost: async () => host },
     );
+    await expect(
+      session.surface.driver.getWindowState(session.surface.binding),
+    ).rejects.toThrow(/unusable snapshot/);
 
-    expect(session.tier).toBe("pixel");
+    expect(session.observedTier()).toBeNull();
   });
 
   test("closing with the close policy terminates what this run launched", async () => {

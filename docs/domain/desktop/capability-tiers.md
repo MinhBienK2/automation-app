@@ -48,12 +48,25 @@ Mapping:
 
 `elements_complete: false` appears even on healthy snapshots. Treat it as "the tree may be partial", surface it as a warning on the authored step, and do not use it for tiering.
 
-## Tier is discovered at authoring time and re-checked at run time
+## Tier is read from the run's own snapshots, never probed separately
 
-The operator must know what they are dealing with **before** building a workflow, not when it fails.
+Every element-addressed action takes an Element Snapshot, and a snapshot already
+says what tier the window is at. So the tier costs nothing to know — provided
+nothing takes a snapshot purely to ask.
 
-- **Authoring.** Adding a Desktop Target probes its window and shows the tier plainly, including what it costs: *"Only pixel addressing is available for this window. Steps will break if the window is resized or the display scaling changes."*
 - **Run time.** Every snapshot re-reads the tier. An Element-addressed action against a window that has dropped to Pixel fails with that specific reason rather than a generic "element not found" — the distinction is the difference between a broken locator and a degraded window.
+- **Authoring.** The Desktop Target shows the tier its **last run** observed, labelled as such, and says so plainly when no run has looked yet. A window that never had a snapshot taken has no tier, and an empty column is the honest rendering of that.
+
+**Binding takes no snapshot.** An earlier design probed the window once at bind
+so the operator would see the tier before the first action. On the windows
+affected by [the collapse defect](#the-uwp-degradation-defect) that probe spent
+one of the roughly two reads the window would ever answer — to learn something
+the next action re-reads anyway. The tier is not worth a read of its own.
+
+For the same reason the tier is **not** probed when a Desktop Target is created.
+An authoring-time probe measures the window that happens to be open then, and
+the tier is a property of the individual window, so the answer would be a guess
+dressed as a measurement by the time a run used it.
 
 ## The Pixel tier is opt-in per step
 
@@ -65,7 +78,7 @@ An operator enables Pixel addressing on a step deliberately, and the step is mar
 
 Some windows lose their accessibility tree after roughly two reads and never recover — not after the driver is recreated, not after the application is restarted. Measured: Calculator dies after two reads; Explorer sustained twelve reads of a 410-element tree unaffected. It is confined to UWP windows hosted by `ApplicationFrameHost`; Win32, Store-packaged and shell windows are unaffected. See [the findings](../../research/cua-driver-windows.md#the-uia-collapse-defect).
 
-Because every element action consumes a snapshot, an affected window supports about two element actions per session. The product handles this as a tier transition, which the existing detection already covers: the window drops from Element to Pixel mid-run and the action fails with the specific reason. No extra mechanism is needed.
+Because every element action consumes a snapshot, an affected window supports about two element actions per session — and only if nothing else spends one, which is why binding does not. The product handles the collapse as a tier transition, which the existing detection already covers: the window drops from Element to Pixel mid-run and the action fails with the specific reason. No extra mechanism is needed.
 
 This is an upstream defect worth reporting, not something to design around further.
 

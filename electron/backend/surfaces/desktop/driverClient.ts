@@ -21,9 +21,15 @@
 
 import { asRecord, isPlainRecord } from "../../shared/records.js";
 import { clampMessage, summarisePayload } from "./payloads.js";
-import { parseSnapshot } from "./snapshot.js";
+import { parseSnapshot, tierOf } from "./snapshot.js";
 import { parseWindowList } from "./windowBinding.js";
-import type { DesktopLaunchSpec, DriverWindow, ElementSnapshot, WindowBinding } from "./types.js";
+import type {
+  CapabilityTier,
+  DesktopLaunchSpec,
+  DriverWindow,
+  ElementSnapshot,
+  WindowBinding,
+} from "./types.js";
 
 /**
  * `DesktopScope.Desktop`. One legal value, mandatory, and omitting it panics
@@ -87,6 +93,22 @@ export type VerifyVerdict = {
 
 export class DesktopDriverClient {
   constructor(private readonly transport: DriverTransport) {}
+
+  private lastTier: CapabilityTier | null = null;
+
+  /**
+   * The Capability Tier of the most recent Element Snapshot, or `null` before
+   * this session has taken one.
+   *
+   * Recorded as a side effect of snapshots the run was taking anyway, rather
+   * than probed. A probe costs a whole `get_window_state`, and #49 measured UWP
+   * windows whose UIA provider collapses after about two reads — on exactly the
+   * windows with no reads to spare, a probe halved the budget to learn
+   * something the next action re-reads regardless.
+   */
+  get observedTier(): CapabilityTier | null {
+    return this.lastTier;
+  }
 
   async listWindows(signal?: AbortSignal): Promise<DriverWindow[]> {
     const result = await this.call("list_windows", {}, signal);
@@ -183,6 +205,7 @@ export class DesktopDriverClient {
       );
     }
 
+    this.lastTier = tierOf(parsed.snapshot);
     return parsed.snapshot;
   }
 

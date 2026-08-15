@@ -22,8 +22,8 @@ export type DesktopSurfaceOpenerOptions = {
   /** Injected in tests; defaults to a real Electron utility process. */
   startHost?: DesktopSessionDependencies["startHost"];
   /**
-   * Called with what the probe found. Advisory — the tier is re-read every run,
-   * so this only keeps the authoring UI's hint current.
+   * Called with what the run's snapshots showed. Advisory — the tier is re-read
+   * every run, so this only keeps the authoring UI's hint current.
    */
   onTierObserved?: (targetId: string, tier: CapabilityTier) => Promise<void> | void;
 };
@@ -48,40 +48,30 @@ export function createDesktopSurfaceOpener(options: DesktopSurfaceOpenerOptions 
         { startHost },
       );
 
-      if (session.tier !== request.target.observed_tier) {
-        // Never allowed to fail the run: the tier is a hint for the next
-        // authoring session, and the run itself already has what it needs.
+      const reportTier = async (tier: CapabilityTier | null): Promise<void> => {
+        // Null means a wholly pixel-addressed run that never looked. Writing a
+        // guess would overwrite a measurement with an absence of one.
+        if (tier === null || tier === request.target.observed_tier) return;
         try {
-          await options.onTierObserved?.(request.target.id, session.tier);
+          await options.onTierObserved?.(request.target.id, tier);
         } catch {
-          // Nothing the operator can act on mid-run.
+          // A hint for the next authoring session. Nothing the operator can act
+          // on, and never a reason to fail a run that has already finished.
         }
-      }
+      };
 
       return {
         surface: session.surface,
-        warnings: [describeTier(session.tier, request.target.name), ...session.warnings],
-        close: session.close,
+        warnings: session.warnings,
+        close: async () => {
+          // At close, because that is the first moment the tier is known: the
+          // session reads it from the run's own snapshots rather than spending
+          // one at bind. Reported before the teardown so a failing `close`
+          // cannot lose an observation the run already paid for.
+          await reportTier(session.observedTier());
+          await session.close();
+        },
       };
     };
   };
-}
-
-/**
- * Stated on every run, not only the bad ones.
- *
- * `capability-tiers.md` asks that the operator know the tier *before* building
- * on it, and the tier is a property of the individual window rather than of the
- * application — measured backwards from the obvious guess on Windows, where a
- * WinUI Settings window exposed nothing and Electron apps exposed their chrome.
- */
-function describeTier(tier: CapabilityTier, targetName: string): string {
-  switch (tier) {
-    case "element":
-      return `${targetName} exposed a full accessibility tree, so elements are addressable by name.`;
-    case "chrome":
-      return `${targetName} exposed only its window frame. Minimise, restore and close will work; nothing inside the window is addressable.`;
-    case "pixel":
-      return `${targetName} exposed no accessibility tree. Only pixel addressing is available, and pixel steps break when the window moves or resizes.`;
-  }
 }
