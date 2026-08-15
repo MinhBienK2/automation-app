@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import type { ActionType } from "../../../types/workflow";
+import type { ActionType, ExecutionSurfaceKind } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import {
   actionGroups,
   actionLabels,
 } from "../../../lib/workflowUi";
+import { isActionAvailableOnSurface } from "../../../lib/actionCapabilities";
 
 export type ActionNodePaletteProps = {
   open: boolean;
@@ -103,13 +104,28 @@ const hiddenActionPickerTypes = new Set<ActionType>([
   "extract_emails",
 ]);
 
-export const actionPickerGroups = actionGroups
-  .filter((group) => group.label !== "Logic")
-  .map((group) => ({
-    ...group,
-    actions: group.actions.filter((actionType) => !hiddenActionPickerTypes.has(actionType)),
-  }))
-  .filter((group) => group.actions.length > 0);
+/**
+ * The picker for one surface.
+ *
+ * Desktop actions never appear in a web workflow and vice versa: a workflow
+ * cannot mix surfaces, so offering the other family's actions would only let
+ * an operator build a step that cannot run.
+ */
+export function actionPickerGroupsForSurface(surface: ExecutionSurfaceKind) {
+  return actionGroups
+    .filter((group) => group.label !== "Logic")
+    .map((group) => ({
+      ...group,
+      actions: group.actions.filter(
+        (actionType) =>
+          !hiddenActionPickerTypes.has(actionType) &&
+          isActionAvailableOnSurface(actionType, surface),
+      ),
+    }))
+    .filter((group) => group.actions.length > 0);
+}
+
+export const actionPickerGroups = actionPickerGroupsForSurface("web");
 
 export const actionPickerOptions = actionPickerGroups.flatMap((group) => group.actions);
 

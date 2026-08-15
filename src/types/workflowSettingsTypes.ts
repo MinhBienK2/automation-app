@@ -1,3 +1,4 @@
+import type { ExecutionSurfaceKind } from "./workflowRecords.js";
 /**
  * Workflow Settings and the browser-profile tree: personas, launch options,
  * environments, graph defaults, validation issues, and diagnostics.
@@ -136,6 +137,8 @@ export type BrowserProfileInput = {
 export type WorkflowCreateOptions = {
   project_id?: string | null;
   browser_profile_id?: string | null;
+  /** Chosen at creation and fixed afterwards. Defaults to the Web Surface. */
+  surface?: ExecutionSurfaceKind;
 };
 
 export type WorkflowSettingsEnvironment = {

@@ -161,6 +161,7 @@ function fileFor(value: unknown) {
 
 function workflowSummary(): WorkflowSummary {
   return {
+    surface: "web" as const,
     id: "workflow-1",
     name: "Workflow",
     step_count: 1,
@@ -198,6 +199,7 @@ function workflowPackagePreview(): WorkflowPackagePreview {
 function workflowDetail(id: string): WorkflowDetail {
   return {
     workflow: {
+      surface: "web" as const,
       id,
       name: "Imported workflow",
       project_id: "project-1",

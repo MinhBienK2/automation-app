@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import type { DbAdapter } from "./dbAdapter.js";
-import { up } from "../../../migrations/001_initial_schema.js";
+import { migrations } from "./migrations/migrations.js";
 
 export class TestDbAdapter implements DbAdapter {
   private db: DatabaseSync;
@@ -19,16 +19,26 @@ export class TestDbAdapter implements DbAdapter {
   }
 
   private async initialize() {
+    // Reports postgres because that is the branch whose schema these tests are
+    // written against — the SQLite branch of the initial migration is the older
+    // local shape and has no users table. `translateForSqlite` covers the few
+    // postgres-only forms the later migrations use.
     const conn = {
       type: "postgres" as const,
       query: async (sql: string, params?: any[]) => {
-        return this.query(sql, params);
+        const translated = await this.translateForSqlite(sql);
+        return translated === null ? [] : this.query(translated, params);
       },
       executeTransaction: async (callback: (conn: any) => Promise<any>) => {
         return callback(conn);
       },
     };
-    await up(conn);
+    // Every migration, not just the initial schema: a test database that
+    // stops at 001 lets a column added later look optional, and the failure
+    // shows up as a query error deep inside an unrelated test.
+    for (const migration of migrations) {
+      await migration.up(conn);
+    }
     // Create default user so foreign keys are satisfied
     await this.query(
       `INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4)`,
@@ -40,6 +50,28 @@ export class TestDbAdapter implements DbAdapter {
        VALUES ($1, $2, $3, $4, $5, $6)`,
       ["default-project-uuid", "Main", "Auto-generated default project", new Date().toISOString(), new Date().toISOString(), "test-user-uuid"]
     );
+  }
+
+  /**
+   * Postgres forms the later migrations use that SQLite does not accept.
+   * Returns null when the statement should be skipped entirely.
+   */
+  private async translateForSqlite(sql: string): Promise<string | null> {
+    const trimmed = sql.trim();
+
+    if (/^DROP TABLE IF EXISTS .+ CASCADE/i.test(trimmed)) {
+      return trimmed.replace(/\s+CASCADE/i, "");
+    }
+
+    const addColumn = /^ALTER TABLE (\w+) ADD COLUMN IF NOT EXISTS (\w+)([\s\S]*)$/i.exec(trimmed);
+    if (addColumn) {
+      const [, table, column, rest] = addColumn;
+      const existing = (await this.query(`PRAGMA table_info(${table})`)) as Array<{ name: string }>;
+      if (existing.some((entry) => entry.name === column)) return null;
+      return `ALTER TABLE ${table} ADD COLUMN ${column}${rest}`;
+    }
+
+    return sql;
   }
 
   // Legacy SQLite compatibility methods for test assertions

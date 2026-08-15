@@ -88,6 +88,7 @@ describe("workflow API phase ten commands", () => {
     const exported: WorkflowExport = {
       version: 1,
       workflow: {
+        surface: "web" as const,
         id: "workflow-1",
         name: "Export me",
         created_at: "1",

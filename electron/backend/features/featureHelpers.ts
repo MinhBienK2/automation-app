@@ -415,6 +415,9 @@ export function createFeatureHelpers(
     const project = options.project_id
       ? await requireProject(options.project_id)
       : await ensureDefaultProject();
+    // A desktop workflow still gets a browser profile row today. Untangling
+    // that means making the profile optional across settings and the run
+    // lifecycle, which the desktop run path will force anyway.
     const browserProfile = options.browser_profile_id
       ? await requireBrowserProfile(options.browser_profile_id)
       : await ensureDefaultBrowserProfile(project);
@@ -422,7 +425,11 @@ export function createFeatureHelpers(
       normalized,
       createDraftGraph(),
       new Date(),
-      { projectId: project.id, browserProfileId: browserProfile.id },
+      {
+        projectId: project.id,
+        browserProfileId: browserProfile.id,
+        surface: options.surface ?? "web",
+      },
     );
     const defaultSettings = settingsService.defaultWorkflowSettings(workflow, {
       randomizeIdentity: true,

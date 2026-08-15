@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { actionCapabilities, isActionVisibleInPrimaryPalette } from "./actionCapabilities";
+import {
+  actionCapabilities,
+  isActionAvailableOnSurface,
+  isActionVisibleInPrimaryPalette,
+} from "./actionCapabilities";
+import { actionPickerGroupsForSurface } from "../features/workflows/components/ActionNodePalette";
 import { actionLabels, actionOptions, allActionOptions } from "./workflowUi";
 import type { ActionType } from "../types/workflow";
 import {
@@ -88,7 +93,10 @@ describe("action capability registry", () => {
     // action may be offered only as a graph node — every extraction action is,
     // and `ActionNodePalette` keeps an explicit list of them.
     for (const actionType of actionOptions) {
-      expect(isActionVisibleInPrimaryPalette(actionType)).toBe(true);
+      const offeredSomewhere =
+        isActionVisibleInPrimaryPalette(actionType) ||
+        isActionAvailableOnSurface(actionType, "desktop");
+      expect(offeredSomewhere).toBe(true);
     }
   });
 
@@ -110,5 +118,43 @@ describe("action capability registry", () => {
     );
 
     expect(unreachable).toEqual([]);
+  });
+});
+
+describe("surface availability", () => {
+  test("a web workflow is never offered a desktop action", () => {
+    expect(isActionAvailableOnSurface("desktop_click", "web")).toBe(false);
+    expect(isActionAvailableOnSurface("click", "web")).toBe(true);
+  });
+
+  test("a desktop workflow is never offered a web action", () => {
+    // Offering one would only let an operator build a step that cannot run:
+    // a workflow belongs to exactly one surface and cannot mix.
+    expect(isActionAvailableOnSurface("click", "desktop")).toBe(false);
+    expect(isActionAvailableOnSurface("desktop_click", "desktop")).toBe(true);
+  });
+
+  test("control flow belongs to both, which is the whole point of the split", () => {
+    // Actions classified `graph_internal` execute above any surface. A few
+    // others are surface-independent too — `set_variable`, `http_request`,
+    // the date and crypto families — but they read as `implemented`, and
+    // separating "implemented on the web" from "implemented anywhere" is a
+    // reclassification the desktop palette will need before it ships.
+    for (const surface of ["web", "desktop"] as const) {
+      expect(isActionAvailableOnSurface("if_condition", surface)).toBe(true);
+      expect(isActionAvailableOnSurface("repeat_times", surface)).toBe(true);
+      expect(isActionAvailableOnSurface("math_operation", surface)).toBe(true);
+    }
+  });
+
+  test("every desktop action is reachable from a desktop palette", () => {
+    const offered = new Set(
+      actionPickerGroupsForSurface("desktop").flatMap((group) => group.actions),
+    );
+    const desktopActions = (Object.keys(actionCapabilities) as ActionType[]).filter(
+      (actionType) => actionCapabilities[actionType] === "desktop_surface",
+    );
+
+    expect(desktopActions.filter((actionType) => !offered.has(actionType))).toEqual([]);
   });
 });

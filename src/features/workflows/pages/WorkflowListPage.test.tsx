@@ -470,6 +470,7 @@ describe("Workflow list integration", () => {
     const secondWorkflow = {
       id: "workflow-2",
       name: "Support flow",
+      surface: "web" as const,
       step_count: 0,
       created_at: "2",
       updated_at: "2",
@@ -520,6 +521,7 @@ describe("Workflow list integration", () => {
     const secondWorkflow = {
       id: "workflow-2",
       name: "Support flow",
+      surface: "web" as const,
       step_count: 0,
       created_at: "2",
       updated_at: "2",

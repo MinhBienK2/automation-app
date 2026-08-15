@@ -11,6 +11,7 @@ import type {
   WorkflowGraph,
   WorkflowSettings,
   WorkflowSummary,
+  ExecutionSurfaceKind,
 } from "../../../../src/types/workflow.js";
 import { processGraphOnLoad } from "../../graph/graphLoader.js";
 import { writeGraphToNormalizedTables } from "../../db/migrations/backfillGraphTables.js";
@@ -21,6 +22,7 @@ import { SubflowRepository } from "./subflowRepository.js";
 
 type WorkflowRow = {
   id: string;
+  surface?: string | null;
   project_id: string | null;
   browser_profile_id: string | null;
   browser_profile_name?: string | null;
@@ -116,11 +118,16 @@ export class WorkflowRepository {
     name: string,
     graph: WorkflowGraph,
     now = new Date(),
-    ownership: { projectId?: string | null; browserProfileId?: string | null } = {},
+    ownership: {
+      projectId?: string | null;
+      browserProfileId?: string | null;
+      surface?: ExecutionSurfaceKind;
+    } = {},
   ): Promise<Workflow> {
     const timestamp = now.toISOString();
     const id = crypto.randomUUID();
     const profileId = ownership.browserProfileId ?? null;
+    const surface: ExecutionSurfaceKind = ownership.surface ?? "web";
     await this.database.execute(
       `INSERT INTO workflows (
         id,
@@ -130,15 +137,17 @@ export class WorkflowRepository {
         description,
         tags_json,
         settings_json,
+        surface,
         created_at,
         updated_at,
         owner_id
-      ) VALUES ($1, $2, $3, $4, '', '[]', NULL, $5, $6, $7)`,
+      ) VALUES ($1, $2, $3, $4, '', '[]', NULL, $5, $6, $7, $8)`,
       [
         id,
         ownership.projectId ?? null,
         profileId,
         name,
+        surface,
         timestamp,
         timestamp,
         this.database.ownerId,
@@ -148,6 +157,7 @@ export class WorkflowRepository {
     return {
       id,
       name,
+      surface,
       project_id: ownership.projectId ?? null,
       browser_profile_id: profileId,
       created_at: timestamp,
@@ -162,6 +172,7 @@ export class WorkflowRepository {
               workflows.browser_profile_id,
               browser_profiles.name AS browser_profile_name,
               workflows.name,
+              workflows.surface,
               workflows.created_at,
               workflows.updated_at
        FROM workflows
@@ -310,6 +321,9 @@ function rowToWorkflow(row: WorkflowRow): Workflow {
   return {
     id: row.id,
     name: row.name,
+    // A row written before the column existed is a browser workflow; that is
+    // what every workflow was.
+    surface: row.surface === "desktop" ? "desktop" : "web",
     project_id: row.project_id,
     browser_profile_id: row.browser_profile_id,
     created_at: row.created_at,

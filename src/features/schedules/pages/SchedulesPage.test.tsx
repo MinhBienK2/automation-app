@@ -212,6 +212,7 @@ function workflow(overrides: Partial<WorkflowSummary> = {}): WorkflowSummary {
   return {
     id: "workflow-1",
     name: "Login flow",
+    surface: "web",
     step_count: 0,
     created_at: "2026-05-17T08:00:00.000Z",
     updated_at: "2026-05-17T08:00:00.000Z",

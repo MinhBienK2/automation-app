@@ -1,4 +1,4 @@
-import type { ActionType } from "../types/workflow.js";
+import type { ActionType, ExecutionSurfaceKind } from "../types/workflow.js";
 
 export type ActionCapability =
   | "implemented"
@@ -216,4 +216,25 @@ export const allActionTypes = Object.keys(actionCapabilities) as ActionType[];
 export function isActionVisibleInPrimaryPalette(actionType: ActionType) {
   const capability = actionCapabilities[actionType];
   return capability === "implemented" || capability === "implemented_partial_requires_validation";
+}
+
+/**
+ * Which actions a workflow of this surface may use.
+ *
+ * A workflow belongs to exactly one Execution Surface and cannot mix, so this
+ * is the filter every palette applies — not a new capability class. Surface
+ * independent actions, control flow above all, belong to both.
+ */
+export function isActionAvailableOnSurface(
+  actionType: ActionType,
+  surface: ExecutionSurfaceKind,
+): boolean {
+  const capability = actionCapabilities[actionType];
+  if (capability === "graph_internal") return true;
+  return surface === "desktop"
+    ? capability === "desktop_surface"
+    : capability !== "desktop_surface";
+  // Known gap: `set_variable`, `http_request` and the date, crypto and file
+  // families are surface-independent but read as `implemented`, so a desktop
+  // workflow is not offered them yet.
 }

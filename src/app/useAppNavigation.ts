@@ -209,6 +209,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     const loadedWorkflow: WorkflowSummary = {
       id: loaded.workflow.id,
       name: loaded.workflow.name,
+      surface: loaded.workflow.surface,
       step_count: loaded.steps.length,
       project_id: loaded.workflow.project_id ?? null,
       browser_profile_id: loaded.workflow.browser_profile_id ?? null,

@@ -348,6 +348,7 @@ function defaultForm(workflows: WorkflowSummary[]): ScheduleFormState {
 function formFromSchedule(schedule: WorkflowSchedule): ScheduleFormState {
   const base = defaultForm([
     {
+      surface: "web" as const,
       id: schedule.workflow_id,
       name: schedule.workflow_name,
       step_count: 0,

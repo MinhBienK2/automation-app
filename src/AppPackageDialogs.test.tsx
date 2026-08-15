@@ -5,6 +5,7 @@ import type { WorkflowSettingsSectionId, WorkflowSummary } from "./types/workflo
 import { AppPackageDialogs } from "./AppPackageDialogs";
 
 const workflow: WorkflowSummary = {
+  surface: "web" as const,
   id: "workflow-1",
   project_id: "project-1",
   name: "Login flow",

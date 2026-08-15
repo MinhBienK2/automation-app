@@ -1,6 +1,7 @@
 import type { WorkflowStep, WorkflowSummary } from "../../types/workflow";
 
 export const workflow: WorkflowSummary = {
+  surface: "web" as const,
   id: "workflow-1",
   name: "Login flow",
   step_count: 0,
@@ -9,6 +10,7 @@ export const workflow: WorkflowSummary = {
 };
 
 export const newWorkflow: WorkflowSummary = {
+  surface: "web" as const,
   id: "workflow-2",
   name: "Checkout flow",
   step_count: 0,

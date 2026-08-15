@@ -5,7 +5,11 @@ import type {
   RunState,
   WorkflowRunSnapshot,
 } from "../types/workflow";
-import { allActionTypes, isActionVisibleInPrimaryPalette } from "./actionCapabilities";
+import {
+  actionCapabilities,
+  allActionTypes,
+  isActionVisibleInPrimaryPalette,
+} from "./actionCapabilities";
 
 export const actionLabels: Record<ActionType, string> = {
   navigate: "Navigate",
@@ -334,13 +338,39 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
     label: "Advanced",
     actions: ["execute_js"],
   },
+  {
+    label: "Desktop",
+    actions: [
+      "desktop_click",
+      "desktop_set_value",
+      "desktop_type_text",
+      "desktop_press_key",
+      "desktop_hotkey",
+      "desktop_read_text",
+      "desktop_wait_for",
+      "desktop_screenshot",
+      "desktop_focus_window",
+      "desktop_invoke_menu",
+    ],
+  },
 ];
 
+/**
+ * The catalog minus anything not offered in a palette at all.
+ *
+ * Desktop actions survive this filter — they are offered, just on the other
+ * surface — and `actionPickerGroupsForSurface` is what decides which family a
+ * given workflow sees.
+ */
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> =
   actionGroupCatalog
     .map((group) => ({
       ...group,
-      actions: group.actions.filter(isActionVisibleInPrimaryPalette),
+      actions: group.actions.filter(
+        (actionType) =>
+          isActionVisibleInPrimaryPalette(actionType) ||
+          actionCapabilities[actionType] === "desktop_surface",
+      ),
     }))
     .filter((group) => group.actions.length > 0);
 

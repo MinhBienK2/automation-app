@@ -48,6 +48,7 @@ describe("workflow UI action taxonomy", () => {
       "Integrations",
       "Advanced Utilities",
       "Advanced",
+      "Desktop",
     ]);
     expect(actionGroups.map((group) => group.label)).not.toContain("Core");
 

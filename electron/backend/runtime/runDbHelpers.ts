@@ -171,6 +171,9 @@ export function fallbackWorkflowSummary(id: string, name: string): WorkflowSumma
   return {
     id,
     name,
+    // A stand-in for a workflow that could not be read. It says web because
+    // that is what a workflow is unless its row says otherwise.
+    surface: "web",
     step_count: 0,
     created_at: timestamp,
     updated_at: timestamp,
