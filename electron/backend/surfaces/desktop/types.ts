@@ -139,7 +139,19 @@ export type DesktopLaunchSpec = {
   /** "calc" | "C:\\Tools\\ledger.exe" */
   value: string;
   args?: string[];
+  ready?: ReadyCondition;
 };
+
+/**
+ * How the runner knows an application finished starting.
+ *
+ * One kind, deliberately. "A window matching the selector appeared" is the only
+ * readiness signal the driver actually gives us, and inventing richer ones —
+ * a process idle check, a probe for a named element — would mean writing
+ * behaviour against a driver nobody has measured. The union stays open so a
+ * second kind can arrive once there is something real to base it on.
+ */
+export type ReadyCondition = { kind: "window"; timeout_ms?: number };
 
 /** How a Desktop Target picks its window out of everything the process owns. */
 export type WindowSelector = {
