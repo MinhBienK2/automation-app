@@ -2,6 +2,39 @@ import { DatabaseSync } from "node:sqlite";
 import type { DbAdapter } from "./dbAdapter.js";
 import { migrations } from "./migrations/migrations.js";
 
+/**
+ * Postgres `$1` placeholders to SQLite's **anonymous** `?`, params reordered to
+ * match the order they appear in.
+ *
+ * Not the obvious `$1` → `?1`. SQLite treats `?NNN` as a *named* parameter, and
+ * `node:sqlite` binds anonymous values against it by position only on some Node
+ * builds — Node 22 rejects the same statement Node 24 accepts, with
+ * "column index out of range". The suite then fails on one developer's machine
+ * and passes on another's, which is worse than either. `?` has one meaning
+ * everywhere.
+ *
+ * Reordering is why this returns params rather than only SQL: a statement that
+ * uses `$1` twice needs the value twice.
+ */
+function toAnonymousPlaceholders(
+  sql: string,
+  params: unknown[],
+): { sql: string; params: unknown[] } {
+  const ordered: unknown[] = [];
+  const translated = sql.replace(/\$(\d+)/g, (_match, digits: string) => {
+    ordered.push(params[Number(digits) - 1]);
+    return "?";
+  });
+
+  // No `$n` in the statement means it either takes no parameters or already
+  // uses `?`. Either way the caller's list is already in the right order.
+  return ordered.length === 0
+    ? { sql: translated, params }
+    : { sql: translated, params: ordered };
+}
+
+const nullForUndefined = (value: unknown) => (value === undefined ? null : value);
+
 export class TestDbAdapter implements DbAdapter {
   private db: DatabaseSync;
   ownerId: string | null = "test-user-uuid";
@@ -80,22 +113,18 @@ export class TestDbAdapter implements DbAdapter {
   }
 
   prepare(sql: string) {
-    let translatedSql = sql.replace(/\$(\d+)/g, "?$1");
-    // Also map "?" placeholders if they are used
+    // The parameter order is fixed by the statement, so it is worked out once
+    // here and applied to whatever each call passes.
+    const { sql: translatedSql } = toAnonymousPlaceholders(sql, []);
+    const order = [...sql.matchAll(/\$(\d+)/g)].map((match) => Number(match[1]) - 1);
+    const bind = (params: any[]) =>
+      (order.length === 0 ? params : order.map((index) => params[index])).map(nullForUndefined);
+
     const stmt = this.db.prepare(translatedSql);
     return {
-      run: (...params: any[]) => {
-        const safeParams = params.map((p) => (p === undefined ? null : p));
-        return stmt.run(...safeParams);
-      },
-      get: (...params: any[]) => {
-        const safeParams = params.map((p) => (p === undefined ? null : p));
-        return stmt.get(...safeParams);
-      },
-      all: (...params: any[]) => {
-        const safeParams = params.map((p) => (p === undefined ? null : p));
-        return stmt.all(...safeParams);
-      },
+      run: (...params: any[]) => stmt.run(...bind(params)),
+      get: (...params: any[]) => stmt.get(...bind(params)),
+      all: (...params: any[]) => stmt.all(...bind(params)),
     };
   }
 
@@ -104,10 +133,12 @@ export class TestDbAdapter implements DbAdapter {
       return [{ tablename: "migration_log" }];
     }
 
-    let translatedSql = sql.replace(/\$(\d+)/g, "?$1");
-    translatedSql = translatedSql.replace(/COALESCE\((started_at|finished_at),\s*(started_at|finished_at)\)/gi, "COALESCE($1, $2)");
-
-    const safeParams = params.map((p) => (p === undefined ? null : p));
+    const bound = toAnonymousPlaceholders(sql, params);
+    const translatedSql = bound.sql.replace(
+      /COALESCE\((started_at|finished_at),\s*(started_at|finished_at)\)/gi,
+      "COALESCE($1, $2)",
+    );
+    const safeParams = bound.params.map(nullForUndefined);
 
     try {
       const stmt = this.db.prepare(translatedSql);
@@ -127,10 +158,10 @@ export class TestDbAdapter implements DbAdapter {
   }
 
   async execute(sql: string, params: any[] = []): Promise<{ changes: number }> {
-    let translatedSql = sql.replace(/\$(\d+)/g, "?$1");
-    const safeParams = params.map((p) => (p === undefined ? null : p));
+    const bound = toAnonymousPlaceholders(sql, params);
+    const safeParams = bound.params.map(nullForUndefined);
     try {
-      const stmt = this.db.prepare(translatedSql);
+      const stmt = this.db.prepare(bound.sql);
       const res = stmt.run(...safeParams);
       return { changes: Number(res.changes) };
     } catch (e: any) {
