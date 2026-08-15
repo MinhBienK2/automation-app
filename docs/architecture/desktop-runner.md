@@ -36,6 +36,25 @@ The existing generic parameter on `RunnerActionExecutorDependencies<Runtime>` is
 
 Dependencies that take `page` directly (`pressKeyHuman(page, …)`, `pressHotkeyHuman(page, …)`) move behind the surface or into the web executor module, because there is no desktop value to pass them.
 
+### Most executors should never see a surface at all
+
+[#32](https://github.com/MinhBienK2/automation-app/issues/32) measured what executors actually read, and the result changes the shape above for the better: the number, text, boolean, list, object, date, crypto, file and HTTP families **never touch the browser**, yet today each receives a live page and browser context. Five runtime fields are referenced zero times across the whole executor module.
+
+So `surface` does not belong on the runtime every executor receives. It belongs on the **narrow interface only surface-acting executors ask for**:
+
+```ts
+type VariableScope     = { outputs; elementRefs; … };          // data-only actions
+type SurfaceActing     = VariableScope & { surface: ExecutionSurface };
+type FlowControlling   = VariableScope & { … };                // loops, retries, nesting
+```
+
+This is why the Desktop Surface is affordable. Adding a second surface costs nothing for the majority of executors, because they never referenced the first one. Only `SurfaceActing` executors split into web and desktop families.
+
+Two consequences for anyone implementing this:
+
+- **Do not add `surface` to the base runtime and then narrow everywhere.** That spreads the cost across executors that have no business knowing a surface exists, and it is precisely the shape #32 exists to remove.
+- **#32 should land before the surface union**, not after. Doing it in the other order means threading `surface` through the very executors #32 is about to take it away from.
+
 ## Desktop execution model
 
 The Web Surface holds a live `page` for the whole run. The Desktop Surface cannot: element addresses are valid only inside the Element Snapshot that produced them, and the driver rejects addresses that do not carry their snapshot.
@@ -115,18 +134,25 @@ The moves under `surfaces/web/` and `actions/schemas/web/` are pure relocations.
 
 `runtime/runnerActionExecutors.ts` is **2923 lines** against the 500-line cap in `AGENTS.md`. It is pre-existing debt, but the surface union threads through it, so the desktop work forces it open.
 
-Split along the **existing `owner` field** in `actions/registry.ts` (`navigation`, `element_interaction`, `form`, `keyboard`, `capture`, `browser_context`, `variables`, `network`, `advanced`, `graph_internal`) rather than inventing a new axis. That axis already classifies every action, the registry already enforces coverage against it, and it makes the web/desktop cut fall out naturally: `graph_internal` and `variables` are surface-independent and move to `runtime/controlFlow/`; the rest are web-owned and move to `surfaces/web/executors/`.
+**This overlaps two tickets that already exist**, and they should be reconciled rather than duplicated:
 
-Sequence — each step is separately reviewable:
+- [#32](https://github.com/MinhBienK2/automation-app/issues/32) — split the runtime by what executors actually need. **Its axis supersedes an owner-based split.** "What does this executor read" is the cut that makes data-only executors testable with no browser and no temp directory, and it is the cut that makes a second surface nearly free.
+- [#31](https://github.com/MinhBienK2/automation-app/issues/31) — make `ActionDefinition` the single home for per-action knowledge: schema, validator, executor, trace summary and presentation, one module per action type, exhaustiveness-checked at compile time.
 
-1. **Split only.** Move executor bodies into per-owner modules. No behaviour change, no signature change; existing tests must pass untouched.
-2. **Lift control flow.** Move the surface-independent owners into `runtime/controlFlow/`, proving by compilation that they never referenced `page`.
-3. **Introduce the union.** Change `RunnerActionRuntime` to carry `ExecutionSurface`; web executors narrow at entry. Still no desktop code.
-4. **Add the desktop family.** New executors, new schemas, new registry entries.
+File **grouping** can still follow the registry's `owner` field, because that axis already classifies every action and keeps directories legible. But the **interface** split is #32's, and the two are not the same decision: one is where code sits, the other is what a function may read.
 
-Steps 1 and 2 are pure refactors and carry the risk; step 3 is where the type system does the work. Do not merge them into one change.
+Sequence — each step separately reviewable:
 
-`runtime/testSupport/executorFixtures.ts` is deliberately named outside the `*.test.ts` pattern so it is type-checked against the real runtime shapes. Preserve that property — it is what will catch the surface union breaking a fixture.
+1. **Land #32.** Narrow interfaces, one runtime shape declared once, in-memory browser driver exported for shared test use. Pure refactor.
+2. **Lift control flow** into `runtime/controlFlow/`, proving by compilation that it never referenced `page`. Pure refactor.
+3. **Introduce the union.** `ExecutionSurface` is added to the `SurfaceActing` interface only — not to the base runtime. Still no desktop code.
+4. **Add the desktop family**, following #31's one-module-per-action shape if #31 has landed by then.
+
+Steps 1 and 2 carry the risk; step 3 is where the type system does the work. Do not merge them.
+
+**Order matters.** Running step 3 before step 1 means threading `surface` through the same executors #32 then removes it from — wasted work that also makes #32's diff much harder to review.
+
+`runtime/testSupport/executorFixtures.ts` is deliberately named outside the `*.test.ts` pattern so it is type-checked against the real runtime shapes. Preserve that property — it is what will catch the surface union breaking a fixture — and put #32's exported in-memory browser driver alongside it.
 
 ## Belongs here
 
