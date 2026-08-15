@@ -173,8 +173,7 @@ async function captureDesktopFailureScreenshot(
 }
 
 function isSensitiveStep(runtime: RunnerEvidenceRuntime): boolean {
-  const metadata = runtime.currentStepMetadata as { sensitive?: unknown } | null;
-  return metadata?.sensitive === true;
+  return runtime.currentActionSensitive === true;
 }
 
 export function recordRunnerEvidence(

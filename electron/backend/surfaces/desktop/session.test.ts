@@ -283,7 +283,10 @@ describe("openDesktopSession", () => {
     expect(host.stop).toHaveBeenCalled();
   });
 
-  test("the retain policy leaves the application running", async () => {
+  test("the retain policy leaves the application running but still stops the host", async () => {
+    // The two are separate decisions and only one is the operator's. Keeping
+    // the host alive would leak an Electron utility process, and an embedded
+    // driver, for every run — with no handle left to stop it.
     const { host, calls } = fakeHost(healthyReplies({ kill_app: { ok: true } }));
 
     const session = await openDesktopSession(
@@ -293,6 +296,7 @@ describe("openDesktopSession", () => {
     await session.close();
 
     expect(calls.filter((c) => c.tool === "kill_app")).toHaveLength(0);
+    expect(host.stop).toHaveBeenCalled();
   });
 
   test("stops the host even when terminating the application fails", async () => {

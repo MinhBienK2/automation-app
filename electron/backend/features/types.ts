@@ -64,7 +64,12 @@ export type CommandDeps = {
   saveSettings: (workflowId: string, settings: WorkflowSettings) => Promise<WorkflowSettings>;
   createWorkflow: (name: string, options?: WorkflowCreateOptions) => Promise<Workflow>;
   getWorkflowGraph: (workflowId: string) => Promise<WorkflowGraph>;
-  activeRunConflict: (workflowId: string, settings: WorkflowSettings) => { message: string; field: string } | null;
+  activeRunConflict: (
+    workflowId: string,
+    settings: WorkflowSettings,
+    /** Omitting this on a desktop workflow silently disables the Desktop Target lock. */
+    desktopTargetId?: string | null,
+  ) => { message: string; field: string } | null;
   schedulerConflictReason: (workflowId: string) => Promise<string | null>;
   assertWorkflowDeletionAllowed: (workflowId: string, settings: WorkflowSettings) => Promise<void>;
   rotateBrowserIdentity: (workflowId: string) => Promise<WorkflowSettings>;

@@ -146,6 +146,18 @@ function webSurfaceOf(runtime: Pick<RunnerActionRuntime, "surface">) {
   return requireWebSurface(runtime.surface);
 }
 
+/**
+ * The step's own sensitivity flag, or `null` when it does not carry one.
+ *
+ * `null` rather than `false`: "the operator said no" and "the operator said
+ * nothing" are different inputs to the policy, which can infer sensitivity from
+ * a password-typed target when the flag is unset.
+ */
+function sensitivityOf(config: ActionConfig): boolean | null {
+  const inner = (config as { config?: { sensitive?: unknown } }).config;
+  return typeof inner?.sensitive === "boolean" ? inner.sensitive : null;
+}
+
 type Runtime = RunnerActionRuntime & {
   domainPolicy: { allowed_domains: string[] } | null;
   traces: ActionTrace[];
@@ -249,6 +261,7 @@ export class BrowserWorkflowRunner {
       currentStepName: null,
       currentActionType: null,
       currentActionSummary: null,
+      currentActionSensitive: null,
       currentStepMetadata: null,
       liveState: state,
       onProgress: request.onProgress,
@@ -281,6 +294,7 @@ export class BrowserWorkflowRunner {
         runtime.currentStepName = step.label;
         runtime.currentActionType = step.config.type;
         runtime.currentActionSummary = actionConfigSummary(step.config);
+        runtime.currentActionSensitive = sensitivityOf(step.config);
         runtime.currentStepMetadata = step.metadata ?? null;
         state.current_step_id = step.node_id;
         state.current_step_number = stepNumber;
@@ -338,9 +352,14 @@ export class BrowserWorkflowRunner {
       state.current_step_number = null;
 
       if (runtime.surface.kind !== "web") {
-        // Retention for a non-web surface belongs to whoever opened it: only
-        // that side knows what "keep it open" means for the thing it opened.
-        if (closeSurface) await opened.close();
+        // Always closed, whatever the retention policy says. Retention is about
+        // the *application*, and the opener already applies it — a desktop
+        // session's `close` terminates only what the run launched, and only
+        // when the policy asks. What `close` also does, unconditionally, is
+        // stop the driver host: an Electron utility process that nothing else
+        // holds a handle to. Skipping this call for a retained run leaked one
+        // host process, and one embedded driver, per run.
+        await opened.close();
       } else if (closeSurface) {
         await webSurfaceOf(runtime).context.close();
         this.sessionManager.forgetContext(webSurfaceOf(runtime).context);

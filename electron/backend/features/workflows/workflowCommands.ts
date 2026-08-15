@@ -96,7 +96,10 @@ export function createWorkflowCommands(deps: CommandDeps) {
   ): Promise<WorkflowRunSnapshot> {
     const workflow = await requireWorkflow(workflowId);
     const settings = await getSettings(workflowId);
-    const conflict = activeRunConflict(workflowId, settings);
+    // The Desktop Target is part of the conflict, not an afterthought: without
+    // it two manual runs against one application both start and interleave
+    // keystrokes into its windows.
+    const conflict = activeRunConflict(workflowId, settings, workflow.desktop_target_id);
     if (conflict) {
       throw commandError(conflict.message, conflict.field);
     }
@@ -226,7 +229,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
     ): Promise<WorkflowRunSnapshot> {
       const workflow = await requireWorkflow(workflowId);
       const settings = await getSettings(workflowId);
-      const conflict = activeRunConflict(workflowId, settings);
+      const conflict = activeRunConflict(workflowId, settings, workflow.desktop_target_id);
       if (conflict) {
         throw commandError(conflict.message, conflict.field);
       }

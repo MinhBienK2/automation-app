@@ -47,6 +47,15 @@ export type VariableScope = {
   currentStepName: string | null;
   currentActionType: string | null;
   currentActionSummary: string | null;
+  /**
+   * The current step's `sensitive` flag, lifted from its action config.
+   *
+   * Carried on the runtime because the runner's failure path needs it and does
+   * not receive the config. Reading it from `currentStepMetadata` instead was a
+   * bug: that type declares only `subflow`, so the lookup silently produced
+   * `undefined` and every sensitive step that failed got photographed.
+   */
+  currentActionSensitive: boolean | null;
   currentStepMetadata: CompiledStepMetadata | null;
   signal?: AbortSignal;
 };

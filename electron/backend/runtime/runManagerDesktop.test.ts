@@ -202,6 +202,39 @@ describe("RunManager, desktop runs", () => {
     ).toBeNull();
   });
 
+  test("the lock is only enforced when the caller passes the target", async () => {
+    // Regression: the manual run path called activeRunConflict with two
+    // arguments, so the Desktop Target lock existed and did nothing. The
+    // omission is invisible at the call site, which is why it is asserted here.
+    const database = await TestDbAdapter.create();
+    const first = desktopWorkflow("wf-1", "target-ledger");
+    const second = desktopWorkflow("wf-2", "target-ledger");
+    await seedWorkflow(database, first);
+    await seedWorkflow(database, second);
+
+    const manager = new RunManager({
+      database,
+      runner: { run: vi.fn(() => new Promise(() => {})) as never },
+      openDesktopSurface: async () => async () => ({
+        surface: { kind: "desktop" as const, driver: {} as never, binding: {} as never },
+        close: async () => {},
+      }),
+    });
+
+    await manager.startWorkflowRun({
+      workflow: first,
+      source: "manual",
+      settings: settingsFor(first.id),
+      graphSnapshot: GRAPH,
+      compiledGraph: COMPILED,
+    });
+
+    expect(manager.activeRunConflict(second.id, settingsFor(second.id))).toBeNull();
+    expect(
+      manager.activeRunConflict(second.id, settingsFor(second.id), "target-ledger"),
+    ).not.toBeNull();
+  });
+
   test("releases the target lock when the run finishes", async () => {
     const database = await TestDbAdapter.create();
     const workflow = desktopWorkflow("wf-1", "target-ledger");
