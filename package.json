@@ -95,6 +95,7 @@
     }
   },
   "dependencies": {
+    "@trycua/cua-driver": "0.19.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.20.0",
     "@xyflow/react": "^12.10.2",

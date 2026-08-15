@@ -7,8 +7,10 @@
  * process, the active run fails with a reason, and Mission Control survives.
  * See ADR-0001 and `docs/architecture/desktop-runner.md`.
  *
- * Status: `@trycua/cua-driver` is deliberately not a declared dependency — it
- * ships a 25 MB platform binary — so the package is resolved at runtime.
+ * `@trycua/cua-driver` is pinned exactly (`0.19.3`) rather than ranged: 16
+ * releases in three weeks, and a prerelease dependency underneath. It is still
+ * resolved at runtime rather than imported statically, so a build on a platform
+ * with no matching binary type-checks and packages regardless.
  */
 
 import { createHostDispatcher } from "./protocol.js";

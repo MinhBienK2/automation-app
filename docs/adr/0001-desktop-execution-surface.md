@@ -38,6 +38,8 @@ RustPanic [Error]
 
 We therefore host the driver in an **Electron utility process** that we own: it loads `@trycua/cua-driver` in `Embedded` mode, and a panic kills only that process. The run fails; the app survives and can restart the driver. This is an availability decision, not a security boundary.
 
+**The panic did not reproduce when the slice ran** ([#48](https://github.com/MinhBienK2/automation-app/issues/48)). On the same pinned version, `type_text` without its required `pid` returned `isError: true` and the process lived, as did `verify_state` with an empty `expect`. The decision stands unchanged: it was measured once, on a different field, and a fault that kills the host is not something to design *out* of on one contrary observation. But the utility process is now insurance rather than a necessity, and that is worth knowing before anyone spends effort hardening it further.
+
 ## Why one surface per workflow
 
 Allowing a single graph to mix web and desktop steps would require the runtime to hold both a live browser context and a live window binding, and every action would need to declare which it targets. The value is speculative and the cost is paid in every action config, every validation path, and every UI affordance. Workflows pick a surface at creation. If a genuine cross-surface use case appears later, the shared graph layer leaves the door open — the surface field becomes a set instead of a scalar.
