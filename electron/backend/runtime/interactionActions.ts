@@ -29,16 +29,17 @@ import {
 } from "./interactionPrimitives.js";
 
 import type { RunnerActionRuntime } from "./actionRuntime.js";
+import { requireWebSurface } from "./surface.js";
 
 type ScrollDirection = "up" | "down" | "left" | "right" | null | undefined;
 
 // Derived, not restated. These were hand-written copies of parts of the
 // runtime, free to drift from the shape callers actually pass.
-type ScrollActionRuntime = Pick<RunnerActionRuntime, "page" | "settings" | "signal">;
+type ScrollActionRuntime = Pick<RunnerActionRuntime, "surface" | "settings" | "signal">;
 
 type PasteClipboardRuntime = Pick<
   RunnerActionRuntime,
-  "page" | "context" | "clipboard" | "signal"
+  "surface" | "clipboard" | "signal"
 >;
 
 export type CloakHumanScrollAdapter = (input: {
@@ -226,6 +227,7 @@ export async function executeScrollAction(
     random: () => number;
   },
 ) {
+  const web = requireWebSurface(runtime.surface);
   const mode = action.config.mode ?? "page";
   assertInteractionEnumValue(
     mode,
@@ -241,14 +243,14 @@ export async function executeScrollAction(
     );
     if (scrollStyle === "smooth_single") {
       await smoothSinglePageScroll(
-        runtime.page,
+        web.page,
         action.config.direction ?? "down",
         action.config.pixels ?? 0,
         runtime.signal,
       );
     } else {
       await humanPageScroll(
-        runtime.page,
+        web.page,
         action.config.direction ?? "down",
         action.config.pixels ?? 0,
         deps.sleep,
@@ -262,7 +264,7 @@ export async function executeScrollAction(
   const locator = await deps.locatorForAction(runtime, action.config, "");
   if (mode === "until_element_visible") {
     await humanScrollUntilLocatorVisible(
-      runtime.page,
+      web.page,
       locator,
       action.config.direction ?? "down",
       action.config.pixels ?? SCROLL_UNTIL_VISIBLE_DEFAULT_PIXELS,
@@ -275,7 +277,7 @@ export async function executeScrollAction(
   }
 
   const handledByCloakBrowser = await deps.cloakHumanScroll({
-    page: runtime.page,
+    page: web.page,
     locator,
     timeoutMs: action.config.timeout_ms,
     preset: runtime.settings.browser_launch.human_preset,
@@ -284,7 +286,7 @@ export async function executeScrollAction(
   if (handledByCloakBrowser) return;
 
   await humanScrollLocatorIntoView(
-    runtime.page,
+    web.page,
     locator,
     action.config.timeout_ms,
     deps.sleep,
@@ -510,11 +512,12 @@ export async function executePasteClipboardAction(
     ) => Promise<BrowserDriverLocator>;
   },
 ) {
-  await runtime.context.grantPermissions?.(["clipboard-read", "clipboard-write"]).catch(() => undefined);
-  await writeBrowserClipboard(runtime.page, runtime.clipboard);
+  const web = requireWebSurface(runtime.surface);
+  await web.context.grantPermissions?.(["clipboard-read", "clipboard-write"]).catch(() => undefined);
+  await writeBrowserClipboard(web.page, runtime.clipboard);
   await (await deps.locatorForAction(runtime, action.config)).click();
   await pressKeyboardShortcut(
-    runtime.page,
+    web.page,
     process.platform === "darwin" ? "Meta+V" : "Control+V",
   );
 }
@@ -569,14 +572,15 @@ export async function pressHotkeyHuman(
 }
 
 export function registerDialogHandler(
-  runtime: { page: BrowserDriverPage },
+  runtime: Pick<RunnerActionRuntime, "surface">,
   behavior: "accept" | "dismiss",
   promptText?: string,
 ) {
-  if (!runtime.page.once) {
+  const web = requireWebSurface(runtime.surface);
+  if (!web.page.once) {
     throw new Error(`${behavior}_dialog requires driver dialog event support`);
   }
-  runtime.page.once("dialog", async (dialog) => {
+  web.page.once("dialog", async (dialog: { accept(text?: string): Promise<void>; dismiss(): Promise<void> }) => {
     if (behavior === "accept") {
       await dialog.accept(promptText);
     } else {

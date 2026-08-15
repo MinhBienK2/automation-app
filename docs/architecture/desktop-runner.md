@@ -133,12 +133,16 @@ Rules that keep the split honest:
 
 ### What exists today
 
+**The surface union has landed.** `runtime/surface.ts` holds `ExecutionSurface`, and `RunnerActionRuntime` carries `surface` instead of `context` and `page`. Web-acting families narrow once at their entry through `requireWebSurface`; `conditionMatches` is the one deliberate exception, because control flow calls it and a variable condition must not require a surface at all.
+
+`#32` landed first, as sequenced: data-only and control-flow executors take a `VariableScope` and cannot reach a page. That is what made the union cheap — it touched the browser half only.
+
 The driver-facing half of `surfaces/desktop/` is built and unit-tested with no driver present: `types.ts`, `payloads.ts`, `locator.ts`, `snapshot.ts`, `windowBinding.ts`, `driverClient.ts` and `protocol.ts`. Every one of them is pure or transport-injected, which is why they can be tested on Linux against payloads captured on Windows.
 
 Not built yet, and each blocked on something specific:
 
 - **`driverHost.ts` is an entry point nothing spawns.** The lazy start belongs to the run lifecycle, which has no desktop path yet. `@trycua/cua-driver` is deliberately not a dependency — it ships a 25 MB platform binary and nothing exercises it until the slice runs on Windows — so the host resolves it at runtime.
-- **`executors/` and `actions/schemas/desktop/` are absent**, because adding them means introducing the surface union, and the sequence below puts #32 first.
+- **`executors/` and `actions/schemas/desktop/` are absent.** The union is in place, so this is now the next step rather than a blocked one: the desktop family needs Zod schemas, executors that narrow with `requireDesktopSurface`, and `ActionType` union entries.
 - **`DesktopLaunchSpec.ready` is not implemented.** Waiting for an application to finish starting is runner behaviour, and there is no desktop run path to hang it on; `desktop_wait_for` and the launch sequence arrive together.
 
 Three things the code assumes rather than knows, all of them cheap to confirm on the first Windows run and expensive to discover late:
@@ -162,10 +166,10 @@ File **grouping** can still follow the registry's `owner` field, because that ax
 
 Sequence — each step separately reviewable:
 
-1. **Land #32.** Narrow interfaces, one runtime shape declared once, in-memory browser driver exported for shared test use. Pure refactor.
-2. **Lift control flow** into `runtime/controlFlow/`, proving by compilation that it never referenced `page`. Pure refactor.
-3. **Introduce the union.** `ExecutionSurface` is added to the `SurfaceActing` interface only — not to the base runtime. Still no desktop code.
-4. **Add the desktop family**, following #31's one-module-per-action shape if #31 has landed by then.
+1. ~~**Land #32.**~~ Done. Narrow interfaces, one runtime shape declared once, in-memory browser driver exported for shared test use.
+2. ~~**Lift control flow** into `runtime/controlFlow/`.~~ Done — and the compilation proof is stronger than planned: control flow takes a `VariableScope`, so it could not reference a page even if someone tried.
+3. ~~**Introduce the union.**~~ Done. `ExecutionSurface` sits on `SurfaceActing`, not on the base runtime.
+4. **Add the desktop family**, following #31's one-module-per-action shape if #31 has landed by then. ← next
 
 Steps 1 and 2 carry the risk; step 3 is where the type system does the work. Do not merge them.
 

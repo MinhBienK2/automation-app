@@ -28,10 +28,10 @@ import type {
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import type {
-  BrowserDriverContext,
   BrowserDriverLocator,
   BrowserDriverPage,
 } from "../browser/sessionManager.js";
+import type { ExecutionSurface } from "./surface.js";
 import type { AppPaths } from "../db/database.js";
 import type { RuntimeElementRef } from "./targetResolver.js";
 
@@ -51,12 +51,19 @@ export type VariableScope = {
   signal?: AbortSignal;
 };
 
-/** `VariableScope` plus the browser. What a web-acting executor receives. */
-export type RunnerActionRuntime = VariableScope & {
-  context: BrowserDriverContext;
-  page: BrowserDriverPage;
-  activeFrameXpath?: string | null;
+/**
+ * `VariableScope` plus the thing being driven.
+ *
+ * The surface is a discriminated union rather than a page, so adding the
+ * Desktop Surface costs nothing for the executors that never asked for one.
+ * Surface-acting executors narrow it once, at the entry of their family.
+ */
+export type SurfaceActing = VariableScope & {
+  surface: ExecutionSurface;
 };
+
+/** The shape a surface-acting executor receives. */
+export type RunnerActionRuntime = SurfaceActing;
 
 export type ActionTargetConfig = {
   target?: Extract<ActionConfig, { type: "click" }>["config"]["target"];

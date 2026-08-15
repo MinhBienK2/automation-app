@@ -12,6 +12,7 @@ import type {
 import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { isPlainRecord } from "../shared/records.js";
 import { locatorFor, locatorForRuntimeElementRef } from "./targetResolver.js";
+import { requireWebSurface } from "./surface.js";
 import {
   currentPageHostname,
   hostnameAllowed,
@@ -53,6 +54,10 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
   runtime: Runtime,
   deps: RunnerActionExecutorDependencies<Runtime>,
 ): ActionExecutorMap {
+  // Narrowed once, here. Every entry below is a web action, so none of them
+  // branches on the surface again.
+  const web = requireWebSurface(runtime.surface);
+
   return createActionExecutorMap({
     // Data-only and flow-control actions come from a module that cannot
     // reach a page: `createDataActionExecutors` takes a `VariableScope`.
@@ -145,7 +150,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
     navigate: async (action) => {
       const url = renderTemplate(action.config.url, runtime.outputs);
       await deps.enforceNavigationPolicy(runtime, url);
-      await runtime.page.goto(url, {
+      await web.page.goto(url, {
         waitUntil: waitUntil(action.config.wait_until),
         timeout: action.config.timeout_ms ?? undefined,
       });
@@ -183,7 +188,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
     },
     right_click: async (action) => {
       await rightClickTarget(
-        runtime.page,
+        web.page,
         await deps.locatorForAction(runtime, action.config),
         deps.sleep,
         deps.random,
@@ -234,10 +239,10 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       await (await deps.locatorForAction(runtime, action.config)).click();
     },
     press_key: async (action) => {
-      await deps.pressKeyHuman(runtime.page, action.config.key, runtime.signal);
+      await deps.pressKeyHuman(web.page, action.config.key, runtime.signal);
     },
     hotkey: async (action) => {
-      await deps.pressHotkeyHuman(runtime.page, action.config.keys, runtime.signal);
+      await deps.pressHotkeyHuman(web.page, action.config.keys, runtime.signal);
     },
     type_sequence: async (action) => {
       await requireLocatorMethod(
@@ -268,12 +273,12 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       if (action.config.xpath || action.config.target || action.config.target_ref?.trim()) {
         await submitFormTarget(await deps.locatorForAction(runtime, action.config, "form"));
       } else {
-        await deps.pressKeyHuman(runtime.page, "Enter", runtime.signal);
+        await deps.pressKeyHuman(web.page, "Enter", runtime.signal);
       }
     },
     select_custom_option: async (action) => {
       await (await deps.locatorForCustomSelectTrigger(runtime, action)).click();
-      await runtime.page.locator(`text=${action.config.option_text}`).click();
+      await web.page.locator(`text=${action.config.option_text}`).click();
     },
     set_contenteditable: async (action) => {
       await (await deps.locatorForAction(runtime, action.config)).fill(
@@ -720,18 +725,18 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       runtime.outputs[action.config.output_name] = count > 0;
     },
     get_page_title: async (action) => {
-      runtime.outputs[action.config.output_name] = await runtime.page.evaluate(() => document.title);
+      runtime.outputs[action.config.output_name] = await web.page.evaluate(() => document.title);
     },
     get_meta_content: async (action) => {
       runtime.outputs[action.config.output_name] =
-        (await runtime.page.evaluate((metaName) => {
+        (await web.page.evaluate((metaName) => {
           const meta = document.querySelector(`meta[name="${metaName}"], meta[property="${metaName}"]`);
           return meta ? meta.getAttribute("content") : null;
         }, action.config.meta_name)) ?? null;
     },
     extract_page_links: async (action) => {
       runtime.outputs[action.config.output_name] =
-        (await runtime.page.evaluate(() => {
+        (await web.page.evaluate(() => {
           return Array.from(document.querySelectorAll("a")).map((a: any) => ({
             text: a.textContent?.trim() || "",
             href: a.href || "",
@@ -751,7 +756,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
         extension: ".png",
       });
       await fs.mkdir(path.dirname(artifact.absolutePath), { recursive: true });
-      const buffer = await runtime.page.screenshot?.({ fullPage: action.config.full_page });
+      const buffer = await web.page.screenshot?.({ fullPage: action.config.full_page });
       if (buffer) await fs.writeFile(artifact.absolutePath, buffer);
       deps.recordEvidence(runtime, {
         actionType: action.type,
@@ -788,27 +793,27 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       runtime.outputs[action.config.output_name] = artifact.relativePath;
     },
     go_back: async () => {
-      await runtime.page.goBack?.();
+      await web.page.goBack?.();
     },
     go_forward: async () => {
-      await runtime.page.goForward?.();
+      await web.page.goForward?.();
     },
     reload: async () => {
-      await runtime.page.reload?.();
+      await web.page.reload?.();
     },
     open_new_tab: async (action) => {
-      runtime.page = await runtime.context.newPage();
+      web.page = await web.context.newPage();
       if (action.config.url) {
         const url = renderTemplate(action.config.url, runtime.outputs);
         await deps.enforceNavigationPolicy(runtime, url);
-        await runtime.page.goto(url);
+        await web.page.goto(url);
       }
     },
     open_link_in_new_tab: async (action) => {
       const timeout = action.config.timeout_ms ?? 30000;
       const locator = await deps.locatorForAction(runtime, action.config);
 
-      if (!runtime.context.waitForEvent) {
+      if (!web.context.waitForEvent) {
         throw new Error("Browser context does not support waitForEvent");
       }
 
@@ -844,31 +849,31 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
 
       if (href) {
         await deps.enforceNavigationPolicy(runtime, href);
-        const newPage = await runtime.context.newPage();
+        const newPage = await web.context.newPage();
         await newPage.goto(href, { timeout, waitUntil: "load" });
-        runtime.page = newPage;
-        await runtime.page.bringToFront?.();
+        web.page = newPage;
+        await web.page.bringToFront?.();
       } else {
         const [newPage] = await Promise.all([
-          runtime.context.waitForEvent("page", { timeout }),
+          web.context.waitForEvent("page", { timeout }),
           locator.click({ timeout }),
         ]);
-        runtime.page = newPage;
-        await runtime.page.bringToFront?.();
+        web.page = newPage;
+        await web.page.bringToFront?.();
       }
     },
     switch_tab: async (action) => {
-      const page = runtime.context.pages()[action.config.index];
+      const page = web.context.pages()[action.config.index];
       if (!page) throw new Error(`Tab index ${action.config.index} does not exist`);
-      runtime.page = page;
-      await runtime.page.bringToFront?.();
+      web.page = page;
+      await web.page.bringToFront?.();
     },
     close_tab: async (action) => {
-      const pageIndex = action.config.index ?? runtime.context.pages().length - 1;
-      const page = runtime.context.pages()[pageIndex];
+      const pageIndex = action.config.index ?? web.context.pages().length - 1;
+      const page = web.context.pages()[pageIndex];
       if (!page) throw new Error(`Tab index ${pageIndex} does not exist`);
       await page.close?.();
-      runtime.page = runtime.context.pages()[0] ?? (await runtime.context.newPage());
+      web.page = web.context.pages()[0] ?? (await web.context.newPage());
     },
     accept_dialog: async (action) => {
       deps.registerDialogHandler(runtime, "accept", action.config.prompt_text ?? undefined);
@@ -889,7 +894,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       }
       if (!script) throw new Error("Script is required");
       
-      const result = await runtime.page.evaluate((args) => {
+      const result = await web.page.evaluate((args) => {
         if (!args) throw new Error("Arguments are required");
         const { scriptText, list } = args;
         try {
@@ -910,7 +915,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       }
       if (!script) throw new Error("Script is required");
       
-      const result = await runtime.page.evaluate((args) => {
+      const result = await web.page.evaluate((args) => {
         if (!args) throw new Error("Arguments are required");
         const { scriptText, obj } = args;
         try {
@@ -941,7 +946,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       }
     },
     domain_allowlist: async (action) => {
-      const hostname = await currentPageHostname(runtime.page);
+      const hostname = await currentPageHostname(web.page);
       if (!hostname || !hostnameAllowed(hostname, action.config.domains)) {
         throw new Error(
           `Current domain ${hostname ?? "unknown"} is not in the allowlist`,
@@ -950,18 +955,18 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       runtime.outputs.domain_allowlist = action.config.domains;
     },
     set_viewport: async (action) => {
-      await runtime.page.setViewportSize?.({
+      await web.page.setViewportSize?.({
         width: action.config.width,
         height: action.config.height,
       });
       runtime.outputs.last_set_viewport = action.config;
     },
     set_geolocation: async (action) => {
-      await runtime.context.setGeolocation?.(action.config);
+      await web.context.setGeolocation?.(action.config);
       runtime.outputs.last_set_geolocation = action.config;
     },
     set_extra_headers: async (action) => {
-      await runtime.context.setExtraHTTPHeaders?.(
+      await web.context.setExtraHTTPHeaders?.(
         Object.fromEntries(
           action.config.headers.map((header) => [header.name, header.value]),
         ),
@@ -969,18 +974,18 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       runtime.outputs.last_set_extra_headers = action.config;
     },
     grant_permission: async (action) => {
-      await runtime.context.grantPermissions?.(
+      await web.context.grantPermissions?.(
         action.config.permissions,
         action.config.origin ? { origin: action.config.origin } : undefined,
       );
       runtime.outputs.last_grant_permission = action.config;
     },
     set_cookie: async (action) => {
-      const domain = action.config.domain?.trim() || await currentPageHostname(runtime.page);
+      const domain = action.config.domain?.trim() || await currentPageHostname(web.page);
       if (!domain) {
         throw new Error("Set cookie requires a current page host when Domain is blank");
       }
-      await runtime.context.addCookies?.([
+      await web.context.addCookies?.([
         {
           name: action.config.name,
           value: action.config.value,
@@ -991,7 +996,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       runtime.outputs.last_set_cookie = { ...action.config, domain };
     },
     clear_cookies: async (action) => {
-      await runtime.context.clearCookies?.(
+      await web.context.clearCookies?.(
         action.config.domain ? { domain: action.config.domain } : undefined,
       );
       runtime.outputs.last_clear_cookies = action.config;
@@ -1002,13 +1007,13 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       }
       if (action.config.output_name) {
         runtime.outputs[action.config.output_name] = await withActionTimeout(
-          runtime.page.evaluate(executableJavaScript(action.config.script)),
+          web.page.evaluate(executableJavaScript(action.config.script)),
           action.config.timeout_ms,
           (timeoutMs) => `Execute JavaScript timed out after ${timeoutMs} ms`,
         );
       } else {
         await withActionTimeout(
-          runtime.page.evaluate(executableJavaScript(action.config.script)),
+          web.page.evaluate(executableJavaScript(action.config.script)),
           action.config.timeout_ms,
           (timeoutMs) => `Execute JavaScript timed out after ${timeoutMs} ms`,
         );
@@ -1016,14 +1021,14 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
     },
     wait_for_request: async (action) => {
       runtime.outputs.last_request_url = (
-        await runtime.page.waitForRequest?.(
+        await web.page.waitForRequest?.(
           (request) => request.url().includes(action.config.url_contains),
           { timeout: action.config.timeout_ms ?? undefined },
         )
       )?.url();
     },
     wait_for_response: async (action) => {
-      const response = await runtime.page.waitForResponse?.(
+      const response = await web.page.waitForResponse?.(
         (candidate) =>
           candidate.url().includes(action.config.url_contains) &&
           (!action.config.status || candidate.status() === action.config.status),
@@ -1033,11 +1038,11 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
     },
     block_request: async (action) => {
       for (const pattern of action.config.url_patterns) {
-        await runtime.context.route?.(pattern, async (route) => route.abort());
+        await web.context.route?.(pattern, async (route) => route.abort());
       }
     },
     mock_response: async (action) => {
-      await runtime.context.route?.(
+      await web.context.route?.(
         (url) => url.toString().includes(action.config.url_contains),
         async (route) =>
           route.fulfill({
@@ -1048,11 +1053,11 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       );
     },
     set_local_storage: async (action) => {
-      await setWebStorage(runtime.page, "local", action.config.key, action.config.value);
+      await setWebStorage(web.page, "local", action.config.key, action.config.value);
       runtime.outputs[action.config.key] = action.config.value;
     },
     set_session_storage: async (action) => {
-      await setWebStorage(runtime.page, "session", action.config.key, action.config.value);
+      await setWebStorage(web.page, "session", action.config.key, action.config.value);
       runtime.outputs[action.config.key] = action.config.value;
     },
     check_conditions: async (action) => {
@@ -1071,7 +1076,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
           resolve: async () => {
             if (mode === "script") {
               if (!script) throw new Error("Script is required in script mode");
-              const result = await runtime.page.evaluate((args) => {
+              const result = await web.page.evaluate((args) => {
                 if (!args) throw new Error("Arguments are required");
                 const { scriptText, outputs } = args;
                 try {
@@ -1094,7 +1099,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
         }
         if (mode === "script") {
           if (!script) throw new Error("Script is required in script mode");
-          const result = await runtime.page.evaluate((args) => {
+          const result = await web.page.evaluate((args) => {
             if (!args) throw new Error("Arguments are required");
             const { scriptText, outputs } = args;
             try {
@@ -1123,7 +1128,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
           dependencies: Array.from(refs),
           resolve: async () => {
             if (!expression) throw new Error("Expression is required");
-            const result = await runtime.page.evaluate((args) => {
+            const result = await web.page.evaluate((args) => {
               if (!args) throw new Error("Arguments are required");
               const { scriptText, outputs } = args;
               try {
@@ -1142,7 +1147,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
           resolvers.delete(output_name);
         }
         if (!expression) throw new Error("Expression is required");
-        const result = await runtime.page.evaluate((args) => {
+        const result = await web.page.evaluate((args) => {
           if (!args) throw new Error("Arguments are required");
           const { scriptText, outputs } = args;
           try {
@@ -1156,7 +1161,7 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
       }
     },
     get_current_url: async () => {
-      const href = await runtime.page.evaluate<string>(executableJavaScript("return window.location.href"));
+      const href = await web.page.evaluate<string>(executableJavaScript("return window.location.href"));
       const url = new URL(href);
       const urlData = {
         href: url.href,
@@ -1178,10 +1183,10 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
     },
     switch_frame: async (action) => {
       const iframeXpath = renderTemplate(action.config.iframe_xpath, runtime.outputs);
-      runtime.activeFrameXpath = iframeXpath;
+      web.activeFrameXpath = iframeXpath;
     },
     switch_to_parent_frame: async () => {
-      runtime.activeFrameXpath = null;
+      web.activeFrameXpath = null;
     },
   });
 }
@@ -1207,6 +1212,7 @@ async function evaluateRuleGroup(group: any, runtime: RunnerActionRuntime): Prom
 }
 
 async function evaluateSingleRule(rule: any, runtime: RunnerActionRuntime): Promise<boolean> {
+  const web = requireWebSurface(runtime.surface);
   switch (rule.type) {
     case "value_compare": {
       const left = renderTemplate(rule.left_operand ?? "", runtime.outputs);
@@ -1233,9 +1239,9 @@ async function evaluateSingleRule(rule: any, runtime: RunnerActionRuntime): Prom
         if (!rule.target_ref) throw new Error("Target ref is required");
         const ref = runtime.elementRefs.get(rule.target_ref);
         if (!ref) throw new Error(`Element ref not found: ${rule.target_ref}`);
-        locator = await locatorForRuntimeElementRef(runtime.page, ref);
+        locator = await locatorForRuntimeElementRef(web.page, ref);
       } else {
-        locator = await locatorFor(runtime.page, null, rule.xpath || "body");
+        locator = await locatorFor(web.page, null, rule.xpath || "body");
       }
 
       switch (rule.element_property) {
@@ -1249,7 +1255,7 @@ async function evaluateSingleRule(rule: any, runtime: RunnerActionRuntime): Prom
       }
     }
     case "url_check": {
-      const href = await runtime.page.evaluate(() => window.location.href);
+      const href = await web.page.evaluate(() => window.location.href);
       const val = rule.url_value ?? "";
       switch (rule.url_comparison) {
         case "contains": return href.includes(val);

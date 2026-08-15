@@ -37,8 +37,9 @@ describe("runnerEvidence", () => {
   test("collects page outputs with runtime outputs taking precedence", async () => {
     const runtime = {
       outputs: { shared: "runtime", local: true },
-      page: {
-        evaluate: async () => ({ shared: "page", page_only: 1 }),
+      surface: {
+        kind: "web",
+        page: { evaluate: async () => ({ shared: "page", page_only: 1 }) },
       },
     } as unknown as RunnerActionRuntime;
 

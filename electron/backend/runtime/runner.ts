@@ -12,6 +12,7 @@ import type {
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import type { AppPaths } from "../db/database.js";
+import { requireWebSurface } from "./surface.js";
 import {
   BrowserSessionManager,
   browserIdentityEvidence,
@@ -115,6 +116,15 @@ export type RunnerRunRequest = {
  * (`RunnerActionRuntime`) plus the fields only the runner itself touches.
  * Declared as an extension rather than a second copy of the shared fields.
  */
+/**
+ * The runner drives the Web Surface today, so it reads through one helper
+ * rather than narrowing at twenty call sites. When a desktop runner arrives it
+ * will be a sibling of this class, not a branch inside it.
+ */
+function webSurfaceOf(runtime: Pick<RunnerActionRuntime, "surface">) {
+  return requireWebSurface(runtime.surface);
+}
+
 type Runtime = RunnerActionRuntime & {
   domainPolicy: { allowed_domains: string[] } | null;
   traces: ActionTrace[];
@@ -208,8 +218,7 @@ export class BrowserWorkflowRunner {
     const runtime: Runtime = {
       runId: request.runId ?? randomUUID(),
       settings: request.settings,
-      context: launch.context,
-      page: launch.page,
+      surface: { kind: "web", context: launch.context, page: launch.page },
       domainPolicy: request.graph.domain_policy ?? null,
       outputs,
       elementRefs: new Map(),
@@ -302,12 +311,12 @@ export class BrowserWorkflowRunner {
       state.current_step_number = null;
 
       if (closeBrowser) {
-        await runtime.context.close();
-        this.sessionManager.forgetContext(runtime.context);
+        await webSurfaceOf(runtime).context.close();
+        this.sessionManager.forgetContext(webSurfaceOf(runtime).context);
       } else {
         this.sessionManager.retainSession(
-          runtime.context,
-          runtime.page,
+          webSurfaceOf(runtime).context,
+          webSurfaceOf(runtime).page,
           retainedWorkflowId,
           retainedProfileName,
         );
@@ -607,13 +616,13 @@ export class BrowserWorkflowRunner {
         await this.sleep(action.config.duration_ms ?? 1000, runtime.signal);
         return;
       case "page_load":
-        await runtime.page.waitForLoadState?.("load", {
+        await webSurfaceOf(runtime).page.waitForLoadState?.("load", {
           timeout: action.config.timeout_ms ?? undefined,
         });
         return;
       case "url_contains":
-        await runtime.page.waitForURL?.(
-          (url) => url.href.includes(action.config.url ?? ""),
+        await webSurfaceOf(runtime).page.waitForURL?.(
+          (url: URL) => url.href.includes(action.config.url ?? ""),
           { timeout: action.config.timeout_ms ?? undefined },
         );
         return;
@@ -639,7 +648,7 @@ export class BrowserWorkflowRunner {
       }
       case "text_visible":
         await waitForLocatorState(
-          runtime.page.locator(`text=${action.config.text ?? ""}`),
+          webSurfaceOf(runtime).page.locator(`text=${action.config.text ?? ""}`),
           "visible",
           action.config.timeout_ms,
         );
@@ -757,12 +766,12 @@ export class BrowserWorkflowRunner {
       if (!ref) {
         throw new Error(`Element ref not found: ${refName}`);
       }
-      return locatorForRuntimeElementRef(runtime.page, ref);
+      return locatorForRuntimeElementRef(webSurfaceOf(runtime).page, ref);
     }
 
     if (endpoint === "source") {
       return locatorFor(
-        runtime.page,
+        webSurfaceOf(runtime).page,
         action.config.source_target,
         action.config.source_xpath,
         this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
@@ -770,7 +779,7 @@ export class BrowserWorkflowRunner {
     }
 
     return locatorFor(
-      runtime.page,
+      webSurfaceOf(runtime).page,
       action.config.target_target,
       action.config.target_xpath,
       this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
@@ -790,11 +799,11 @@ export class BrowserWorkflowRunner {
       if (!ref) {
         throw new Error(`Element ref not found: ${action.config.trigger_ref}`);
       }
-      return locatorForRuntimeElementRef(runtime.page, ref);
+      return locatorForRuntimeElementRef(webSurfaceOf(runtime).page, ref);
     }
 
     return locatorFor(
-      runtime.page,
+      webSurfaceOf(runtime).page,
       action.config.trigger_target,
       action.config.trigger_xpath,
       this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
@@ -808,7 +817,7 @@ export class BrowserWorkflowRunner {
     position: DragTargetPosition,
     timeoutMs: number | null | undefined,
   ) {
-    const mouse = runtime.page.mouse;
+    const mouse = webSurfaceOf(runtime).page.mouse;
     if (!mouse?.move || !mouse.down || !mouse.up) {
       throw new Error("drag_and_drop target_position requires driver mouse support");
     }
@@ -866,7 +875,7 @@ export class BrowserWorkflowRunner {
       if (!ref) {
         throw new Error(`Element ref not found: ${config.target_ref}`);
       }
-      const locator = await locatorForRuntimeElementRef(runtime.page, ref);
+      const locator = await locatorForRuntimeElementRef(webSurfaceOf(runtime).page, ref);
       await this.waitForElementReadiness(
         locator,
         config.wait_until ?? null,
@@ -877,7 +886,7 @@ export class BrowserWorkflowRunner {
     }
 
     const locator = await locatorFor(
-      runtime.page,
+      webSurfaceOf(runtime).page,
       config.target,
       config.xpath ?? fallbackXpath,
       this.getEffectiveIframeXpath(runtime, config.iframe_xpath),
@@ -892,7 +901,7 @@ export class BrowserWorkflowRunner {
   }
 
   private getEffectiveIframeXpath(runtime: Runtime, iframeXpath?: string | null): string | null {
-    return iframeXpath || runtime.activeFrameXpath || null;
+    return iframeXpath || webSurfaceOf(runtime).activeFrameXpath || null;
   }
 
   private async executeFindElement(
@@ -908,7 +917,7 @@ export class BrowserWorkflowRunner {
     if (!candidates.length) {
       throw new Error("No element locator satisfied target constraints");
     }
-    const selected = await selectRankedElementCandidate(runtime.page, candidates, rank);
+    const selected = await selectRankedElementCandidate(webSurfaceOf(runtime).page, candidates, rank);
     const target = action.config.target ?? {
       locators: [selected.locatorConfig],
       constraints: null,
@@ -944,7 +953,7 @@ export class BrowserWorkflowRunner {
     do {
       this.throwIfCancelled(runtime.signal);
       const candidates = await rankedCandidatesForTarget(
-        runtime.page,
+        webSurfaceOf(runtime).page,
         config.target,
         config.xpath,
         effectiveIframe,
@@ -954,7 +963,7 @@ export class BrowserWorkflowRunner {
       await this.sleep(Math.min(100, Math.max(1, deadline - Date.now())), runtime.signal);
     } while (Date.now() < deadline);
     return rankedCandidatesForTarget(
-      runtime.page,
+      webSurfaceOf(runtime).page,
       config.target,
       config.xpath,
       effectiveIframe,

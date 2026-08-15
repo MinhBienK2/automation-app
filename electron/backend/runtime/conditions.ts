@@ -1,8 +1,26 @@
+import { requireWebSurface } from "./surface.js";
 import { locatorFor, locatorForRuntimeElementRef } from "./targetResolver.js";
-import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
+import type { SurfaceActing, VariableScope } from "./actionRuntime.js";
 import { resolveObjectTemplates, getDeepValue } from "./variables.js";
 
-export async function conditionMatches(runtime: RunnerActionRuntime, condition: unknown) {
+/**
+ * Conditions span both halves of the split: `variable_is_true` reads the
+ * outputs bag and nothing else, while `text_visible` needs a page. Control
+ * flow calls this, and control flow must stay surface-independent — so the
+ * surface is optional here and demanded only by the branches that use it.
+ */
+export async function conditionMatches(
+  runtime: VariableScope & Partial<Pick<SurfaceActing, "surface">>,
+  condition: unknown,
+) {
+  const web = () => {
+    if (!runtime.surface) {
+      throw new Error(
+        "This condition inspects the page, but the run has no execution surface bound.",
+      );
+    }
+    return requireWebSurface(runtime.surface);
+  };
   if (!condition || typeof condition !== "object" || !("kind" in condition)) {
     throw new Error("Condition kind is required");
   }
@@ -24,12 +42,12 @@ export async function conditionMatches(runtime: RunnerActionRuntime, condition: 
   }
   if (typed.kind === "url_contains") {
     const href = String(
-      (await runtime.page.evaluate<string | null | undefined>("window.location.href")) ?? "",
+      (await web().page.evaluate<string | null | undefined>("window.location.href")) ?? "",
     );
     return href.includes(typed.value ?? "");
   }
   if (typed.kind === "text_visible") {
-    return Boolean(await runtime.page.locator(`text=${typed.text ?? ""}`).isVisible?.());
+    return Boolean(await web().page.locator(`text=${typed.text ?? ""}`).isVisible?.());
   }
   if (typed.kind === "element_visible") {
     if (typed.target_ref != null) {
@@ -41,10 +59,10 @@ export async function conditionMatches(runtime: RunnerActionRuntime, condition: 
       if (!ref) {
         throw new Error(`Element ref not found: ${typed.target_ref}`);
       }
-      return Boolean(await (await locatorForRuntimeElementRef(runtime.page, ref)).isVisible?.());
+      return Boolean(await (await locatorForRuntimeElementRef(web().page, ref)).isVisible?.());
     }
     return Boolean(
-      await (await locatorFor(runtime.page, typed.target, typed.xpath ?? "body")).isVisible?.(),
+      await (await locatorFor(web().page, typed.target, typed.xpath ?? "body")).isVisible?.(),
     );
   }
   throw new Error(`Unsupported condition kind: ${typed.kind || "unknown"}`);

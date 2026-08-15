@@ -3,6 +3,7 @@ import path from "node:path";
 import type { AppPaths } from "../db/database.js";
 import { resolveEvidenceArtifact } from "../features/evidence/artifacts.js";
 import { finalizeEvidenceOutputs } from "../features/evidence/model.js";
+import { requireWebSurface } from "./surface.js";
 import type { RunnerActionRuntime } from "./runnerActionExecutors.js";
 
 export type RunEvidenceArtifact = {
@@ -26,7 +27,10 @@ export type RunnerEvidenceRuntime = RunnerActionRuntime & {
 
 export async function collectRunnerOutputs(runtime: RunnerActionRuntime) {
   try {
-    const pageOutputs = await runtime.page.evaluate<Record<string, unknown>>(
+    // Inside the try on purpose: a surface with no page — or a page that
+    // refuses to evaluate — means there are no page outputs to merge, not that
+    // collecting outputs failed.
+    const pageOutputs = await requireWebSurface(runtime.surface).page.evaluate<Record<string, unknown>>(
       "() => globalThis.window?.__wamOutputs ?? {}",
     );
     return finalizeEvidenceOutputs({ ...pageOutputs, ...runtime.outputs });
@@ -39,7 +43,8 @@ export async function captureFailureScreenshot(
   appPaths: AppPaths,
   runtime: RunnerEvidenceRuntime,
 ) {
-  if (!runtime.page.screenshot) return;
+  const web = requireWebSurface(runtime.surface);
+  if (!web.page.screenshot) return;
   const artifact = resolveEvidenceArtifact({
     evidenceDir: appPaths.evidenceDir,
     runId: runtime.runId,
@@ -51,7 +56,7 @@ export async function captureFailureScreenshot(
     extension: ".png",
   });
   await fs.mkdir(path.dirname(artifact.absolutePath), { recursive: true });
-  const buffer = await runtime.page.screenshot({ fullPage: true });
+  const buffer = await web.page.screenshot({ fullPage: true });
   await fs.writeFile(artifact.absolutePath, buffer);
   recordRunnerEvidence(runtime, {
     actionType: runtime.currentActionType ?? "workflow",
@@ -67,10 +72,11 @@ export async function waitForRunnerDownload(
   outputName: string,
   timeoutMs: number | null | undefined,
 ) {
-  if (!runtime.page.waitForEvent) {
+  const web = requireWebSurface(runtime.surface);
+  if (!web.page.waitForEvent) {
     throw new Error("wait_for_download requires driver download event support");
   }
-  const download = await runtime.page.waitForEvent("download", {
+  const download = await web.page.waitForEvent("download", {
     timeout: timeoutMs ?? undefined,
   });
   if (!download.saveAs) {
