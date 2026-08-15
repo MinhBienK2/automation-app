@@ -28,26 +28,18 @@ import {
   type ScrollViewport,
 } from "./interactionPrimitives.js";
 
+import type { RunnerActionRuntime } from "./actionRuntime.js";
+
 type ScrollDirection = "up" | "down" | "left" | "right" | null | undefined;
 
-type ScrollActionRuntime = {
-  page: BrowserDriverPage;
-  settings: {
-    browser_launch: {
-      human_preset?: string | null;
-    };
-  };
-  signal?: AbortSignal;
-};
+// Derived, not restated. These were hand-written copies of parts of the
+// runtime, free to drift from the shape callers actually pass.
+type ScrollActionRuntime = Pick<RunnerActionRuntime, "page" | "settings" | "signal">;
 
-type PasteClipboardRuntime = {
-  page: BrowserDriverPage;
-  context: {
-    grantPermissions?(permissions: string[], options?: { origin?: string }): Promise<void>;
-  };
-  clipboard: string;
-  signal?: AbortSignal;
-};
+type PasteClipboardRuntime = Pick<
+  RunnerActionRuntime,
+  "page" | "context" | "clipboard" | "signal"
+>;
 
 export type CloakHumanScrollAdapter = (input: {
   page: BrowserDriverPage;

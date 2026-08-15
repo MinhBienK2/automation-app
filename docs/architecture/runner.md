@@ -6,25 +6,47 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 
 ## Key Files
 
-- Core runner: `electron/backend/runtime/` (`runner.ts`, `runManager.ts`, `batchWorkflowRun.ts`, `runnerActionExecutors.ts`)
+- Core runner: `electron/backend/runtime/` (`runner.ts`, `runManager.ts`, `batchWorkflowRun.ts`, `runnerActionExecutors.ts`, `dataActionExecutors.ts`)
+- Runtime shapes: `electron/backend/runtime/actionRuntime.ts` (the one place the run state and the executor dependencies are declared)
 - Browser context: `electron/backend/browser/sessionManager.ts`
 - Action execution: `electron/backend/actions/` (`registry.ts`, `execution.ts`, `validation.ts`)
 - Evidence and artifacts: `electron/backend/evidence/` (`artifacts.ts`, `model.ts`)
 - Helper modules: `electron/backend/runtime/` (`actionTrace`, `targetResolver`, `interactionPrimitives`, `interactionActions`, `runtimeHelpers`, `conditions`, `runnerEvidence`, `domainPolicy`, `variables`)
 - Unit and smoke tests: `runner.test.ts`, `runner.smoke.test.ts`, `sessionManager.test.ts`
 - Shared executor test fixtures: `electron/backend/runtime/testSupport/executorFixtures.ts` (kept outside a `*.test.ts` name so the fixtures are type-checked against the real runtime and dependency shapes)
+- Shared in-memory browser driver: `electron/backend/runtime/testSupport/inMemoryBrowserDriver.ts` (same naming rule, same reason — it is checked against the real `BrowserDriver*` interfaces)
 
 ## Runtime Shapes
 
-The run state is declared once and narrowed by tier, not restated:
+The run state is declared once, in `actionRuntime.ts`, and narrowed by tier
+rather than restated:
 
-- `RunnerActionRuntime` (`runnerActionExecutors.ts`) is what an action executor is given — the fields an executor can read.
+- `VariableScope` — run outputs, element refs and step identity. What a
+  data-only action needs, and all it gets.
+- `RunnerActionRuntime` — `VariableScope` plus `context` and `page`. Only
+  actions that drive a browser ask for it.
 - `Runtime` (`runner.ts`) extends it with the runner-only fields: `domainPolicy`, `traces`, `evidence`, `liveState`, `onProgress`, `failedStepInfo`.
 - `RunnerEvidenceRuntime` (`runnerEvidence.ts`) extends it with `evidence`, the one extra fact evidence recording needs.
 
-`RunnerActionExecutorDependencies` is generic over the caller's runtime, so the
-flow-control callbacks round-trip the runner's own richer state without widening
-what an executor body can read.
+`DataActionDependencies` is the matching split on the dependency side;
+`RunnerActionExecutorDependencies` adds the calls that need a page. Both are
+generic over the caller's runtime, so the flow-control callbacks round-trip the
+runner's own richer state without widening what an executor body can read.
+
+### Which executors see a browser
+
+`dataActionExecutors.ts` holds every action that does not: number, text,
+boolean, list, object, date, crypto, file, HTTP and all flow control. It takes
+a `VariableScope`, so reaching for a page there is a compile error rather than
+a convention, and `dataActionExecutors.test.ts` exercises those actions with no
+page, no browser context and no temp directory anywhere in the test.
+
+`runnerActionExecutors.ts` holds the rest and composes both halves into the one
+map the registry checks for completeness.
+
+Three actions sit on the browser side that look like they belong on the data
+side — `filter_list`, `check_list_any_match` and `check_list_all_match`. Their
+rule groups can address elements, so evaluating one may resolve a locator.
 
 ## Current Behavior
 

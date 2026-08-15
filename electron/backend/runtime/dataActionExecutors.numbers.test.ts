@@ -2,9 +2,7 @@
 
 import { describe, expect, test } from "vitest";
 import { executeRegisteredAction } from "../actions/execution.js";
-import {
-  createRunnerActionExecutors,
-} from "./runnerActionExecutors.js";
+import { createDataActionExecutors } from "./dataActionExecutors.js";
 import {
   minimalDependencies,
   minimalRuntime,
@@ -19,7 +17,7 @@ describe("number actions execution", () => {
         other_var: 42,
       },
     });
-    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+    const executors = createDataActionExecutors(runtime, minimalDependencies());
 
     // Static value
     await executeRegisteredAction(executors, {
@@ -39,7 +37,7 @@ describe("number actions execution", () => {
   test("generate_random_number", async () => {
     const runtime = minimalRuntime();
     // mock random returns 0.5
-    const executors = createRunnerActionExecutors(
+    const executors = createDataActionExecutors(
       runtime,
       minimalDependencies({ random: () => 0.5 }),
     );
@@ -68,7 +66,7 @@ describe("number actions execution", () => {
         invalid_text: "abc",
       },
     });
-    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+    const executors = createDataActionExecutors(runtime, minimalDependencies());
 
     // Valid float parsing
     await executeRegisteredAction(executors, {
@@ -92,7 +90,7 @@ describe("number actions execution", () => {
         val2: 3,
       },
     });
-    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+    const executors = createDataActionExecutors(runtime, minimalDependencies());
 
     const testMath = async (op: string, expected: number, op2?: string) => {
       await executeRegisteredAction(executors, {
@@ -133,7 +131,7 @@ describe("number actions execution", () => {
 
   test("round_number", async () => {
     const runtime = minimalRuntime();
-    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+    const executors = createDataActionExecutors(runtime, minimalDependencies());
 
     // Round mode round (nearest)
     await executeRegisteredAction(executors, {
@@ -159,7 +157,7 @@ describe("number actions execution", () => {
 
   test("format_number", async () => {
     const runtime = minimalRuntime();
-    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+    const executors = createDataActionExecutors(runtime, minimalDependencies());
 
     // Style decimal
     await executeRegisteredAction(executors, {
@@ -203,7 +201,7 @@ describe("number actions execution", () => {
 
   test("compare_numbers", async () => {
     const runtime = minimalRuntime();
-    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+    const executors = createDataActionExecutors(runtime, minimalDependencies());
 
     const testCompare = async (op: string, expected: boolean) => {
       await executeRegisteredAction(executors, {
@@ -223,7 +221,7 @@ describe("number actions execution", () => {
 
   test("check_number_range", async () => {
     const runtime = minimalRuntime();
-    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+    const executors = createDataActionExecutors(runtime, minimalDependencies());
 
     // Inclusive - value equals min
     await executeRegisteredAction(executors, {
@@ -249,7 +247,7 @@ describe("number actions execution", () => {
 
   test("check_number_property", async () => {
     const runtime = minimalRuntime();
-    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+    const executors = createDataActionExecutors(runtime, minimalDependencies());
 
     const testProperty = async (val: string, prop: string, expected: boolean) => {
       await executeRegisteredAction(executors, {
