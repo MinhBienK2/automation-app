@@ -16,7 +16,7 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 
 ### Add Or Change A Zod Action Schema
 - **Read**: `domain/action-taxonomy.md` (deprecation policy), `contracts/action-configs.md` (Zod schema section), `architecture/persistence.md` (quarantine + migration framework)
-- **Verify**: `electron/backend/actions/schemas/` (one file per action type + `common.ts` + `index.ts` registry), `electron/backend/actions/registry.ts` (`configSchema`, `deprecated`), `electron/backend/persistence/graphLoader.ts` (`processGraphOnLoad` runs Zod validation + quarantine)
+- **Verify**: `electron/backend/actions/schemas/` (one file per action type + `common.ts` + `index.ts` registry), `electron/backend/actions/registry.ts` (`configSchema`, `deprecated`), `electron/backend/features/workflows/graphLoader.ts` (`processGraphOnLoad` runs Zod validation + quarantine)
 - **Checks**: `npm test -- electron/backend/actions/schemas/`, `npx tsc --noEmit` (catches `assertSchemaCoverage()` drift at build time)
 
 ### Change Workflow UI Behavior
@@ -26,8 +26,8 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 
 ### Change Projects, Browser Profiles, Or Subflows
 - **Read**: `domain/product-model.md`, `domain/workflow-lifecycle.md`, `domain/invariants/projects.md`, `architecture/persistence.md`, `contracts/electron-ipc.md`; add `DESIGN.md` for styling
-- **Verify**: `src/features/projects/state/`, `src/features/subflows/`, `electron/backend/commands/projectCommands.ts`, `electron/backend/commands/subflowCommands.ts`, `electron/backend/persistence/`, `electron/backend/services/`, `electron/backend/projects/`
-- **Checks**: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts electron/backend/graph/ electron/backend/services/`, `npx tsc --noEmit`
+- **Verify**: `src/features/projects/state/`, `src/features/subflows/`, `electron/backend/features/projects/`, `electron/backend/features/workflows/subflowCommands.ts`, `electron/backend/db/`
+- **Checks**: `npm test -- electron/backend/db/ electron/backend/features/projects/ electron/backend/graph/`, `npx tsc --noEmit`
 
 ### Change User-Facing Styling Or Layout
 - **Read**: `DESIGN.md`, `architecture/frontend.md`, `domain/invariants/workflow-ui.md`
@@ -36,33 +36,33 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 
 ### Change An Electron IPC Command
 - **Read**: `architecture/command-boundary.md`, `contracts/electron-ipc.md`, `contracts/workflow-types.md`
-- **Verify**: `src/lib/workflowApi.ts`, `src/types/electron.ts`, `electron/preload.cts`, `electron/ipc.ts`, `electron/main.ts`, `electron/backend/commands/` modules
+- **Verify**: `src/lib/workflowApi.ts`, `src/types/electron.ts`, `electron/preload.cts`, `electron/ipc.ts`, `electron/main.ts`, `electron/backend/commands.ts`, `electron/backend/features/*/›Commands.ts`
 - **Checks**: `npm test -- src/lib/workflowApi.test.ts`, `npx tsc --noEmit`, `npm run build:electron`
 
 ### Change Browser Recorder
 - **Read**: `domain/product-model.md`, `domain/workflow-lifecycle.md`, `domain/invariants/recording.md`, `contracts/electron-ipc.md`; add `architecture/runner.md` for capture/replay
-- **Verify**: `electron/backend/recording/`, `electron/backend/commands/recordingCommands.ts`, `src/lib/workflowApi.ts`, `src/types/workflow.ts`, recorder UI under `src/features/workflows/state/useRecordingWorkspace.ts`
-- **Checks**: `npm test -- electron/backend/recording/` / `electron/backend/commands.test.ts` / `src/lib/workflowApi.test.ts`, `npx tsc --noEmit`
+- **Verify**: `electron/backend/features/recording/`, `src/lib/workflowApi.ts`, `src/types/workflow.ts`, recorder UI under `src/features/workflows/state/useRecordingWorkspace.ts`
+- **Checks**: `npm test -- electron/backend/features/recording/` / `src/lib/workflowApi.test.ts`, `npx tsc --noEmit`
 
 ### Change Domain Validation
 - **Read**: `architecture/domain.md`, `contracts/action-configs.md`, `domain/invariants/runner.md`
-- **Verify**: `electron/backend/graph/validateGraph.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/actions/validation.ts`, `electron/backend/commands/workflowCommands.ts`
+- **Verify**: `electron/backend/graph/validateGraph.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/actions/validation.ts`, `electron/backend/features/workflows/workflowCommands.ts`
 - **Checks**: `npm test -- electron/backend/graph/`, `npm run build:electron`
 
 ### Change SQLite Persistence
 - **Read**: `architecture/persistence.md`, `contracts/workflow-types.md`
-- **Verify**: `electron/backend/persistence/`, `electron/backend/commands/`, `electron/backend/services/`
-- **Checks**: `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`
+- **Verify**: `electron/backend/db/`, `electron/backend/config/`, `migrations/`, `electron/backend/features/workflows/`
+- **Checks**: `npm test -- electron/backend/db/`, `npm run build:electron`
 
 ### Change Workflow Scheduling
 - **Read**: `domain/workflow-lifecycle.md`, `domain/invariants/runner.md`, `architecture/persistence.md`, `contracts/electron-ipc.md`
-- **Verify**: `src/features/schedules/`, `electron/backend/scheduling/`, `electron/backend/commands/index.ts`, `electron/backend/runtime/runManager.ts`
-- **Checks**: `npm test -- electron/backend/scheduling/` / `electron/backend/commands.test.ts`, `npx tsc --noEmit`
+- **Verify**: `src/features/schedules/`, `electron/backend/features/scheduling/`, `electron/backend/commands.ts`, `electron/backend/runtime/runManager.ts`
+- **Checks**: `npm test -- electron/backend/features/scheduling/`, `npx tsc --noEmit`
 
 ### Change Operations Overview
 - **Read**: `domain/product-model.md`, `domain/invariants/workflow-ui.md`, `architecture/frontend.md`, `contracts/electron-ipc.md`
-- **Verify**: `src/features/overview/`, `src/features/settings/`, `electron/backend/operations/`, `electron/backend/diagnostics/`, `electron/backend/commands/settingsCommands.ts`
-- **Checks**: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts`, `npx tsc --noEmit`
+- **Verify**: `src/features/overview/`, `src/features/settings/`, `electron/backend/features/operations/`, `electron/backend/diagnostics/`, `electron/backend/features/settings/`
+- **Checks**: `npm test -- electron/backend/db/ electron/backend/features/operations/`, `npx tsc --noEmit`
 
 ### Change Mission Control Navigation
 - **Read**: `domain/product-model.md`, `domain/invariants/workflow-ui.md`, `architecture/frontend.md`; add `DESIGN.md` for layout changes
@@ -71,12 +71,17 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 
 ### Change Evidence Explorer
 - **Read**: `domain/invariants/runner.md`, `architecture/frontend.md`, `architecture/persistence.md`, `contracts/electron-ipc.md`
-- **Verify**: `src/features/evidence/`, `electron/backend/evidence/`, `electron/backend/commands/settingsCommands.ts`
+- **Verify**: `src/features/evidence/`, `electron/backend/features/evidence/`, `electron/backend/features/settings/`
 - **Checks**: `npm test -- electron/backend/commands.test.ts src/lib/workflowApi.test.ts`, `npx tsc --noEmit`
+
+### Change Sign-In Or Session Auth
+- **Read**: `architecture/command-boundary.md`, `contracts/electron-ipc.md`; add `DESIGN.md` for the sign-in screen
+- **Verify**: `src/features/auth/`, `electron/backend/features/auth/`
+- **Checks**: `npm test -- electron/backend/features/auth/`, `npx tsc --noEmit`
 
 ### Change Identity Lab
 - **Read**: `domain/invariants/runner.md`, `architecture/frontend.md`, `architecture/command-boundary.md`, `contracts/electron-ipc.md`
-- **Verify**: `src/features/identities/`, `electron/backend/identity/`, `electron/backend/commands/settingsCommands.ts`
+- **Verify**: `src/features/identities/`, `electron/backend/features/identities/`
 - **Checks**: `npm test -- electron/backend/commands.test.ts src/lib/workflowApi.test.ts`, `npx tsc --noEmit`
 
 ### Change Runner Behavior

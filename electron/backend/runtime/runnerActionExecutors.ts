@@ -835,12 +835,19 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
             if (el.tagName.toLowerCase() === "a") {
               const rawHref = el.getAttribute("href");
               const resolvedHref = (el as HTMLAnchorElement).href;
+              // The http/https check below is what actually makes this safe, but
+              // a scheme list that names `javascript:` without `data:` and
+              // `vbscript:` reads as an incomplete guard — to a reviewer and to
+              // CodeQL alike. Name all three so the intent survives an edit.
+              const scheme = rawHref?.trim().toLowerCase() ?? "";
               if (
                 rawHref &&
                 rawHref !== "#" &&
-                !rawHref.startsWith("javascript:") &&
-                !rawHref.startsWith("mailto:") &&
-                !rawHref.startsWith("tel:")
+                !scheme.startsWith("javascript:") &&
+                !scheme.startsWith("data:") &&
+                !scheme.startsWith("vbscript:") &&
+                !scheme.startsWith("mailto:") &&
+                !scheme.startsWith("tel:")
               ) {
                 if (resolvedHref && (resolvedHref.startsWith("http:") || resolvedHref.startsWith("https:"))) {
                   return resolvedHref;
