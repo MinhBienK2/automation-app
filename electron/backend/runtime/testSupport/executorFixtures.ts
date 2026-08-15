@@ -52,6 +52,7 @@ export function minimalRuntime(
     currentStepName: null,
     currentActionType: null,
     currentActionSummary: null,
+    currentActionSensitive: null,
     currentStepMetadata: null,
     signal: undefined,
     ...rest,

@@ -209,7 +209,10 @@ export class DesktopTargetRepository {
 }
 
 function rowToDesktopTarget(row: DesktopTargetRow): DesktopTarget {
-  const accessibility = parseJson<AccessibilityHints>(row.accessibility_json, undefined);
+  const accessibility = parseJson<AccessibilityHints | undefined>(
+    row.accessibility_json,
+    undefined,
+  );
 
   return {
     id: row.id,
