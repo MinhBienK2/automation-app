@@ -16,6 +16,13 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Shared executor test fixtures: `electron/backend/runtime/testSupport/executorFixtures.ts` (kept outside a `*.test.ts` name so the fixtures are type-checked against the real runtime and dependency shapes)
 - Shared in-memory browser driver: `electron/backend/runtime/testSupport/inMemoryBrowserDriver.ts` (same naming rule, same reason — it is checked against the real `BrowserDriver*` interfaces)
 
+`FakePage` is what a test that needs a browser uses, in both `runner.test.ts` and
+`runnerActionExecutors.test.ts`. It records three ways, and which one to assert
+against depends on the question: `events` for *order*, `gotoCalls` and
+`evaluateCalls` for *arguments*. A test that hand-rolls its own one-method
+`page` is a test asserting against a shape nothing checks, which is how the
+fixtures rotted the last time.
+
 ## Runtime Shapes
 
 The run state is declared once, in `actionRuntime.ts`, and narrowed by tier

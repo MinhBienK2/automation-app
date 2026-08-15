@@ -118,7 +118,20 @@ export class FakePage implements BrowserDriverPage {
   urlValue = "about:blank";
   evaluateResult: unknown = null;
 
-  async goto(url: string) {
+  /**
+   * What the page was asked to do, in full.
+   *
+   * `events` is a compact log for asserting *order*; these two record the
+   * arguments, which is what an executor test is usually about — that the right
+   * URL and wait condition were passed, or the right script text and data.
+   * Separate arrays rather than richer `events` entries, so every assertion
+   * already written against `events` keeps its exact meaning.
+   */
+  gotoCalls: Array<{ url: string; options?: Record<string, unknown> }> = [];
+  evaluateCalls: unknown[] = [];
+
+  async goto(url: string, options?: Record<string, unknown>) {
+    this.gotoCalls.push({ url, ...(options ? { options } : {}) });
     this.urlValue = url.endsWith("/") ? url : `${url}/`;
     this.events.push(`goto:${url}`);
   }
@@ -205,6 +218,7 @@ export class FakePage implements BrowserDriverPage {
   }
 
   private async evaluateFake(pageFunction: unknown, arg?: unknown): Promise<unknown> {
+    this.evaluateCalls.push(arg);
     if (this.evaluateResult != null) {
       this.events.push("evaluate:custom");
       return this.evaluateResult;
