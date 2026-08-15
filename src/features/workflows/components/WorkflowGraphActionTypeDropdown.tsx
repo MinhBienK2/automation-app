@@ -1,31 +1,56 @@
 import { useEffect, useRef, useState } from "react";
-import type { ActionConfig, ActionType } from "../../../types/workflow";
+import type { ActionConfig, ActionType, ExecutionSurfaceKind } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { useWorkflowSurface } from "../state/WorkflowSurfaceContext";
 import { actionLabels } from "../../../lib/workflowUi";
 import {
   actionDescriptions,
-  actionPickerGroups,
-  actionPickerOptions,
+  actionPickerGroupsForSurface,
 } from "./ActionNodePalette";
 
+/**
+ * Surface-blind on purpose.
+ *
+ * This answers "is this an authorable action type", which is a question about
+ * the step already in the graph. Filtering it by surface would make an existing
+ * step read as no type at all in a workflow that legitimately contains it.
+ */
 export function actionTypeFromConfig(config: ActionConfig | null): ActionType | null {
   if (!config) {
     return null;
   }
-  return actionPickerOptions.includes(config.type as ActionType)
+  return allPickerOptions.includes(config.type as ActionType)
     ? (config.type as ActionType)
     : null;
 }
 
+const allPickerOptions: ActionType[] = [
+  ...new Set([
+    ...actionPickerGroupsForSurface("web").flatMap((group) => group.actions),
+    ...actionPickerGroupsForSurface("desktop").flatMap((group) => group.actions),
+  ]),
+];
+
 export function ActionTypeDropdown({
   value,
   onChange,
+  surface: surfaceOverride,
 }: {
   value: ActionType | null;
   onChange: (actionType: ActionType) => void;
+  /** Overrides the open workflow's surface. Tests and previews only. */
+  surface?: ExecutionSurfaceKind;
 }) {
+  const contextSurface = useWorkflowSurface();
+  const surface = surfaceOverride ?? contextSurface;
+  // The other family is hidden rather than disabled: a workflow cannot mix
+  // surfaces, so a greyed-out list of actions that can never be enabled is
+  // noise. The line under the search box is what stops the absence reading as
+  // a missing feature.
+  const actionPickerGroups = actionPickerGroupsForSurface(surface);
+  const actionPickerOptions = actionPickerGroups.flatMap((group) => group.actions);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -124,6 +149,11 @@ export function ActionTypeDropdown({
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
           />
+          <p className="text-[11px] text-fg-muted px-2 pb-1">
+            {surface === "desktop"
+              ? "Desktop workflow — showing desktop and surface-independent actions. Browser actions are not offered."
+              : "Web workflow — showing browser and surface-independent actions. Desktop actions are not offered."}
+          </p>
           {actionPickerGroups.map((group) => {
             const groupActions = group.actions.filter((actionType) =>
               visibleActions.includes(actionType),

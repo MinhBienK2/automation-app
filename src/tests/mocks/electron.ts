@@ -18,6 +18,11 @@ const methodNames: BridgeMethodName[] = [
   "importProjectPackage",
   "deleteProject",
   "listBrowserProfiles",
+  "listDesktopTargets",
+  "createDesktopTarget",
+  "updateDesktopTarget",
+  "deleteDesktopTarget",
+  "setWorkflowDesktopTarget",
   "createBrowserProfile",
   "updateBrowserProfile",
   "deleteBrowserProfile",
@@ -312,6 +317,9 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
     resolveCommand(commands, "delete_project", { projectId }),
   );
 
+  // Empty by default: a project with no Desktop Targets is the normal state,
+  // and every test that predates the Desktop Surface describes exactly that.
+  workflowBridgeMock.listDesktopTargets.mockResolvedValue([]);
   workflowBridgeMock.listBrowserProfiles.mockImplementation((projectId: string) =>
     resolveCommand(commands, "list_browser_profiles", { projectId }),
   );

@@ -2,6 +2,8 @@ import { useState, type ReactNode } from "react";
 import { HelpCircle, Save, Settings } from "lucide-react";
 import type {
   BrowserProfile,
+  DesktopTarget,
+  ExecutionSurfaceKind,
   WorkflowSettings,
   WorkflowSettingsSectionId,
 } from "../../../types/workflow";
@@ -27,6 +29,7 @@ import { HelpDisclosure } from "./HelpDisclosure";
 import { GeneralSettingsSection } from "./settings/GeneralSettingsSection";
 import { RunPolicySettingsSection } from "./settings/RunPolicySettingsSection";
 import { BrowserLaunchSettingsSection } from "./settings/BrowserLaunchSettingsSection";
+import { DesktopTargetSettingsSection } from "./settings/DesktopTargetSettingsSection";
 import { GraphDefaultsSettingsSection } from "./settings/GraphDefaultsSettingsSection";
 import { EnvironmentSettingsSection } from "./settings/EnvironmentSettingsSection";
 
@@ -36,11 +39,16 @@ type WorkflowSettingsDialogProps = {
   activeSection: WorkflowSettingsSectionId;
   browserProfiles?: BrowserProfile[];
   selectedBrowserProfileId?: string | null;
+  /** Which family of controls the launch section shows. */
+  surface?: ExecutionSurfaceKind;
+  desktopTargets?: DesktopTarget[];
+  selectedDesktopTargetId?: string | null;
   error?: string;
   hasUnsavedChanges: boolean;
   onOpenChange: (open: boolean) => void;
   onActiveSectionChange: (section: WorkflowSettingsSectionId) => void;
   onBrowserProfileChange?: (profileId: string) => void;
+  onDesktopTargetChange?: (targetId: string) => void;
   onSettingsChange: (settings: WorkflowSettings) => void;
   onSaveSettings: () => void | boolean | Promise<void | boolean>;
   onDiscardChanges: () => void;
@@ -53,11 +61,15 @@ export function WorkflowSettingsDialog({
   activeSection,
   browserProfiles = [],
   selectedBrowserProfileId = null,
+  surface = "web",
+  desktopTargets = [],
+  selectedDesktopTargetId = null,
   error,
   hasUnsavedChanges,
   onOpenChange,
   onActiveSectionChange,
   onBrowserProfileChange,
+  onDesktopTargetChange,
   onSettingsChange,
   onSaveSettings,
   onDiscardChanges,
@@ -183,11 +195,19 @@ export function WorkflowSettingsDialog({
                       />
                     ) : null}
                     {activeSection === "browser_launch" ? (
-                      <BrowserLaunchSettingsSection
-                        browserProfiles={browserProfiles}
-                        selectedBrowserProfileId={selectedBrowserProfileId}
-                        onBrowserProfileChange={onBrowserProfileChange}
-                      />
+                      surface === "desktop" ? (
+                        <DesktopTargetSettingsSection
+                          desktopTargets={desktopTargets}
+                          selectedDesktopTargetId={selectedDesktopTargetId}
+                          onDesktopTargetChange={onDesktopTargetChange}
+                        />
+                      ) : (
+                        <BrowserLaunchSettingsSection
+                          browserProfiles={browserProfiles}
+                          selectedBrowserProfileId={selectedBrowserProfileId}
+                          onBrowserProfileChange={onBrowserProfileChange}
+                        />
+                      )
                     ) : null}
                     {activeSection === "graph_defaults" ? (
                       <GraphDefaultsSettingsSection

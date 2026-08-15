@@ -7,6 +7,8 @@ import type {
   WorkflowSummary,
   WorkflowDetail,
   BrowserProfile,
+  DesktopTarget,
+  ExecutionSurfaceKind,
 } from "../../../types/workflow";
 import {
   listWorkflows,
@@ -14,6 +16,7 @@ import {
   deleteWorkflow as deleteWorkflowCommand,
   duplicateWorkflow as duplicateWorkflowCommand,
   createWorkflow as createWorkflowCommand,
+  setWorkflowDesktopTarget as setWorkflowDesktopTargetCommand,
   renameWorkflow as renameWorkflowCommand,
   listBrowserProfiles,
   getWorkflowGraph,
@@ -40,6 +43,7 @@ export interface WorkflowWorkspaceDeps {
   currentProjectId: () => string | null;
   browserProfiles: BrowserProfile[];
   setBrowserProfiles: (profiles: BrowserProfile[]) => void;
+  desktopTargets: DesktopTarget[];
   loadSubflowsForProject: (projectId?: string | null) => Promise<any[]>;
   graphAutosaveEnabled: boolean;
   setWorkflowGraph: (graph: any) => void;
@@ -71,6 +75,7 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     currentProjectId,
     browserProfiles,
     setBrowserProfiles,
+    desktopTargets,
     loadSubflowsForProject,
     graphAutosaveEnabled,
     setWorkflowGraph,
@@ -100,6 +105,12 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
   const [selectedProfileIdDraft, setSelectedProfileIdDraft] = useState<string | null>(null);
+  // The surface is a creation-time choice and cannot change afterwards, so it
+  // lives only as a draft — there is no "current surface" to edit.
+  const [surfaceDraft, setSurfaceDraft] = useState<ExecutionSurfaceKind>("web");
+  const [selectedDesktopTargetIdDraft, setSelectedDesktopTargetIdDraft] = useState<string | null>(
+    null,
+  );
   const [deleteWorkflowCandidate, setDeleteWorkflowCandidate] = useState<WorkflowSummary | null>(null);
   const [workflowDialogBusy, setWorkflowDialogBusy] = useState(false);
 
@@ -273,9 +284,14 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     setWorkflowNameDraft("");
     const defaultProfile = browserProfiles.find((p) => p.is_default) ?? browserProfiles[0];
     setSelectedProfileIdDraft(defaultProfile?.id ?? null);
+    // Web is the default because every workflow that exists today is one; a
+    // desktop workflow is the deliberate choice, not the accidental one.
+    setSurfaceDraft("web");
+    const defaultTarget = desktopTargets.find((t) => t.is_default) ?? desktopTargets[0];
+    setSelectedDesktopTargetIdDraft(defaultTarget?.id ?? null);
     setWorkflowDialogBusy(false);
     setAppError("");
-  }, [browserProfiles, setAppError]);
+  }, [browserProfiles, desktopTargets, setAppError]);
 
   const openEditWorkflowDialog = useCallback((workflow: WorkflowSummary) => {
     setWorkflowDialogMode("edit");
@@ -307,8 +323,17 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
         }
         const created = await createWorkflowCommand(workflowNameDraft, {
           project_id: projectId,
-          browser_profile_id: selectedProfileIdDraft ?? undefined,
+          surface: surfaceDraft,
+          browser_profile_id:
+            surfaceDraft === "web" ? (selectedProfileIdDraft ?? undefined) : undefined,
         });
+        // Set after creation rather than as a creation argument: the command
+        // that assigns a Desktop Target is the one that checks the target
+        // belongs to the workflow's project, and duplicating that check in the
+        // create path is how the two drift.
+        if (surfaceDraft === "desktop" && selectedDesktopTargetIdDraft) {
+          await setWorkflowDesktopTargetCommand(created.id, selectedDesktopTargetIdDraft);
+        }
         closeWorkflowDialog();
         await loadWorkflows();
         await openWorkflow(created.id);
@@ -420,12 +445,16 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     editingWorkflowId,
     workflowNameDraft,
     selectedProfileIdDraft,
+    surfaceDraft,
+    selectedDesktopTargetIdDraft,
     deleteWorkflowCandidate,
     setWorkflows,
     setSelectedWorkflowId,
     setDetail,
     setWorkflowNameDraft,
     setSelectedProfileIdDraft,
+    setSurfaceDraft,
+    setSelectedDesktopTargetIdDraft,
     setDeleteWorkflowCandidate,
     loadWorkflows,
     openWorkflow,

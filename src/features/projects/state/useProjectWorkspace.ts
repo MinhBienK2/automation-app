@@ -1,14 +1,17 @@
 import { useState, useCallback } from "react";
 import type {
+  ProjectCollection,
   ProjectWorkspaceAPI,
 } from "../../../shared/types/workspaceContracts";
 import type {
   Project,
   BrowserProfile,
+  DesktopTarget,
 } from "../../../types/workflow";
 import {
   listProjects,
   listBrowserProfiles,
+  listDesktopTargets,
   createProject as createProjectCommand,
   updateProject as updateProjectCommand,
   duplicateProject as duplicateProjectCommand,
@@ -30,8 +33,28 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [projectCollection, setProjectCollectionState] = useState<"workflows" | "subflows" | "profiles" | "settings">("workflows");
+  const [projectCollection, setProjectCollectionState] = useState<ProjectCollection>("workflows");
   const [browserProfiles, setBrowserProfiles] = useState<BrowserProfile[]>([]);
+  // A separate tab, not more rows in Profiles: a Browser Profile owns a
+  // user-data directory and an identity, a Desktop Target owns neither and
+  // names an application instead. One list would be half-empty in both
+  // directions. See docs/domain/desktop/desktop-target.md.
+  const [desktopTargets, setDesktopTargets] = useState<DesktopTarget[]>([]);
+
+  const loadDesktopTargets = useCallback(async (projectId: string | null) => {
+    if (!projectId) {
+      setDesktopTargets([]);
+      return [];
+    }
+    try {
+      const targets = await listDesktopTargets(projectId);
+      setDesktopTargets(targets);
+      return targets;
+    } catch (error) {
+      setAppError(commandMessage(error));
+      return [];
+    }
+  }, [setAppError]);
 
   const loadProjectModel = useCallback(async () => {
     try {
@@ -48,12 +71,13 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
       }
       const environments = await listBrowserProfiles(projectId);
       setBrowserProfiles(environments);
+      await loadDesktopTargets(projectId);
       return { projects: loadedProjects, browserProfiles: environments };
     } catch (error) {
       setAppError(commandMessage(error));
       return { projects: [], browserProfiles: [] };
     }
-  }, [selectedProjectId, setAppError]);
+  }, [selectedProjectId, setAppError, loadDesktopTargets]);
 
   const currentProjectId = useCallback(() => {
     return (
@@ -91,7 +115,7 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
     }
   }, [setSubflows, setSubflowsLoading, setAppError]);
 
-  const setProjectCollection = useCallback((collection: "workflows" | "subflows" | "profiles" | "settings") => {
+  const setProjectCollection = useCallback((collection: ProjectCollection) => {
     setProjectCollectionState(collection);
     const projectId = currentProjectId();
     if (projectId && (collection === "subflows" || collection === "settings" || collection === "profiles")) {
@@ -190,6 +214,8 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
     selectedProjectId,
     projectCollection,
     browserProfiles,
+    desktopTargets,
+    loadDesktopTargets,
     setSelectedProjectId,
     setProjectCollection,
     setBrowserProfiles,

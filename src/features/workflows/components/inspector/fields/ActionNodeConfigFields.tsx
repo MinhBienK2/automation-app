@@ -1,4 +1,4 @@
-import type { GraphNode, ActionConfig, ActionType } from "../../../../../types/workflow";
+import type { ActionConfig, ActionType, GraphNode } from "../../../../../types/workflow";
 import { ActionConfigFieldGroup } from "../../ActionConfigFieldGroup";
 import { ActionConfigEditor } from "../../ActionConfigEditor";
 import {
@@ -38,10 +38,7 @@ export function ActionNodeConfigFields({
     return (
       <div className="graph-config-fields">
         <ActionConfigFieldGroup title="Action configuration">
-          <ActionTypeDropdown
-            value={null}
-            onChange={updateActionType}
-          />
+          <ActionTypeDropdown value={null} onChange={updateActionType} />
           {actionConfig ? (
             <GraphInternalActionConfigPanel config={actionConfig} />
           ) : null}
@@ -53,10 +50,7 @@ export function ActionNodeConfigFields({
   return (
     <div className="graph-config-fields">
       <ActionConfigFieldGroup title="Action configuration">
-        <ActionTypeDropdown
-          value={type}
-          onChange={updateActionType}
-        />
+        <ActionTypeDropdown value={type} onChange={updateActionType} />
       </ActionConfigFieldGroup>
       <ActionConfigEditor
         config={actionConfig as ActionConfig}

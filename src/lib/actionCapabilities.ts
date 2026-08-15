@@ -231,10 +231,99 @@ export function isActionAvailableOnSurface(
 ): boolean {
   const capability = actionCapabilities[actionType];
   if (capability === "graph_internal") return true;
+  if (surfaceIndependentActionTypes.has(actionType)) return true;
   return surface === "desktop"
     ? capability === "desktop_surface"
     : capability !== "desktop_surface";
-  // Known gap: `set_variable`, `http_request` and the date, crypto and file
-  // families are surface-independent but read as `implemented`, so a desktop
-  // workflow is not offered them yet.
 }
+
+/**
+ * Actions that run identically on either surface.
+ *
+ * Not a judgement call: these are exactly the action types whose executors take
+ * a `VariableScope` and therefore *cannot* reach a page or a window — the split
+ * #32 made, enforced by the type system. A desktop workflow that could not read
+ * a value into a variable, branch on it, or post it over HTTP would not be a
+ * second surface on a shared platform; it would be a separate product.
+ *
+ * `electron/backend/runtime/surfaceIndependence.test.ts` checks this list
+ * against the executors themselves, so adding a data action without listing it
+ * here fails a test rather than quietly hiding it from desktop workflows.
+ */
+export const surfaceIndependentActionTypes: ReadonlySet<ActionType> = new Set<ActionType>([
+  "add_to_list",
+  "append_text",
+  "boolean_logical_op",
+  "change_text_case",
+  "check_boolean_property",
+  "check_list_contains",
+  "check_list_empty",
+  "check_number_property",
+  "check_number_range",
+  "check_object_empty",
+  "check_object_key_exists",
+  "check_text_contains",
+  "check_text_empty",
+  "check_text_regex_matches",
+  "compare_booleans",
+  "compare_numbers",
+  "create_empty_list",
+  "create_empty_object",
+  "create_list_manual",
+  "create_object_manual",
+  "crypto_operation",
+  "date_time_operation",
+  "extract_emails",
+  "extract_numbers",
+  "extract_regex_matches",
+  "extract_urls",
+  "file_operation",
+  "format_number",
+  "generate_number_range",
+  "generate_random_boolean",
+  "generate_random_number",
+  "get_list_item",
+  "get_list_length",
+  "get_object_keys",
+  "get_object_property",
+  "get_object_values",
+  "get_text_length",
+  "http_request",
+  "join_list",
+  "map_list_property",
+  "math_operation",
+  "merge_lists",
+  "merge_objects",
+  "parse_csv_excel",
+  "parse_json_to_object",
+  "parse_text_to_number",
+  "parse_to_boolean",
+  "prepend_text",
+  "random_wait",
+  "read_text_file",
+  "regex_extract",
+  "remove_from_list_by_index",
+  "remove_from_list_by_value",
+  "remove_object_property",
+  "rename_object_property",
+  "replace_text",
+  "round_number",
+  "set_boolean_variable",
+  "set_clipboard",
+  "set_json_variables",
+  "set_number_variable",
+  "set_object_property",
+  "set_text_variable",
+  "set_variable",
+  "slice_list",
+  "slice_text",
+  "sort_reverse_list",
+  "split_text_to_list",
+  "stringify_object",
+  "trim_text",
+  "update_flag_variable",
+  "update_list_variable",
+  "update_number_variable",
+  "update_text_variable",
+  "write_csv_excel",
+]);

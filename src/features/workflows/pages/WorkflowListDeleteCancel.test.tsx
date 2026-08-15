@@ -40,6 +40,11 @@ function WorkflowDeleteCancelHarness() {
         workflowNameDraft=""
         browserProfiles={[]}
         selectedProfileIdDraft={null}
+        desktopTargets={[]}
+        surfaceDraft="web"
+        selectedDesktopTargetIdDraft={null}
+        onSurfaceDraftChange={() => {}}
+        onSelectedDesktopTargetIdDraftChange={() => {}}
         appError=""
         runSnapshots={[]}
         onWorkflowNameDraftChange={vi.fn()}

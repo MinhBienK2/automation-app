@@ -4,6 +4,7 @@ import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { SettingsHelpPage } from "./features/settings/pages/SettingsHelpPage";
 import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnostics";
 import { ProjectProfilesPanel } from "./features/projects/components/ProjectProfilesPanel";
+import { ProjectDesktopTargetsPanel } from "./features/projects/components/ProjectDesktopTargetsPanel";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
 import { useOperationsOverviewWorkspace } from "./features/overview/useOperationsOverviewWorkspace";
 import { ProjectSettings } from "./features/projects/components/ProjectSettings";
@@ -47,12 +48,18 @@ import {
 } from "./lib/appState";
 import { RecordingReviewDialog } from "./features/workflows/components/RecordingReviewDialog";
 import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
+import { WorkflowSurfaceProvider } from "./features/workflows/state/WorkflowSurfaceContext";
 import { UnsavedChangesDialog } from "./components/ui/unsaved-changes-dialog";
 import { AppPackageDialogs } from "./AppPackageDialogs";
 import {
   useAppPackageDialogs,
   workflowPackageSections,
 } from "./lib/useAppPackageDialogs";
+import {
+  createDesktopTarget,
+  deleteDesktopTarget,
+  setWorkflowDesktopTarget,
+} from "./lib/workflowApi";
 import type {
   IdentityLabTarget,
   OperationsNavigationTarget,
@@ -213,6 +220,7 @@ function AppInner() {
     setSelectedProjectId: (id) => projectsWorkspace.setSelectedProjectId(id),
     currentProjectId: () => projectsWorkspace.currentProjectId(),
     browserProfiles: projectsWorkspace.browserProfiles,
+    desktopTargets: projectsWorkspace.desktopTargets,
     setBrowserProfiles: (envs) => projectsWorkspace.setBrowserProfiles(envs),
     loadSubflowsForProject: (id) => subflowsWorkspace.loadSubflowsForProject(id),
     graphAutosaveEnabled,
@@ -740,6 +748,12 @@ function AppInner() {
       )
     : projectsWorkspace.browserProfiles;
 
+  const selectedDesktopTargets = selectedProject
+    ? projectsWorkspace.desktopTargets.filter(
+        (target) => target.project_id === selectedProject.id,
+      )
+    : projectsWorkspace.desktopTargets;
+
   const projectStats = useMemo(() => {
     const stats: Record<string, { workflows: number; subflows: number; profiles: number }> = {};
     for (const project of projectsWorkspace.projects) {
@@ -828,6 +842,7 @@ function AppInner() {
       onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
       screen={nav.screen}
     >
+      <WorkflowSurfaceProvider value={workflowsWorkspace.detail?.workflow.surface ?? "web"}>
       {nav.screen === "overview" ? (
         <OperationsOverviewPage
           overview={operationsOverview}
@@ -957,6 +972,30 @@ function AppInner() {
                 await deleteBrowserProfile(profileId, selectedProject?.id);
               }}
             />
+          ) : projectsWorkspace.projectCollection === "desktop-targets" ? (
+            <ProjectDesktopTargetsPanel
+              project={selectedProject}
+              desktopTargets={selectedDesktopTargets}
+              error={appError}
+              onCreateDesktopTarget={async (projectId, input) => {
+                try {
+                  await createDesktopTarget(projectId, input);
+                  await projectsWorkspace.loadDesktopTargets(projectId);
+                  setAppError("");
+                } catch (error) {
+                  setAppError(commandMessage(error));
+                }
+              }}
+              onDeleteDesktopTarget={async (targetId) => {
+                try {
+                  await deleteDesktopTarget(targetId);
+                  await projectsWorkspace.loadDesktopTargets(selectedProject?.id ?? null);
+                  setAppError("");
+                } catch (error) {
+                  setAppError(commandMessage(error));
+                }
+              }}
+            />
           ) : projectsWorkspace.projectCollection === "settings" ? (
             <ProjectSettings
               project={selectedProject}
@@ -972,12 +1011,19 @@ function AppInner() {
               workflowDialogMode={workflowsWorkspace.workflowDialogMode}
               workflowNameDraft={workflowsWorkspace.workflowNameDraft}
               browserProfiles={selectedBrowserProfiles}
+              desktopTargets={selectedDesktopTargets}
               selectedProfileIdDraft={workflowsWorkspace.selectedProfileIdDraft}
+              surfaceDraft={workflowsWorkspace.surfaceDraft}
+              selectedDesktopTargetIdDraft={workflowsWorkspace.selectedDesktopTargetIdDraft}
               appError={appError}
               runSnapshots={runSnapshots}
               startingWorkflowId={runWorkspace.startingWorkflowId}
               onWorkflowNameDraftChange={workflowsWorkspace.setWorkflowNameDraft}
               onSelectedProfileIdDraftChange={workflowsWorkspace.setSelectedProfileIdDraft}
+              onSurfaceDraftChange={workflowsWorkspace.setSurfaceDraft}
+              onSelectedDesktopTargetIdDraftChange={
+                workflowsWorkspace.setSelectedDesktopTargetIdDraft
+              }
               onSubmitWorkflowDialog={workflowsWorkspace.submitWorkflowDialog}
               onOpenCreateWorkflow={workflowsWorkspace.openCreateWorkflowDialog}
               onOpenEditWorkflow={(workflow) => {
@@ -1137,6 +1183,9 @@ function AppInner() {
         activeSection={workflowSettingsActiveSection}
         browserProfiles={selectedBrowserProfiles}
         selectedBrowserProfileId={workflowProfileDraftId}
+        surface={workflowsWorkspace.detail?.workflow.surface ?? "web"}
+        desktopTargets={selectedDesktopTargets}
+        selectedDesktopTargetId={workflowsWorkspace.detail?.workflow.desktop_target_id ?? null}
         error={appError}
         hasUnsavedChanges={Object.values(workflowSettingsSaveStatuses).some(
           (status) => status === "unsaved",
@@ -1149,6 +1198,22 @@ function AppInner() {
           settingsWorkspace.closeWorkflowSettingsDialog();
         }}
         onActiveSectionChange={settingsWorkspace.setWorkflowSettingsActiveSection}
+        onDesktopTargetChange={(targetId) => {
+          const workflowId = workflowsWorkspace.detail?.workflow.id;
+          if (!workflowId) return;
+          void (async () => {
+            try {
+              await setWorkflowDesktopTarget(workflowId, targetId);
+              // Reloaded rather than patched locally: the command is what
+              // enforces that the Target belongs to this workflow's project,
+              // and a local patch would show a state the backend refused.
+              await workflowsWorkspace.performOpenWorkflow(workflowId);
+              setAppError("");
+            } catch (error) {
+              setAppError(commandMessage(error));
+            }
+          })();
+        }}
         onBrowserProfileChange={(profileId) => {
           setWorkflowProfileDraftId(profileId);
           setWorkflowSettings((current) => {
@@ -1210,6 +1275,7 @@ function AppInner() {
         isPackageActionBusy={isPackageActionBusy}
         workflowDialogBusy={workflowsWorkspace.workflowDialogBusy}
       />
+      </WorkflowSurfaceProvider>
      </AppShell>
     </>
   );

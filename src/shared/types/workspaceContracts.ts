@@ -2,6 +2,8 @@ import type {
   Project,
   BrowserProfile,
   WorkflowSummary,
+  ExecutionSurfaceKind,
+  DesktopTarget,
   WorkflowDetail,
   WorkflowGraph,
   WorkflowSettings,
@@ -37,7 +39,7 @@ export interface AppNavigationAPI {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setOverviewFocus: (focus: OverviewFocus) => void;
   setProjectsBrowseMode: (mode: "grid" | "detail") => void;
-  openProjects: (collection?: "workflows" | "subflows" | "profiles" | "settings") => void;
+  openProjects: (collection?: ProjectCollection) => void;
   openOverview: (focus?: OverviewFocus) => void;
   openSettings: () => void;
   openSettingsHelp: () => void;
@@ -47,14 +49,28 @@ export interface AppNavigationAPI {
   backFromSubflowDetail: () => void;
 }
 
+/**
+ * Desktop Targets are their own tab rather than more rows under Profiles: a
+ * Browser Profile owns a user-data directory and an identity, a Desktop Target
+ * owns neither and names an application on the operator's machine instead.
+ */
+export type ProjectCollection =
+  | "workflows"
+  | "subflows"
+  | "profiles"
+  | "desktop-targets"
+  | "settings";
+
 export interface ProjectWorkspaceAPI {
   projects: Project[];
   selectedProjectId: string | null;
-  projectCollection: "workflows" | "subflows" | "profiles" | "settings";
+  projectCollection: ProjectCollection;
   browserProfiles: BrowserProfile[];
-  
+  desktopTargets: DesktopTarget[];
+
   setSelectedProjectId: (id: string | null) => void;
-  setProjectCollection: (collection: "workflows" | "subflows" | "profiles" | "settings") => void;
+  setProjectCollection: (collection: ProjectCollection) => void;
+  loadDesktopTargets: (projectId: string | null) => Promise<DesktopTarget[]>;
   setBrowserProfiles: (profiles: BrowserProfile[]) => void;
   setProjects: (projects: Project[]) => void;
 
@@ -76,6 +92,9 @@ export interface WorkflowWorkspaceAPI {
   editingWorkflowId: string | null;
   workflowNameDraft: string;
   selectedProfileIdDraft: string | null;
+  /** Creation-time only: a workflow's surface is fixed once it exists. */
+  surfaceDraft: ExecutionSurfaceKind;
+  selectedDesktopTargetIdDraft: string | null;
   deleteWorkflowCandidate: WorkflowSummary | null;
 
   setWorkflows: React.Dispatch<React.SetStateAction<WorkflowSummary[]>>;
@@ -83,6 +102,8 @@ export interface WorkflowWorkspaceAPI {
   setDetail: React.Dispatch<React.SetStateAction<WorkflowDetail | null>>;
   setWorkflowNameDraft: (name: string) => void;
   setSelectedProfileIdDraft: (id: string | null) => void;
+  setSurfaceDraft: (surface: ExecutionSurfaceKind) => void;
+  setSelectedDesktopTargetIdDraft: (id: string | null) => void;
   setDeleteWorkflowCandidate: (candidate: WorkflowSummary | null) => void;
 
   loadWorkflows: () => Promise<void>;

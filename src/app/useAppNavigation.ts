@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import type {
   AppNavigationAPI,
   AppScreen,
+  ProjectCollection,
   OverviewFocus,
   SubflowBackTarget,
 } from "../shared/types/workspaceContracts";
@@ -40,7 +41,7 @@ export interface AppNavigationDeps {
   workflows: WorkflowSummary[];
   setWorkflows: React.Dispatch<React.SetStateAction<WorkflowSummary[]>>;
   openWorkflowSettings: (workflow: WorkflowSummary, sectionId?: any) => Promise<void>;
-  setProjectCollection: (collection: "workflows" | "subflows" | "profiles" | "settings") => void;
+  setProjectCollection: (collection: ProjectCollection) => void;
   setSelectedGraphNodeId: (nodeId: string | null) => void;
   setAppError: (error: string) => void;
 }
@@ -82,7 +83,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     setAppError,
   } = deps;
 
-  const performOpenProjects = useCallback((collection: "workflows" | "subflows" | "profiles" | "settings" = "workflows") => {
+  const performOpenProjects = useCallback((collection: ProjectCollection = "workflows") => {
     setScreen("projects");
     setProjectCollection(collection);
     setSidebarCollapsed(false);
@@ -107,7 +108,7 @@ export function useAppNavigation(deps: AppNavigationDeps): AppNavigationAPI {
     setAppError,
   ]);
 
-  const openProjects = useCallback((collection: "workflows" | "subflows" | "profiles" | "settings" = "workflows") => {
+  const openProjects = useCallback((collection: ProjectCollection = "workflows") => {
     void requestGraphExitNavigation(() => performOpenProjects(collection));
   }, [requestGraphExitNavigation, performOpenProjects]);
 

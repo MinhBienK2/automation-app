@@ -146,6 +146,10 @@ describe("Workflow list integration", () => {
         "Login flow",
         {
           project_id: project.id,
+          // Sent explicitly rather than left to the backend default: the
+          // operator picked it, and a surface that arrives by omission is one
+          // nobody can see they chose.
+          surface: "web",
           browser_profile_id: "environment-staging",
         },
       );
