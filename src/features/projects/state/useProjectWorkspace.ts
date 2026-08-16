@@ -132,11 +132,12 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
     try {
       const environments = await listBrowserProfiles(projectId);
       setBrowserProfiles(environments);
+      await loadDesktopTargets(projectId);
       await loadSubflowsForProject(projectId);
     } catch (error) {
       setAppError(commandMessage(error));
     }
-  }, [selectedProjectId, loadSubflowsForProject, setAppError]);
+  }, [selectedProjectId, loadSubflowsForProject, loadDesktopTargets, setAppError]);
 
   const createProject = useCallback(async (input: { name: string; description?: string | null }) => {
     setAppError("");
@@ -147,12 +148,13 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
       setProjects(await listProjects());
       await loadWorkflows();
       setBrowserProfiles(await listBrowserProfiles(project.id));
+      await loadDesktopTargets(project.id);
       const subflowItems = await listSubflows(project.id);
       setSubflows(subflowItems);
     } catch (error) {
       setAppError(commandMessage(error));
     }
-  }, [loadWorkflows, setSubflows, setAppError]);
+  }, [loadWorkflows, setSubflows, loadDesktopTargets, setAppError]);
 
   const updateProject = useCallback(async (
     projectId: string,
@@ -177,6 +179,7 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
       setProjectCollectionState("settings");
       setProjects(await listProjects());
       setBrowserProfiles(await listBrowserProfiles(project.id));
+      await loadDesktopTargets(project.id);
       const subflowItems = await listSubflows(project.id);
       setSubflows(subflowItems);
       await loadWorkflows();
@@ -184,7 +187,7 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
     } catch (error) {
       setAppError(commandMessage(error));
     }
-  }, [loadWorkflows, setSubflows, showToast, setAppError]);
+  }, [loadWorkflows, setSubflows, loadDesktopTargets, showToast, setAppError]);
 
   const deleteProject = useCallback(async (projectId: string) => {
     setAppError("");
@@ -202,12 +205,14 @@ export function useProjectWorkspace(deps: ProjectWorkspaceDeps): ProjectWorkspac
         setBrowserProfiles([]);
         setSubflows([]);
       }
+      // Passing null is the clearing path, so this covers both branches.
+      await loadDesktopTargets(nextProjectId);
       await loadWorkflows();
       showToast("Project deleted.");
     } catch (error) {
       setAppError(commandMessage(error));
     }
-  }, [loadWorkflows, setSubflows, showToast, setAppError]);
+  }, [loadWorkflows, setSubflows, loadDesktopTargets, showToast, setAppError]);
 
   return {
     projects,

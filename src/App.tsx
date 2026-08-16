@@ -220,6 +220,9 @@ function AppInner() {
     setSelectedProjectId: (id) => projectsWorkspace.setSelectedProjectId(id),
     currentProjectId: () => projectsWorkspace.currentProjectId(),
     browserProfiles: projectsWorkspace.browserProfiles,
+    // Unfiltered on purpose: `selectedDesktopTargets` is derived further down,
+    // after this hook. The hook narrows to the current project itself, in
+    // `defaultDesktopTargetFor` — which is the only place it reads the list.
     desktopTargets: projectsWorkspace.desktopTargets,
     setBrowserProfiles: (envs) => projectsWorkspace.setBrowserProfiles(envs),
     loadSubflowsForProject: (id) => subflowsWorkspace.loadSubflowsForProject(id),

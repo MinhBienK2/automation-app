@@ -23,6 +23,7 @@ import {
   getWorkflowSettings,
 } from "../../../lib/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
+import { defaultDesktopTargetFor } from "./defaultDesktopTarget";
 import { linearGraphFromSteps } from "../lib/workflowGraph";
 import {
   withWorkflowSettingsDefaults,
@@ -287,11 +288,11 @@ export function useWorkflowWorkspace(deps: WorkflowWorkspaceDeps): WorkflowWorks
     // Web is the default because every workflow that exists today is one; a
     // desktop workflow is the deliberate choice, not the accidental one.
     setSurfaceDraft("web");
-    const defaultTarget = desktopTargets.find((t) => t.is_default) ?? desktopTargets[0];
+    const defaultTarget = defaultDesktopTargetFor(desktopTargets, currentProjectId());
     setSelectedDesktopTargetIdDraft(defaultTarget?.id ?? null);
     setWorkflowDialogBusy(false);
     setAppError("");
-  }, [browserProfiles, desktopTargets, setAppError]);
+  }, [browserProfiles, desktopTargets, currentProjectId, setAppError]);
 
   const openEditWorkflowDialog = useCallback((workflow: WorkflowSummary) => {
     setWorkflowDialogMode("edit");
