@@ -48,15 +48,6 @@ type ProjectCommandCascadeDeps = {
   ) => WorkflowGraph;
 };
 
-export function getBrowserProfileKey(profile: BrowserProfile) {
-  if (profile.browser_launch.session_mode !== "persistent_profile") return null;
-  return (
-    profile.browser_launch.profile_dir?.trim() ||
-    profile.browser_launch.profile_name?.trim() ||
-    null
-  );
-}
-
 export function duplicateProjectWorkflowSettings(
   sourceSettings: WorkflowSettings,
   created: Workflow,
@@ -181,7 +172,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
       const profiles = await deps.repository.listBrowserProfiles(project.id);
       for (const profile of profiles) {
         if (profile.id === browserProfileId) continue;
-        if (getBrowserProfileKey(profile) === profileDir) return true;
+        if (browserProfileKey(profile) === profileDir) return true;
       }
     }
     const workflows = await deps.repository.listWorkflows();
@@ -203,7 +194,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
       if (project.id === projectId) continue;
       const profiles = await deps.repository.listBrowserProfiles(project.id);
       for (const profile of profiles) {
-        if (getBrowserProfileKey(profile) === profileDir) return true;
+        if (browserProfileKey(profile) === profileDir) return true;
       }
     }
     const workflows = await deps.repository.listWorkflows();
@@ -220,7 +211,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
   ): Promise<BrowserProfile> {
     const profile = await deps.requireBrowserProfile(browserProfileId);
     await assertCanResetBrowserProfileIdentity(profile);
-    const oldProfileDir = getBrowserProfileKey(profile);
+    const oldProfileDir = browserProfileKey(profile);
     const identityId = createHighEntropyBrowserIdentityId();
     const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
       identityId,
@@ -242,7 +233,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
     await deleteBrowserProfileDirectoryIfPrivate(
       profile.id,
       oldProfileDir,
-      getBrowserProfileKey(updated),
+      browserProfileKey(updated),
     );
     return updated;
   }
@@ -495,7 +486,7 @@ export function createProjectCommandCascades(deps: ProjectCommandCascadeDeps) {
 
     const profileDirs = new Set<string>();
     for (const profile of await deps.repository.listBrowserProfiles(project.id)) {
-      const profileDir = getBrowserProfileKey(profile);
+      const profileDir = browserProfileKey(profile);
       if (profileDir) profileDirs.add(profileDir);
     }
     for (const workflow of workflows) {

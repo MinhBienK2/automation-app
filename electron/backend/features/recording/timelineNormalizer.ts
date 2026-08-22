@@ -5,6 +5,7 @@ import type {
   ReviewedRecordingStep,
 } from "../../../../src/types/workflow.js";
 import { generateElementTarget, type LocatorGenerationResult } from "./locatorGenerator.js";
+import { stringValueTrimmed } from "../../shared/records.js";
 
 const recordingActionLabels: Partial<Record<ActionConfig["type"], string>> = {
   navigate: "Navigate",
@@ -97,7 +98,7 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
     if (event.kind === "clipboard") {
       flushPending();
       if (
-        stringValue(event.raw.action) === "copy" &&
+        stringValueTrimmed(event.raw.action) === "copy" &&
         isCopyHotkeyStep(steps[steps.length - 1])
       ) {
         continue;
@@ -106,7 +107,7 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
       for (const step of clipboardSteps) {
         steps.push(withStepId(step, steps.length + 1));
       }
-      if (stringValue(event.raw.action) === "paste") {
+      if (stringValueTrimmed(event.raw.action) === "paste") {
         lastClipboardPasteTargetKey = targetKey(event.target);
       }
       continue;
@@ -152,7 +153,7 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
 
     if (
       event.kind === "tab" &&
-      stringValue(event.raw.action) === "open" &&
+      stringValueTrimmed(event.raw.action) === "open" &&
       pendingDedupedEvent?.kind === "click"
     ) {
       flushDedupedEvent();
@@ -186,7 +187,7 @@ function isCopyHotkeyStep(step: ReviewedRecordingStep | undefined) {
 function clipboardStepsFromEvent(
   event: RecordingEvent,
 ): Array<Omit<ReviewedRecordingStep, "id">> {
-  const action = stringValue(event.raw.action);
+  const action = stringValueTrimmed(event.raw.action);
   if (action === "copy") {
     return [
       recordingStep([event], {
@@ -239,7 +240,7 @@ function stepFromEvent(
   }
   if (event.kind === "click") {
     const locator = generateElementTarget(event.target);
-    const clickType = stringValue(event.raw.click_type);
+    const clickType = stringValueTrimmed(event.raw.click_type);
     if (clickType === "double" || numberValue(event.raw.detail) >= 2) {
       return recordingStep(sourceEvents, {
         type: "double_click",
@@ -341,11 +342,11 @@ function stepFromEvent(
     });
   }
   if (event.kind === "tab") {
-    const action = stringValue(event.raw.action);
+    const action = stringValueTrimmed(event.raw.action);
     if (action === "open") {
       return recordingStep(sourceEvents, {
         type: "open_new_tab",
-        config: { url: stringValue(event.raw.url) },
+        config: { url: stringValueTrimmed(event.raw.url) },
       });
     }
     const index = numberValue(event.raw.index);
@@ -364,11 +365,11 @@ function stepFromEvent(
     });
   }
   if (event.kind === "dialog") {
-    const action = stringValue(event.raw.action);
+    const action = stringValueTrimmed(event.raw.action);
     if (action === "accept") {
       return recordingStep(sourceEvents, {
         type: "accept_dialog",
-        config: { prompt_text: stringValue(event.raw.prompt_text) },
+        config: { prompt_text: stringValueTrimmed(event.raw.prompt_text) },
       });
     }
     return recordingStep(sourceEvents, {
@@ -377,13 +378,13 @@ function stepFromEvent(
     });
   }
   if (event.kind === "wait_marker") {
-    const action = stringValue(event.raw.action);
+    const action = stringValueTrimmed(event.raw.action);
     if (action === "screenshot") {
       return recordingStep(sourceEvents, {
         type: "take_screenshot",
         config: {
-          path: stringValue(event.raw.path) || `recorded-step-${event.sequence}.png`,
-          output_name: stringValue(event.raw.output_name),
+          path: stringValueTrimmed(event.raw.path) || `recorded-step-${event.sequence}.png`,
+          output_name: stringValueTrimmed(event.raw.output_name),
           full_page: booleanValue(event.raw.full_page) ?? false,
         },
       });
@@ -406,8 +407,8 @@ function stepFromEvent(
           condition: waitCondition(event.raw.condition),
           duration_ms: numberOrNull(event.raw.duration_ms),
           timeout_ms: numberOrNull(event.raw.timeout_ms),
-          text: stringValue(event.raw.text),
-          url: stringValue(event.raw.url),
+          text: stringValueTrimmed(event.raw.text),
+          url: stringValueTrimmed(event.raw.url),
         },
       });
     }
@@ -625,7 +626,7 @@ function canMergeDedupedEvent(
 }
 
 function isSingleClickEvent(event: RecordingEvent) {
-  const clickType = stringValue(event.raw.click_type);
+  const clickType = stringValueTrimmed(event.raw.click_type);
   return (
     event.kind === "click" &&
     clickType !== "double" &&
@@ -636,7 +637,7 @@ function isSingleClickEvent(event: RecordingEvent) {
 }
 
 function isDoubleClickEvent(event: RecordingEvent) {
-  const clickType = stringValue(event.raw.click_type);
+  const clickType = stringValueTrimmed(event.raw.click_type);
   return (
     event.kind === "click" &&
     (clickType === "double" || numberValue(event.raw.detail) >= 2)
@@ -683,10 +684,6 @@ function targetKey(target: RecordingTarget | null) {
   ].join("\u0000");
 }
 
-function stringValue(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
 function numberValue(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : Number.NaN;
 }
@@ -706,9 +703,9 @@ function stringArray(value: unknown) {
 }
 
 function outputNameForDownload(event: RecordingEvent) {
-  const explicit = stringValue(event.raw.output_name);
+  const explicit = stringValueTrimmed(event.raw.output_name);
   if (explicit) return explicit;
-  const filename = stringValue(event.raw.suggested_filename) ?? event.value?.file_names?.[0] ?? "download";
+  const filename = stringValueTrimmed(event.raw.suggested_filename) ?? event.value?.file_names?.[0] ?? "download";
   const normalized = filename
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")

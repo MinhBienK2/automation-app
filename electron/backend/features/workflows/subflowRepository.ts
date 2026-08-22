@@ -9,6 +9,7 @@ import { processGraphOnLoad } from "../../graph/graphLoader.js";
 import { writeGraphToNormalizedTables } from "../../db/migrations/backfillGraphTables.js";
 import { assembleSubflowGraphFromTables } from "./normalizedGraphRepository.js";
 import { snapshotRevision } from "./revisionRepository.js";
+import { parseJson } from "../../shared/records.js";
 
 type SubflowRow = {
   id: string;
@@ -213,8 +214,4 @@ function rowToSubflowSummary(row: SubflowRow): SubflowSummary {
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
-}
-
-function parseJson<T>(value: string): T {
-  return JSON.parse(value) as T;
 }

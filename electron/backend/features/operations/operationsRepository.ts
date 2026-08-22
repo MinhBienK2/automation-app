@@ -14,6 +14,7 @@ import type {
   WorkflowScheduleStatus,
   WorkflowSummary,
 } from "../../../../src/types/workflow.js";
+import { parseJsonRecord, stringValue } from "../../shared/records.js";
 
 type RunRow = {
   id: string;
@@ -505,21 +506,6 @@ function attentionMatchesFilter(item: OverviewAttentionItem, request: Operations
   if (sourceFilter?.length && !sourceFilter.includes(item.source_kind)) return false;
   if (severityFilter?.length && !severityFilter.includes(item.severity)) return false;
   return true;
-}
-
-function parseJsonRecord(value: unknown): Record<string, unknown> | null {
-  try {
-    const parsed = typeof value === "string" ? JSON.parse(value) : value;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function stringValue(value: unknown) {
-  return typeof value === "string" && value.trim() ? value : null;
 }
 
 function safeRelativeEvidenceReference(value: string) {

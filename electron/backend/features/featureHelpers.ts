@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { migrateWorkflowGraph } from "../graph/migration.js";
 import { commandError, createDraftGraph } from "../commandHelpers.js";
+import { asRecord } from "../shared/records.js";
 import type { CommandContext } from "./types.js";
 import type {
   BrowserProfile,
@@ -186,12 +187,6 @@ export function createFeatureHelpers(
         };
       }),
     };
-  }
-
-  function asRecord(value: unknown): Record<string, unknown> {
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? value as Record<string, unknown>
-      : {};
   }
 
   async function requireWorkflow(workflowId: string): Promise<WorkflowSummary> {
@@ -462,7 +457,6 @@ export function createFeatureHelpers(
     referencedSubflowsForWorkflowGraph,
     callSubflowIds,
     remapCallSubflowIds,
-    asRecord,
     requireWorkflow,
     getSettings,
     lastRunAtForWorkflow,

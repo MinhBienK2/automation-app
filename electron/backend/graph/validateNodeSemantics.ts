@@ -28,6 +28,7 @@ import { validateWorkflowGraph, type WorkflowGraphValidationOptions } from "./va
 import { graphHasExecutableSteps } from "./graphTopology.js";
 import {
   asRecord,
+  numberField,
   stringField,
   validationError,
   type ValidationErrorLike,
@@ -957,12 +958,6 @@ function validateWorkflowCondition(condition: WorkflowCondition) {
 
 function conditionKindLabel(kind: unknown) {
   return typeof kind === "string" && kind ? kind : "unknown";
-}
-
-
-function numberField(config: unknown, field: string): number | null {
-  const value = asRecord(config)[field];
-  return typeof value === "number" ? value : null;
 }
 
 function positiveNumberField(config: unknown, field: string): boolean {

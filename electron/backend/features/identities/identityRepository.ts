@@ -12,6 +12,7 @@ import type {
   WorkflowSummary,
 } from "../../../../src/types/workflow.js";
 import { browserProfileKey, type RunnerCommandPort } from "../../runtime/runManager.js";
+import { parseJsonRecord, stringValue } from "../../shared/records.js";
 
 type RunRow = {
   id: string;
@@ -352,21 +353,6 @@ function safeFields(record: Record<string, unknown> | null) {
 
 function isScalar(value: unknown) {
   return value === null || ["string", "number", "boolean"].includes(typeof value);
-}
-
-function parseJsonRecord(value: unknown): Record<string, unknown> | null {
-  try {
-    const parsed = typeof value === "string" ? JSON.parse(value) : value;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function stringValue(value: unknown) {
-  return typeof value === "string" && value.trim() ? value : null;
 }
 
 function limitValue(value: number | null | undefined, fallback: number) {

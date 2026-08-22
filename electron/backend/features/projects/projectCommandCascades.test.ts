@@ -2,10 +2,8 @@
 
 import { describe, expect, test } from "vitest";
 import type { Workflow, WorkflowSettings } from "../../../../src/types/workflow";
-import {
-  duplicateProjectWorkflowSettings,
-  getBrowserProfileKey,
-} from "./projectCommandCascades";
+import { duplicateProjectWorkflowSettings } from "./projectCommandCascades";
+import { browserProfileKey } from "../../runtime/runDbHelpers";
 
 describe("project command cascade helpers", () => {
   test("copies workflow settings for a duplicated project workflow without retaining run-from-selected state", () => {
@@ -47,7 +45,7 @@ describe("project command cascade helpers", () => {
   });
 
   test("returns the persistent browser profile key", () => {
-    expect(getBrowserProfileKey({
+    expect(browserProfileKey({
       id: "environment-1",
       project_id: "project-1",
       name: "Saved session",

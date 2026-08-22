@@ -5,6 +5,7 @@ import type {
   BrowserProfileInput,
   WorkflowSummary,
 } from "../../../../src/types/workflow.js";
+import { parseJson } from "../../shared/records.js";
 
 type ProjectRow = {
   id: string;
@@ -307,6 +308,3 @@ function rowToSummary(row: WorkflowRow): WorkflowSummary {
   };
 }
 
-function parseJson<T>(value: string): T {
-  return JSON.parse(value) as T;
-}

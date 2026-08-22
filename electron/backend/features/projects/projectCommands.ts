@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import nodeFs from "node:fs";
 import path from "node:path";
 import { sanitizePathSegment } from "../evidence/artifacts.js";
-import { getBrowserProfileKey } from "./projectCommandCascades.js";
+import { browserProfileKey } from "../../runtime/runDbHelpers.js";
 import { WorkflowRepository } from "../workflows/workflowRepository.js";
 
 export function createProjectCommands(deps: CommandDeps) {

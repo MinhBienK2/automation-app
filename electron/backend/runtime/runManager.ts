@@ -10,6 +10,7 @@ import type {
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
 import type { BrowserWorkflowRunner } from "./runner.js";
+import { commandError } from "../commandHelpers.js";
 import {
   browserProfileKey,
   beginRun,
@@ -19,11 +20,6 @@ import {
 } from "./runDbHelpers.js";
 
 export { browserProfileKey };
-
-export type CommandError = {
-  message: string;
-  field?: string | null;
-};
 
 export type RunnerCommandPort = {
   run: BrowserWorkflowRunner["run"];
@@ -717,8 +713,4 @@ export class RunManager {
       this.activeProfileRuns.delete(profileName);
     }
   }
-}
-
-function commandError(message: string, field?: string): CommandError {
-  return { message, field };
 }

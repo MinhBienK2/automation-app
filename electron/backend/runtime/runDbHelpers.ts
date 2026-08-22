@@ -10,9 +10,15 @@ import type {
 } from "../../../src/types/workflow.js";
 import { getMongoCollection } from "../db/mongo.js";
 
-export function browserProfileKey(settings: WorkflowSettings) {
-  if (settings.browser_launch.session_mode !== "persistent_profile") return null;
-  return settings.browser_launch.profile_dir?.trim() || settings.browser_launch.profile_name?.trim() || null;
+export function browserProfileKey(target: {
+  browser_launch: {
+    session_mode: WorkflowSettings["browser_launch"]["session_mode"];
+    profile_dir?: string | null;
+    profile_name?: string | null;
+  };
+}) {
+  if (target.browser_launch.session_mode !== "persistent_profile") return null;
+  return target.browser_launch.profile_dir?.trim() || target.browser_launch.profile_name?.trim() || null;
 }
 
 export async function beginRun(

@@ -18,6 +18,7 @@ import { assembleGraphFromTables } from "./normalizedGraphRepository.js";
 import { snapshotRevision } from "./revisionRepository.js";
 import { ProjectRepository } from "../projects/projectRepository.js";
 import { SubflowRepository } from "./subflowRepository.js";
+import { parseJson } from "../../shared/records.js";
 
 type WorkflowRow = {
   id: string;
@@ -323,8 +324,4 @@ function rowToSummary(row: WorkflowRow): WorkflowSummary {
     step_count: 0,
     browser_profile_name: row.browser_profile_name ?? null,
   };
-}
-
-function parseJson<T>(value: string): T {
-  return JSON.parse(value) as T;
 }
