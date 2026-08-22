@@ -5,6 +5,7 @@ import type {
 } from "../../../src/types/workflow.js";
 import { migrateWorkflowGraph } from "./migration.js";
 import { asRecord } from "../shared/records.js";
+import { isQuarantinedNode } from "./quarantine.js";
 
 export function reachableNodeIds(graph: WorkflowGraph): Set<string> {
   const start = graph.nodes.find((node) => node.node_type === "start");
@@ -32,7 +33,7 @@ export function graphHasExecutableSteps(graph: WorkflowGraph): boolean {
 
 function nodeProducesCompiledStep(node: GraphNode): boolean {
   if (node.node_type === "start") return false;
-  if (node.node_type === "quarantined") return false;
+  if (isQuarantinedNode(node)) return false;
   if (node.node_type === "end_success") {
     return asRecord(node.config).close_browser === true;
   }

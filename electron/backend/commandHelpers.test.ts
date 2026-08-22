@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { CompiledWorkflowGraph, WorkflowSummary } from "../../src/types/workflow.js";
 import {
-  asRecord,
   commandError,
   createDraftGraph,
   isCommandError,
@@ -18,12 +17,6 @@ describe("commandHelpers", () => {
     expect(isCommandError({ message: "Boom" })).toBe(true);
     expect(isCommandError(new Error("Boom"))).toBe(true);
     expect(isCommandError({ message: 123 })).toBe(false);
-  });
-
-  test("keeps only non-array objects as records", () => {
-    expect(asRecord({ id: "node-1" })).toEqual({ id: "node-1" });
-    expect(asRecord(["not", "a", "record"])).toEqual({});
-    expect(asRecord(null)).toEqual({});
   });
 
   test("converts workflow summaries and creates the default draft graph", () => {

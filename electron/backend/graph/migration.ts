@@ -1,7 +1,4 @@
-import type {
-  ElementTarget,
-  WorkflowGraph,
-} from "../../../src/types/workflow.js";
+import type { WorkflowGraph } from "../../../src/types/workflow.js";
 import { runMigrations } from "./migrations/index.js";
 
 export const CURRENT_WORKFLOW_GRAPH_VERSION = 9;
@@ -13,16 +10,4 @@ export const CURRENT_WORKFLOW_GRAPH_VERSION = 9;
  */
 export function migrateWorkflowGraph(graph: WorkflowGraph): WorkflowGraph {
   return runMigrations(graph).graph;
-}
-
-export function elementTargetFromXpath(xpath: string, iframeXpath?: string | null): ElementTarget {
-  const target: ElementTarget = {
-    locators: [{ kind: "xpath", value: xpath.trim() }],
-  };
-  if (iframeXpath?.trim()) {
-    target.iframe = {
-      locators: [{ kind: "xpath", value: iframeXpath.trim() }],
-    };
-  }
-  return target;
 }

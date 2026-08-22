@@ -14,12 +14,6 @@ export function commandError(message: string, field?: string): CommandError {
   return { message, field };
 }
 
-export function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
-}
-
 export function isCommandError(error: unknown): error is CommandError {
   return Boolean(
     error &&
