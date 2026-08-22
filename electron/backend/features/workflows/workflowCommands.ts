@@ -70,6 +70,10 @@ export function createWorkflowCommands(deps: CommandDeps) {
     const workflow = await requireWorkflow(workflowId);
     const graph = await getWorkflowGraph(workflowId);
     const settings = await getSettings(workflowId);
+    const rawSettingsIssues = settingsService.validateSettings(settings);
+    const settingsIssues = workflow.surface === "desktop"
+      ? rawSettingsIssues.filter((issue) => issue.section !== "browser_launch")
+      : rawSettingsIssues;
     return [
       ...validateGraph(graph, await graphContextForWorkflow(workflow, graph)).map((issue) => ({
         source: "graph" as const,
@@ -79,7 +83,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
         message: issue.message,
         level: issue.level,
       })),
-      ...settingsService.validateSettings(settings).map((issue: any) => ({
+      ...settingsIssues.map((issue) => ({
         source: "settings" as const,
         field: issue.field ?? null,
         node_id: null,

@@ -209,6 +209,8 @@ export function createFeatureHelpers(
       ? settingsService.normalizeWorkflowSettings(persisted, workflow)
       : settingsService.defaultWorkflowSettings(workflow);
     
+    if (workflow.surface === "desktop") return normalized;
+
     let browserProfile = workflow.browser_profile_id
       ? await repository.getBrowserProfile(workflow.browser_profile_id)
       : null;
