@@ -106,6 +106,7 @@ export interface WorkflowGraphStateAPI {
   graphRevision: number;
   savedGraphRevision: number;
   graphIssues: GraphValidationIssue[];
+  graphIssuesNeedRecheck: boolean;
   selectedGraphNodeId: string | null;
 
   setWorkflowGraph: (graph: WorkflowGraph | null) => void;
@@ -114,6 +115,7 @@ export interface WorkflowGraphStateAPI {
   setGraphRevision: (revision: number | ((curr: number) => number)) => void;
   setSavedGraphRevision: (revision: number | ((curr: number) => number)) => void;
   setGraphIssues: (issues: GraphValidationIssue[]) => void;
+  setGraphIssuesNeedRecheck: (value: boolean | ((current: boolean) => boolean)) => void;
   setSelectedGraphNodeId: (nodeId: string | null) => void;
 
   changeWorkflowGraph: (graph: WorkflowGraph) => void;

@@ -18,7 +18,7 @@ import {
   listBrowserProfiles,
   getWorkflowGraph,
   getWorkflowSettings,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
 import { linearGraphFromSteps } from "../lib/workflowGraph";
 import {

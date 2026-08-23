@@ -32,6 +32,7 @@ const methodNames: BridgeMethodName[] = [
   "duplicateSubflow",
   "deleteSubflow",
   "getSubflowUsage",
+  "listProjectSubflowUsages",
   "listWorkflows",
   "getWorkflow",
   "getWorkflowBrowserConfig",
@@ -143,6 +144,7 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
     if (command === "list_browser_profiles") return defaultBrowserProfiles();
     if (command === "list_subflows") return [];
     if (command === "get_subflow_usage") return [];
+    if (command === "list_project_subflow_usages") return {};
     if (command === "get_operations_overview") return defaultOperationsOverview();
 
     if (command === "get_identity_lab_overview") return defaultIdentityLabOverview();
@@ -363,6 +365,9 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.getSubflowUsage.mockImplementation((subflowId: string) =>
     resolveCommand(commands, "get_subflow_usage", { subflowId }),
+  );
+  workflowBridgeMock.listProjectSubflowUsages.mockImplementation(async (projectId: string) =>
+    resolveCommand(commands, "list_project_subflow_usages", { projectId }),
   );
   workflowBridgeMock.createWorkflow.mockImplementation((name: string, options: unknown) =>
     resolveCommand(commands, "create_workflow", { name, options }),

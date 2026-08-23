@@ -1,4 +1,5 @@
-import { useCallback } from "react";
+import { useState, useCallback } from "react";
+import type React from "react";
 import type {
   WorkflowSettingsStateAPI,
 } from "../../../shared/types/workspaceContracts";
@@ -14,7 +15,7 @@ import {
   saveWorkflowSettingsSection,
   getWorkflowSettings,
   listBrowserProfiles,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
 import {
   cloneWorkflowSettings,
@@ -28,11 +29,10 @@ import {
 } from "../lib/workflowSettings";
 
 export interface WorkflowSettingsStateDeps {
-  detail: WorkflowDetail | null;
+  getDetail: () => WorkflowDetail | null;
   setDetail: React.Dispatch<React.SetStateAction<WorkflowDetail | null>>;
-  workflows: WorkflowSummary[];
   setWorkflows: React.Dispatch<React.SetStateAction<WorkflowSummary[]>>;
-  browserProfiles: BrowserProfile[];
+  getBrowserProfiles: () => BrowserProfile[];
   setBrowserProfiles: (profiles: BrowserProfile[]) => void;
   setSelectedProjectId: (id: string | null) => void;
   loadWorkflows: () => Promise<void>;
@@ -40,29 +40,13 @@ export interface WorkflowSettingsStateDeps {
   showToast: (message: string) => void;
   resolveWorkflowProfileId: (profileId: string | null | undefined, profiles: BrowserProfile[]) => string | null;
 
-  workflowSettings: WorkflowSettings | null;
-  setWorkflowSettings: (settings: WorkflowSettings | null) => void;
-  workflowSettingsSavedSnapshot: WorkflowSettings | null;
-  setWorkflowSettingsSavedSnapshot: (settings: WorkflowSettings | null) => void;
-  workflowSettingsDialogOpen: boolean;
-  setWorkflowSettingsDialogOpen: (open: boolean) => void;
-  workflowSettingsActiveSection: WorkflowSettingsSectionId;
-  setWorkflowSettingsActiveSection: (section: WorkflowSettingsSectionId) => void;
-  workflowSettingsSaveStatuses: Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>;
-  setWorkflowSettingsSaveStatuses: React.Dispatch<React.SetStateAction<Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>>>;
-  workflowProfileDraftId: string | null;
-  setWorkflowProfileDraftId: (id: string | null) => void;
-  workflowProfileSavedId: string | null;
-  setWorkflowProfileSavedId: (id: string | null) => void;
 }
 
 export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): WorkflowSettingsStateAPI {
   const {
-    detail: _detail,
     setDetail,
-    workflows: _workflows,
     setWorkflows,
-    browserProfiles,
+    getBrowserProfiles,
     setBrowserProfiles,
     setSelectedProjectId,
     loadWorkflows,
@@ -70,23 +54,18 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
     showToast: _showToast,
     resolveWorkflowProfileId,
 
-    workflowSettings,
-    setWorkflowSettings,
-    workflowSettingsSavedSnapshot,
-    setWorkflowSettingsSavedSnapshot,
-    workflowSettingsDialogOpen,
-    setWorkflowSettingsDialogOpen,
-    workflowSettingsActiveSection,
-    setWorkflowSettingsActiveSection,
-    workflowSettingsSaveStatuses,
-    setWorkflowSettingsSaveStatuses,
-    workflowProfileDraftId,
-    setWorkflowProfileDraftId,
-    workflowProfileSavedId,
-    setWorkflowProfileSavedId,
   } = deps;
+  // Owned session state (moved out of App.tsx).
+  const [workflowSettings, setWorkflowSettings] = useState<WorkflowSettings | null>(null);
+  const [workflowSettingsSavedSnapshot, setWorkflowSettingsSavedSnapshot] = useState<WorkflowSettings | null>(null);
+  const [workflowSettingsDialogOpen, setWorkflowSettingsDialogOpen] = useState(false);
+  const [workflowSettingsActiveSection, setWorkflowSettingsActiveSection] = useState<WorkflowSettingsSectionId>("general");
+  const [workflowSettingsSaveStatuses, setWorkflowSettingsSaveStatuses] = useState<Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>>(settingsSaveStatuses("saved"));
+  const [workflowProfileDraftId, setWorkflowProfileDraftId] = useState<string | null>(null);
+  const [workflowProfileSavedId, setWorkflowProfileSavedId] = useState<string | null>(null);
 
   const updateLoadedWorkflowName = useCallback((name: string) => {
+
     setDetail((current) =>
       current
         ? {
@@ -210,7 +189,7 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
       settingsPromise,
     ]);
 
-    const workflowBrowserProfiles = profilesResult ?? browserProfiles;
+    const workflowBrowserProfiles = profilesResult ?? getBrowserProfiles();
     if (profilesResult) {
       setBrowserProfiles(profilesResult);
     }
@@ -251,7 +230,7 @@ export function useWorkflowSettingsState(deps: WorkflowSettingsStateDeps): Workf
     }
     setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
   }, [
-    browserProfiles,
+    getBrowserProfiles,
     setSelectedProjectId,
     setBrowserProfiles,
     resolveWorkflowProfileId,

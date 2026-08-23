@@ -12,10 +12,10 @@ import {
   listScheduleEvents,
   listSchedules,
   updateSchedule,
-} from "../../lib/workflowApi";
+} from "../../lib/api/workflowApi";
 import { useSchedulesWorkspace } from "./useSchedulesWorkspace";
 
-vi.mock("../../lib/workflowApi", () => ({
+vi.mock("../../lib/api/workflowApi", () => ({
   createSchedule: vi.fn(),
   deleteSchedule: vi.fn(),
   disableSchedule: vi.fn(),

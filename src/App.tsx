@@ -26,7 +26,7 @@ import {
   saveWorkflowGraph,
   createSubflow,
   saveSubflowGraph,
-} from "./lib/workflowApi";
+} from "./lib/api/workflowApi";
 import {
   commandMessage,
   initialRunState,
@@ -35,7 +35,6 @@ import {
   graphSaveStatusLabel,
   idleRunStateWithRetainedSession,
   latestRunForWorkflow,
-  settingsSaveStatuses,
   readGraphAutosaveEnabled,
   writeGraphAutosaveEnabled,
   readGraphAutosaveDelayMs,
@@ -43,24 +42,20 @@ import {
   cloneWorkflowSettings,
   operationsTargetToMissionTarget,
   type GraphSaveStatus,
-  type WorkflowSettingsSaveStatus,
 } from "./lib/appState";
-import { RecordingReviewDialog } from "./features/workflows/components/RecordingReviewDialog";
-import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
+import { RecordingReviewDialog } from "./features/workflows/components/dialogs/RecordingReviewDialog";
+import { WorkflowSettingsDialog } from "./features/workflows/components/dialogs/WorkflowSettingsDialog";
 import { UnsavedChangesDialog } from "./components/ui/unsaved-changes-dialog";
-import { AppPackageDialogs } from "./AppPackageDialogs";
+import { AppPackageDialogs } from "./app/AppPackageDialogs";
 import {
   useAppPackageDialogs,
   workflowPackageSections,
-} from "./lib/useAppPackageDialogs";
+} from "./app/useAppPackageDialogs";
 import type {
   IdentityLabTarget,
   OperationsNavigationTarget,
   RunState,
-  WorkflowGraph,
-  WorkflowSettings,
   WorkflowSettingsSectionId,
-  GraphValidationIssue,
   WorkflowRunSnapshot,
 } from "./types/workflow";
 import "./App.css";
@@ -75,7 +70,7 @@ import { useWorkflowRunState } from "./features/workflows/state/useWorkflowRunSt
 import { useRecordingWorkspace } from "./features/workflows/state/useRecordingWorkspace";
 import { useSubflowWorkspace } from "./features/subflows/state/useSubflowWorkspace";
 import { runFromSelectedState } from "./features/workflows/lib/runFromSelected";
-import { useGraphExitNavigation } from "./lib/useGraphExitNavigation";
+import { useGraphExitNavigation } from "./app/useGraphExitNavigation";
 import { useAuthState } from "./features/auth/state/useAuthState";
 import { LoginScreen } from "./features/auth/pages/LoginScreen";
 import { AdminPanel } from "./features/auth/pages/AdminPanel";
@@ -134,22 +129,8 @@ function AppInner() {
   );
 
   // Shared state references
-  const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
-  const [workflowSettings, setWorkflowSettings] = useState<WorkflowSettings | null>(null);
-  const [workflowSettingsSavedSnapshot, setWorkflowSettingsSavedSnapshot] = useState<WorkflowSettings | null>(null);
-  const [workflowProfileDraftId, setWorkflowProfileDraftId] = useState<string | null>(null);
-  const [workflowProfileSavedId, setWorkflowProfileSavedId] = useState<string | null>(null);
-  const [workflowSettingsDialogOpen, setWorkflowSettingsDialogOpen] = useState(false);
-  const [workflowSettingsActiveSection, setWorkflowSettingsActiveSection] = useState<WorkflowSettingsSectionId>("general");
-  const [workflowSettingsSaveStatuses, setWorkflowSettingsSaveStatuses] = useState<Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>>(settingsSaveStatuses("saved"));
   const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(readGraphAutosaveEnabled);
   const [graphAutosaveDelayMs, setGraphAutosaveDelayMs] = useState(readGraphAutosaveDelayMs);
-  const [graphSaveStatus, setGraphSaveStatus] = useState<GraphSaveStatus>(graphAutosaveEnabled ? "saved" : "off");
-  const [graphRevision, setGraphRevision] = useState(0);
-  const [savedGraphRevision, setSavedGraphRevision] = useState(0);
-  const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
-  const [graphIssuesNeedRecheck, setGraphIssuesNeedRecheck] = useState(false);
-  const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
   const [runState, setRunState] = useState<RunState>(initialRunState);
   const [runSnapshots, setRunSnapshots] = useState<WorkflowRunSnapshot[]>([]);
   const [activeRunWorkflowName, setActiveRunWorkflowName] = useState<string | null>(null);
@@ -186,7 +167,63 @@ function AppInner() {
     cleanupSettingsBrowserProfiles,
   } = useSettingsDiagnostics();
 
+  // --- Graph session state lives inside the workflows feature ---
+  const graphState = useWorkflowGraphState({
+    getDetail: () => workflowsWorkspace.detail,
+    graphAutosaveEnabled,
+    setGraphAutosaveEnabled,
+    setAppError,
+    loadWorkflows: () => workflowsWorkspace.loadWorkflows(),
+  });
+  const {
+    workflowGraph,
+    graphSaveStatus,
+    graphRevision,
+    savedGraphRevision,
+    graphIssues,
+    setWorkflowGraph,
+    setGraphSaveStatus,
+    setGraphRevision,
+    setSavedGraphRevision,
+    setGraphIssues,
+    graphIssuesNeedRecheck,
+    setGraphIssuesNeedRecheck,
+    setSelectedGraphNodeId,
+  } = graphState;
+
   // --- Domain hooks ---
+  const settingsWorkspace = useWorkflowSettingsState({
+    getDetail: () => workflowsWorkspace.detail,
+    setDetail: (detailValue) => workflowsWorkspace.setDetail(detailValue),
+    setWorkflows: (workflowList) => workflowsWorkspace.setWorkflows(workflowList),
+    getBrowserProfiles: () => projectsWorkspace.browserProfiles,
+    setBrowserProfiles: (profiles) => projectsWorkspace.setBrowserProfiles(profiles),
+    setSelectedProjectId: (id) => projectsWorkspace.setSelectedProjectId(id),
+    loadWorkflows: () => workflowsWorkspace.loadWorkflows(),
+    setAppError,
+    showToast,
+    resolveWorkflowProfileId: (profileId, profiles) => {
+      if (profileId && profiles.some((profile) => profile.id === profileId)) {
+        return profileId;
+      }
+      return profiles[0]?.id ?? null;
+    },
+  });
+
+  const {
+    workflowSettings,
+    workflowSettingsDialogOpen,
+    workflowSettingsActiveSection,
+    workflowSettingsSaveStatuses,
+    workflowProfileDraftId,
+    setWorkflowSettings,
+    setWorkflowSettingsSavedSnapshot,
+    setWorkflowSettingsDialogOpen,
+    setWorkflowSettingsSaveStatuses,
+    setWorkflowProfileDraftId,
+    setWorkflowProfileSavedId,
+  } = settingsWorkspace;
+
   const subflowsWorkspace = useSubflowWorkspace({
     setAppError,
     ensureProjectId: () => projectsWorkspace.ensureProjectId(),
@@ -237,67 +274,13 @@ function AppInner() {
   });
 
 
-  const graphState = useWorkflowGraphState({
-    detail: workflowsWorkspace.detail,
-    workflowGraph,
-    setWorkflowGraph,
-    graphAutosaveEnabled,
-    setGraphAutosaveEnabled,
-    graphSaveStatus,
-    setGraphSaveStatus,
-    graphRevision,
-    setGraphRevision,
-    savedGraphRevision,
-    setSavedGraphRevision,
-    graphIssues,
-    setGraphIssues,
-    selectedGraphNodeId,
-    setSelectedGraphNodeId,
-    setAppError,
-    loadWorkflows: () => workflowsWorkspace.loadWorkflows(),
-    graphIssuesNeedRecheck,
-    setGraphIssuesNeedRecheck,
-  });
 
-  const settingsWorkspace = useWorkflowSettingsState({
-    detail: workflowsWorkspace.detail,
-    setDetail: workflowsWorkspace.setDetail,
-    workflows: workflowsWorkspace.workflows,
-    setWorkflows: workflowsWorkspace.setWorkflows,
-    browserProfiles: projectsWorkspace.browserProfiles,
-    setBrowserProfiles: projectsWorkspace.setBrowserProfiles,
-    setSelectedProjectId: projectsWorkspace.setSelectedProjectId,
-    loadWorkflows: workflowsWorkspace.loadWorkflows,
-    setAppError,
-    showToast,
-    resolveWorkflowProfileId: (profileId, profiles) => {
-      if (profileId && profiles.some((profile) => profile.id === profileId)) {
-        return profileId;
-      }
-      return profiles[0]?.id ?? null;
-    },
-    workflowSettings,
-    setWorkflowSettings,
-    workflowSettingsSavedSnapshot,
-    setWorkflowSettingsSavedSnapshot,
-    workflowSettingsDialogOpen,
-    setWorkflowSettingsDialogOpen,
-    workflowSettingsActiveSection,
-    setWorkflowSettingsActiveSection,
-    workflowSettingsSaveStatuses,
-    setWorkflowSettingsSaveStatuses,
-    workflowProfileDraftId,
-    setWorkflowProfileDraftId,
-    workflowProfileSavedId,
-    setWorkflowProfileSavedId,
-  });
 
   const runWorkspace = useWorkflowRunState({
     detail: workflowsWorkspace.detail,
     workflowGraph,
     selectedGraphNodeId: graphState.selectedGraphNodeId,
     selectedWorkflowId: workflowsWorkspace.selectedWorkflowId,
-    activeRunWorkflowName,
     setAppError,
     loadOperationsOverview,
     persistCurrentGraph: () => graphState.persistCurrentGraph(),
@@ -305,6 +288,7 @@ function AppInner() {
     setGraphIssues: graphState.setGraphIssues,
     setGraphIssuesNeedRecheck,
     runState,
+    activeRunWorkflowName,
     setRunState,
     runSnapshots,
     setRunSnapshots,
@@ -609,7 +593,6 @@ function AppInner() {
     }
   }, [
     nav.screen,
-    setRunSnapshots,
     workflowsWorkspace,
     setWorkflowGraph,
     setWorkflowSettings,
@@ -1151,18 +1134,20 @@ function AppInner() {
         onActiveSectionChange={settingsWorkspace.setWorkflowSettingsActiveSection}
         onBrowserProfileChange={(profileId) => {
           setWorkflowProfileDraftId(profileId);
-          setWorkflowSettings((current) => {
-            const selectedProfile = selectedBrowserProfiles.find(
-              (profile) => profile.id === profileId,
-            );
-            return current && selectedProfile
-              ? { ...current, browser_launch: selectedProfile.browser_launch }
-              : current;
-          });
-          setWorkflowSettingsSaveStatuses((current) => ({
-            ...current,
+          const current = workflowSettings;
+          const selectedProfile = selectedBrowserProfiles.find(
+            (profile) => profile.id === profileId,
+          );
+          if (current && selectedProfile) {
+            settingsWorkspace.changeWorkflowSettings({
+              ...current,
+              browser_launch: selectedProfile.browser_launch,
+            });
+          }
+          setWorkflowSettingsSaveStatuses({
+            ...workflowSettingsSaveStatuses,
             browser_launch: "unsaved",
-          }));
+          });
         }}
         onSettingsChange={settingsWorkspace.changeWorkflowSettings}
         onSaveSettings={async () => {

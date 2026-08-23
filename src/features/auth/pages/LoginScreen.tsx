@@ -27,6 +27,7 @@ export function LoginScreen({ onLogin, authError, isLoading }: LoginScreenProps)
     if (!email.trim() || !password.trim()) return;
 
     setSubmitting(true);
+    console.warn("[SUBMIT]", email);
     try {
       if (rememberMe) {
         localStorage.setItem("remember_me", "true");

@@ -7,7 +7,7 @@ import {
   closeIdentityRetainedSession,
   getIdentityLabOverview,
   resetWorkflowBrowserIdentity,
-} from "../../lib/workflowApi";
+} from "../../lib/api/workflowApi";
 import { commandMessage } from "../../lib/workflowUi";
 
 const toastTimeoutMs = 2200;

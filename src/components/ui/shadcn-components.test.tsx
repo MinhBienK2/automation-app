@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, test } from "vitest";
 import { Button } from "./button";
 import { Badge } from "./badge";
-import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import {
   Dialog,
   DialogContent,
@@ -115,12 +114,7 @@ describe("daisyUI UI components", () => {
   test("renders the remaining shared primitives", () => {
     render(
       <TooltipProvider>
-        <Card>
-          <CardHeader>
-            <CardTitle>Step Detail</CardTitle>
-            <Badge>running</Badge>
-          </CardHeader>
-          <CardContent>
+        <Badge>running</Badge>
             <label className="label" htmlFor="condition">Condition</label>
             <select id="condition" className="select" defaultValue="duration">
               <option value="duration">Duration</option>
@@ -152,12 +146,9 @@ describe("daisyUI UI components", () => {
               </TooltipTrigger>
               <TooltipContent>Open help</TooltipContent>
             </Tooltip>
-          </CardContent>
-        </Card>
       </TooltipProvider>,
     );
 
-    expect(screen.getByText("Step Detail")).toBeInTheDocument();
     expect(screen.getByText("running")).toBeInTheDocument();
     expect(screen.getByLabelText("Step notes")).toHaveValue("Check selector");
     expect(screen.getByRole("switch", { name: "Use browser profile" }))

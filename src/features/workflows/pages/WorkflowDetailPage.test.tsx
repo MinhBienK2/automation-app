@@ -92,7 +92,11 @@ describe("Workflow detail integration", () => {
   });
 
   test("shows workflow detail header without inline workflow name editing", async () => {
-    mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
+      list_schedules: [],
+    });
 
     renderApp();
 

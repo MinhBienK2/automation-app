@@ -1,10 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { OperationsOverview } from "../../types/workflow";
-import { getOperationsOverview } from "../../lib/workflowApi";
+import { getOperationsOverview } from "../../lib/api/workflowApi";
 import { useOperationsOverviewWorkspace } from "./useOperationsOverviewWorkspace";
 
-vi.mock("../../lib/workflowApi", () => ({
+vi.mock("../../lib/api/workflowApi", () => ({
   getOperationsOverview: vi.fn(),
 }));
 

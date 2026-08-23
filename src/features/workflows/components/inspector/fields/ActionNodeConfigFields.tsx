@@ -1,13 +1,13 @@
 import type { GraphNode, ActionConfig, ActionType } from "../../../../../types/workflow";
-import { ActionConfigFieldGroup } from "../../ActionConfigFieldGroup";
-import { ActionConfigEditor } from "../../ActionConfigEditor";
+import { ActionConfigFieldGroup } from "../../actionFields/ActionConfigFieldGroup";
+import { ActionConfigEditor } from "../../actionFields/ActionConfigEditor";
 import {
   ActionTypeDropdown,
   GraphInternalActionConfigPanel,
   actionTypeFromConfig,
   isActionConfig,
-} from "../../WorkflowGraphActionTypeDropdown";
-import type { VariableOption } from "../../TemplateTextField";
+} from "../WorkflowGraphActionTypeDropdown";
+import type { VariableOption } from "../../variables/TemplateTextField";
 import { actionLabels } from "../../../../../lib/workflowUi";
 import { defaultActionConfig } from "../../../lib/workflowGraph";
 

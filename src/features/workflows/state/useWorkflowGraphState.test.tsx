@@ -2,9 +2,9 @@ import { renderHook, act } from "@testing-library/react";
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { useWorkflowGraphState } from "./useWorkflowGraphState";
 import type { WorkflowGraphStateDeps } from "./useWorkflowGraphState";
-import { saveWorkflowGraph } from "../../../lib/workflowApi";
+import { saveWorkflowGraph } from "../../../lib/api/workflowApi";
 
-vi.mock("../../../lib/workflowApi", () => ({
+vi.mock("../../../lib/api/workflowApi", () => ({
   saveWorkflowGraph: vi.fn(),
   validateWorkflowGraph: vi.fn(),
 }));
@@ -24,28 +24,18 @@ describe("useWorkflowGraphState", () => {
     const graph = { nodes: [], edges: [], version: 2 } as any;
 
     const deps: WorkflowGraphStateDeps = {
-      detail,
-      workflowGraph: graph,
-      setWorkflowGraph: vi.fn(),
+      getDetail: () => detail,
       graphAutosaveEnabled: false,
       setGraphAutosaveEnabled: vi.fn(),
-      graphSaveStatus: "saved",
-      setGraphSaveStatus: vi.fn(),
-      graphRevision: 1,
-      setGraphRevision: vi.fn(),
-      savedGraphRevision: 1,
-      setSavedGraphRevision: vi.fn(),
-      graphIssues: [],
-      setGraphIssues: vi.fn(),
-      selectedGraphNodeId: null,
-      setSelectedGraphNodeId: vi.fn(),
       setAppError: vi.fn(),
       loadWorkflows: vi.fn(),
-      graphIssuesNeedRecheck: false,
-      setGraphIssuesNeedRecheck: vi.fn(),
     };
 
     const { result } = renderHook(() => useWorkflowGraphState(deps));
+
+    act(() => {
+      result.current.setWorkflowGraph(graph);
+    });
 
     await act(async () => {
       await result.current.saveGraph({ comment: "Manual backup 1" });

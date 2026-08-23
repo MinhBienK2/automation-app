@@ -5,7 +5,7 @@ import type {
   WorkflowSummary,
 } from "../../types/workflow";
 import { linearGraphFromSteps } from "../../features/workflows/lib/workflowGraph";
-import { personaForSeed } from "../../lib/personaCatalog";
+import { personaForSeed } from "../../features/workflows/data/personaCatalog";
 import { workflow } from "./workflowFixtures";
 
 export const idleRunState: RunState = {

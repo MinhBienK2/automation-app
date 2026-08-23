@@ -12,7 +12,7 @@ import {
   listScheduleEvents,
   listSchedules,
   updateSchedule,
-} from "../../lib/workflowApi";
+} from "../../lib/api/workflowApi";
 import { commandMessage } from "../../lib/workflowUi";
 
 type UseSchedulesWorkspaceOptions = {

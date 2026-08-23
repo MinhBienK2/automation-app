@@ -13,7 +13,7 @@ import {
   discardRecordingSession,
   generateRecordingDraft,
   saveRecordingDraft,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
 
 export interface RecordingWorkspaceDeps {

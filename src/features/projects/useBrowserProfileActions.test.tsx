@@ -5,11 +5,11 @@ import {
   listBrowserProfiles,
   resetBrowserProfileIdentity,
   updateBrowserProfile,
-} from "../../lib/workflowApi";
+} from "../../lib/api/workflowApi";
 import { defaultWorkflowSettings } from "../workflows/lib/workflowSettings";
 import { useBrowserProfileActions } from "./useBrowserProfileActions";
 
-vi.mock("../../lib/workflowApi", () => ({
+vi.mock("../../lib/api/workflowApi", () => ({
   listBrowserProfiles: vi.fn(),
   resetBrowserProfileIdentity: vi.fn(),
   updateBrowserProfile: vi.fn(),

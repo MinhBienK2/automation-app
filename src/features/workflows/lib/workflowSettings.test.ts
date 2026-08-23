@@ -177,7 +177,7 @@ describe("workflow settings model", () => {
       "utf8",
     );
     const dialogSource = readFileSync(
-      path.join(process.cwd(), "src/features/workflows/components/WorkflowSettingsDialog.tsx"),
+      path.join(process.cwd(), "src/features/workflows/components/dialogs/WorkflowSettingsDialog.tsx"),
       "utf8",
     );
 

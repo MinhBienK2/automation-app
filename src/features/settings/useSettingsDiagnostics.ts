@@ -4,7 +4,7 @@ import {
   cleanupOrphanedBrowserProfiles,
   getCloakBrowserDiagnostics,
   installCloakBrowserBinary,
-} from "../../lib/workflowApi";
+} from "../../lib/api/workflowApi";
 import { formatMaintenanceBytes } from "../../lib/appState";
 import { commandMessage } from "../../lib/workflowUi";
 

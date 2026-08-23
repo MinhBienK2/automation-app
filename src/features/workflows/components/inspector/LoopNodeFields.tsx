@@ -4,16 +4,16 @@ import { Label } from "../../../../components/ui/label";
 import { Select } from "../../../../components/ui/select";
 import { Textarea } from "../../../../components/ui/textarea";
 import { Checkbox } from "../../../../components/ui/checkbox";
-import { ActionConfigFieldGroup } from "../ActionConfigFieldGroup";
-import { ConditionFields, conditionFromConfig } from "../WorkflowGraphConditionFields";
-import { TemplateTextField, type VariableOption } from "../TemplateTextField";
+import { ActionConfigFieldGroup } from "../actionFields/ActionConfigFieldGroup";
+import { ConditionFields, conditionFromConfig } from "./WorkflowGraphConditionFields";
+import { TemplateTextField, type VariableOption } from "../variables/TemplateTextField";
 import type { GraphNode } from "../../../../types/workflow";
 import {
   arrayConfig,
   objectConfig,
   stringConfig,
 } from "../../lib/configUtils";
-import { VariableNumericInput } from "../VariableNumericInput";
+import { VariableNumericInput } from "../variables/VariableNumericInput";
 
 type LoopNodeFieldsProps = {
   node: GraphNode;

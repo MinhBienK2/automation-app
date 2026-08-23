@@ -5,7 +5,7 @@ import type {
   RunState,
   WorkflowRunSnapshot,
 } from "../types/workflow";
-import { allActionTypes, isActionVisibleInPrimaryPalette } from "./actionCapabilities";
+import { allActionTypes, isActionVisibleInPrimaryPalette } from "../features/workflows/data/actionCapabilities";
 
 export const actionLabels: Record<ActionType, string> = {
   navigate: "Navigate",
