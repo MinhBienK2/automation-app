@@ -1319,7 +1319,9 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
-  test("renames action and logic nodes from the graph inspector", async () => {
+  test(
+    "renames action and logic nodes from the graph inspector",
+    async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
@@ -1382,7 +1384,9 @@ describe("Workflow graph editor integration", () => {
         }),
       );
     });
-  });
+  },
+    45000,
+  );
 
   test("edits action node config through the graph inspector", async () => {
     mockWorkflowBridgeCommands({

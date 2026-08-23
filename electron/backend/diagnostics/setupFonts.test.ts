@@ -53,7 +53,7 @@ describe("setupFonts", () => {
   });
 
   describe("setupCloakBrowserFonts", () => {
-    test("runs apt-get download and extracts packages successfully", async () => {
+    test.skipIf(process.platform === "win32")("runs apt-get download and extracts packages successfully", async () => {
       const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "fonts-test-"));
       tempRoots.push(tempDir);
 

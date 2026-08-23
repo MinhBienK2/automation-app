@@ -1600,8 +1600,10 @@ describe("App settings and graph autosave", () => {
     const passwordInput = screen.getByLabelText(/password/i);
     const signInBtn = screen.getByRole("button", { name: /sign in/i });
 
-    // Login as admin
+    // Login as admin — clear the prefilled defaults first
+    await userEvent.clear(emailInput);
     await userEvent.type(emailInput, "admin@example.com");
+    await userEvent.clear(passwordInput);
     await userEvent.type(passwordInput, "adminpassword");
     await userEvent.click(signInBtn);
 
@@ -1629,8 +1631,10 @@ describe("App settings and graph autosave", () => {
     const newPasswordInput = screen.getByLabelText(/password/i);
     const newSignInBtn = screen.getByRole("button", { name: /sign in/i });
 
-    // 4. Login as user
+    // 4. Login as user — clear the remembered admin email first
+    await userEvent.clear(newEmailInput);
     await userEvent.type(newEmailInput, "user@example.com");
+    await userEvent.clear(newPasswordInput);
     await userEvent.type(newPasswordInput, "userpassword");
     await userEvent.click(newSignInBtn);
 

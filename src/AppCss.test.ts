@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
-const appCss = readFileSync(join(process.cwd(), "src/App.css"), "utf8");
+const readCss = (path: string) => readFileSync(join(process.cwd(), path), "utf8").replace(/\r\n/g, "\n");
+const appCss = readCss("src/App.css");
 const buttonSource = readFileSync(
   join(process.cwd(), "src/components/ui/button.tsx"),
   "utf8",
@@ -23,9 +24,7 @@ const cssFiles = [
   "src/styles/modals.css",
   "src/styles/responsive.css",
 ];
-const css = cssFiles
-  .map((path) => readFileSync(join(process.cwd(), path), "utf8"))
-  .join("\n");
+const css = cssFiles.map(readCss).join("\n");
 
 function cssRule(selector: string) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

@@ -61,6 +61,7 @@ describe("workflow UI action taxonomy", () => {
         "go_forward",
         "reload",
         "open_new_tab",
+        "open_link_in_new_tab",
         "switch_tab",
         "close_tab",
       ]);

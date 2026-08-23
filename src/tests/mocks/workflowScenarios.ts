@@ -124,5 +124,25 @@ export function workflowDetailScenario(steps: WorkflowStep[]) {
     },
     get_workflow_settings: workflowSettings,
     get_workflow_graph: linearGraphFromSteps(steps),
+    list_schedules: [],
+    get_cloakbrowser_diagnostics: {
+      wrapper_version: "1.0.0",
+      binary: {
+        version: "120.0.0",
+        platform: "linux",
+        installed: true,
+        binary_path: "/tmp/cloak",
+        cache_dir: "/tmp/cache",
+        download_url: null,
+      },
+      auto_update_enabled: false,
+      checksum_skip_enabled: false,
+      geoip_available: true,
+      profile_root: "/tmp/profiles",
+      font_checklist: { status: "ok", reason: null, directories: [] },
+      last_smoke_result: { status: "not_recorded", reason: null },
+      headed_display: { available: true, reason: null },
+      profiles: [],
+    },
   };
 }

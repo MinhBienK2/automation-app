@@ -101,6 +101,10 @@ function buildVariableTree(options: VariableOption[]): SourceGroup[] {
   return groups.sort((a, b) => a.sourceName.localeCompare(b.sourceName));
 }
 
+function javaScriptVariableToken(name: string): string {
+  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? `outputs.${name}` : `outputs["${name}"]`;
+}
+
 export function VariableAutocompletePopover({
   open,
   onClose,
@@ -280,11 +284,7 @@ export function VariableAutocompletePopover({
   function insertVariable(name: string) {
     let token = `{{${name}}}`;
     if (isJs) {
-      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name)) {
-        token = `outputs.${name}`;
-      } else {
-        token = `outputs["${name}"]`;
-      }
+      token = javaScriptVariableToken(name);
     }
     const input = inputRef.current;
     const start = input?.selectionStart ?? value.length;
@@ -482,6 +482,13 @@ export function VariableAutocompletePopover({
               ref={(el) => {
                 rowRefs.current[row.id] = el;
               }}
+              {...(row.type === "leaf"
+                ? {
+                    role: "option",
+                    "aria-label": `${isJs ? javaScriptVariableToken(row.fullName ?? "") : row.fullName} ${row.sourceName}`,
+                    "aria-selected": isHighlighted,
+                  }
+                : {})}
               onClick={handleRowClick}
               style={{ paddingLeft: `${row.level * 14}px` }}
               className={`tree-row-line flex items-center justify-between rounded px-1.5 py-1 transition-colors cursor-pointer select-none ${

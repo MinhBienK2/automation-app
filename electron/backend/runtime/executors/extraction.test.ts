@@ -144,6 +144,7 @@ describe("runnerActionExecutors", () => {
       evaluate: async (fn: any, arg?: any) => {
         const mockEl = {
           outerHTML: "<div>Outer</div>",
+          innerHTML: "<span>HTML</span>",
           attributes: [
             { name: "class", value: "test-class" },
             { name: "data-id", value: "123" },

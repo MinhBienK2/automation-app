@@ -8,7 +8,7 @@ describe("LoginScreen remember credentials feature", () => {
     localStorage.clear();
   });
 
-  test("renders a 'Remember email' checkbox", () => {
+  test("renders a 'Remember' checkbox that defaults to checked", () => {
     render(
       <LoginScreen
         onLogin={vi.fn().mockResolvedValue(true)}
@@ -17,12 +17,12 @@ describe("LoginScreen remember credentials feature", () => {
       />
     );
 
-    const checkbox = screen.getByRole("checkbox", { name: /remember email/i });
+    const checkbox = screen.getByRole("checkbox", { name: /remember/i });
     expect(checkbox).toBeInTheDocument();
-    expect(checkbox).not.toBeChecked();
+    expect(checkbox).toBeChecked();
   });
 
-  test("pre-fills email field on mount when remember_me is true but does not prefill password", () => {
+  test("pre-fills remembered email on mount and defaults password without storing it", () => {
     localStorage.setItem("remember_me", "true");
     localStorage.setItem("remembered_email", "user@example.com");
     localStorage.setItem("remembered_password", "password123");
@@ -36,11 +36,11 @@ describe("LoginScreen remember credentials feature", () => {
     );
 
     expect(screen.getByLabelText(/email address/i)).toHaveValue("user@example.com");
-    expect(screen.getByLabelText(/password/i)).toHaveValue("");
-    expect(screen.getByRole("checkbox", { name: /remember email/i })).toBeChecked();
+    expect(screen.getByLabelText(/password/i)).toHaveValue("admin");
+    expect(screen.getByRole("checkbox", { name: /remember/i })).toBeChecked();
   });
 
-  test("saves email to localStorage on submit if checkbox is checked but not password", async () => {
+  test("saves email to localStorage on submit when remember stays checked but never stores password", async () => {
     const onLogin = vi.fn().mockResolvedValue(true);
     render(
       <LoginScreen
@@ -52,21 +52,20 @@ describe("LoginScreen remember credentials feature", () => {
 
     const emailInput = screen.getByLabelText(/email address/i);
     const passwordInput = screen.getByLabelText(/password/i);
-    const checkbox = screen.getByRole("checkbox", { name: /remember email/i });
     const submitBtn = screen.getByRole("button", { name: /sign in/i });
 
+    await userEvent.clear(emailInput);
     await userEvent.type(emailInput, "newuser@example.com");
+    await userEvent.clear(passwordInput);
     await userEvent.type(passwordInput, "newpassword");
-    await userEvent.click(checkbox);
     await userEvent.click(submitBtn);
-
     expect(onLogin).toHaveBeenCalledWith("newuser@example.com", "newpassword");
     expect(localStorage.getItem("remember_me")).toBe("true");
     expect(localStorage.getItem("remembered_email")).toBe("newuser@example.com");
     expect(localStorage.getItem("remembered_password")).toBeNull();
   });
 
-  test("clears stored email if checkbox is not checked on submit", async () => {
+  test("clears stored email if remember is unchecked before submit", async () => {
     localStorage.setItem("remember_me", "true");
     localStorage.setItem("remembered_email", "olduser@example.com");
     localStorage.setItem("remembered_password", "oldpassword");
@@ -82,15 +81,15 @@ describe("LoginScreen remember credentials feature", () => {
 
     const emailInput = screen.getByLabelText(/email address/i);
     const passwordInput = screen.getByLabelText(/password/i);
-    const checkbox = screen.getByRole("checkbox", { name: /remember email/i });
+    const checkbox = screen.getByRole("checkbox", { name: /remember/i });
     const submitBtn = screen.getByRole("button", { name: /sign in/i });
 
-    // Uncheck remember me
+    // Remember defaults to checked now — uncheck it explicitly.
     await userEvent.click(checkbox);
 
-    // Change email and type password
     await userEvent.clear(emailInput);
     await userEvent.type(emailInput, "another@example.com");
+    await userEvent.clear(passwordInput);
     await userEvent.type(passwordInput, "oldpassword");
 
     await userEvent.click(submitBtn);
