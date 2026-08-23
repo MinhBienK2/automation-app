@@ -31,27 +31,22 @@ function extractNodeMeta(node: GraphNode): NodeMeta {
   return { action_type: null, subflow_ref: null };
 }
 
-async function decomposeAndInsert(
+async function insertGraphNodeChunks(
   db: DbAdapter,
   graph: WorkflowGraph,
   nodeTable: string,
-  edgeTable: string,
   ownerColumn: string,
   ownerId: string,
   now: string,
+  dbOwnerId: string,
 ): Promise<void> {
-  const dbOwnerId = db.ownerId;
-  if (!dbOwnerId) {
-    throw new Error("decomposeAndInsert requires a DbAdapter with a valid ownerId");
-  }
-
   // Insert nodes in chunks
   const nodeChunkSize = 100;
   for (let c = 0; c < graph.nodes.length; c += nodeChunkSize) {
     const chunk = graph.nodes.slice(c, c + nodeChunkSize);
     const placeholders: string[] = [];
     const values: any[] = [];
-    
+
     for (let i = 0; i < chunk.length; i++) {
       const node = chunk[i];
       const meta = extractNodeMeta(node);
@@ -77,7 +72,7 @@ async function decomposeAndInsert(
         dbOwnerId,
       );
     }
-    
+
     if (chunk.length > 0) {
       await db.execute(
         `INSERT INTO ${nodeTable} (
@@ -87,7 +82,16 @@ async function decomposeAndInsert(
       );
     }
   }
+}
 
+async function insertGraphEdgeChunks(
+  db: DbAdapter,
+  graph: WorkflowGraph,
+  edgeTable: string,
+  ownerColumn: string,
+  ownerId: string,
+  dbOwnerId: string,
+): Promise<void> {
   // Insert edges in chunks
   const edgeChunkSize = 100;
   for (let c = 0; c < graph.edges.length; c += edgeChunkSize) {
@@ -129,6 +133,23 @@ async function decomposeAndInsert(
       );
     }
   }
+}
+
+async function decomposeAndInsert(
+  db: DbAdapter,
+  graph: WorkflowGraph,
+  nodeTable: string,
+  edgeTable: string,
+  ownerColumn: string,
+  ownerId: string,
+  now: string,
+): Promise<void> {
+  const dbOwnerId = db.ownerId;
+  if (!dbOwnerId) {
+    throw new Error("decomposeAndInsert requires a DbAdapter with a valid ownerId");
+  }
+  await insertGraphNodeChunks(db, graph, nodeTable, ownerColumn, ownerId, now, dbOwnerId);
+  await insertGraphEdgeChunks(db, graph, edgeTable, ownerColumn, ownerId, dbOwnerId);
 }
 
 const writeLocks = new Map<string, Promise<any>>();

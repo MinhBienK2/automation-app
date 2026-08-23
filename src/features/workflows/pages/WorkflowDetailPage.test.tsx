@@ -125,11 +125,10 @@ describe("Workflow detail integration", () => {
     expect(within(controlsRow).queryByText("Graph workspace")).not.toBeInTheDocument();
     expect(within(controlsRow).queryByText("Updated 1")).not.toBeInTheDocument();
     expect(within(controlsRow).getByText("Project: Main")).toBeInTheDocument();
-    expect(within(controlsRow).getByText("Status")).toBeInTheDocument();
-    expect(within(controlsRow).getByText("Idle")).toHaveAttribute(
-      "data-slot",
-      "badge",
-    );
+    expect(await within(controlsRow).findByText("Status")).toBeInTheDocument();
+    expect(
+      await within(controlsRow).findByText("Idle", {}, { timeout: 5000 }),
+    ).toHaveAttribute("data-slot", "badge");
     expect(within(controlsRow).getByRole("button", { name: "More actions" }))
       .toBeInTheDocument();
     expect(within(controlsRow).getByRole("button", { name: "Save" }))

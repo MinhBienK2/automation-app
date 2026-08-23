@@ -46,8 +46,9 @@ import {
   validationError,
 } from "../shared/records.js";
 import { generateLoopPreludeSteps } from "./loopAnalysis.js";
+import { forEachNestedActionArray } from "./nestedSteps.js";
 
-export { validateActionConfig } from "../actions/validation.js";
+export { validateActionConfig } from "../actions/validation/index.js";
 export { validateWorkflowGraph } from "./validateGraph.js";
 
 type CompileSubflowReference = {
@@ -64,21 +65,6 @@ export type CompileWorkflowGraphOptions = Omit<WorkflowGraphValidationOptions, "
   resolveSubflow?: (subflowId: string) => CompileSubflowReference | null;
   profileEnvironment?: ProfileEnvironment;
 };
-
-const nestedStepKeys = [
-  "then_steps",
-  "else_steps",
-  "steps",
-  "failed_steps",
-  "default_steps",
-  "try_steps",
-  "success_steps",
-  "error_steps",
-  "finally_steps",
-  "primary_steps",
-  "fallback_steps",
-  "timeout_steps",
-] as const;
 
 export function compileWorkflowGraph(
   graph: WorkflowGraph,
@@ -1487,27 +1473,6 @@ function insertWaitBetweenGraphNodes(
   return steps;
 }
 
-function forEachNestedActionArray(
-  config: ActionConfig,
-  visit: (steps: ActionConfig[]) => void,
-) {
-  const record = asMutableRecord(config.config);
-  for (const key of nestedStepKeys) {
-    const value = record[key];
-    if (Array.isArray(value)) visit(value as ActionConfig[]);
-  }
-  for (const branchKey of ["cases", "choices"]) {
-    const branches = record[branchKey];
-    if (!Array.isArray(branches)) continue;
-    for (const branch of branches) {
-      const steps = asMutableRecord(branch).steps;
-      if (Array.isArray(steps)) visit(steps as ActionConfig[]);
-    }
-  }
-  const stepValue = record.step;
-  if (isActionConfig(stepValue)) visit([stepValue]);
-}
-
 function nextTransition(
   graph: WorkflowGraph,
   sourceNodeId: string,
@@ -1590,16 +1555,3 @@ function closeBrowserConfig(config: unknown): boolean {
 }
 
 
-
-function isActionConfig(value: unknown): value is ActionConfig {
-  return Boolean(
-    value &&
-      typeof value === "object" &&
-      "type" in value &&
-      "config" in value,
-  );
-}
-
-function asMutableRecord(value: unknown): Record<string, unknown> {
-  return asRecord(value);
-}

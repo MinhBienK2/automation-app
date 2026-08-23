@@ -3,6 +3,9 @@
 import { describe, expect, test } from "vitest";
 import type { WorkflowGraph } from "../../../src/types/workflow";
 import { migrateWorkflowGraph } from "./migration";
+import { MIGRATIONS } from "./migrations/index.js";
+
+const LATEST_GRAPH_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
 describe("workflow graph migration", () => {
   test("only upgrades graph version and preserves current contract nodes", () => {
@@ -31,7 +34,7 @@ describe("workflow graph migration", () => {
 
     expect(migrateWorkflowGraph(graph)).toEqual({
       ...graph,
-      version: 8,
+      version: LATEST_GRAPH_VERSION,
       migration_notes: [],
     });
   });
@@ -68,7 +71,7 @@ describe("workflow graph migration", () => {
     };
 
     expect(migrateWorkflowGraph(graph)).toEqual({
-      version: 8,
+      version: LATEST_GRAPH_VERSION,
       nodes: [
         {
           id: "node-logic",
@@ -144,7 +147,7 @@ describe("workflow graph migration", () => {
     };
 
     expect(migrateWorkflowGraph(graph)).toEqual({
-      version: 8,
+      version: LATEST_GRAPH_VERSION,
       nodes: [
         {
           id: "node-append",

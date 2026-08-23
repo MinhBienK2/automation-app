@@ -115,9 +115,7 @@ function AppInner() {
   // --- Appearance preferences (theme / accent / density) ---
   const themePreferences = useThemePreferences();
 
-  // --- States ---
   const [appError, setAppError] = useState("");
-
   const toastApi = useToast();
   const showToast = useCallback(
     (message: string, type: "success" | "error" | "info" = "success") => {

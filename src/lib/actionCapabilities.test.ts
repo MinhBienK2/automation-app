@@ -73,9 +73,9 @@ describe("action capability registry", () => {
     const actionTypes = Object.keys(actionLabels) as ActionType[];
 
     for (const actionType of actionTypes) {
-      expect(actionOptions.includes(actionType)).toBe(
-        isActionVisibleInPrimaryPalette(actionType),
-      );
+      const inOptions = (actionOptions as string[]).includes(actionType);
+      const visible = isActionVisibleInPrimaryPalette(actionType);
+      expect(inOptions, `${actionType}: inOptions=${inOptions} visible=${visible}`).toBe(visible);
     }
   });
 });

@@ -6,7 +6,7 @@ import type {
   RecordingWorkflowDraft,
 } from "../../../../src/types/workflow.js";
 import { commandError } from "../../commandHelpers.js";
-import type { CommandDeps } from "../types.js";
+import type { RecordingCommandsDeps } from "../types.js";
 import { RecorderSessionInputError } from "./recorderSessionManager.js";
 
 async function runRecorderCommand<T>(operation: () => T | Promise<T>): Promise<T> {
@@ -31,7 +31,7 @@ function requireRecordingResult<T>(
   return value;
 }
 
-export function createRecordingCommands(deps: CommandDeps) {
+export function createRecordingCommands(deps: RecordingCommandsDeps) {
   const {
     recorderSessionManager,
     recordingDraftCommands,

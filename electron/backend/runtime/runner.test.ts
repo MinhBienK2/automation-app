@@ -11,7 +11,7 @@ import type {
   RunState,
   WorkflowSettings,
 } from "../../../src/types/workflow";
-import { defaultWorkflowSettings } from "../commands";
+import { defaultWorkflowSettings } from "../features/workflows/workflowSettingsService";
 import { createAppPaths } from "../db/database";
 import {
   BrowserWorkflowRunner,
@@ -36,7 +36,7 @@ describe("BrowserWorkflowRunner", () => {
       "utf8",
     );
 
-    expect(existsSync(path.join(process.cwd(), "electron/backend/features/evidence/artifacts.ts"))).toBe(
+    expect(existsSync(path.join(process.cwd(), "electron/backend/evidence/artifacts.ts"))).toBe(
       true,
     );
     expect(runnerSource).toContain("./runnerEvidence.js");

@@ -11,20 +11,13 @@ import type {
 } from "../../../src/types/workflow.js";
 import type { BrowserWorkflowRunner } from "./runner.js";
 import {
-  browserProfileKey,
   beginRun,
   finishRun,
   fallbackWorkflowSummary,
   serializeVariableValue,
 } from "./runDbHelpers.js";
-
-export { browserProfileKey };
-
-export type CommandError = {
-  message: string;
-  field?: string | null;
-};
-
+import { browserProfileKey } from "../shared/browserProfileKey.js";
+import { commandError } from "../commandHelpers.js";
 export type RunnerCommandPort = {
   run: BrowserWorkflowRunner["run"];
   closeRetainedContext?: BrowserWorkflowRunner["closeRetainedContext"];
@@ -717,8 +710,4 @@ export class RunManager {
       this.activeProfileRuns.delete(profileName);
     }
   }
-}
-
-function commandError(message: string, field?: string): CommandError {
-  return { message, field };
 }

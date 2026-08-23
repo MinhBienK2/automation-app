@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 import {
@@ -19,7 +20,7 @@ import {
   type ProjectWorkflowTestHandlers,
 } from "../../commands.testHelpers";
 import type { ProjectPackage, CompiledWorkflowGraph } from "../../../../src/types/workflow";
-import { deriveFingerprintSeedFromIdentityId } from "../../commands.js";
+import { deriveFingerprintSeedFromIdentityId } from "../workflows/workflowSettingsService.js";
 
 describe("Projects, Environments, and Subflows integration", () => {
   test("creates an initial browser profile and assigns it to new workflows by default", async () => {
@@ -482,7 +483,7 @@ describe("Projects, Environments, and Subflows integration", () => {
     const { createAppPaths } = await import("../../db/database.js");
     const { TestDbAdapter } = await import("../../db/testDbAdapter.js");
 
-    const tempRoot = await fs.mkdtemp(path.join(tempRoots[0] ? path.dirname(tempRoots[0]) : "/tmp", "automation-app-"));
+    const tempRoot = await fs.mkdtemp(path.join(tempRoots[0] ? path.dirname(tempRoots[0]) : os.tmpdir(), "automation-app-"));
     const appPaths = createAppPaths(tempRoot);
     const database = await TestDbAdapter.create();
     

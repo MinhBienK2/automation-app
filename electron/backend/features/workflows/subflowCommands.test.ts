@@ -1,5 +1,8 @@
 // @vitest-environment node
 
+import { MIGRATIONS } from "../../graph/migrations/index.js";
+
+const LATEST_GRAPH_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 import { describe, expect, test, vi } from "vitest";
 import {
   createTestHandlers,
@@ -63,7 +66,7 @@ describe("Subflows integration", () => {
     });
     expect(await projectHandlers.getSubflowGraph(duplicated.id)).toEqual({
       ...subflowGraph,
-      version: 8,
+      version: LATEST_GRAPH_VERSION,
       migration_notes: [],
     });
   });

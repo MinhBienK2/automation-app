@@ -1782,7 +1782,7 @@ describe("Workflow graph editor integration", () => {
 
     await userEvent.click(within(editor).getByRole("button", { name: "Insert variable for Text" }));
     await userEvent.click(
-      screen.getByRole("option", { name: "session.token Set Variables" }),
+      screen.getByRole("option", { name: "session.token" }),
     );
 
     expect(within(editor).getByLabelText("Text")).toHaveValue("{{session.token}}");

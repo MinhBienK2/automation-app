@@ -18,13 +18,16 @@ const cssFiles = [
   "src/styles/workflows.css",
   "src/styles/workflow-panels.css",
   "src/styles/mission-workspaces.css",
+  "src/styles/schedules.css",
   "src/styles/workflow-graph.css",
   "src/styles/workflow-graph-overlays.css",
   "src/styles/modals.css",
   "src/styles/responsive.css",
+  "src/styles/mission-control.css",
+  "src/styles/auth.css",
 ];
 const css = cssFiles
-  .map((path) => readFileSync(join(process.cwd(), path), "utf8"))
+  .map((path) => readFileSync(join(process.cwd(), path), "utf8").replace(/\r\n/g, "\n"))
   .join("\n");
 
 function cssRule(selector: string) {

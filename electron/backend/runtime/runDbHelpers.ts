@@ -10,11 +10,6 @@ import type {
 } from "../../../src/types/workflow.js";
 import { getMongoCollection } from "../db/mongo.js";
 
-export function browserProfileKey(settings: WorkflowSettings) {
-  if (settings.browser_launch.session_mode !== "persistent_profile") return null;
-  return settings.browser_launch.profile_dir?.trim() || settings.browser_launch.profile_name?.trim() || null;
-}
-
 export async function beginRun(
   database: DbAdapter,
   workflowId: string,

@@ -1,8 +1,8 @@
 import path from "node:path";
 import { BackupService, type BackupConfig, type BackupFile } from "../settings/backupService.js";
-import type { CommandDeps } from "../types.js";
+import type { BackupCommandsDeps } from "../types.js";
 
-export function createBackupCommands(deps: CommandDeps) {
+export function createBackupCommands(deps: BackupCommandsDeps) {
   const service = new BackupService(deps.context.database, deps.context.appPaths);
 
   return {

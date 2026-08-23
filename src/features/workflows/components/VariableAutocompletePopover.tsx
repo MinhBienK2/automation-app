@@ -484,6 +484,7 @@ export function VariableAutocompletePopover({
               }}
               onClick={handleRowClick}
               style={{ paddingLeft: `${row.level * 14}px` }}
+              {...(row.type === "leaf" ? { role: "option", "aria-selected": isHighlighted, "aria-label": row.fullName || row.label } : {})}
               className={`tree-row-line flex items-center justify-between rounded px-1.5 py-1 transition-colors cursor-pointer select-none ${
                 row.type === "group"
                   ? "tree-row-group text-[var(--app-text-muted)] font-semibold mt-1"

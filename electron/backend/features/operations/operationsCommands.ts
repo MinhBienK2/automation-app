@@ -1,7 +1,7 @@
 import type { OperationsOverviewRequest } from "../../../../src/types/workflow.js";
-import type { CommandDeps } from "../types.js";
+import type { OperationsCommandsDeps } from "../types.js";
 
-export function createOperationsCommands(deps: CommandDeps) {
+export function createOperationsCommands(deps: OperationsCommandsDeps) {
   const { operationsRepository, runManager } = deps;
 
   return {

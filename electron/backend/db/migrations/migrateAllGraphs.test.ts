@@ -6,6 +6,9 @@ import { migrateAllGraphs } from "./migrateAllGraphs.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
 import { TestDbAdapter } from "../testDbAdapter.js";
+import { MIGRATIONS } from "../../graph/migrations/index.js";
+
+const LATEST_GRAPH_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
 function baselineV1Graph(): WorkflowGraph {
   return {
@@ -36,7 +39,7 @@ function baselineV1Graph(): WorkflowGraph {
 }
 
 describe("lazy migrate on read", () => {
-  test("getWorkflowGraph migrates v1 to v4 and persists back", async () => {
+  test("getWorkflowGraph migrates to the latest version and persists back", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
 
@@ -50,15 +53,15 @@ describe("lazy migrate on read", () => {
     // First read: should migrate and persist
     const graph = await repo.getWorkflowGraph(workflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(8);
+    expect(graph!.version).toBe(LATEST_GRAPH_VERSION);
     expect(graph!.migration_notes).toEqual([]);
 
     // Second read: should be a no-op (already v8)
     const graph2 = await repo.getWorkflowGraph(workflow.id);
-    expect(graph2!.version).toBe(8);
+    expect(graph2!.version).toBe(LATEST_GRAPH_VERSION);
   });
 
-  test("getSubflowGraph migrates v1 to v4 and persists back", async () => {
+  test("getSubflowGraph migrates to the latest version and persists back", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
 
@@ -68,7 +71,7 @@ describe("lazy migrate on read", () => {
 
     const graph = await repo.getSubflowGraph(subflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(8);
+    expect(graph!.version).toBe(LATEST_GRAPH_VERSION);
   });
 });
 
