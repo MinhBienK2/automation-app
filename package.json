@@ -51,7 +51,7 @@
     "publish": {
       "provider": "github",
       "owner": "MinhBienK2",
-      "repo": "tik-automation"
+      "repo": "automation-app"
     },
     "icon": "public/app-logo.png",
     "directories": {
