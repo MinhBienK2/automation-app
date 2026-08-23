@@ -47,6 +47,9 @@ const DESKTOP_TARGETED = new Set([
   "desktop_read_text",
   "desktop_wait_for",
   "desktop_invoke_menu",
+  "desktop_scroll",
+  "desktop_drag",
+  "desktop_read_table",
 ]);
 
 export function DesktopActionFields({
@@ -153,6 +156,81 @@ export function DesktopActionFields({
         </Label>
       )}
 
+      {config.type === "desktop_scroll" && (
+        <>
+          <Label>
+            Direction
+            <Select
+              value={config.config.direction}
+              onChange={(e) => set("direction", e.currentTarget.value)}
+            >
+              <option value="up">Up</option>
+              <option value="down">Down</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </Select>
+          </Label>
+          <Label>
+            By
+            <Select
+              value={config.config.by ?? ""}
+              onChange={(e) => set("by", e.currentTarget.value || null)}
+            >
+              <option value="">Default</option>
+              <option value="line">Line</option>
+              <option value="page">Page</option>
+            </Select>
+          </Label>
+          <Label>
+            Amount
+            <Input
+              type="number"
+              value={config.config.amount ?? ""}
+              onChange={(e) =>
+                set("amount", e.currentTarget.value === "" ? null : Number(e.currentTarget.value))
+              }
+            />
+          </Label>
+        </>
+      )}
+
+      {config.type === "desktop_drag" && (
+        <DesktopTargetField
+          title="Drag to"
+          target={config.config.to}
+          onChange={(to) => set("to", to)}
+        />
+      )}
+
+      {config.type === "desktop_read_clipboard" && (
+        <Label>
+          Output name
+          <Input
+            value={config.config.output_name}
+            onChange={(e) => set("output_name", e.currentTarget.value)}
+          />
+        </Label>
+      )}
+
+      {config.type === "desktop_set_clipboard" && (
+        <TemplateTextField
+          label="Text"
+          value={config.config.text}
+          onChange={(value: string) => set("text", value)}
+          variableOptions={variableOptions}
+        />
+      )}
+
+      {config.type === "desktop_read_table" && (
+        <Label>
+          Output name
+          <Input
+            value={config.config.output_name}
+            onChange={(e) => set("output_name", e.currentTarget.value)}
+          />
+        </Label>
+      )}
+
       {config.type === "desktop_screenshot" && (
         <>
           <Label>
@@ -187,15 +265,17 @@ export function DesktopActionFields({
 function DesktopTargetField({
   target,
   onChange,
+  title = "Element",
 }: {
   target: DesktopStepTargetConfig;
   onChange: (target: DesktopStepTargetConfig) => void;
+  title?: string;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const surface = useWorkflowSurface();
 
   return (
-    <ActionConfigFieldGroup title="Element" nested>
+    <ActionConfigFieldGroup title={title} nested>
       <Label>
         Addressed by
         <Select

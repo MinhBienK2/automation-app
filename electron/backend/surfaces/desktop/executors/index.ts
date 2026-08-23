@@ -185,7 +185,212 @@ export function createDesktopActionExecutors<Runtime extends DesktopRuntime>(
       await walkMenu(desktop, runtime, action.config.path);
       await verify(desktop, action.config, runtime);
     },
+
+    desktop_scroll: async (action) => scrollAt(desktop, runtime, action.config),
+
+    desktop_drag: async (action) => dragBetween(desktop, runtime, action.config),
+
+    desktop_read_clipboard: async (action) => readClipboard(desktop, runtime, action.config),
+
+    desktop_set_clipboard: async (action) => setClipboard(desktop, runtime, action.config),
+
+    desktop_read_table: async (action) => readTable(desktop, runtime, action.config),
   } satisfies Partial<ActionExecutorMap>;
+}
+
+async function scrollAt(
+  desktop: DesktopSurface,
+  runtime: StepScope & { signal?: AbortSignal },
+  config: StepConfig & {
+    direction: "up" | "down" | "left" | "right";
+    by?: "line" | "page" | null;
+    amount?: number | null;
+  },
+): Promise<void> {
+  const point = await resolvePoint(desktop, config.target, runtime, "desktop_scroll");
+  await desktop.driver.scroll(
+    desktop.binding,
+    {
+      x: point.x,
+      y: point.y,
+      direction: config.direction,
+      by: config.by ?? undefined,
+      amount: config.amount ?? undefined,
+    },
+    runtime.signal,
+  );
+  await verify(desktop, config, runtime);
+}
+
+/**
+ * One snapshot, both endpoints resolved against it: the source and the
+ * destination belong to the same tree, and two reads would let the window move
+ * between them and drag from a stale point.
+ */
+async function dragBetween(
+  desktop: DesktopSurface,
+  runtime: StepScope & { signal?: AbortSignal },
+  config: StepConfig & {
+    to: StepConfig["target"];
+    button?: "left" | "right" | "middle" | null;
+    duration_ms?: number | null;
+    steps?: number | null;
+  },
+): Promise<void> {
+  const snapshot = await desktop.driver.getWindowState(desktop.binding, runtime.signal);
+  noteTrace(runtime, { tier: tierOf(snapshot) });
+  const from = pointFromSnapshot(snapshot, config.target, runtime, "desktop_drag (from)");
+  const to = pointFromSnapshot(snapshot, config.to, runtime, "desktop_drag (to)");
+  await desktop.driver.drag(
+    desktop.binding,
+    {
+      fromX: from.x,
+      fromY: from.y,
+      toX: to.x,
+      toY: to.y,
+      button: config.button ?? undefined,
+      durationMs: config.duration_ms ?? undefined,
+      steps: config.steps ?? undefined,
+    },
+    runtime.signal,
+  );
+  await verify(desktop, config, runtime);
+}
+
+/**
+ * Reading is the assertion. `supported: false` is a real answer — the clipboard
+ * holds no text form — written through rather than silently turned into an
+ * empty string the workflow would misread as a cleared clipboard.
+ */
+async function readClipboard(
+  desktop: DesktopSurface,
+  runtime: StepScope & { signal?: AbortSignal },
+  config: { output_name: string },
+): Promise<void> {
+  const clipboard = await desktop.driver.readClipboard(runtime.signal);
+  noteTrace(runtime, { verified: true });
+  runtime.outputs[config.output_name] = clipboard.supported ? (clipboard.text ?? "") : "";
+}
+
+/**
+ * Write, then confirm by reading back. The clipboard has no `verify_state`
+ * predicate, so this read is the only honest confirmation the write took.
+ */
+async function setClipboard(
+  desktop: DesktopSurface,
+  runtime: StepScope & { signal?: AbortSignal },
+  config: { text: string },
+): Promise<void> {
+  await desktop.driver.writeClipboard({ text: config.text }, runtime.signal);
+  const readback = await desktop.driver.readClipboard(runtime.signal);
+  const verified = readback.supported && readback.text === config.text;
+  noteTrace(runtime, { verified });
+  if (!verified) {
+    throw new Error(
+      "desktop_set_clipboard wrote the clipboard but the read-back did not match; the write may not have taken effect.",
+    );
+  }
+}
+
+async function readTable(
+  desktop: DesktopSurface,
+  runtime: StepScope & { signal?: AbortSignal },
+  config: StepConfig & { output_name: string; max_rows?: number | null },
+): Promise<void> {
+  const snapshot = await desktop.driver.getWindowState(desktop.binding, runtime.signal);
+  const warnings = snapshotWarnings(snapshot);
+  noteTrace(runtime, {
+    tier: tierOf(snapshot),
+    ...(warnings.length > 0 ? { warnings } : {}),
+  });
+  const element = resolveOrThrow(snapshot, config, "desktop_read_table", runtime);
+  const rows = extractTable(snapshot, element.element_index, config.max_rows ?? undefined);
+  noteTrace(runtime, { verified: true });
+  runtime.outputs[config.output_name] = rows;
+}
+
+/**
+ * A window-relative point for an input tool that only speaks coordinates.
+ *
+ * An element target resolves to the centre of its `frame`; a pixel target is
+ * already a point. `scroll` needs a fresh snapshot for its element case, which
+ * is why this takes one — `drag` resolves both ends against a single snapshot
+ * instead and calls `pointFromSnapshot` directly.
+ */
+async function resolvePoint(
+  desktop: DesktopSurface,
+  target: StepConfig["target"],
+  runtime: StepScope,
+  actionType: string,
+): Promise<{ x: number; y: number }> {
+  if (target.kind === "pixel") {
+    noteTrace(runtime, { matched: "pixel" });
+    return { x: target.x, y: target.y };
+  }
+  const snapshot = await desktop.driver.getWindowState(desktop.binding, runtime.signal);
+  noteTrace(runtime, { tier: tierOf(snapshot) });
+  return pointFromSnapshot(snapshot, target, runtime, actionType);
+}
+
+function pointFromSnapshot(
+  snapshot: Awaited<ReturnType<DesktopSurface["driver"]["getWindowState"]>>,
+  target: StepConfig["target"],
+  runtime: StepScope,
+  actionType: string,
+): { x: number; y: number } {
+  if (target.kind === "pixel") {
+    noteTrace(runtime, { matched: "pixel" });
+    return { x: target.x, y: target.y };
+  }
+  const element = resolveOrThrow(snapshot, { target }, actionType, runtime);
+  return centerOf(element, actionType);
+}
+
+/**
+ * The centre of an element's frame.
+ *
+ * The frame is the driver's own coordinate system, and it is the same one the
+ * input tools consume — element frame in, input coordinates out, no translation
+ * between window and desktop origins that could put the point in the wrong
+ * place. An element with no frame cannot be a coordinate target; the message
+ * says to use a pixel one.
+ */
+function centerOf(element: { frame?: { x: number; y: number; w: number; h: number } }, actionType: string) {
+  const frame = element.frame;
+  if (!frame) {
+    throw new Error(
+      `${actionType} needs the element's on-screen position, but its accessibility node reported no frame. Point the step at a pixel target instead.`,
+    );
+  }
+  return { x: Math.round(frame.x + frame.w / 2), y: Math.round(frame.y + frame.h / 2) };
+}
+
+/**
+ * Flattens the subtree under a resolved element into rows of cell strings.
+ *
+ * A generic reader, not a UIA-table-aware one: direct children of the anchor
+ * are rows, their own children are cells, and a row with no children of its own
+ * contributes its own text as a single cell. That covers Table/DataGrid, List
+ * and most grouped containers without guessing at a schema the tree does not
+ * carry. Cell text is `value` when present, else `label`, trimmed.
+ */
+function extractTable(
+  snapshot: { elements: Array<{ element_index: number; parent_index?: number; label?: string; value?: string }> },
+  anchorIndex: number,
+  maxRows?: number,
+): string[][] {
+  const childrenOf = (parent: number) =>
+    snapshot.elements.filter((element) => element.parent_index === parent);
+  const textOf = (element: { label?: string; value?: string }) =>
+    (element.value ?? element.label ?? "").trim();
+
+  const rows: string[][] = [];
+  for (const row of childrenOf(anchorIndex)) {
+    if (maxRows !== undefined && rows.length >= maxRows) break;
+    const cells = childrenOf(row.element_index);
+    rows.push(cells.length > 0 ? cells.map(textOf) : [textOf(row)]);
+  }
+  return rows;
 }
 
 /**

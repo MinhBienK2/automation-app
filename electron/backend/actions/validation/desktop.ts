@@ -36,6 +36,27 @@ function validateDesktopStep(config: {
   );
 }
 
+/**
+ * A drag needs two runnable endpoints. `target` is the source and reuses the
+ * shared step check; `to` is the destination, validated the same way against a
+ * synthesised step so a half-specified endpoint fails at authoring, not mid-run.
+ */
+function validateDesktopDrag(config: {
+  config: {
+    target?: any;
+    to?: any;
+  };
+}): ActionValidationError | null {
+  const source = validateDesktopStep(config);
+  if (source) return source;
+
+  const destination = validateDesktopStep({ config: { target: config.config.to } });
+  if (destination) {
+    return validationError("to", destination.message ?? "Choose where the drag ends");
+  }
+  return null;
+}
+
 export const desktopValidators = {
   desktop_click: (config: any) => validateDesktopStep(config),
   desktop_set_value: (config: any) => validateDesktopStep(config),
@@ -48,4 +69,14 @@ export const desktopValidators = {
   desktop_screenshot: () => null,
   desktop_focus_window: () => null,
   desktop_invoke_menu: (config: any) => validateDesktopStep(config),
+  desktop_scroll: (config: any) => validateDesktopStep(config),
+  desktop_drag: (config: any) => validateDesktopDrag(config),
+  desktop_read_table: (config: any) => validateDesktopStep(config),
+  // No target: the clipboard is a machine-global surface, not a window element.
+  desktop_read_clipboard: (config: any) =>
+    requiredActionString(config?.config?.output_name, "output_name", "Name the output to read into"),
+  desktop_set_clipboard: (config: any) =>
+    typeof config?.config?.text === "string"
+      ? null
+      : validationError("text", "Enter the text to place on the clipboard"),
 };

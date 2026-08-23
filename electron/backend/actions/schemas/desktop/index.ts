@@ -115,3 +115,61 @@ export const desktopInvokeMenuSchema = z.object({
   type: z.literal("desktop_invoke_menu"),
   config: z.object({ ...stepConfig, path: z.array(z.string()) }),
 });
+
+export const desktopScrollSchema = z.object({
+  type: z.literal("desktop_scroll"),
+  config: z.object({
+    ...stepConfig,
+    direction: z.enum(["up", "down", "left", "right"]),
+    by: z.enum(["line", "page"]).nullable().optional(),
+    amount: z.number().nullable().optional(),
+  }),
+});
+
+/**
+ * Two targets, not one: a drag is defined by where it starts and where it ends,
+ * and either end may be an element (resolved to the centre of its frame) or a
+ * raw window-relative pixel. `target` is the source, `to` the destination —
+ * `target` keeps the name every other step uses so the shared trace code reads
+ * it without a special case.
+ */
+export const desktopDragSchema = z.object({
+  type: z.literal("desktop_drag"),
+  config: z.object({
+    ...stepConfig,
+    to: targetSchema,
+    button: z.enum(["left", "right", "middle"]).nullable().optional(),
+    duration_ms: z.number().nullable().optional(),
+    steps: z.number().nullable().optional(),
+  }),
+});
+
+export const desktopReadClipboardSchema = z.object({
+  type: z.literal("desktop_read_clipboard"),
+  config: z.object({
+    output_name: z.string(),
+    timeout_ms: z.number().nullable().optional(),
+  }),
+});
+
+export const desktopSetClipboardSchema = z.object({
+  type: z.literal("desktop_set_clipboard"),
+  config: z.object({
+    text: z.string(),
+    timeout_ms: z.number().nullable().optional(),
+  }),
+});
+
+/**
+ * Structured read: the subtree under a resolved element, flattened to rows of
+ * cell strings. `max_rows` bounds a table large enough to be its own hazard;
+ * absent, the whole subtree is read.
+ */
+export const desktopReadTableSchema = z.object({
+  type: z.literal("desktop_read_table"),
+  config: z.object({
+    ...stepConfig,
+    output_name: z.string(),
+    max_rows: z.number().nullable().optional(),
+  }),
+});

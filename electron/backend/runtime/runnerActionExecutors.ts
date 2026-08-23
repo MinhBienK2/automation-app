@@ -49,6 +49,11 @@ function createDesktopActionExecutorsLazily<Runtime extends RunnerActionRuntime>
     desktop_screenshot: (action: any) => get().desktop_screenshot(action),
     desktop_focus_window: () => get().desktop_focus_window(),
     desktop_invoke_menu: (action: any) => get().desktop_invoke_menu(action),
+    desktop_scroll: (action: any) => get().desktop_scroll(action),
+    desktop_drag: (action: any) => get().desktop_drag(action),
+    desktop_read_clipboard: (action: any) => get().desktop_read_clipboard(action),
+    desktop_set_clipboard: (action: any) => get().desktop_set_clipboard(action),
+    desktop_read_table: (action: any) => get().desktop_read_table(action),
   };
 }
 

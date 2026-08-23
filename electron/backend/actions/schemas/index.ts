@@ -9,6 +9,11 @@ import {
   desktopScreenshotSchema,
   desktopFocusWindowSchema,
   desktopInvokeMenuSchema,
+  desktopScrollSchema,
+  desktopDragSchema,
+  desktopReadClipboardSchema,
+  desktopSetClipboardSchema,
+  desktopReadTableSchema,
 } from "./desktop/index.js";
 import type { z } from "zod";
 import type { ActionConfig, GraphNode } from "../../../../src/types/workflow.js";
@@ -420,6 +425,11 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   desktop_screenshot: desktopScreenshotSchema,
   desktop_focus_window: desktopFocusWindowSchema,
   desktop_invoke_menu: desktopInvokeMenuSchema,
+  desktop_scroll: desktopScrollSchema,
+  desktop_drag: desktopDragSchema,
+  desktop_read_clipboard: desktopReadClipboardSchema,
+  desktop_set_clipboard: desktopSetClipboardSchema,
+  desktop_read_table: desktopReadTableSchema,
 };
 
 export type ValidationResult<T> =

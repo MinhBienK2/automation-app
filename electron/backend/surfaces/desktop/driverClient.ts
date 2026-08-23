@@ -43,6 +43,20 @@ import type {
  */
 const DESKTOP_SCOPE = 0;
 
+/**
+ * The driver's `ScrollDirection` and `ScrollBy`, as **numbers** on the wire.
+ *
+ * Measured against the real driver in `scripts/desktop-smoke.mjs`: these enums
+ * cross `callTool` as their integer members, not as the lowercase strings the
+ * authored config uses. The maps are the one place that translation lives, so a
+ * driver that renumbers them is a one-line change here.
+ */
+const SCROLL_DIRECTION = { up: 0, down: 1, left: 2, right: 3 } as const;
+const SCROLL_BY = { line: 0, page: 1 } as const;
+
+export type ScrollDirection = keyof typeof SCROLL_DIRECTION;
+export type ScrollBy = keyof typeof SCROLL_BY;
+
 /** `verify_state` accepts 1–8 predicates, ANDed. */
 const MAX_PREDICATES = 8;
 
@@ -382,6 +396,128 @@ export class DesktopDriverClient {
         signal,
       )
     ).ack;
+  }
+
+  /**
+   * Scroll at a window-relative point.
+   *
+   * `direction` and `by` are the driver's **numeric** enums on the wire, not
+   * strings — the same rule the session's `captureScope` follows and the
+   * opposite of `click`'s string `button`. Measured in
+   * `scripts/desktop-smoke.mjs` against the real driver: `ScrollDirection`
+   * is `{ up: 0, down: 1, left: 2, right: 3 }` and `ScrollBy` is
+   * `{ line: 0, page: 1 }`. `scope` is `DesktopScope.Desktop`, carried by every
+   * input-synthesis tool exactly as `click` carries it.
+   */
+  async scroll(
+    binding: WindowBinding,
+    request: { x: number; y: number; direction: ScrollDirection; by?: ScrollBy; amount?: number },
+    signal?: AbortSignal,
+  ): Promise<DriverAck> {
+    return (
+      await this.call(
+        "scroll",
+        {
+          ...scopeOf(binding),
+          scope: DESKTOP_SCOPE,
+          ...pixelArgs(request),
+          direction: SCROLL_DIRECTION[request.direction],
+          ...(request.by ? { by: SCROLL_BY[request.by] } : {}),
+          ...(request.amount !== undefined ? { amount: request.amount } : {}),
+        },
+        signal,
+      )
+    ).ack;
+  }
+
+  /**
+   * Drag from one window-relative point to another.
+   *
+   * Both ends are coordinates: the driver has no element-token drag, so the
+   * executor resolves an element target to the centre of its `frame` first.
+   * Field names are snake_case on the wire (`from_x`, `to_y`), matching the
+   * driver's spelling for every other tool.
+   */
+  async drag(
+    binding: WindowBinding,
+    request: {
+      fromX: number;
+      fromY: number;
+      toX: number;
+      toY: number;
+      button?: "left" | "right" | "middle";
+      durationMs?: number;
+      steps?: number;
+    },
+    signal?: AbortSignal,
+  ): Promise<DriverAck> {
+    if (
+      !Number.isFinite(request.fromX) ||
+      !Number.isFinite(request.fromY) ||
+      !Number.isFinite(request.toX) ||
+      !Number.isFinite(request.toY)
+    ) {
+      throw new DesktopDriverError(
+        "invalid_request",
+        "A drag needs both endpoints, each with an x and a y relative to the window.",
+      );
+    }
+
+    return (
+      await this.call(
+        "drag",
+        {
+          ...scopeOf(binding),
+          scope: DESKTOP_SCOPE,
+          from_x: request.fromX,
+          from_y: request.fromY,
+          to_x: request.toX,
+          to_y: request.toY,
+          ...(request.button && request.button !== "left" ? { button: request.button } : {}),
+          ...(request.durationMs !== undefined ? { duration_ms: request.durationMs } : {}),
+          ...(request.steps !== undefined ? { steps: request.steps } : {}),
+        },
+        signal,
+      )
+    ).ack;
+  }
+
+  /**
+   * Read the operator's clipboard as text.
+   *
+   * `include_text` is required — without it the driver returns the available
+   * types but no content. The clipboard is shared with the operator using the
+   * machine, so this is a read of their live state, never of the run's own.
+   * `supported` is `false` on a platform or content type with no text form,
+   * and the caller gets an explicit "unsupported" rather than an empty string
+   * it would mistake for an empty clipboard.
+   */
+  async readClipboard(
+    signal?: AbortSignal,
+  ): Promise<{ supported: boolean; text?: string }> {
+    const result = await this.call("clipboard_read", { include_text: true }, signal);
+    const payload = asRecord(result.payload);
+    return {
+      supported: payload.supported === true,
+      text: typeof payload.text === "string" ? payload.text : undefined,
+    };
+  }
+
+  /**
+   * Place text on the operator's clipboard.
+   *
+   * A write, not a read: it overwrites whatever the operator had copied. Empty
+   * text is a legal value (clearing the text form), so it is not rejected the
+   * way an empty element token is.
+   */
+  async writeClipboard(
+    request: { text: string },
+    signal?: AbortSignal,
+  ): Promise<DriverAck> {
+    if (typeof request.text !== "string") {
+      throw new DesktopDriverError("invalid_request", "clipboard write needs a text string.");
+    }
+    return (await this.call("clipboard_write", { text: request.text }, signal)).ack;
   }
 
   /**

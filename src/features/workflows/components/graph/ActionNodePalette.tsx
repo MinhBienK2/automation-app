@@ -336,6 +336,11 @@ export const actionDescriptions: Record<ActionType, string> = {
   desktop_screenshot: "Capture the bound application window",
   desktop_focus_window: "Bring the bound window forward",
   desktop_invoke_menu: "Drive a menu path in the bound window",
+  desktop_scroll: "Scroll a desktop element or window position",
+  desktop_drag: "Drag from one desktop target to another",
+  desktop_read_clipboard: "Read the system clipboard into an output",
+  desktop_set_clipboard: "Write text to the system clipboard",
+  desktop_read_table: "Read a table's rows into an output",
 };
 
 export function ActionNodePalette({

@@ -20,8 +20,13 @@ Every desktop action is prefixed `desktop_`. Workflows cannot mix surfaces, so t
 | `desktop_screenshot` | `capture` | Capture the bound window. See [secrets and evidence](secrets-and-evidence.md). |
 | `desktop_focus_window` | `element_interaction` | Bring the bound window forward. Explicit, because most actions do not need it. |
 | `desktop_invoke_menu` | `element_interaction` | Drive a menu path. Menus are a distinct UIA surface; treating them as ordinary clicks is unreliable. |
+| `desktop_scroll` | `element_interaction` | Scroll at a target (element or pixel), `direction` up/down/left/right, `by` line/page, `amount`. An element resolves to the centre of its frame. |
+| `desktop_drag` | `element_interaction` | Drag from a source target to a destination target; either end may be an element (resolved to its frame centre) or a pixel. |
+| `desktop_read_clipboard` | `capture` | Read the operator's clipboard text into an output. |
+| `desktop_set_clipboard` | `form` | Place text on the operator's clipboard. Confirmed by reading it back. |
+| `desktop_read_table` | `capture` | Structured read: flatten the subtree under a resolved element into rows of cell strings. Covers the `read_text` gap of one element at a time. |
 
-Ten actions. Enough to express real work, small enough to get the contracts right.
+Fifteen actions. The first ten were enough to express real work; the five added on top close the gaps real applications hit first — a list that will not fit on screen, a control reached only by dragging, copy/paste, and reading a grid rather than a single label. Each was verified against the real driver in `scripts/desktop-smoke.mjs` before it was wrapped.
 
 ## Every element action carries the same envelope
 
@@ -56,15 +61,19 @@ Recording what was left out, so a later reader does not mistake it for an oversi
 | Network interception, request blocking, response mocking | Not observable from an accessibility tree. Belongs to the Web Surface. |
 | `execute_js` | Nothing to execute against. Not a gap — the absence of an escape hatch is deliberate; it is what makes desktop runs auditable. |
 | iframes and frame locators | No analogue. |
-| Drag and drop, scroll | Deferred. Both need pointer-path semantics that interact with input isolation in ways not yet measured. |
 | `set_viewport` | Window geometry belongs to the Desktop Target, not to a step. |
-| Clipboard | Deferred. The clipboard is shared with the operator, who is using the machine concurrently; overwriting it mid-run is a side effect on a person, not just on an app. |
+
+Scroll, drag and clipboard have since graduated out of this list — `scripts/desktop-smoke.mjs` measured the pointer-path and clipboard tools working under input isolation, so the "not yet measured" reason no longer holds ([#58](https://github.com/MinhBienK2/automation-app/issues/58), [#59](https://github.com/MinhBienK2/automation-app/issues/59), [#60](https://github.com/MinhBienK2/automation-app/issues/60)). `desktop_read_table` ([#61](https://github.com/MinhBienK2/automation-app/issues/61)) covers the one-element limit of `read_text`. The clipboard's shared-with-the-operator hazard did not go away with the deferral; it is handled by policy now — see below.
 
 ## Reading text is what makes the surface useful
 
 `desktop_read_text` writes a named output exactly like the web capture actions, so `set_variable`, `conditions.ts` and every assertion consume it **without modification**. That is the practical proof of [ADR-0001](../../adr/0001-desktop-execution-surface.md): a desktop step feeds shared control flow with no desktop-specific code above the dispatch layer.
 
-It returns the element's text content, trimmed, as a string. Structured extraction — tables, lists — is deferred until there is a real case; guessing at shapes now would produce a contract nobody wants.
+It returns the element's text content, trimmed, as a string. Structured extraction — tables, lists — is now `desktop_read_table`: it flattens the subtree under a resolved element into rows of cell strings (a row's children are its cells; a childless row contributes its own text). Deliberately generic rather than UIA-table-aware, because the tree does not reliably carry a table schema and guessing one would produce a contract nobody wants.
+
+## The clipboard is shared with the operator
+
+`desktop_read_clipboard` and `desktop_set_clipboard` exist, but the hazard that kept them out of v1 is real: a desktop run happens while the operator is using the machine, and their clipboard is live state that belongs to them. A read is side-effect-free. A `set` overwrites whatever they had copied, so it is never implicit — it is an action the workflow author chooses on purpose, and it confirms itself by reading the value back rather than trusting the driver's own answer.
 
 ## Waiting
 

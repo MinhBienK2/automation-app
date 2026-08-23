@@ -269,6 +269,11 @@ export const actionDefinitions = [
   definition("desktop_screenshot", "capture"),
   definition("desktop_focus_window", "element_interaction"),
   definition("desktop_invoke_menu", "element_interaction"),
+  definition("desktop_scroll", "element_interaction"),
+  definition("desktop_drag", "element_interaction"),
+  definition("desktop_read_clipboard", "capture"),
+  definition("desktop_set_clipboard", "form"),
+  definition("desktop_read_table", "capture"),
 ] satisfies readonly ActionDefinition[];
 
 /**

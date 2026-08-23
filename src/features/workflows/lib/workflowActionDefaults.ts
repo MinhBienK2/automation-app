@@ -835,6 +835,16 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return { type: actionType, config: {} };
     case "desktop_invoke_menu":
       return { type: actionType, config: { target: emptyDesktopTarget(), path: [] } };
+    case "desktop_scroll":
+      return { type: actionType, config: { target: emptyDesktopTarget(), direction: "down" } };
+    case "desktop_drag":
+      return { type: actionType, config: { target: emptyDesktopTarget(), to: emptyDesktopTarget() } };
+    case "desktop_read_clipboard":
+      return { type: actionType, config: { output_name: "" } };
+    case "desktop_set_clipboard":
+      return { type: actionType, config: { text: "" } };
+    case "desktop_read_table":
+      return { type: actionType, config: { target: emptyDesktopTarget(), output_name: "" } };
   }
 }
 

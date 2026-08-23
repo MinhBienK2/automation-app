@@ -420,3 +420,188 @@ describe("screenshots", () => {
     expect(calls).toHaveLength(0);
   });
 });
+
+/**
+ * The capability actions added on top of the v1 set: scroll, drag, clipboard
+ * and structured read. Driven through the same fake transport, so what is
+ * pinned is the wire shape the driver measured in `scripts/desktop-smoke.mjs`
+ * — numeric scroll enums, snake_case drag coordinates, a clipboard round-trip.
+ */
+
+// A window with real frames, so an element target can become a coordinate.
+const FRAMED = {
+  snapshot_id: "s00000009",
+  element_count: 2,
+  elements: [
+    {
+      depth: 3,
+      element_index: 1,
+      element_token: "s00000009:1",
+      role: "List",
+      label: "Results",
+      frame: { x: 0, y: 0, w: 200, h: 400 },
+    },
+    {
+      depth: 4,
+      element_index: 2,
+      element_token: "s00000009:2",
+      role: "Button",
+      label: "Load more",
+      frame: { x: 10, y: 20, w: 40, h: 30 },
+    },
+  ],
+};
+
+const LOAD_MORE = {
+  kind: "element" as const,
+  locator: { role: "Button", name: { kind: "exact" as const, value: "Load more" } },
+};
+
+describe("desktop_scroll", () => {
+  test("resolves an element to its frame centre and sends the numeric direction", async () => {
+    const { surface, calls } = surfaceWith({ get_window_state: { structuredJson: FRAMED } });
+
+    await run(runtimeFor(surface), {
+      type: "desktop_scroll",
+      config: { target: LOAD_MORE, direction: "down", by: "page", amount: 3 },
+    });
+
+    expect(calls.map((c) => c.tool)).toEqual(["get_window_state", "scroll"]);
+    // Centre of { x:10, y:20, w:40, h:30 } is (30, 35). down=1, page=1.
+    expect(calls[1].args).toMatchObject({ x: 30, y: 35, direction: 1, by: 1, amount: 3, scope: 0 });
+  });
+
+  test("a pixel target scrolls without a snapshot", async () => {
+    const { surface, calls } = surfaceWith({});
+
+    await run(runtimeFor(surface), {
+      type: "desktop_scroll",
+      config: { target: { kind: "pixel", x: 120, y: 240, origin: "window" }, direction: "up" },
+    });
+
+    expect(calls.map((c) => c.tool)).toEqual(["scroll"]);
+    expect(calls[0].args).toMatchObject({ x: 120, y: 240, direction: 0 });
+  });
+});
+
+describe("desktop_drag", () => {
+  test("resolves both endpoints against one snapshot into snake_case coordinates", async () => {
+    const { surface, calls } = surfaceWith({ get_window_state: { structuredJson: FRAMED } });
+
+    await run(runtimeFor(surface), {
+      type: "desktop_drag",
+      config: {
+        target: LOAD_MORE,
+        to: { kind: "pixel", x: 5, y: 6, origin: "window" },
+      },
+    });
+
+    expect(calls.map((c) => c.tool)).toEqual(["get_window_state", "drag"]);
+    expect(calls[1].args).toMatchObject({ from_x: 30, from_y: 35, to_x: 5, to_y: 6, scope: 0 });
+  });
+});
+
+describe("desktop clipboard", () => {
+  test("read writes the clipboard text into the named output", async () => {
+    const { surface } = surfaceWith({
+      clipboard_read: { structuredJson: { supported: true, types: ["CF_UNICODETEXT"], text: "copied-value" } },
+    });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, { type: "desktop_read_clipboard", config: { output_name: "clip" } });
+
+    expect(runtime.outputs.clip).toBe("copied-value");
+  });
+
+  test("an unsupported clipboard reads as empty, not as a stale value", async () => {
+    const { surface } = surfaceWith({
+      clipboard_read: { structuredJson: { supported: false, types: [] } },
+    });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, { type: "desktop_read_clipboard", config: { output_name: "clip" } });
+
+    expect(runtime.outputs.clip).toBe("");
+  });
+
+  test("set writes the text, then confirms it by reading back", async () => {
+    const { surface, calls } = surfaceWith({
+      clipboard_read: { structuredJson: { supported: true, types: ["CF_UNICODETEXT"], text: "hello" } },
+    });
+
+    await run(runtimeFor(surface), { type: "desktop_set_clipboard", config: { text: "hello" } });
+
+    expect(calls.map((c) => c.tool)).toEqual(["clipboard_write", "clipboard_read"]);
+    expect(calls[0].args).toMatchObject({ text: "hello" });
+  });
+
+  test("set fails when the read-back does not match the text it wrote", async () => {
+    const { surface } = surfaceWith({
+      clipboard_read: { structuredJson: { supported: true, types: ["CF_UNICODETEXT"], text: "something-else" } },
+    });
+
+    await expect(
+      run(runtimeFor(surface), { type: "desktop_set_clipboard", config: { text: "hello" } }),
+    ).rejects.toThrow(/read-back did not match/);
+  });
+});
+
+describe("desktop_read_table", () => {
+  test("flattens the subtree under the anchor into rows of cell text", async () => {
+    const { surface } = surfaceWith({
+      get_window_state: {
+        structuredJson: {
+          snapshot_id: "s00000010",
+          element_count: 6,
+          elements: [
+            { depth: 1, element_index: 1, element_token: "s00000010:1", role: "Table", label: "Prices" },
+            { depth: 2, element_index: 2, element_token: "s00000010:2", role: "Row", parent_index: 1 },
+            { depth: 3, element_index: 3, element_token: "s00000010:3", role: "Cell", parent_index: 2, value: "Apple" },
+            { depth: 3, element_index: 4, element_token: "s00000010:4", role: "Cell", parent_index: 2, value: "1.20" },
+            { depth: 2, element_index: 5, element_token: "s00000010:5", role: "Row", parent_index: 1 },
+            { depth: 3, element_index: 6, element_token: "s00000010:6", role: "Cell", parent_index: 5, label: "Pear" },
+          ],
+        },
+      },
+    });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, {
+      type: "desktop_read_table",
+      config: {
+        target: { kind: "element", locator: { role: "Table", name: { kind: "exact", value: "Prices" } } },
+        output_name: "rows",
+      },
+    });
+
+    expect(runtime.outputs.rows).toEqual([["Apple", "1.20"], ["Pear"]]);
+  });
+
+  test("honours max_rows", async () => {
+    const { surface } = surfaceWith({
+      get_window_state: {
+        structuredJson: {
+          snapshot_id: "s00000011",
+          element_count: 3,
+          elements: [
+            { depth: 1, element_index: 1, element_token: "s00000011:1", role: "List", label: "Items" },
+            { depth: 2, element_index: 2, element_token: "s00000011:2", role: "ListItem", parent_index: 1, value: "one" },
+            { depth: 2, element_index: 3, element_token: "s00000011:3", role: "ListItem", parent_index: 1, value: "two" },
+          ],
+        },
+      },
+    });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, {
+      type: "desktop_read_table",
+      config: {
+        target: { kind: "element", locator: { role: "List", name: { kind: "exact", value: "Items" } } },
+        output_name: "rows",
+        max_rows: 1,
+      },
+    });
+
+    expect(runtime.outputs.rows).toEqual([["one"]]);
+  });
+});

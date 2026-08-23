@@ -205,4 +205,9 @@ export type ActionType =
   | "desktop_wait_for"
   | "desktop_screenshot"
   | "desktop_focus_window"
-  | "desktop_invoke_menu";
+  | "desktop_invoke_menu"
+  | "desktop_scroll"
+  | "desktop_drag"
+  | "desktop_read_clipboard"
+  | "desktop_set_clipboard"
+  | "desktop_read_table";

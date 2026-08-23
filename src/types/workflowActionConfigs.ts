@@ -1390,6 +1390,35 @@ export type ActionConfig =
       config: DesktopStepConfig & { path: string[] };
     }
   | {
+      type: "desktop_scroll";
+      config: DesktopStepConfig & {
+        direction: "up" | "down" | "left" | "right";
+        by?: "line" | "page" | null;
+        amount?: number | null;
+      };
+    }
+  | {
+      type: "desktop_drag";
+      config: DesktopStepConfig & {
+        to: DesktopStepTargetConfig;
+        button?: "left" | "right" | "middle" | null;
+        duration_ms?: number | null;
+        steps?: number | null;
+      };
+    }
+  | {
+      type: "desktop_read_clipboard";
+      config: { output_name: string; timeout_ms?: number | null };
+    }
+  | {
+      type: "desktop_set_clipboard";
+      config: { text: string; timeout_ms?: number | null };
+    }
+  | {
+      type: "desktop_read_table";
+      config: DesktopStepConfig & { output_name: string; max_rows?: number | null };
+    }
+  | {
       type: "quarantined";
       config: {
         original_type: string | null;

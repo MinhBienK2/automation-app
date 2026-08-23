@@ -209,6 +209,11 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   desktop_screenshot: "desktop_surface",
   desktop_focus_window: "desktop_surface",
   desktop_invoke_menu: "desktop_surface",
+  desktop_scroll: "desktop_surface",
+  desktop_drag: "desktop_surface",
+  desktop_read_clipboard: "desktop_surface",
+  desktop_set_clipboard: "desktop_surface",
+  desktop_read_table: "desktop_surface",
 };
 
 export const allActionTypes = Object.keys(actionCapabilities) as ActionType[];

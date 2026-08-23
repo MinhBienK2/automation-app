@@ -205,6 +205,11 @@ export const actionLabels: Record<ActionType, string> = {
   desktop_screenshot: "Desktop: Screenshot",
   desktop_focus_window: "Desktop: Focus Window",
   desktop_invoke_menu: "Desktop: Invoke Menu",
+  desktop_scroll: "Desktop: Scroll",
+  desktop_drag: "Desktop: Drag",
+  desktop_read_clipboard: "Desktop: Read Clipboard",
+  desktop_set_clipboard: "Desktop: Set Clipboard",
+  desktop_read_table: "Desktop: Read Table",
 };
 
 export const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
@@ -383,6 +388,11 @@ export const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }>
       "desktop_screenshot",
       "desktop_focus_window",
       "desktop_invoke_menu",
+      "desktop_scroll",
+      "desktop_drag",
+      "desktop_read_clipboard",
+      "desktop_set_clipboard",
+      "desktop_read_table",
     ],
   },
 ];
