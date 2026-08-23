@@ -146,7 +146,8 @@ export function createFilesExecutors<Runtime extends RunnerActionRuntime>(
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout_ms ?? 30000);
+      const effectiveTimeoutMs = timeout_ms ?? 30000;
+      const timeoutId = setTimeout(() => controller.abort(), effectiveTimeoutMs);
 
       try {
         const fetchOptions: RequestInit = {
@@ -181,6 +182,9 @@ export function createFilesExecutors<Runtime extends RunnerActionRuntime>(
         writeVariableValue(runtime.outputs, output_name, result);
       } catch (err: any) {
         clearTimeout(timeoutId);
+        if (controller.signal.aborted) {
+          throw new Error(`HTTP Request timed out after ${effectiveTimeoutMs}ms`);
+        }
         throw new Error(`HTTP Request failed: ${err.message}`);
       }
     },

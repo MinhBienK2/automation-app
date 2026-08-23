@@ -3,7 +3,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { executeRegisteredAction } from "../../actions/execution.js";
 import {
   createRunnerActionExecutors,
@@ -65,5 +65,36 @@ describe("runnerActionExecutors", () => {
         relativePath: "runs/run-1/downloads/007-write-results-tiktok-usernames.txt",
       },
     ]);
+  });
+
+  test("labels http_request failures caused by timeout", async () => {
+    const runtime = minimalRuntime();
+    const executors = createRunnerActionExecutors(runtime, minimalDependencies());
+    const { promise: pendingFetch, reject } = Promise.withResolvers<unknown>();
+    const fetchMock = vi.fn((_url: unknown, init: { signal: AbortSignal }) => {
+      init.signal.addEventListener(
+        "abort",
+        () => reject(new DOMException("This operation was aborted", "AbortError")),
+        { once: true },
+      );
+      return pendingFetch;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      await expect(
+        executeRegisteredAction(executors, {
+          type: "http_request",
+          config: {
+            method: "GET",
+            url: "https://owned.test/slow",
+            output_name: "http_result",
+            timeout_ms: 5,
+          },
+        } as never),
+      ).rejects.toThrow("HTTP Request timed out after 5ms");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
