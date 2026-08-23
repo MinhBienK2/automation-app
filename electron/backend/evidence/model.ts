@@ -1,4 +1,4 @@
-import { isPlainRecord } from "../../shared/records.js";
+import { isPlainRecord } from "../shared/records.js";
 
 export type EvidenceCategory =
   | "operator_input"

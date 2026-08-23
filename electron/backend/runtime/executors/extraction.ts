@@ -7,7 +7,7 @@ import type {
 } from "../runnerActionExecutors.js";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { resolveEvidenceArtifact } from "../../features/evidence/artifacts.js";
+import { resolveEvidenceArtifact } from "../../evidence/artifacts.js";
 import {
   assertElementState,
   assertRuntimeEnumValue,

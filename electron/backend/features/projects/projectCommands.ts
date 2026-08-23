@@ -9,7 +9,7 @@ import type { CommandDeps } from "../types.js";
 import { randomUUID } from "node:crypto";
 import nodeFs from "node:fs";
 import path from "node:path";
-import { sanitizePathSegment } from "../evidence/artifacts.js";
+import { sanitizePathSegment } from "../../evidence/artifacts.js";
 import { browserProfileKey } from "../../runtime/runDbHelpers.js";
 import { WorkflowRepository } from "../workflows/workflowRepository.js";
 

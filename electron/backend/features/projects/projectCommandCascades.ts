@@ -11,7 +11,7 @@ import type {
   WorkflowGraph,
   WorkflowSettings,
 } from "../../../../src/types/workflow.js";
-import { sanitizePathSegment } from "../evidence/artifacts.js";
+import { sanitizePathSegment } from "../../evidence/artifacts.js";
 import { migrateWorkflowGraph } from "../../graph/migration.js";
 import type { ProjectPackageService } from "./projectPackageService.js";
 import {

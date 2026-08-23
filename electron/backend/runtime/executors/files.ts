@@ -7,7 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { renderTemplate, writeVariableValue } from "../variables.js";
 import { outputValueToText } from "./support.js";
-import { resolveEvidenceArtifact } from "../../features/evidence/artifacts.js";
+import { resolveEvidenceArtifact } from "../../evidence/artifacts.js";
 
 export type FilesExecutors = Pick<
   ActionExecutorMap,

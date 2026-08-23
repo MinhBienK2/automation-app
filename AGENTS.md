@@ -6,7 +6,11 @@ Adversarial browser automation lab simulating realistic client bypasses (fingerp
 
 ## Project Structure
 - Frontend composition root is `src/app/App.tsx`. Feature code: `src/features/{feature-name}/{state,components,pages,data,lib}/`.
-- Electron IPC lives in `electron/ipc.ts`, preload in `electron/preload.cts`, and backend commands in `electron/backend/commands/{domain}Commands.ts`.
+- Electron IPC: channel map `electron/ipc.ts`, type-level contract `electron/ipcContract.ts`, preload `electron/preload.cts`.
+- Backend composition root is `electron/backend/features/index.ts`. Per-domain command factories, repositories, and services live in `electron/backend/features/{domain}/` (e.g. `features/workflows/workflowCommands.ts`).
+- Action executors are grouped by action family in `electron/backend/runtime/executors/{family}.ts` (family `variables` sub-split by value type under `executors/variables/`). Validators and zod schemas for the same family live in `electron/backend/actions/{family}/` (schemas under `actions/{family}/schemas/`, public entry `actions/schemas/index.ts`).
+- `electron/backend/evidence/` is a leaf module (run artifacts/categories); `runtime/`, `browser/`, and features import it, never the reverse.
+- Test support lives in `electron/backend/testSupport/` (command-level fixtures/bootstrap) and `electron/backend/runtime/testSupport/` (executor fixtures). Tests drive the real command factory over the in-memory SQLite `testDbAdapter`.
 - Database persistence, graph compiler, and runner live under `electron/backend/`.
 - Docs live under `docs/`; router is `docs/task-routes.md`.
 
