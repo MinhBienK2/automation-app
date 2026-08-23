@@ -78,7 +78,15 @@ function RenderSection({
   if (visibleFields.length === 0) return null;
 
   if (section.bare) {
-    return <>{visibleFields.map((def) => renderField(def))}</>;
+    return (
+      <>
+        {visibleFields.map((def, i) => (
+          <Fragment key={def.widget === "custom" ? `custom-${i}` : def.key}>
+            {renderField(def)}
+          </Fragment>
+        ))}
+      </>
+    );
   }
 
   return (

@@ -3,6 +3,9 @@ import type { ActionSchema } from "./schema";
 import { coreSchemas } from "./core";
 import { browserSchemas } from "./browser";
 import { elementSchemas } from "./element";
+import { dragAndDropSchemas } from "./dragAndDrop";
+import { formSchemas } from "./form";
+import { keyboardSchemas } from "./keyboard";
 import { captureSchemas } from "./capture";
 import { outputSchemas } from "./output";
 import { logicSchemas } from "./logic";
@@ -21,6 +24,9 @@ export const actionSchemas: Partial<Record<ActionConfig["type"], ActionSchema>> 
   ...coreSchemas,
   ...browserSchemas,
   ...elementSchemas,
+  ...dragAndDropSchemas,
+  ...formSchemas,
+  ...keyboardSchemas,
   ...captureSchemas,
   ...outputSchemas,
   ...logicSchemas,

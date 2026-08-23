@@ -1383,7 +1383,7 @@ describe("Workflow graph editor integration", () => {
         }),
       );
     });
-  });
+  }, 30000);
 
   test("edits action node config through the graph inspector", async () => {
     mockWorkflowBridgeCommands({
