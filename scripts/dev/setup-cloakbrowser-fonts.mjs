@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { constants as fsConstants } from "node:fs";
 import {
   access,

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { AppPackageDialogs } from "../../../AppPackageDialogs";
+import { AppPackageDialogs } from "../../../app/AppPackageDialogs";
 import type { WorkflowSettingsSectionId, WorkflowSummary } from "../../../types/workflow";
 import { WorkflowListPage } from "./WorkflowListPage";
 

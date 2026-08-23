@@ -5,7 +5,7 @@ import { createDataActionExecutors } from "./dataActionExecutors.js";
 import {
   isActionAvailableOnSurface,
   surfaceIndependentActionTypes,
-} from "../../../src/lib/actionCapabilities.js";
+} from "../../../src/features/workflows/data/actionCapabilities.js";
 import type { ActionType } from "../../../src/types/workflow.js";
 
 /**

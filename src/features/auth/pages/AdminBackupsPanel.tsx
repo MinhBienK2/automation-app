@@ -12,7 +12,7 @@ import {
   getBackupConfig,
   saveBackupConfig,
   openBackupsFolder,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 import { Database, Clock, Trash2, Settings, AlertTriangle, FolderOpen } from "lucide-react";
 import {
   Dialog,

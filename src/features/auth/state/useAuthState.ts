@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { login as apiLogin, logout as apiLogout, me as apiMe } from "../../../lib/workflowApi";
+import { login as apiLogin, logout as apiLogout, me as apiMe } from "../../../lib/api/workflowApi";
 
 // Verify a saved token, retrying on transient backend errors (e.g. DB pool
 // not ready at startup). Returns null only when the token is definitively
@@ -79,9 +79,11 @@ export function useAuthState() {
       setToken(response.token);
       localStorage.setItem("auth_token", response.token);
       setMode("team");
+      console.warn("[LOGIN-OK]", JSON.stringify(response.user));
       return true;
     } catch (error: any) {
       setAuthError(error.message || "Failed to log in");
+      console.warn("[LOGIN-ERR]", error?.message);
       return false;
     } finally {
       setIsLoggingIn(false);

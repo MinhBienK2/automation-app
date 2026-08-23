@@ -13,7 +13,7 @@ import type {
 import {
   commandMessage,
 } from "../lib/workflowUi";
-import { getWorkflow } from "../lib/workflowApi";
+import { getWorkflow } from "../lib/api/workflowApi";
 
 export interface AppNavigationDeps {
   requestGraphExitNavigation: (navigate: () => void | Promise<void>) => Promise<boolean> | boolean;

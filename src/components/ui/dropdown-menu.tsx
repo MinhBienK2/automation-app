@@ -68,9 +68,6 @@ function DropdownMenuTrigger({
   );
 }
 
-function DropdownMenuPortal({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
-}
 
 function DropdownMenuContent({
   className,
@@ -155,17 +152,6 @@ function DropdownMenuSeparator({ className, ...props }: { className?: string }) 
   return <li className={classes} role="separator" {...props} />;
 }
 
-function DropdownMenuLabel({
-  className,
-  children,
-  ...props
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  const classes = ["px-3 py-1.5 text-xs font-semibold text-secondary", className].filter(Boolean).join(" ");
-  return <li className={classes} {...props}>{children}</li>;
-}
 
 export {
   DropdownMenu,
@@ -173,7 +159,5 @@ export {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuLabel,
-  DropdownMenuPortal,
 };
 

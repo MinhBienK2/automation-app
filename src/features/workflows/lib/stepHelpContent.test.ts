@@ -15,11 +15,11 @@ const stepHelpEnrichmentSource = readFileSync(
   "utf8",
 );
 const stepHelpModalSource = readFileSync(
-  join(process.cwd(), "src/features/workflows/components/StepHelpModal.tsx"),
+  join(process.cwd(), "src/features/workflows/components/dialogs/StepHelpModal.tsx"),
   "utf8",
 );
 const nodeHelpDialogSource = readFileSync(
-  join(process.cwd(), "src/features/workflows/components/NodeHelpDialog.tsx"),
+  join(process.cwd(), "src/features/workflows/components/dialogs/NodeHelpDialog.tsx"),
   "utf8",
 );
 

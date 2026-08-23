@@ -1,8 +1,8 @@
 import type { GraphNode } from "../../../../../types/workflow";
 import { Label } from "../../../../../components/ui/label";
 import { Select } from "../../../../../components/ui/select";
-import { ActionConfigFieldGroup } from "../../ActionConfigFieldGroup";
-import { TemplateTextField, TemplateTextareaField, type VariableOption } from "../../TemplateTextField";
+import { ActionConfigFieldGroup } from "../../actionFields/ActionConfigFieldGroup";
+import { TemplateTextField, TemplateTextareaField, type VariableOption } from "../../variables/TemplateTextField";
 import { objectConfig, stringConfig } from "../../../lib/configUtils";
 
 export function TextNodeFields({

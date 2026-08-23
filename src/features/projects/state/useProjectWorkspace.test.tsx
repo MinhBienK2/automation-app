@@ -10,7 +10,7 @@ import {
   createProject,
   duplicateProject,
   deleteProject,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 
 /**
  * Desktop Targets are per-project, and every path that changes which project is
@@ -20,7 +20,7 @@ import {
  * offered them as the default in the create dialog.
  */
 
-vi.mock("../../../lib/workflowApi", () => ({
+vi.mock("../../../lib/api/workflowApi", () => ({
   listProjects: vi.fn(),
   listBrowserProfiles: vi.fn(),
   listDesktopTargets: vi.fn(),

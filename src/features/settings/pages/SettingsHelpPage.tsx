@@ -1,4 +1,4 @@
-import { GraphShortcutGuide } from "../../workflows/components/GraphShortcutGuide";
+import { GraphShortcutGuide } from "../../workflows/components/graph/GraphShortcutGuide";
 import { XPathCookbook } from "../components/XPathCookbook";
 
 export function SettingsHelpPage() {

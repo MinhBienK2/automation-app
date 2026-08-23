@@ -58,7 +58,7 @@ describe("app shell static assets", () => {
   test("keeps workflow package option controls out of App orchestration", () => {
     const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
     const dialogsSource = readFileSync(
-      join(process.cwd(), "src/AppPackageDialogs.tsx"),
+      join(process.cwd(), "src/app/AppPackageDialogs.tsx"),
       "utf8",
     );
 
@@ -66,7 +66,7 @@ describe("app shell static assets", () => {
       existsSync(
         join(
           process.cwd(),
-          "src/features/workflows/components/WorkflowPackageOptions.tsx",
+          "src/features/workflows/components/graph/WorkflowPackageOptions.tsx",
         ),
       ),
     ).toBe(true);

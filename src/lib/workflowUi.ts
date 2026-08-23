@@ -5,11 +5,7 @@ import type {
   RunState,
   WorkflowRunSnapshot,
 } from "../types/workflow";
-import {
-  actionCapabilities,
-  allActionTypes,
-  isActionVisibleInPrimaryPalette,
-} from "./actionCapabilities";
+import { allActionTypes, isActionVisibleInPrimaryPalette } from "../features/workflows/data/actionCapabilities";
 
 export const actionLabels: Record<ActionType, string> = {
   navigate: "Navigate",
@@ -211,7 +207,7 @@ export const actionLabels: Record<ActionType, string> = {
   desktop_invoke_menu: "Desktop: Invoke Menu",
 };
 
-const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
+export const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Navigation",
     actions: [
@@ -402,10 +398,8 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> =
   actionGroupCatalog
     .map((group) => ({
       ...group,
-      actions: group.actions.filter(
-        (actionType) =>
-          isActionVisibleInPrimaryPalette(actionType) ||
-          actionCapabilities[actionType] === "desktop_surface",
+      actions: group.actions.filter((actionType) =>
+        isActionVisibleInPrimaryPalette(actionType),
       ),
     }))
     .filter((group) => group.actions.length > 0);

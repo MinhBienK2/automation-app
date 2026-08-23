@@ -1603,8 +1603,8 @@ describe("App settings and graph autosave", () => {
 
     // Login as admin
     await userEvent.clear(emailInput);
-    await userEvent.clear(passwordInput);
     await userEvent.type(emailInput, "admin@example.com");
+    await userEvent.clear(passwordInput);
     await userEvent.type(passwordInput, "adminpassword");
     await userEvent.click(signInBtn);
 
@@ -1634,8 +1634,8 @@ describe("App settings and graph autosave", () => {
 
     // 4. Login as user
     await userEvent.clear(newEmailInput);
-    await userEvent.clear(newPasswordInput);
     await userEvent.type(newEmailInput, "user@example.com");
+    await userEvent.clear(newPasswordInput);
     await userEvent.type(newPasswordInput, "userpassword");
     await userEvent.click(newSignInBtn);
 

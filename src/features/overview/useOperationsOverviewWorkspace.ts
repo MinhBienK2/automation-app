@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { OperationsOverview } from "../../types/workflow";
-import { getOperationsOverview } from "../../lib/workflowApi";
+import { getOperationsOverview } from "../../lib/api/workflowApi";
 import { todayOperationsRange } from "../../lib/appState";
 import { commandMessage } from "../../lib/workflowUi";
 

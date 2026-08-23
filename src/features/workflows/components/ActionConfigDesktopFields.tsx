@@ -11,11 +11,11 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
-import { inspectDesktopTarget } from "../../../lib/workflowApi";
-import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
+import { inspectDesktopTarget } from "../../../lib/api/workflowApi";
+import { ActionConfigFieldGroup } from "./actionFields/ActionConfigFieldGroup";
 import { DesktopElementPickerDialog } from "./DesktopElementPickerDialog";
-import { TemplateTextField } from "./TemplateTextField";
-import type { VariableOption } from "./TemplateTextField";
+import { TemplateTextField } from "./variables/TemplateTextField";
+import type { VariableOption } from "./variables/TemplateTextField";
 import { useWorkflowSurface } from "../state/WorkflowSurfaceContext";
 
 /**
@@ -97,7 +97,7 @@ export function DesktopActionFields({
         <TemplateTextField
           label="Value"
           value={config.config.value}
-          onChange={(value) => set("value", value)}
+          onChange={(value: string) => set("value", value)}
           variableOptions={variableOptions}
         />
       )}
@@ -106,7 +106,7 @@ export function DesktopActionFields({
         <TemplateTextField
           label="Text"
           value={config.config.text}
-          onChange={(value) => set("text", value)}
+          onChange={(value: string) => set("text", value)}
           variableOptions={variableOptions}
         />
       )}
@@ -116,7 +116,7 @@ export function DesktopActionFields({
           label="Key"
           placeholder="Enter, Tab, F2, a"
           value={config.config.key}
-          onChange={(value) => set("key", value)}
+          onChange={(value: string) => set("key", value)}
           variableOptions={variableOptions}
         />
       )}

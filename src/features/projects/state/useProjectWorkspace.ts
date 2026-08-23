@@ -17,7 +17,7 @@ import {
   duplicateProject as duplicateProjectCommand,
   deleteProject as deleteProjectCommand,
   listSubflows,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
 
 export interface ProjectWorkspaceDeps {

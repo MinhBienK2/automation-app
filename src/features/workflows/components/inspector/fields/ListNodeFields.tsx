@@ -1,5 +1,5 @@
 import type { GraphNode } from "../../../../../types/workflow";
-import type { VariableOption } from "../../TemplateTextField";
+import type { VariableOption } from "../../variables/TemplateTextField";
 import { ListMutationFields } from "./ListMutationFields";
 import { ListProcessingFields } from "./ListProcessingFields";
 import { ListConditionFields } from "./ListConditionFields";

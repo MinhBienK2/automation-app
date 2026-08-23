@@ -5,10 +5,10 @@ import {
   cleanupOrphanedBrowserProfiles,
   getCloakBrowserDiagnostics,
   installCloakBrowserBinary,
-} from "../../lib/workflowApi";
+} from "../../lib/api/workflowApi";
 import { useSettingsDiagnostics } from "./useSettingsDiagnostics";
 
-vi.mock("../../lib/workflowApi", () => ({
+vi.mock("../../lib/api/workflowApi", () => ({
   cleanupOrphanedBrowserProfiles: vi.fn(),
   getCloakBrowserDiagnostics: vi.fn(),
   installCloakBrowserBinary: vi.fn(),

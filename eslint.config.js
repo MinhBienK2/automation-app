@@ -47,7 +47,9 @@ export default [
       "src/lib/**/*.{ts,tsx}",
       "src/app/useAppNavigation.ts",
       "src/App.tsx",
-      "src/AppPackageDialogs.tsx",
+      "src/app/AppPackageDialogs.tsx",
+      "src/app/useAppPackageDialogs.ts",
+      "src/app/useGraphExitNavigation.ts",,
       "src/features/evidence/useEvidenceWorkspace.ts",
       "src/layouts/AppSidebar.tsx",
       // Backend files exempt

@@ -17,7 +17,7 @@ import { SearchInput } from "../../../components/ui/search-input";
 import { FormField } from "../../../components/ui/form-field";
 import { ConfirmDialog } from "../../../components/ui/confirm-dialog";
 import { Select } from "../../../components/ui/select";
-import { SubflowSettingsDialog } from "../components/SubflowSettingsDialog";
+import { SubflowSettingsDialog } from "../components/dialogs/SubflowSettingsDialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, SortableTableHead, type SortDirection } from "../../../components/ui/table";
 
 type SubflowSortKey = "name" | "used_by";

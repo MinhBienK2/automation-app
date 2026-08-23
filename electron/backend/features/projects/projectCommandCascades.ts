@@ -21,7 +21,7 @@ import {
 import { WorkflowRepository } from "../workflows/workflowRepository.js";
 import { commandError } from "../../commandHelpers.js";
 import { browserProfileKey } from "../../shared/browserProfileKey.js";
-import { personaForSeed } from "../../../../src/lib/personaCatalog.js";
+import { personaForSeed } from "../../../../src/features/workflows/data/personaCatalog.js";
 
 type RunConflict = {
   message: string;
