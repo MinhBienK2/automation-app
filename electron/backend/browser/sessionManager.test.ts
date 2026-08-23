@@ -1,12 +1,9 @@
 // @vitest-environment node
 
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import type { WorkflowSettings } from "../../../src/types/workflow";
-import { defaultWorkflowSettings } from "../commands";
-import { createAppPaths } from "../db/database";
 import {
   BrowserSessionManager,
   browserIdentityEvidence,
@@ -17,14 +14,7 @@ import {
   type BrowserDriverContext,
   type BrowserDriverPage,
 } from "./sessionManager";
-
-const tempRoots: string[] = [];
-
-afterEach(async () => {
-  for (const root of tempRoots.splice(0)) {
-    await fs.rm(root, { recursive: true, force: true });
-  }
-});
+import { createTempAppPaths, makeSettings } from "../testSupport/runtimeFixtures.js";
 
 describe("BrowserSessionManager", () => {
   test("adds CloakBrowser fingerprint mitigation args for persistent profiles", async () => {
@@ -474,40 +464,12 @@ describe("BrowserSessionManager", () => {
   });
 });
 
-function makeSettings(overrides: Partial<WorkflowSettings> = {}): WorkflowSettings {
-  const defaults = defaultWorkflowSettings({
-    id: "workflow-1",
-    name: "Fixture",
-    step_count: 0,
-    created_at: "2026-05-09T00:00:00.000Z",
-    updated_at: "2026-05-09T00:00:00.000Z",
-  });
-  return {
-    ...defaults,
-    ...overrides,
-    browser_launch: {
-      ...defaults.browser_launch,
-      ...(overrides.browser_launch ?? {}),
-    },
-    run_policy: {
-      ...defaults.run_policy,
-      ...(overrides.run_policy ?? {}),
-    },
-  };
-}
-
 function expectedLocalTimezone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
 function expectedLocalLocale() {
   return Intl.DateTimeFormat().resolvedOptions().locale || "en-US";
-}
-
-async function createTempAppPaths() {
-  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "browser-session-manager-"));
-  tempRoots.push(rootDir);
-  return createAppPaths(rootDir);
 }
 
 class FakeContext implements BrowserDriverContext {

@@ -5,44 +5,7 @@ import { WorkflowRepository } from "./workflowRepository.js";
 import { assembleGraphFromTables } from "./normalizedGraphRepository.js";
 import type { WorkflowGraph } from "../../../../src/types/workflow.js";
 import { TestDbAdapter } from "../../db/testDbAdapter.js";
-
-function sampleGraph(): WorkflowGraph {
-  return {
-    version: 2,
-    nodes: [
-      {
-        id: "start",
-        node_type: "start",
-        label: "Start",
-        position: { x: 0, y: 0 },
-        config: null,
-        ports: [],
-      },
-      {
-        id: "nav-1",
-        node_type: "action",
-        label: "Navigate",
-        position: { x: 100, y: 50 },
-        ports: [],
-        config: { type: "navigate", config: { url: "https://example.com" } },
-      },
-      {
-        id: "end-1",
-        node_type: "end_success",
-        label: "End",
-        position: { x: 200, y: 100 },
-        config: null,
-        ports: [],
-      },
-    ],
-    edges: [
-      { id: "e1", source_node_id: "start", source_port: "out", target_node_id: "nav-1", target_port: "in" },
-      { id: "e2", source_node_id: "nav-1", source_port: "out", target_node_id: "end-1", target_port: "in" },
-    ],
-    viewport: { x: 10, y: 20, zoom: 0.8 },
-    migration_notes: [],
-  };
-}
+import { sampleGraph } from "../../testSupport/commands.testHelpers.js";
 
 describe("normalized graph tables", () => {
   test("tables exist with correct schema", async () => {

@@ -3,26 +3,7 @@
 import { describe, expect, test } from "vitest";
 import { WorkflowRepository } from "../../features/workflows/workflowRepository.js";
 import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "../../features/workflows/normalizedGraphRepository.js";
-import type { WorkflowGraph } from "../../../src/types/workflow.js";
-import { TestDbAdapter } from "../testDbAdapter.js";
-
-function sampleGraph(): WorkflowGraph {
-  return {
-    version: 2,
-    nodes: [
-      { id: "start", node_type: "start", label: "Start", position: { x: 0, y: 0 }, config: null, ports: [] },
-      { id: "nav", node_type: "action", label: "Navigate", position: { x: 100, y: 0 }, ports: [],
-        config: { type: "navigate", config: { url: "https://example.com" } } },
-      { id: "end", node_type: "end_success", label: "End", position: { x: 200, y: 0 }, config: null, ports: [] },
-    ],
-    edges: [
-      { id: "e1", source_node_id: "start", source_port: "out", target_node_id: "nav", target_port: "in" },
-      { id: "e2", source_node_id: "nav", source_port: "out", target_node_id: "end", target_port: "in" },
-    ],
-    viewport: { x: 0, y: 0, zoom: 1 },
-    migration_notes: [],
-  };
-}
+import { sampleGraph } from "../../testSupport/commands.testHelpers.js";
 
 describe("save writes to normalized tables", () => {
   test("saveWorkflowGraph writes to normalized tables", async () => {

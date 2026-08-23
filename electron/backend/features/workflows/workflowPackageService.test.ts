@@ -8,6 +8,7 @@ import type {
   WorkflowSettings,
 } from "../../../../src/types/workflow";
 import { WorkflowPackageService } from "./workflowPackageService";
+import { startOnlyGraph } from "../../testSupport/commands.testHelpers.js";
 
 describe("WorkflowPackageService", () => {
   test("builds sanitized workflow packages without command-handler dependencies", () => {
@@ -122,7 +123,7 @@ describe("WorkflowPackageService", () => {
               name: "Login",
               description: "",
               tags: [],
-              graph: startOnlyGraph(),
+              graph: startOnlyGraph(2),
               created_at: "1",
               updated_at: "1",
             },
@@ -189,24 +190,6 @@ function workflowGraphCallingSubflow(subflowId: string): WorkflowGraph {
         target_port: "in",
       },
     ],
-    viewport: { x: 0, y: 0, zoom: 1 },
-  };
-}
-
-function startOnlyGraph(): WorkflowGraph {
-  return {
-    version: 2,
-    nodes: [
-      {
-        id: "start",
-        node_type: "start",
-        label: "Start",
-        position: { x: 0, y: 0 },
-        config: null,
-        ports: [{ id: "out", label: "Out", direction: "output" }],
-      },
-    ],
-    edges: [],
     viewport: { x: 0, y: 0, zoom: 1 },
   };
 }

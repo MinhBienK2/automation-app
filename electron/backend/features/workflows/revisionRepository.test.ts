@@ -14,25 +14,24 @@ import {
 } from "./revisionRepository.js";
 import type { WorkflowGraph } from "../../../../src/types/workflow.js";
 import { TestDbAdapter } from "../../db/testDbAdapter.js";
+import { sampleGraph } from "../../testSupport/commands.testHelpers.js";
 
-function sampleGraph(): WorkflowGraph {
-  return {
-    version: 3,
-    nodes: [
-      { id: "start", node_type: "start", label: "Start", position: { x: 0, y: 0 }, config: null, ports: [] },
-      { id: "end", node_type: "end_success", label: "End", position: { x: 100, y: 0 }, config: null, ports: [] },
-    ],
-    edges: [],
-    viewport: { x: 0, y: 0, zoom: 1 },
-    migration_notes: [],
-  };
-}
+// Revision tests assert on exact node counts, so use the minimal start -> end
+// shape rather than the canonical three-node fixture.
+const minimalGraphOverrides: Partial<WorkflowGraph> = {
+  version: 3,
+  nodes: [
+    { id: "start", node_type: "start", label: "Start", position: { x: 0, y: 0 }, config: null, ports: [] },
+    { id: "end", node_type: "end_success", label: "End", position: { x: 100, y: 0 }, config: null, ports: [] },
+  ],
+  edges: [],
+};
 
 describe("revisionRepository — snapshot on save", () => {
   test("5 saves produce 5 revisions with monotonic numbers", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));
@@ -62,7 +61,7 @@ describe("revisionRepository — snapshot on save", () => {
   test("subflow saves also produce revisions", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));
@@ -79,7 +78,7 @@ describe("revisionRepository — snapshot on save", () => {
   test("getRevision returns full snapshot", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));
@@ -96,7 +95,7 @@ describe("revisionRepository — snapshot on save", () => {
   test("tagRevision and untagRevision", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));
@@ -116,7 +115,7 @@ describe("revisionRepository — snapshot on save", () => {
   test("deleteRevision deletes revision by id", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));
@@ -140,7 +139,7 @@ describe("revisionRepository — snapshot on save", () => {
 describe("revisionRepository — pruning", () => {
   test("prunes untagged revisions beyond 50, keeps tagged ones", async () => {
     const db = await TestDbAdapter.create();
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const wfId = "wf-prune-test";
     await db.query(
@@ -175,7 +174,7 @@ describe("revisionRepository — pruning", () => {
 
   test("prunes correctly when untagged > 50", async () => {
     const db = await TestDbAdapter.create();
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const wfId = "wf-prune-test2";
     await db.query(
@@ -213,7 +212,7 @@ describe("revisionRepository — restore", () => {
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));
-    const graphV1 = sampleGraph();
+    const graphV1 = sampleGraph(minimalGraphOverrides);
     const wf = await repo.createWorkflow("Test", graphV1, new Date(), { projectId: project.id });
 
     await repo.saveWorkflowGraph(wf.id, graphV1);
@@ -257,7 +256,7 @@ describe("revisionRepository — restore", () => {
   test("restoreRevision throws for non-existent revision", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));
@@ -272,7 +271,7 @@ describe("revisionRepository — restore", () => {
   test("saveWorkflowGraph and saveSubflowGraph store comment and tag", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));
@@ -289,7 +288,7 @@ describe("revisionRepository — restore", () => {
   test("listRevisions onlyBackups option filters correctly", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));
@@ -310,7 +309,7 @@ describe("revisionRepository — restore", () => {
   test("workflow backup bundles exclusive subflows and restore duplicates & remaps them", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
-    const graph = sampleGraph();
+    const graph = sampleGraph(minimalGraphOverrides);
 
     const projects = await repo.listProjects();
     const project = projects[0] ?? (await repo.createProject("Main"));

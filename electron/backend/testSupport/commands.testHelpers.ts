@@ -5,16 +5,15 @@ import { afterEach, vi } from "vitest";
 import {
   createWorkflowCommandHandlers,
 } from "../commands.js";
+import type { WorkflowCommandHandlers } from "../commands.js";
 import {
   createAppPaths,
 } from "../db/database.js";
 import { TestDbAdapter } from "../db/testDbAdapter.js";
 import type {
   GraphNodeType,
-  ProjectPackage,
   RunState,
   WorkflowGraph,
-  WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import type {
   BrowserDriver,
@@ -29,82 +28,8 @@ export type ProjectWorkflow = {
   project_id: string;
   browser_profile_id: string | null;
 };
-
-export type TestProject = {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type TestBrowserProfile = {
-  id: string;
-  project_id: string;
-  name: string;
-  description: string;
-  is_default: boolean;
-  browser_launch: WorkflowSettings["browser_launch"];
-  created_at: string;
-  updated_at: string;
-};
-
-export type TestSubflow = {
-  id: string;
-  project_id: string;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type ProjectWorkflowTestHandlers = {
-  listProjects(): TestProject[];
-  createProject(input: { name: string; description?: string | null }): TestProject;
-  updateProject(projectId: string, input: { name?: string; description?: string | null }): TestProject;
-  duplicateProject(projectId: string): TestProject;
-  deleteProject(projectId: string): void;
-  listBrowserProfiles(projectId: string): TestBrowserProfile[];
-  createBrowserProfile(
-    projectId: string,
-    input: {
-      name: string;
-      description?: string | null;
-      browser_launch?: WorkflowSettings["browser_launch"];
-      is_default?: boolean;
-    },
-  ): TestBrowserProfile;
-  updateBrowserProfile(
-    profileId: string,
-    input: {
-      name?: string;
-      description?: string | null;
-      browser_launch?: WorkflowSettings["browser_launch"];
-      is_default?: boolean;
-    },
-  ): TestBrowserProfile;
-  deleteBrowserProfile(profileId: string): void;
-  setWorkflowBrowserProfile(
-    workflowId: string,
-    profileId: string,
-  ): ProjectWorkflow;
-  resetBrowserProfileIdentity(profileId: string): TestBrowserProfile;
-  exportProjectPackage(projectId: string): ProjectPackage;
-  previewProjectPackage(packageValue: ProjectPackage): unknown;
-  importProjectPackage(packageValue: ProjectPackage): TestProject;
-  saveProjectPackageFile(packageValue: ProjectPackage): Promise<string | null>;
-  createSubflow(projectId: string, input: { name: string; description?: string | null }): TestSubflow;
-  updateSubflow(
-    subflowId: string,
-    input: { name?: string; description?: string | null },
-  ): TestSubflow;
-  listSubflows(projectId: string): Array<TestSubflow & { used_by_count: number }>;
-  getSubflowGraph(subflowId: string): WorkflowGraph;
-  saveSubflowGraph(subflowId: string, graph: WorkflowGraph): void;
-  duplicateSubflow(subflowId: string, name: string): TestSubflow;
-  deleteSubflow(subflowId: string): void;
-  getSubflowUsage(subflowId: string): Array<{ workflow_id: string; workflow_name: string }>;
-};
+// Derived from the real factory contract so signature drift fails to compile here.
+export type ProjectWorkflowTestHandlers = WorkflowCommandHandlers;
 
 export const tempRoots: string[] = [];
 
@@ -206,7 +131,64 @@ export class FakeRecordingPage implements BrowserDriverPage {
   }
 }
 
-export function runnableGraph(): WorkflowGraph {
+export function sampleGraph(overrides: Partial<WorkflowGraph> = {}): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      { id: "start", node_type: "start", label: "Start", position: { x: 0, y: 0 }, config: null, ports: [] },
+      { id: "nav", node_type: "action", label: "Navigate", position: { x: 100, y: 0 }, ports: [],
+        config: { type: "navigate", config: { url: "https://example.com" } } },
+      { id: "end", node_type: "end_success", label: "End", position: { x: 200, y: 0 }, config: null, ports: [] },
+    ],
+    edges: [
+      { id: "e1", source_node_id: "start", source_port: "out", target_node_id: "nav", target_port: "in" },
+      { id: "e2", source_node_id: "nav", source_port: "out", target_node_id: "end", target_port: "in" },
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+    migration_notes: [],
+    ...overrides,
+  };
+}
+
+export function runnableGraph(actionId?: string): WorkflowGraph {
+  if (actionId !== undefined) {
+    // Parameterized variant (package-service fixtures): a start node wired to a
+    // single named wait action.
+    return {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: null,
+          ports: [{ id: "out", label: "Out", direction: "output" }],
+        },
+        {
+          id: actionId,
+          node_type: "action",
+          label: "Wait",
+          position: { x: 200, y: 0 },
+          config: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
+          ports: [
+            { id: "in", label: "In", direction: "input" },
+            { id: "out", label: "Out", direction: "output" },
+          ],
+        },
+      ],
+      edges: [
+        {
+          id: `start-${actionId}`,
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: actionId,
+          target_port: "in",
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+  }
   return {
     version: 1,
     nodes: [
@@ -371,9 +353,9 @@ export function subflowGraphWithAction(nodeId: string, label: string): WorkflowG
   };
 }
 
-export function startOnlyGraph(): WorkflowGraph {
+export function startOnlyGraph(version = 1): WorkflowGraph {
   return {
-    version: 1,
+    version,
     nodes: [
       {
         id: "start",

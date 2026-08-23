@@ -2,17 +2,14 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type {
   ActionConfig,
   CompiledWorkflowGraph,
   RunState,
   WorkflowSettings,
 } from "../../../src/types/workflow";
-import { defaultWorkflowSettings } from "../commands";
-import { createAppPaths } from "../db/database";
 import {
   BrowserWorkflowRunner,
   createCloakBrowserDriver,
@@ -20,14 +17,7 @@ import {
   type BrowserDriverContext,
   type BrowserDriverPage,
 } from "./runner";
-
-const tempRoots: string[] = [];
-
-afterEach(async () => {
-  for (const root of tempRoots.splice(0)) {
-    await fs.rm(root, { recursive: true, force: true });
-  }
-});
+import { createTempAppPaths, makeSettings } from "../testSupport/runtimeFixtures.js";
 
 describe("BrowserWorkflowRunner", () => {
   test("keeps evidence artifact path helpers outside the runner module", () => {
@@ -4630,34 +4620,6 @@ function step(nodeId: string, label: string, config: ActionConfig) {
   return { node_id: nodeId, label, config };
 }
 
-function makeSettings(
-  overrides: {
-    browser_launch?: Partial<WorkflowSettings["browser_launch"]>;
-    environment?: Partial<WorkflowSettings["environment"]>;
-    run_policy?: Partial<WorkflowSettings["run_policy"]>;
-  } = {},
-): WorkflowSettings {
-  const base = defaultWorkflowSettings({
-    id: "workflow-1",
-    name: "Fixture",
-    step_count: 0,
-    created_at: "2026-05-09T00:00:00.000Z",
-    updated_at: "2026-05-09T00:00:00.000Z",
-  });
-  return {
-    ...base,
-    browser_launch: { ...base.browser_launch, ...overrides.browser_launch },
-    environment: { ...base.environment, ...overrides.environment },
-    run_policy: { ...base.run_policy, ...overrides.run_policy },
-  };
-}
-
-async function createTempAppPaths() {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-runner-"));
-  tempRoots.push(tempRoot);
-  return createAppPaths(tempRoot);
-}
-
 function createFakeDriver(context: FakeContext) {
   const driver: BrowserDriver & {
     launches: Array<{ kind: "temporary" | "persistent"; options: Record<string, unknown> }>;
@@ -4667,6 +4629,7 @@ function createFakeDriver(context: FakeContext) {
       driver.launches.push({ kind: "temporary", options });
       return context;
     },
+
     async launchPersistent(options) {
       driver.launches.push({ kind: "persistent", options });
       return context;

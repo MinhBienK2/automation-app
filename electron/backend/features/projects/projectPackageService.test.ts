@@ -7,6 +7,7 @@ import type {
   WorkflowSettings,
 } from "../../../../src/types/workflow";
 import { ProjectPackageService } from "./projectPackageService";
+import { runnableGraph, startOnlyGraph } from "../../testSupport/commands.testHelpers.js";
 
 describe("ProjectPackageService", () => {
   test("builds sanitized project packages with workflows, subflows, and sessions", () => {
@@ -121,7 +122,7 @@ describe("ProjectPackageService", () => {
               name: "Broken helper",
               description: "",
               tags: [],
-              graph: startOnlyGraph(),
+              graph: startOnlyGraph(2),
               created_at: "1",
               updated_at: "1",
             },
@@ -262,45 +263,6 @@ function workflowGraphCallingSubflow(subflowId: string): WorkflowGraph {
         target_port: "in",
       },
     ],
-    viewport: { x: 0, y: 0, zoom: 1 },
-  };
-}
-
-function runnableGraph(actionId: string): WorkflowGraph {
-  return {
-    version: 2,
-    nodes: [
-      startNode(),
-      {
-        id: actionId,
-        node_type: "action",
-        label: "Wait",
-        position: { x: 200, y: 0 },
-        config: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
-        ports: [
-          { id: "in", label: "In", direction: "input" },
-          { id: "out", label: "Out", direction: "output" },
-        ],
-      },
-    ],
-    edges: [
-      {
-        id: `start-${actionId}`,
-        source_node_id: "start",
-        source_port: "out",
-        target_node_id: actionId,
-        target_port: "in",
-      },
-    ],
-    viewport: { x: 0, y: 0, zoom: 1 },
-  };
-}
-
-function startOnlyGraph(): WorkflowGraph {
-  return {
-    version: 2,
-    nodes: [startNode()],
-    edges: [],
     viewport: { x: 0, y: 0, zoom: 1 },
   };
 }

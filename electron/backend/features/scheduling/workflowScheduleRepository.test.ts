@@ -4,11 +4,12 @@ import { describe, expect, test } from "vitest";
 import { WorkflowRepository } from "../workflows/workflowRepository.js";
 import { WorkflowScheduleRepository } from "./workflowScheduleRepository.js";
 import { TestDbAdapter } from "../../db/testDbAdapter.js";
+import { startOnlyGraph } from "../../testSupport/commands.testHelpers.js";
 
 describe("WorkflowScheduleRepository", () => {
   test("persists schedules with workflow names and schedule events", async () => {
     const { workflowRepository, scheduleRepository } = await createRepositories();
-    const workflow = await workflowRepository.createWorkflow("Nightly", draftGraph());
+    const workflow = await workflowRepository.createWorkflow("Nightly", startOnlyGraph(2));
 
     const schedule = await scheduleRepository.createSchedule({
       workflow_id: workflow.id,
@@ -54,7 +55,7 @@ describe("WorkflowScheduleRepository", () => {
 
   test("cascades schedules and events when a workflow is deleted", async () => {
     const { workflowRepository, scheduleRepository } = await createRepositories();
-    const workflow = await workflowRepository.createWorkflow("Temporary", draftGraph());
+    const workflow = await workflowRepository.createWorkflow("Temporary", startOnlyGraph(2));
     const schedule = await scheduleRepository.createSchedule({
       workflow_id: workflow.id,
       name: "Once",
@@ -88,23 +89,5 @@ async function createRepositories() {
   return {
     workflowRepository: new WorkflowRepository(database),
     scheduleRepository: new WorkflowScheduleRepository(database),
-  };
-}
-
-function draftGraph() {
-  return {
-    version: 2,
-    nodes: [
-      {
-        id: "start",
-        node_type: "start" as const,
-        label: "Start",
-        position: { x: 0, y: 0 },
-        config: null,
-        ports: [{ id: "out", label: "Out", direction: "output" as const }],
-      },
-    ],
-    edges: [],
-    viewport: { x: 0, y: 0, zoom: 1 },
   };
 }

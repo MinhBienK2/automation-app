@@ -1,12 +1,7 @@
 // @vitest-environment node
 
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
-import { createWorkflowCommandHandlers } from "../commands";
-import { createAppPaths } from "../db/database.js";
-import { TestDbAdapter } from "../db/testDbAdapter.js";
+import { describe, expect, test } from "vitest";
+import { createTestHandlers } from "../testSupport/commands.testHelpers.js";
 import {
   compileWorkflowGraphFromNode,
   compileWorkflowRunPlan,
@@ -22,13 +17,6 @@ import type {
   WorkflowSettings,
 } from "../../../src/types/workflow";
 
-const tempRoots: string[] = [];
-
-afterEach(async () => {
-  for (const root of tempRoots.splice(0)) {
-    await fs.rm(root, { recursive: true, force: true });
-  }
-});
 
 describe("TypeScript graph compiler parity", () => {
   test("compiles edge delays as synthetic wait steps before the target node", () => {
@@ -1848,17 +1836,6 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 });
-
-
-async function createTestHandlers() {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-app-"));
-  tempRoots.push(tempRoot);
-  const appPaths = createAppPaths(tempRoot);
-  const database = await TestDbAdapter.create();
-  return {
-    handlers: createWorkflowCommandHandlers({ appPaths, database }),
-  };
-}
 
 function graphOf(nodes: GraphNode[], edges: ReturnType<typeof edge>[]): WorkflowGraph {
   return {
