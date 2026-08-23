@@ -13,7 +13,7 @@ import {
   tempRoots,
   type ProjectWorkflow,
   type ProjectWorkflowTestHandlers,
-} from "../../commands.testHelpers";
+} from "../../testSupport/commands.testHelpers";
 import type {
   WorkflowGraph,
   WorkflowPackage,

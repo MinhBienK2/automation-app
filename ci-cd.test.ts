@@ -346,11 +346,10 @@ describe("desktop CI/CD", () => {
     expect(topLevelFiles).toEqual([
       "commandHelpers.test.ts",
       "commandHelpers.ts",
-      "commands.testHelpers.ts",
       "commands.ts",
     ]);
     expect(topLevelDirectories).toEqual(
-      expect.arrayContaining(["actions", "browser", "config", "db", "features", "graph", "runtime", "shared"]),
+      expect.arrayContaining(["actions", "browser", "config", "db", "features", "graph", "runtime", "shared", "testSupport"]),
     );
   });
 

@@ -12,7 +12,7 @@ import {
   FakeRecordingDriver,
   FakeRecordingContext,
   FakeRecordingPage,
-} from "../../commands.testHelpers";
+} from "../../testSupport/commands.testHelpers";
 import type {
   ActionConfig,
   WorkflowGraph,

@@ -1,16 +1,16 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import { navigateSchema } from "./navigate.js";
-import { clickSchema } from "./click.js";
-import { inputTextSchema } from "./input_text.js";
-import { waitSchema } from "./wait.js";
-import { extractTextSchema } from "./extract_text.js";
-import { ifConditionSchema } from "./if_condition.js";
-import { setVariableSchema } from "./set_variable.js";
+import { navigateSchema } from "../navigation/schemas/navigate.js";
+import { clickSchema } from "../interaction/schemas/click.js";
+import { inputTextSchema } from "../interaction/schemas/input_text.js";
+import { waitSchema } from "../navigation/schemas/wait.js";
+import { extractTextSchema } from "../extraction/schemas/extract_text.js";
+import { ifConditionSchema } from "../flow-control/schemas/if_condition.js";
+import { setVariableSchema } from "../variables/schemas/set_variable.js";
 import { callSubflowSchema } from "./call_subflow.js";
-import { takeScreenshotSchema } from "./take_screenshot.js";
-import { executeJsSchema } from "./execute_js.js";
+import { takeScreenshotSchema } from "../extraction/schemas/take_screenshot.js";
+import { executeJsSchema } from "../environment/schemas/execute_js.js";
 import { parseActionConfigShape, actionSchemas } from "./index.js";
 import type { WorkflowNode } from "../../../../src/types/workflow.js";
 

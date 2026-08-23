@@ -15,7 +15,7 @@ import {
   tempRoots,
   edgeForPackage,
   type ProjectWorkflow,
-} from "../../commands.testHelpers";
+} from "../../testSupport/commands.testHelpers";
 import type {
   CompiledWorkflowGraph,
   WorkflowGraph,

@@ -31,27 +31,21 @@ function extractNodeMeta(node: GraphNode): NodeMeta {
   return { action_type: null, subflow_ref: null };
 }
 
-async function decomposeAndInsert(
+async function insertNodesChunked(
   db: DbAdapter,
-  graph: WorkflowGraph,
   nodeTable: string,
-  edgeTable: string,
   ownerColumn: string,
   ownerId: string,
+  dbOwnerId: string,
+  graph: WorkflowGraph,
   now: string,
 ): Promise<void> {
-  const dbOwnerId = db.ownerId;
-  if (!dbOwnerId) {
-    throw new Error("decomposeAndInsert requires a DbAdapter with a valid ownerId");
-  }
-
-  // Insert nodes in chunks
   const nodeChunkSize = 100;
   for (let c = 0; c < graph.nodes.length; c += nodeChunkSize) {
     const chunk = graph.nodes.slice(c, c + nodeChunkSize);
     const placeholders: string[] = [];
     const values: any[] = [];
-    
+
     for (let i = 0; i < chunk.length; i++) {
       const node = chunk[i];
       const meta = extractNodeMeta(node);
@@ -77,7 +71,7 @@ async function decomposeAndInsert(
         dbOwnerId,
       );
     }
-    
+
     if (chunk.length > 0) {
       await db.execute(
         `INSERT INTO ${nodeTable} (
@@ -87,8 +81,33 @@ async function decomposeAndInsert(
       );
     }
   }
+}
 
-  // Insert edges in chunks
+async function decomposeAndInsert(
+  db: DbAdapter,
+  graph: WorkflowGraph,
+  nodeTable: string,
+  edgeTable: string,
+  ownerColumn: string,
+  ownerId: string,
+  now: string,
+): Promise<void> {
+  const dbOwnerId = db.ownerId;
+  if (!dbOwnerId) {
+    throw new Error("decomposeAndInsert requires a DbAdapter with a valid ownerId");
+  }
+  await insertNodesChunked(db, nodeTable, ownerColumn, ownerId, dbOwnerId, graph, now);
+  await insertEdgesChunked(db, edgeTable, ownerColumn, ownerId, dbOwnerId, graph);
+}
+
+async function insertEdgesChunked(
+  db: DbAdapter,
+  edgeTable: string,
+  ownerColumn: string,
+  ownerId: string,
+  dbOwnerId: string,
+  graph: WorkflowGraph,
+): Promise<void> {
   const edgeChunkSize = 100;
   for (let c = 0; c < graph.edges.length; c += edgeChunkSize) {
     const chunk = graph.edges.slice(c, c + edgeChunkSize);
@@ -130,6 +149,7 @@ async function decomposeAndInsert(
     }
   }
 }
+
 
 const writeLocks = new Map<string, Promise<any>>();
 

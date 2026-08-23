@@ -151,7 +151,7 @@ export function createProjectCommands(deps: CommandDeps) {
     if (usage.length > 0) {
       throw commandError("Browser profile is used by workflows", "profileId");
     }
-    const profileDir = getBrowserProfileKey(profile);
+    const profileDir = browserProfileKey(profile);
     await repository.deleteBrowserProfile(profile.id);
     if (profileDir) {
       nodeFs.rmSync(path.join(deps.context.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)), {

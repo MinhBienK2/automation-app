@@ -10,7 +10,7 @@ import {
   startToEndSuccessGraph,
   type ProjectWorkflow,
   type ProjectWorkflowTestHandlers,
-} from "../../commands.testHelpers";
+} from "../../testSupport/commands.testHelpers";
 import type { CompiledWorkflowGraph } from "../../../../src/types/workflow";
 
 describe("Subflows integration", () => {

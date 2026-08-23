@@ -1,52 +1,52 @@
 import type { z } from "zod";
 import type { ActionConfig, GraphNode } from "../../../../src/types/workflow.js";
 
-import { navigateSchema } from "./navigate.js";
-import { clickSchema } from "./click.js";
-import { inputTextSchema } from "./input_text.js";
-import { waitSchema } from "./wait.js";
-import { extractTextSchema } from "./extract_text.js";
-import { ifConditionSchema } from "./if_condition.js";
-import { setVariableSchema } from "./set_variable.js";
-import { takeScreenshotSchema } from "./take_screenshot.js";
-import { executeJsSchema } from "./execute_js.js";
+import { navigateSchema } from "../navigation/schemas/navigate.js";
+import { clickSchema } from "../interaction/schemas/click.js";
+import { inputTextSchema } from "../interaction/schemas/input_text.js";
+import { waitSchema } from "../navigation/schemas/wait.js";
+import { extractTextSchema } from "../extraction/schemas/extract_text.js";
+import { ifConditionSchema } from "../flow-control/schemas/if_condition.js";
+import { setVariableSchema } from "../variables/schemas/set_variable.js";
+import { takeScreenshotSchema } from "../extraction/schemas/take_screenshot.js";
+import { executeJsSchema } from "../environment/schemas/execute_js.js";
 
-import { clearInputSchema } from "./clear_input.js";
-import { selectOptionSchema } from "./select_option.js";
-import { checkSchema } from "./check.js";
-import { uncheckSchema } from "./uncheck.js";
-import { toggleCheckboxSchema } from "./toggle_checkbox.js";
-import { selectRadioSchema } from "./select_radio.js";
-import { uploadFileSchema } from "./upload_file.js";
-import { submitFormSchema } from "./submit_form.js";
-import { selectCustomOptionSchema } from "./select_custom_option.js";
-import { setContenteditableSchema } from "./set_contenteditable.js";
+import { clearInputSchema } from "../interaction/schemas/clear_input.js";
+import { selectOptionSchema } from "../interaction/schemas/select_option.js";
+import { checkSchema } from "../interaction/schemas/check.js";
+import { uncheckSchema } from "../interaction/schemas/uncheck.js";
+import { toggleCheckboxSchema } from "../interaction/schemas/toggle_checkbox.js";
+import { selectRadioSchema } from "../interaction/schemas/select_radio.js";
+import { uploadFileSchema } from "../interaction/schemas/upload_file.js";
+import { submitFormSchema } from "../interaction/schemas/submit_form.js";
+import { selectCustomOptionSchema } from "../interaction/schemas/select_custom_option.js";
+import { setContenteditableSchema } from "../interaction/schemas/set_contenteditable.js";
 
-import { pressKeySchema } from "./press_key.js";
-import { hotkeySchema } from "./hotkey.js";
-import { typeSequenceSchema } from "./type_sequence.js";
-import { setClipboardSchema } from "./set_clipboard.js";
-import { pasteClipboardSchema } from "./paste_clipboard.js";
-import { hoverSchema } from "./hover.js";
-import { doubleClickSchema } from "./double_click.js";
-import { rightClickSchema } from "./right_click.js";
-import { dragAndDropSchema } from "./drag_and_drop.js";
-import { focusElementSchema } from "./focus_element.js";
-import { blurElementSchema } from "./blur_element.js";
-import { findElementSchema } from "./find_element.js";
-import { scrollSchema } from "./scroll.js";
+import { pressKeySchema } from "../interaction/schemas/press_key.js";
+import { hotkeySchema } from "../interaction/schemas/hotkey.js";
+import { typeSequenceSchema } from "../interaction/schemas/type_sequence.js";
+import { setClipboardSchema } from "../interaction/schemas/set_clipboard.js";
+import { pasteClipboardSchema } from "../interaction/schemas/paste_clipboard.js";
+import { hoverSchema } from "../interaction/schemas/hover.js";
+import { doubleClickSchema } from "../interaction/schemas/double_click.js";
+import { rightClickSchema } from "../interaction/schemas/right_click.js";
+import { dragAndDropSchema } from "../interaction/schemas/drag_and_drop.js";
+import { focusElementSchema } from "../interaction/schemas/focus_element.js";
+import { blurElementSchema } from "../interaction/schemas/blur_element.js";
+import { findElementSchema } from "../interaction/schemas/find_element.js";
+import { scrollSchema } from "../interaction/schemas/scroll.js";
 
-import { extractAttributeSchema } from "./extract_attribute.js";
-import { extractInputValueSchema } from "./extract_input_value.js";
-import { extractTableSchema } from "./extract_table.js";
-import { extractListSchema } from "./extract_list.js";
-import { countElementsSchema } from "./count_elements.js";
-import { extractRegexMatchesSchema } from "./extract_regex_matches.js";
-import { writeTextFileSchema } from "./write_text_file.js";
-import { assertElementSchema } from "./assert_element.js";
-import { assertTextSchema } from "./assert_text.js";
-import { waitForDownloadSchema } from "./wait_for_download.js";
-import { getCurrentUrlSchema } from "./get_current_url.js";
+import { extractAttributeSchema } from "../extraction/schemas/extract_attribute.js";
+import { extractInputValueSchema } from "../extraction/schemas/extract_input_value.js";
+import { extractTableSchema } from "../extraction/schemas/extract_table.js";
+import { extractListSchema } from "../extraction/schemas/extract_list.js";
+import { countElementsSchema } from "../extraction/schemas/count_elements.js";
+import { extractRegexMatchesSchema } from "../extraction/schemas/extract_regex_matches.js";
+import { writeTextFileSchema } from "../files/schemas/write_text_file.js";
+import { assertElementSchema } from "../extraction/schemas/assert_element.js";
+import { assertTextSchema } from "../extraction/schemas/assert_text.js";
+import { waitForDownloadSchema } from "../navigation/schemas/wait_for_download.js";
+import { getCurrentUrlSchema } from "../extraction/schemas/get_current_url.js";
 import {
   extractTextContentSchema,
   extractInnerHtmlSchema,
@@ -76,50 +76,50 @@ import {
   extractNumbersSchema,
   extractUrlsSchema,
   extractEmailsSchema,
-} from "./data_capture_new.js";
+} from "../extraction/schemas/data_capture_new.js";
 
-import { randomWaitSchema } from "./random_wait.js";
-import { acceptDialogSchema } from "./accept_dialog.js";
-import { dismissDialogSchema } from "./dismiss_dialog.js";
-import { setCookieSchema } from "./set_cookie.js";
-import { clearCookiesSchema } from "./clear_cookies.js";
-import { setViewportSchema } from "./set_viewport.js";
-import { setGeolocationSchema } from "./set_geolocation.js";
-import { grantPermissionSchema } from "./grant_permission.js";
-import { setLocalStorageSchema } from "./set_local_storage.js";
-import { setSessionStorageSchema } from "./set_session_storage.js";
-import { setExtraHeadersSchema } from "./set_extra_headers.js";
-import { waitForRequestSchema } from "./wait_for_request.js";
-import { waitForResponseSchema } from "./wait_for_response.js";
-import { blockRequestSchema } from "./block_request.js";
-import { mockResponseSchema } from "./mock_response.js";
-import { goBackSchema } from "./go_back.js";
-import { goForwardSchema } from "./go_forward.js";
-import { reloadSchema } from "./reload.js";
-import { openNewTabSchema } from "./open_new_tab.js";
-import { openLinkInNewTabSchema } from "./open_link_in_new_tab.js";
-import { switchTabSchema } from "./switch_tab.js";
-import { closeTabSchema } from "./close_tab.js";
+import { randomWaitSchema } from "../navigation/schemas/random_wait.js";
+import { acceptDialogSchema } from "../navigation/schemas/accept_dialog.js";
+import { dismissDialogSchema } from "../navigation/schemas/dismiss_dialog.js";
+import { setCookieSchema } from "../environment/schemas/set_cookie.js";
+import { clearCookiesSchema } from "../environment/schemas/clear_cookies.js";
+import { setViewportSchema } from "../environment/schemas/set_viewport.js";
+import { setGeolocationSchema } from "../environment/schemas/set_geolocation.js";
+import { grantPermissionSchema } from "../environment/schemas/grant_permission.js";
+import { setLocalStorageSchema } from "../environment/schemas/set_local_storage.js";
+import { setSessionStorageSchema } from "../environment/schemas/set_session_storage.js";
+import { setExtraHeadersSchema } from "../environment/schemas/set_extra_headers.js";
+import { waitForRequestSchema } from "../environment/schemas/wait_for_request.js";
+import { waitForResponseSchema } from "../environment/schemas/wait_for_response.js";
+import { blockRequestSchema } from "../environment/schemas/block_request.js";
+import { mockResponseSchema } from "../environment/schemas/mock_response.js";
+import { goBackSchema } from "../navigation/schemas/go_back.js";
+import { goForwardSchema } from "../navigation/schemas/go_forward.js";
+import { reloadSchema } from "../navigation/schemas/reload.js";
+import { openNewTabSchema } from "../navigation/schemas/open_new_tab.js";
+import { openLinkInNewTabSchema } from "../navigation/schemas/open_link_in_new_tab.js";
+import { switchTabSchema } from "../navigation/schemas/switch_tab.js";
+import { closeTabSchema } from "../navigation/schemas/close_tab.js";
 
-import { graphNoopSchema } from "./graph_noop.js";
-import { routerConditionSchema } from "./router_condition.js";
-import { randomChoiceSchema } from "./random_choice.js";
-import { repeatTimesSchema } from "./repeat_times.js";
-import { repeatForEachSchema } from "./repeat_for_each.js";
-import { retryBlockSchema } from "./retry_block.js";
-import { switchConditionSchema } from "./switch_condition.js";
-import { whileLoopSchema } from "./while_loop.js";
-import { repeatUntilSchema } from "./repeat_until.js";
-import { tryCatchSchema } from "./try_catch.js";
-import { fallbackBlockSchema } from "./fallback_block.js";
-import { breakLoopSchema } from "./break_loop.js";
-import { continueLoopSchema } from "./continue_loop.js";
-import { stopWorkflowSchema } from "./stop_workflow.js";
-import { transformVariableSchema } from "./transform_variable.js";
-import { updateNumberVariableSchema } from "./update_number_variable.js";
-import { updateTextVariableSchema } from "./update_text_variable.js";
-import { updateFlagVariableSchema } from "./update_flag_variable.js";
-import { updateListVariableSchema } from "./update_list_variable.js";
+import { graphNoopSchema } from "../flow-control/schemas/graph_noop.js";
+import { routerConditionSchema } from "../flow-control/schemas/router_condition.js";
+import { randomChoiceSchema } from "../flow-control/schemas/random_choice.js";
+import { repeatTimesSchema } from "../flow-control/schemas/repeat_times.js";
+import { repeatForEachSchema } from "../flow-control/schemas/repeat_for_each.js";
+import { retryBlockSchema } from "../flow-control/schemas/retry_block.js";
+import { switchConditionSchema } from "../flow-control/schemas/switch_condition.js";
+import { whileLoopSchema } from "../flow-control/schemas/while_loop.js";
+import { repeatUntilSchema } from "../flow-control/schemas/repeat_until.js";
+import { tryCatchSchema } from "../flow-control/schemas/try_catch.js";
+import { fallbackBlockSchema } from "../flow-control/schemas/fallback_block.js";
+import { breakLoopSchema } from "../flow-control/schemas/break_loop.js";
+import { continueLoopSchema } from "../flow-control/schemas/continue_loop.js";
+import { stopWorkflowSchema } from "../flow-control/schemas/stop_workflow.js";
+import { transformVariableSchema } from "../variables/schemas/transform_variable.js";
+import { updateNumberVariableSchema } from "../variables/schemas/update_number_variable.js";
+import { updateTextVariableSchema } from "../variables/schemas/update_text_variable.js";
+import { updateFlagVariableSchema } from "../variables/schemas/update_flag_variable.js";
+import { updateListVariableSchema } from "../variables/schemas/update_list_variable.js";
 import {
   createEmptyObjectSchema,
   createObjectManualSchema,
@@ -135,21 +135,21 @@ import {
   executeObjectScriptSchema,
   checkObjectKeyExistsSchema,
   checkObjectEmptySchema,
-} from "./object_actions.js";
-import { assertOutputSchema } from "./assert_output.js";
-import { domainAllowlistSchema } from "./domain_allowlist.js";
-import { setJsonVariablesSchema } from "./set_json_variables.js";
-import { checkConditionsSchema } from "./check_conditions.js";
-import { calculateValueSchema } from "./calculate_value.js";
-import { readTextFileSchema } from "./read_text_file.js";
-import { parseCsvExcelSchema } from "./parse_csv_excel.js";
-import { writeCsvExcelSchema } from "./write_csv_excel.js";
-import { fileOperationSchema } from "./file_operation.js";
-import { httpRequestSchema } from "./http_request.js";
-import { dateTimeOperationSchema } from "./date_time_operation.js";
-import { cryptoOperationSchema } from "./crypto_operation.js";
-import { switchFrameSchema } from "./switch_frame.js";
-import { switchToParentFrameSchema } from "./switch_to_parent_frame.js";
+} from "../variables/schemas/object_actions.js";
+import { assertOutputSchema } from "../flow-control/schemas/assert_output.js";
+import { domainAllowlistSchema } from "../navigation/schemas/domain_allowlist.js";
+import { setJsonVariablesSchema } from "../variables/schemas/set_json_variables.js";
+import { checkConditionsSchema } from "../variables/schemas/check_conditions.js";
+import { calculateValueSchema } from "../variables/schemas/calculate_value.js";
+import { readTextFileSchema } from "../files/schemas/read_text_file.js";
+import { parseCsvExcelSchema } from "../files/schemas/parse_csv_excel.js";
+import { writeCsvExcelSchema } from "../files/schemas/write_csv_excel.js";
+import { fileOperationSchema } from "../files/schemas/file_operation.js";
+import { httpRequestSchema } from "../files/schemas/http_request.js";
+import { dateTimeOperationSchema } from "../files/schemas/date_time_operation.js";
+import { cryptoOperationSchema } from "../files/schemas/crypto_operation.js";
+import { switchFrameSchema } from "../interaction/schemas/switch_frame.js";
+import { switchToParentFrameSchema } from "../interaction/schemas/switch_to_parent_frame.js";
 import {
   createEmptyListSchema,
   createListManualSchema,
@@ -171,7 +171,7 @@ import {
   checkListContainsSchema,
   checkListAnyMatchSchema,
   checkListAllMatchSchema,
-} from "./list_actions.js";
+} from "../variables/schemas/list_actions.js";
 import {
   setTextVariableSchema,
   appendTextSchema,
@@ -185,7 +185,7 @@ import {
   checkTextEmptySchema,
   checkTextContainsSchema,
   checkTextRegexMatchesSchema,
-} from "./text_actions.js";
+} from "../variables/schemas/text_actions.js";
 import {
   setNumberVariableSchema,
   generateRandomNumberSchema,
@@ -196,7 +196,7 @@ import {
   compareNumbersSchema,
   checkNumberRangeSchema,
   checkNumberPropertySchema,
-} from "./number_actions.js";
+} from "../variables/schemas/number_actions.js";
 import {
   setBooleanVariableSchema,
   generateRandomBooleanSchema,
@@ -204,7 +204,7 @@ import {
   booleanLogicalOpSchema,
   compareBooleansSchema,
   checkBooleanPropertySchema,
-} from "./boolean_actions.js";
+} from "../variables/schemas/boolean_actions.js";
 
 
 

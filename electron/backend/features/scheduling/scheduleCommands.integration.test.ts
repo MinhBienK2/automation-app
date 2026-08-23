@@ -6,7 +6,7 @@ import {
   runnableGraph,
   waitFor,
   type ProjectWorkflowTestHandlers,
-} from "../../commands.testHelpers";
+} from "../../testSupport/commands.testHelpers";
 import type { RunState } from "../../../../src/types/workflow";
 
 describe("Schedule commands integration", () => {

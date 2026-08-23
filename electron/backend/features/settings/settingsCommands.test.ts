@@ -9,7 +9,7 @@ import {
   tempRoots,
   runnableGraph,
   type ProjectWorkflowTestHandlers,
-} from "../../commands.testHelpers";
+} from "../../testSupport/commands.testHelpers";
 import type {
   WorkflowSettings,
   RunState,

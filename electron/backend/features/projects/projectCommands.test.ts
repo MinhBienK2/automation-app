@@ -17,7 +17,7 @@ import {
   type TestBrowserProfile,
   type TestSubflow,
   type ProjectWorkflowTestHandlers,
-} from "../../commands.testHelpers";
+} from "../../testSupport/commands.testHelpers";
 import type { ProjectPackage, CompiledWorkflowGraph } from "../../../../src/types/workflow";
 import { deriveFingerprintSeedFromIdentityId } from "../../commands.js";
 

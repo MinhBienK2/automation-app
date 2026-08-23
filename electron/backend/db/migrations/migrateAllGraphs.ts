@@ -21,6 +21,42 @@ type IdRow = { id: string };
  * Safe for both SQLite (legacy) and PostgreSQL (DbAdapter).
  * If migration_log table doesn't exist, logs to console.
  */
+type MigrationTx = {
+  ownerId: string | null;
+  query: DbAdapter["query"];
+  execute: DbAdapter["execute"];
+};
+
+async function writeMigrationLog(
+  tx: MigrationTx,
+  targetTable: string,
+  targetId: string,
+  result: RowMigrationResult,
+): Promise<void> {
+  const params = [
+    targetTable,
+    targetId,
+    result.startedAt,
+    result.finishedAt,
+    result.fromVersion,
+    result.toVersion,
+    JSON.stringify(result.applied),
+    result.failure ? JSON.stringify(result.failure) : null,
+  ];
+  if (tx.ownerId) {
+    await tx.execute(
+      `INSERT INTO migration_log (id, target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [crypto.randomUUID(), ...params]
+    );
+  } else {
+    await tx.execute(
+      `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      params
+    );
+  }
+}
 export async function migrateAllGraphs(db: DbAdapter): Promise<MigrationReport> {
   const start = Date.now();
   let scanned = 0;
@@ -55,29 +91,7 @@ export async function migrateAllGraphs(db: DbAdapter): Promise<MigrationReport> 
       if (result.failed) failed++;
       if (result.migrated || result.failed) {
         if (hasMigrationLog) {
-          const params = [
-            "workflows",
-            row.id,
-            result.startedAt,
-            result.finishedAt,
-            result.fromVersion,
-            result.toVersion,
-            JSON.stringify(result.applied),
-            result.failure ? JSON.stringify(result.failure) : null,
-          ];
-          if (tx.ownerId) {
-            await tx.execute(
-              `INSERT INTO migration_log (id, target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-              [crypto.randomUUID(), ...params]
-            );
-          } else {
-            await tx.execute(
-              `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-              params
-            );
-          }
+          await writeMigrationLog(tx, "workflows", row.id, result);
         } else {
           console.log(`[migrateAllGraphs] Workflow ${row.id} migrated from version ${result.fromVersion} to ${result.toVersion}`);
         }
@@ -91,29 +105,7 @@ export async function migrateAllGraphs(db: DbAdapter): Promise<MigrationReport> 
       if (result.failed) failed++;
       if (result.migrated || result.failed) {
         if (hasMigrationLog) {
-          const params = [
-            "subflows",
-            row.id,
-            result.startedAt,
-            result.finishedAt,
-            result.fromVersion,
-            result.toVersion,
-            JSON.stringify(result.applied),
-            result.failure ? JSON.stringify(result.failure) : null,
-          ];
-          if (tx.ownerId) {
-            await tx.execute(
-              `INSERT INTO migration_log (id, target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-              [crypto.randomUUID(), ...params]
-            );
-          } else {
-            await tx.execute(
-              `INSERT INTO migration_log (target_table, target_id, started_at, finished_at, from_version, to_version, applied_json, failure_json)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-              params
-            );
-          }
+          await writeMigrationLog(tx, "subflows", row.id, result);
         } else {
           console.log(`[migrateAllGraphs] Subflow ${row.id} migrated from version ${result.fromVersion} to ${result.toVersion}`);
         }

@@ -58,7 +58,7 @@ export default [
       "electron/backend/graph/**/*.{ts,tsx}",
       "electron/backend/persistence/**/*.{ts,tsx}",
       "electron/backend/features/**/*.{ts,tsx}",
-      "electron/backend/commands.testHelpers.ts",
+      "electron/backend/testSupport/**/*.{ts,tsx}",
       "electron/backend/runtime/**/*.{ts,tsx}",
     ],
     rules: {
