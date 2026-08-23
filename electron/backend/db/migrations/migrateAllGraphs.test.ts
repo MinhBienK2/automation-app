@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { CURRENT_WORKFLOW_GRAPH_VERSION } from "../../graph/migration.js";
 import { describe, expect, test } from "vitest";
 import { WorkflowRepository } from "../../features/workflows/workflowRepository.js";
 import { migrateAllGraphs } from "./migrateAllGraphs.js";
@@ -50,12 +51,12 @@ describe("lazy migrate on read", () => {
     // First read: should migrate and persist
     const graph = await repo.getWorkflowGraph(workflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(8);
+    expect(graph!.version).toBe(CURRENT_WORKFLOW_GRAPH_VERSION);
     expect(graph!.migration_notes).toEqual([]);
 
     // Second read: should be a no-op (already v8)
     const graph2 = await repo.getWorkflowGraph(workflow.id);
-    expect(graph2!.version).toBe(8);
+    expect(graph2!.version).toBe(CURRENT_WORKFLOW_GRAPH_VERSION);
   });
 
   test("getSubflowGraph migrates v1 to v4 and persists back", async () => {
@@ -68,7 +69,7 @@ describe("lazy migrate on read", () => {
 
     const graph = await repo.getSubflowGraph(subflow.id);
     expect(graph).not.toBeNull();
-    expect(graph!.version).toBe(8);
+    expect(graph!.version).toBe(CURRENT_WORKFLOW_GRAPH_VERSION);
   });
 });
 

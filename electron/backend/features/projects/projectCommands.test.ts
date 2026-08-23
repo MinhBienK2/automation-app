@@ -1,16 +1,19 @@
 // @vitest-environment node
 
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 import {
   createTestHandlers,
   runnableGraph,
+  subflowGraphWithAction,
   workflowGraphCallingSubflow,
   tempRoots,
   type ProjectWorkflow,
   type ProjectWorkflowTestHandlers,
 } from "../../testSupport/commands.testHelpers";
+import { deriveFingerprintSeedFromIdentityId } from "../workflows/workflowSettingsService.js";
 import type { ProjectPackage } from "../../../../src/types/workflow";
 
 describe("Projects, Environments, and Subflows integration", () => {
@@ -474,7 +477,7 @@ describe("Projects, Environments, and Subflows integration", () => {
     const { createAppPaths } = await import("../../db/database.js");
     const { TestDbAdapter } = await import("../../db/testDbAdapter.js");
 
-    const tempRoot = await fs.mkdtemp(path.join(tempRoots[0] ? path.dirname(tempRoots[0]) : "/tmp", "automation-app-"));
+    const tempRoot = await fs.mkdtemp(path.join(tempRoots[0] ? path.dirname(tempRoots[0]) : os.tmpdir(), "automation-app-"));
     const appPaths = createAppPaths(tempRoot);
     const database = await TestDbAdapter.create();
     

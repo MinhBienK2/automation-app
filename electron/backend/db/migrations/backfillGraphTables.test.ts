@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { WorkflowRepository } from "../../features/workflows/workflowRepository.js";
 import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "../../features/workflows/normalizedGraphRepository.js";
 import { sampleGraph } from "../../testSupport/commands.testHelpers.js";
+import { TestDbAdapter } from "../../db/testDbAdapter.js";
 
 describe("save writes to normalized tables", () => {
   test("saveWorkflowGraph writes to normalized tables", async () => {

@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "node:fs/promises";
 import { existsSync } from "node:fs";

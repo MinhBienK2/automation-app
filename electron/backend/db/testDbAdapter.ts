@@ -47,10 +47,24 @@ export class TestDbAdapter implements DbAdapter {
     this.db.prepare(sql).run();
   }
 
+  /**
+   * Translate Postgres-style `$n` placeholders to plain `?` markers. node:sqlite
+   * rejects positional binding for numbered `?n` markers, and `$n` may repeat or
+   * skip indices, so values are re-collected in marker order.
+   */
+  private translate(sql: string, params: any[]): { text: string; values: any[] } {
+    const values: any[] = [];
+    const text = sql.replace(/\$(\d+)/g, (_match, index: string) => {
+      const value = params[Number(index) - 1];
+      values.push(value === undefined ? null : value);
+      return "?";
+    });
+    return { text, values };
+  }
+
   prepare(sql: string) {
-    let translatedSql = sql.replace(/\$(\d+)/g, "?$1");
-    // Also map "?" placeholders if they are used
-    const stmt = this.db.prepare(translatedSql);
+    const { text } = this.translate(sql, []);
+    const stmt = this.db.prepare(text);
     return {
       run: (...params: any[]) => {
         const safeParams = params.map((p) => (p === undefined ? null : p));
@@ -72,10 +86,11 @@ export class TestDbAdapter implements DbAdapter {
       return [{ tablename: "migration_log" }];
     }
 
-    let translatedSql = sql.replace(/\$(\d+)/g, "?$1");
+    const translated = this.translate(sql, params);
+    let translatedSql = translated.text;
     translatedSql = translatedSql.replace(/COALESCE\((started_at|finished_at),\s*(started_at|finished_at)\)/gi, "COALESCE($1, $2)");
 
-    const safeParams = params.map((p) => (p === undefined ? null : p));
+    const safeParams = translated.values;
 
     try {
       const stmt = this.db.prepare(translatedSql);
@@ -95,8 +110,7 @@ export class TestDbAdapter implements DbAdapter {
   }
 
   async execute(sql: string, params: any[] = []): Promise<{ changes: number }> {
-    let translatedSql = sql.replace(/\$(\d+)/g, "?$1");
-    const safeParams = params.map((p) => (p === undefined ? null : p));
+    const { text: translatedSql, values: safeParams } = this.translate(sql, params);
     try {
       const stmt = this.db.prepare(translatedSql);
       const res = stmt.run(...safeParams);
