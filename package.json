@@ -30,6 +30,7 @@
     "test:e2e:real-web": "npm run build:electron && E2E_REAL_WEB=1 playwright test tests/e2e/real-world-web.e2e.ts",
     "test:fingerprint": "vitest run electron/backend/browser/sessionManager.test.ts electron/backend/runtime/runner.test.ts",
     "test:smoke": "RUN_CLOAKBROWSER_SMOKE=1 vitest run electron/backend/runtime/runner.smoke.test.ts",
+    "test:desktop:smoke": "RUN_DESKTOP_SMOKE=1 vitest run electron/backend/surfaces/desktop/realDriver.smoke.test.ts",
     "lint": "eslint src/ electron/ --max-warnings=0",
     "lint:fix": "eslint src/ electron/ --fix",
     "agent:validate-routes": "node scripts/agent/validate-routes.mjs",
