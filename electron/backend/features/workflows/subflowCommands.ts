@@ -6,7 +6,7 @@ import type {
   SubflowExport,
 } from "../../../../src/types/workflow.js";
 import { commandError, createDraftGraph } from "../../commandHelpers.js";
-import type { CommandDeps } from "../types.js";
+import type { SubflowCommandsDeps } from "../types.js";
 import { migrateWorkflowGraph } from "../../graph/migration.js";
 import { validateWorkflowGraph as validateGraph } from "../../graph/compiler.js";
 
@@ -28,7 +28,7 @@ function assertNoUnsupportedGraphDiscriminants(graph: WorkflowGraph) {
   throw commandError(issue.message, "workflow.graph");
 }
 
-export function createSubflowCommands(deps: CommandDeps) {
+export function createSubflowCommands(deps: SubflowCommandsDeps) {
   const {
     repository,
     requireProject,

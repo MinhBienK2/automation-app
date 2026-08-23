@@ -11,7 +11,7 @@
  * Spec: `docs/domain/desktop/desktop-target.md`.
  */
 
-import type { CommandError } from "../../runtime/runManager.js";
+import type { CommandError } from "../../commandHelpers.js";
 import type { DesktopInspection } from "../../surfaces/desktop/inspector.js";
 import type { DesktopTargetRepository } from "./desktopTargetRepository.js";
 import type {

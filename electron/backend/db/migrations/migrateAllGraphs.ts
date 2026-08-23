@@ -88,16 +88,15 @@ export async function migrateAllGraphs(db: DbAdapter): Promise<MigrationReport> 
   // Check if migration_log table exists (only SQLite has it by default)
   let hasMigrationLog = false;
   try {
-    if (db.ownerId) {
-      // In PG, check if migration_log exists
-      const tableCheck = await db.query(
-        "SELECT tablename FROM pg_tables WHERE tablename = 'migration_log'"
-      );
-      hasMigrationLog = tableCheck.length > 0;
-    } else {
+    if (!db.ownerId) {
       // If we don't have user context yet, skip
       return { scanned: 0, migrated: 0, failed: 0, durationMs: 0 };
     }
+    // In PG, check if migration_log exists
+    const tableCheck = await db.query(
+      "SELECT tablename FROM pg_tables WHERE tablename = 'migration_log'"
+    );
+    hasMigrationLog = tableCheck.length > 0;
   } catch {
     hasMigrationLog = false;
   }
@@ -123,6 +122,7 @@ export async function migrateAllGraphs(db: DbAdapter): Promise<MigrationReport> 
 
   return { scanned, migrated, failed, durationMs: Date.now() - start };
 }
+
 
 type AssembleFn = (db: DbAdapter, id: string) => Promise<WorkflowGraph | null>;
 

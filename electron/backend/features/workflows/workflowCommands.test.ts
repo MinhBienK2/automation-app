@@ -23,7 +23,10 @@ import type {
   WorkflowSettings,
   RunState,
 } from "../../../../src/types/workflow";
-import { deriveFingerprintSeedFromIdentityId } from "../commands";
+import { MIGRATIONS } from "../../graph/migrations/index.js";
+
+const LATEST_GRAPH_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
+import { deriveFingerprintSeedFromIdentityId } from "./workflowSettingsService";
 import { finishRun } from "../../runtime/runDbHelpers";
 import * as mongoModule from "../../db/mongo.js";
 

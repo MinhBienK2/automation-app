@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { sanitizePathSegment } from "../shared/paths.js";
 export type EvidenceArtifactInput = {
   evidenceDir: string;
   runId: string;
@@ -10,10 +11,6 @@ export type EvidenceArtifactInput = {
   fallbackName: string;
   extension: string;
 };
-
-export function sanitizePathSegment(value: string) {
-  return value.trim().replace(/[^a-zA-Z0-9._-]+/g, "-") || "default";
-}
 
 export function resolveEvidenceArtifact(input: EvidenceArtifactInput) {
   const artifactName = safeArtifactName(input.requestedName, input.fallbackName);

@@ -1,9 +1,10 @@
 import type {
   GraphNode,
-  GraphNodeType,
   WorkflowGraph,
 } from "../../../src/types/workflow.js";
 import { migrateWorkflowGraph } from "./migration.js";
+import { isLoopNode } from "./loopAnalysis.js";
+import { isQuarantinedNode } from "./quarantine.js";
 import { asRecord } from "../shared/records.js";
 
 export function reachableNodeIds(graph: WorkflowGraph): Set<string> {
@@ -32,7 +33,7 @@ export function graphHasExecutableSteps(graph: WorkflowGraph): boolean {
 
 function nodeProducesCompiledStep(node: GraphNode): boolean {
   if (node.node_type === "start") return false;
-  if (node.node_type === "quarantined") return false;
+  if (isQuarantinedNode(node)) return false;
   if (node.node_type === "end_success") {
     return asRecord(node.config).close_browser === true;
   }
@@ -99,8 +100,4 @@ export function loopControlOutsideLoopNodeIds(graph: WorkflowGraph): Set<string>
     }
   }
   return invalid;
-}
-
-function isLoopNode(nodeType: GraphNodeType) {
-  return ["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(nodeType);
 }

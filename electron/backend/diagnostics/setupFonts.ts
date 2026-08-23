@@ -164,10 +164,12 @@ export async function setupCloakBrowserFonts({
   repoRoot,
   runner = runCommand,
   log = console.log,
+  commandAvailable: probe = commandAvailable,
 }: {
   repoRoot: string;
   runner?: typeof runCommand;
   log?: (message: string) => void;
+  commandAvailable?: (command: string) => Promise<boolean>;
 }): Promise<void> {
   if (process.platform !== "linux") {
     throw new Error("CloakBrowser Linux font setup is only supported on Linux hosts.");
@@ -175,11 +177,11 @@ export async function setupCloakBrowserFonts({
 
   const plan = buildCloakBrowserFontSetupPlan(repoRoot);
 
-  if (!(await commandAvailable("apt-get"))) {
+  if (!(await probe("apt-get"))) {
     throw new Error("apt-get is required to download Ubuntu font packages.");
   }
 
-  if (!(await commandAvailable("dpkg-deb"))) {
+  if (!(await probe("dpkg-deb"))) {
     throw new Error("dpkg-deb is required to extract downloaded font packages.");
   }
 

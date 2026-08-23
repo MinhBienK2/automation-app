@@ -55,8 +55,16 @@ export function minimalRuntime(
     currentActionSensitive: null,
     currentSurfaceTrace: null,
     currentStepMetadata: null,
-    signal: undefined,
     ...rest,
+    context:
+      contextOverride ??
+      overriddenSurface?.context ??
+      ({
+        pages: () => [page],
+        newPage: async () => page,
+        close: async () => undefined,
+      } as unknown as WebSurface["context"]),
+    page,
     surface: rest.surface ?? {
       kind: "web",
       context:

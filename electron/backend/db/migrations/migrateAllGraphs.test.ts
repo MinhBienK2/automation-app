@@ -7,6 +7,9 @@ import { CURRENT_WORKFLOW_GRAPH_VERSION } from "../../graph/migration.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
 import type { WorkflowGraph } from "../../../src/types/workflow.js";
 import { TestDbAdapter } from "../testDbAdapter.js";
+import { MIGRATIONS } from "../../graph/migrations/index.js";
+
+const LATEST_GRAPH_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
 function baselineV1Graph(): WorkflowGraph {
   return {
@@ -37,7 +40,7 @@ function baselineV1Graph(): WorkflowGraph {
 }
 
 describe("lazy migrate on read", () => {
-  test("getWorkflowGraph migrates v1 to v4 and persists back", async () => {
+  test("getWorkflowGraph migrates to the latest version and persists back", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
 
@@ -59,7 +62,7 @@ describe("lazy migrate on read", () => {
     expect(graph2!.version).toBe(CURRENT_WORKFLOW_GRAPH_VERSION);
   });
 
-  test("getSubflowGraph migrates v1 to v4 and persists back", async () => {
+  test("getSubflowGraph migrates to the latest version and persists back", async () => {
     const db = await TestDbAdapter.create();
     const repo = new WorkflowRepository(db);
 

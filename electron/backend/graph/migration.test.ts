@@ -68,6 +68,7 @@ describe("workflow graph migration", () => {
     };
 
     expect(migrateWorkflowGraph(graph)).toEqual({
+      ...graph,
       version: CURRENT_WORKFLOW_GRAPH_VERSION,
       nodes: [
         {
@@ -144,6 +145,7 @@ describe("workflow graph migration", () => {
     };
 
     expect(migrateWorkflowGraph(graph)).toEqual({
+      ...graph,
       version: CURRENT_WORKFLOW_GRAPH_VERSION,
       nodes: [
         {
@@ -186,4 +188,3 @@ describe("workflow graph migration", () => {
     });
   });
 });
-

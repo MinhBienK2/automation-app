@@ -12,7 +12,7 @@ import type {
   ProfileEnvironment,
 } from "../../../../src/types/workflow.js";
 import { commandError } from "../../commandHelpers.js";
-import type { CommandDeps } from "../types.js";
+import type { WorkflowCommandsDeps } from "../types.js";
 import { migrateWorkflowGraph } from "../../graph/migration.js";
 import {
   compileWorkflowGraphFromNode,
@@ -21,7 +21,7 @@ import {
   validateActionConfig,
   validateWorkflowGraph as validateGraph,
 } from "../../graph/compiler.js";
-import { browserProfileKey } from "../../runtime/runManager.js";
+import { browserProfileKey } from "../../shared/browserProfileKey.js";
 import { runBatchWorkflowRows } from "../../runtime/batchWorkflowRun.js";
 import {
   listRevisions,
@@ -50,7 +50,7 @@ function assertNoUnsupportedGraphDiscriminants(graph: WorkflowGraph) {
   throw commandError(issue.message, "workflow.graph");
 }
 
-export function createWorkflowCommands(deps: CommandDeps) {
+export function createWorkflowCommands(deps: WorkflowCommandsDeps) {
   const {
     repository,
     settingsService,

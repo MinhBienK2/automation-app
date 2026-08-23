@@ -5,15 +5,15 @@ import type {
   Workflow,
 } from "../../../../src/types/workflow.js";
 import { commandError, createDraftGraph } from "../../commandHelpers.js";
-import type { CommandDeps } from "../types.js";
+import type { ProjectCommandsDeps } from "../types.js";
 import { randomUUID } from "node:crypto";
 import nodeFs from "node:fs";
 import path from "node:path";
-import { sanitizePathSegment } from "../evidence/artifacts.js";
+import { sanitizePathSegment } from "../../shared/paths.js";
 import { getBrowserProfileKey } from "./projectCommandCascades.js";
 import { WorkflowRepository } from "../workflows/workflowRepository.js";
 
-export function createProjectCommands(deps: CommandDeps) {
+export function createProjectCommands(deps: ProjectCommandsDeps) {
   const {
     repository,
     projectCascades,

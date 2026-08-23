@@ -30,7 +30,8 @@ export function useSchedulesWorkspace({ setAppError }: UseSchedulesWorkspaceOpti
     try {
       const items = await listSchedules();
       setSchedules(items);
-      setAppError("");
+      // A quiet schedules load must not clear an app error raised by another
+      // workspace sharing this global error channel.
       return items;
     } catch (error) {
       setAppError(commandMessage(error));

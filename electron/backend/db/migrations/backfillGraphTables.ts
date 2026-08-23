@@ -31,44 +31,26 @@ function extractNodeMeta(node: GraphNode): NodeMeta {
   return { action_type: null, subflow_ref: null };
 }
 
-/** Rows per INSERT. Keeps the statement well under any parameter limit. */
-const INSERT_CHUNK_SIZE = 100;
-
-async function decomposeAndInsert(
+async function insertGraphNodeChunks(
   db: DbAdapter,
   graph: WorkflowGraph,
   nodeTable: string,
-  edgeTable: string,
   ownerColumn: string,
   ownerId: string,
   now: string,
-): Promise<void> {
-  const dbOwnerId = db.ownerId;
-  if (!dbOwnerId) {
-    throw new Error("decomposeAndInsert requires a DbAdapter with a valid ownerId");
-  }
-
-  await insertNodes(db, graph, nodeTable, ownerColumn, ownerId, dbOwnerId, now);
-  await insertEdges(db, graph, edgeTable, ownerColumn, ownerId, dbOwnerId);
-}
-
-async function insertNodes(
-  db: DbAdapter,
-  graph: WorkflowGraph,
-  nodeTable: string,
-  ownerColumn: string,
-  ownerId: string,
   dbOwnerId: string,
-  now: string,
 ): Promise<void> {
-  for (let c = 0; c < graph.nodes.length; c += INSERT_CHUNK_SIZE) {
-    const chunk = graph.nodes.slice(c, c + INSERT_CHUNK_SIZE);
+  // Insert nodes in chunks
+  const nodeChunkSize = 100;
+  for (let c = 0; c < graph.nodes.length; c += nodeChunkSize) {
+    const chunk = graph.nodes.slice(c, c + nodeChunkSize);
     const placeholders: string[] = [];
     const values: any[] = [];
 
     for (let i = 0; i < chunk.length; i++) {
       const node = chunk[i];
       const meta = extractNodeMeta(node);
+      const ordinal = c + i;
       const baseIdx = i * 14;
       placeholders.push(
         `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9}, $${baseIdx + 10}, $${baseIdx + 11}, $${baseIdx + 12}, $${baseIdx + 13}, $${baseIdx + 14})`
@@ -84,7 +66,7 @@ async function insertNodes(
         node.label ?? null,
         JSON.stringify(node.ports ?? []),
         meta.subflow_ref,
-        c + i,
+        ordinal,
         now,
         now,
         dbOwnerId,
@@ -102,7 +84,7 @@ async function insertNodes(
   }
 }
 
-async function insertEdges(
+async function insertGraphEdgeChunks(
   db: DbAdapter,
   graph: WorkflowGraph,
   edgeTable: string,
@@ -110,8 +92,10 @@ async function insertEdges(
   ownerId: string,
   dbOwnerId: string,
 ): Promise<void> {
-  for (let c = 0; c < graph.edges.length; c += INSERT_CHUNK_SIZE) {
-    const chunk = graph.edges.slice(c, c + INSERT_CHUNK_SIZE);
+  // Insert edges in chunks
+  const edgeChunkSize = 100;
+  for (let c = 0; c < graph.edges.length; c += edgeChunkSize) {
+    const chunk = graph.edges.slice(c, c + edgeChunkSize);
     const placeholders: string[] = [];
     const values: any[] = [];
 
@@ -122,6 +106,7 @@ async function insertEdges(
         condition: edge.condition ?? null,
         delay: edge.delay ?? null,
       };
+      const ordinal = c + i;
       const baseIdx = i * 9;
       placeholders.push(
         `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, 'flow', $${baseIdx + 7}, $${baseIdx + 8}, $${baseIdx + 9})`
@@ -134,7 +119,7 @@ async function insertEdges(
         edge.target_node_id,
         edge.target_port,
         JSON.stringify(metadata),
-        c + i,
+        ordinal,
         dbOwnerId,
       );
     }
@@ -148,6 +133,23 @@ async function insertEdges(
       );
     }
   }
+}
+
+async function decomposeAndInsert(
+  db: DbAdapter,
+  graph: WorkflowGraph,
+  nodeTable: string,
+  edgeTable: string,
+  ownerColumn: string,
+  ownerId: string,
+  now: string,
+): Promise<void> {
+  const dbOwnerId = db.ownerId;
+  if (!dbOwnerId) {
+    throw new Error("decomposeAndInsert requires a DbAdapter with a valid ownerId");
+  }
+  await insertGraphNodeChunks(db, graph, nodeTable, ownerColumn, ownerId, now, dbOwnerId);
+  await insertGraphEdgeChunks(db, graph, edgeTable, ownerColumn, ownerId, dbOwnerId);
 }
 
 const writeLocks = new Map<string, Promise<any>>();

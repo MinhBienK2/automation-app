@@ -11,7 +11,7 @@ import type {
   WorkflowGraph,
   WorkflowSettings,
 } from "../../../../src/types/workflow.js";
-import { sanitizePathSegment } from "../evidence/artifacts.js";
+import { sanitizePathSegment } from "../../shared/paths.js";
 import { migrateWorkflowGraph } from "../../graph/migration.js";
 import type { ProjectPackageService } from "./projectPackageService.js";
 import {
@@ -20,7 +20,7 @@ import {
 } from "../workflows/workflowSettingsService.js";
 import { WorkflowRepository } from "../workflows/workflowRepository.js";
 import { commandError } from "../../commandHelpers.js";
-import { browserProfileKey } from "../../runtime/runManager.js";
+import { browserProfileKey } from "../../shared/browserProfileKey.js";
 import { personaForSeed } from "../../../../src/lib/personaCatalog.js";
 
 type RunConflict = {

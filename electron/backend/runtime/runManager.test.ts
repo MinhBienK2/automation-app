@@ -3,7 +3,6 @@
 // `TestDbAdapter` imports `node:sqlite`, which the jsdom environment's bundler
 // refuses. Without this the whole file fails to load rather than failing a
 // test, which is why it read as "0 tests" rather than as a broken suite.
-
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type {
   CompiledWorkflowGraph,

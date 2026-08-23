@@ -11,7 +11,8 @@ import type {
   WorkflowSettings,
   WorkflowSummary,
 } from "../../../../src/types/workflow.js";
-import { browserProfileKey, type RunnerCommandPort } from "../../runtime/runManager.js";
+import type { RunnerCommandPort } from "../../runtime/runManager.js";
+import { browserProfileKey } from "../../shared/browserProfileKey.js";
 
 type RunRow = {
   id: string;

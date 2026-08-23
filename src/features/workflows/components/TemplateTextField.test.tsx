@@ -75,11 +75,11 @@ describe("TemplateTextField", () => {
     expect(screen.queryByRole("option", { name: /user.name/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /roles/i })).not.toBeInTheDocument();
 
-    // system.loop.index should be present
-    expect(screen.getByRole("option", { name: /system.loop.index/i })).toBeInTheDocument();
+    // system.loop.index should be present (popover renders in a portal)
+    expect(await screen.findByRole("option", { name: /system.loop.index/i })).toBeInTheDocument();
 
     // Click an option in the portal popover (system.last_error)
-    const option = screen.getByRole("option", { name: /system.last_error/i });
+    const option = await screen.findByRole("option", { name: /system.last_error/i });
     await user.click(option);
 
     // onChange should be called with updated value
@@ -212,12 +212,12 @@ describe("TemplateTextField", () => {
     const trigger = screen.getByRole("button", { name: /Insert variable for JS Textarea/i });
     await user.click(trigger);
 
-    // Verify option names are rendered with 'outputs.' prefix
-    expect(screen.getByRole("option", { name: /outputs\.my_variable/i })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /outputs\["system\.loop\.index"\]/i })).toBeInTheDocument();
+    // Options are labeled with the full variable path; JS insertion format is
+    // applied by the field when a leaf option is clicked.
+    expect(screen.getByRole("option", { name: "my_variable" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "system.loop.index" })).toBeInTheDocument();
 
-    // Click the standard variable option
-    const option = screen.getByRole("option", { name: /outputs\.my_variable/i });
+    const option = screen.getByRole("option", { name: "my_variable" });
     await user.click(option);
 
     // Should insert outputs.my_variable instead of {{my_variable}}

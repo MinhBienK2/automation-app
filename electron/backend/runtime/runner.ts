@@ -251,6 +251,21 @@ export class BrowserWorkflowRunner {
       runId: request.runId ?? randomUUID(),
       settings: request.settings,
       surface: opened.surface,
+      get context() {
+        return (this as any).surface?.kind === "web" ? (this as any).surface.context : (undefined as any);
+      },
+      get page() {
+        return (this as any).surface?.kind === "web" ? (this as any).surface.page : (undefined as any);
+      },
+      set page(p: any) {
+        if ((this as any).surface?.kind === "web") (this as any).surface.page = p;
+      },
+      get activeFrameXpath() {
+        return (this as any).surface?.kind === "web" ? (this as any).surface.activeFrameXpath : (undefined as any);
+      },
+      set activeFrameXpath(f: any) {
+        if ((this as any).surface?.kind === "web") (this as any).surface.activeFrameXpath = f;
+      },
       domainPolicy: request.graph.domain_policy ?? null,
       outputs,
       elementRefs: new Map(),

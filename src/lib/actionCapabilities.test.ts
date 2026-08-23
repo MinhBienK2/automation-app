@@ -88,15 +88,13 @@ describe("action capability registry", () => {
     }
   });
 
-  test("offers nothing in the primary palette that is not implemented", () => {
-    // One-directional on purpose. The reverse does not hold: an implemented
-    // action may be offered only as a graph node — every extraction action is,
-    // and `ActionNodePalette` keeps an explicit list of them.
-    for (const actionType of actionOptions) {
-      const offeredSomewhere =
-        isActionVisibleInPrimaryPalette(actionType) ||
-        isActionAvailableOnSurface(actionType, "desktop");
-      expect(offeredSomewhere).toBe(true);
+  test("keeps primary action options aligned with capability visibility", () => {
+    const actionTypes = Object.keys(actionLabels) as ActionType[];
+
+    for (const actionType of actionTypes) {
+      const inOptions = (actionOptions as string[]).includes(actionType);
+      const visible = isActionVisibleInPrimaryPalette(actionType);
+      expect(inOptions, `${actionType}: inOptions=${inOptions} visible=${visible}`).toBe(visible);
     }
   });
 

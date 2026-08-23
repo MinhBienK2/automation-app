@@ -16,7 +16,7 @@ import type {
   WorkflowPackage,
   WorkflowExport,
 } from "../../../../src/types/workflow";
-import { deriveFingerprintSeedFromIdentityId } from "../../commands.js";
+import { deriveFingerprintSeedFromIdentityId } from "../workflows/workflowSettingsService.js";
 
 vi.mock("electron", () => ({
   dialog: {

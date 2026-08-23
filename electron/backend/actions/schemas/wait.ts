@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { elementTargetSchema } from "./common.js";
 
-const waitConditionSchema = z.enum([
+export const waitConditions = [
   "duration",
   "element_visible",
   "element_hidden",
@@ -12,7 +12,9 @@ const waitConditionSchema = z.enum([
   "page_load",
   "element_enabled",
   "element_disabled",
-]);
+] as const;
+
+const waitConditionSchema = z.enum(waitConditions);
 
 export const waitSchema = z.object({
   type: z.literal("wait"),

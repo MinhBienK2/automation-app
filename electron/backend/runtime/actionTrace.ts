@@ -6,7 +6,7 @@ import type {
   ElementTarget,
   RunState,
 } from "../../../src/types/workflow.js";
-import type { EvidenceCategory } from "../features/evidence/model.js";
+import type { EvidenceCategory } from "../evidence/model.js";
 
 /**
  * How the surface carried out one step — not what the step found.

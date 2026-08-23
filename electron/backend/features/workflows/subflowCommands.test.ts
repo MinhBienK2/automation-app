@@ -1,5 +1,8 @@
 // @vitest-environment node
 
+import { MIGRATIONS } from "../../graph/migrations/index.js";
+
+const LATEST_GRAPH_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 import { describe, expect, test, vi } from "vitest";
 import { CURRENT_WORKFLOW_GRAPH_VERSION } from "../../graph/migration.js";
 import {

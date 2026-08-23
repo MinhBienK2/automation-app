@@ -1,4 +1,4 @@
-import { isPlainRecord } from "../../shared/records.js";
+import { isPlainRecord } from "../shared/records.js";
 
 export type EvidenceCategory =
   | "operator_input"
@@ -87,7 +87,7 @@ export function finalizeEvidenceOutputs(outputs: Record<string, unknown>) {
   return finalized;
 }
 
-export function evidenceCategoryForOutput(key: string): EvidenceCategory {
+function evidenceCategoryForOutput(key: string): EvidenceCategory {
   if (key === "browser_identity") return "browser_identity";
   if (key === "__action_traces") return "action_trace";
   if (

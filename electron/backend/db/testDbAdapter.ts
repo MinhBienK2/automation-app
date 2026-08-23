@@ -3,37 +3,46 @@ import type { DbAdapter } from "./dbAdapter.js";
 import { migrations } from "./migrations/migrations.js";
 
 /**
- * Postgres `$1` placeholders to SQLite's **anonymous** `?`, params reordered to
- * match the order they appear in.
- *
- * Not the obvious `$1` → `?1`. SQLite treats `?NNN` as a *named* parameter, and
- * `node:sqlite` binds anonymous values against it by position only on some Node
- * builds — Node 22 rejects the same statement Node 24 accepts, with
- * "column index out of range". The suite then fails on one developer's machine
- * and passes on another's, which is worse than either. `?` has one meaning
- * everywhere.
- *
- * Reordering is why this returns params rather than only SQL: a statement that
- * uses `$1` twice needs the value twice.
+ * Translate PostgreSQL-style `$n` placeholders into anonymous `?` markers,
+ * expanding reused numbers so the bound list matches placeholder occurrences
+ * in order. node:sqlite rejects numbered `?n` markers bound positionally.
  */
-function toAnonymousPlaceholders(
-  sql: string,
-  params: any[],
-): { sql: string; params: any[] } {
-  const ordered: any[] = [];
-  const translated = sql.replace(/\$(\d+)/g, (_match, digits: string) => {
-    ordered.push(params[Number(digits) - 1]);
-    return "?";
-  });
+type SqlParam = null | number | bigint | string | Uint8Array;
 
-  // No `$n` in the statement means it either takes no parameters or already
-  // uses `?`. Either way the caller's list is already in the right order.
-  return ordered.length === 0
-    ? { sql: translated, params }
-    : { sql: translated, params: ordered };
+function isSqlParam(value: unknown): value is SqlParam {
+  return (
+    value === null ||
+    typeof value === "number" ||
+    typeof value === "bigint" ||
+    typeof value === "string" ||
+    value instanceof Uint8Array
+  );
 }
 
-const nullForUndefined = (value: any) => (value === undefined ? null : value);
+function translatePgPlaceholders(sql: string, params: readonly unknown[]): { sql: string; bound: SqlParam[] } {
+  const bound: SqlParam[] = [];
+  let sawPlaceholder = false;
+  const translated = sql.replace(/\$(\d+)/g, (_match, num: string) => {
+    sawPlaceholder = true;
+    const raw = params[Number(num) - 1];
+    const value = raw === undefined ? null : raw;
+    if (!isSqlParam(value)) {
+      throw new TypeError(`Unsupported SQLite parameter at $${num}: ${typeof value}`);
+    }
+    bound.push(value);
+    return "?";
+  });
+  if (!sawPlaceholder) {
+    for (const raw of params) {
+      const value = raw === undefined ? null : raw;
+      if (!isSqlParam(value)) {
+        throw new TypeError(`Unsupported SQLite parameter: ${typeof value}`);
+      }
+      bound.push(value);
+    }
+  }
+  return { sql: translated, bound };
+}
 
 export class TestDbAdapter implements DbAdapter {
   private db: DatabaseSync;
@@ -52,23 +61,16 @@ export class TestDbAdapter implements DbAdapter {
   }
 
   private async initialize() {
-    // Reports postgres because that is the branch whose schema these tests are
-    // written against — the SQLite branch of the initial migration is the older
-    // local shape and has no users table. `translateForSqlite` covers the few
-    // postgres-only forms the later migrations use.
     const conn = {
       type: "postgres" as const,
-      query: async (sql: string, params?: any[]) => {
+      query: async (sql: string, params?: unknown[]) => {
         const translated = await this.translateForSqlite(sql);
         return translated === null ? [] : this.query(translated, params);
       },
-      executeTransaction: async (callback: (conn: any) => Promise<any>) => {
+      async executeTransaction<T>(callback: (conn: any) => Promise<T>) {
         return callback(conn);
       },
     };
-    // Every migration, not just the initial schema: a test database that
-    // stops at 001 lets a column added later look optional, and the failure
-    // shows up as a query error deep inside an unrelated test.
     for (const migration of migrations) {
       await migration.up(conn);
     }
@@ -113,32 +115,32 @@ export class TestDbAdapter implements DbAdapter {
   }
 
   prepare(sql: string) {
-    // The parameter order is fixed by the statement, so it is worked out once
-    // here and applied to whatever each call passes.
-    const { sql: translatedSql } = toAnonymousPlaceholders(sql, []);
-    const order = [...sql.matchAll(/\$(\d+)/g)].map((match) => Number(match[1]) - 1);
-    const bind = (params: any[]) =>
-      (order.length === 0 ? params : order.map((index) => params[index])).map(nullForUndefined);
-
-    const stmt = this.db.prepare(translatedSql);
     return {
-      run: (...params: any[]) => stmt.run(...bind(params)),
-      get: (...params: any[]) => stmt.get(...bind(params)),
-      all: (...params: any[]) => stmt.all(...bind(params)),
+      run: (...params: unknown[]) => {
+        const { sql: translated, bound } = translatePgPlaceholders(sql, params);
+        return this.db.prepare(translated).run(...bound);
+      },
+      get: (...params: unknown[]) => {
+        const { sql: translated, bound } = translatePgPlaceholders(sql, params);
+        return this.db.prepare(translated).get(...bound);
+      },
+      all: (...params: unknown[]) => {
+        const { sql: translated, bound } = translatePgPlaceholders(sql, params);
+        return this.db.prepare(translated).all(...bound);
+      },
     };
   }
 
-  async query(sql: string, params: any[] = []): Promise<any[]> {
+  async query<T = any>(sql: string, params: unknown[] = []): Promise<T[]> {
     if (sql.includes("pg_tables")) {
-      return [{ tablename: "migration_log" }];
+      return [{ tablename: "migration_log" }] as T[];
     }
 
-    const bound = toAnonymousPlaceholders(sql, params);
-    const translatedSql = bound.sql.replace(
+    const coalescedSql = sql.replace(
       /COALESCE\((started_at|finished_at),\s*(started_at|finished_at)\)/gi,
       "COALESCE($1, $2)",
     );
-    const safeParams = bound.params.map(nullForUndefined);
+    const { sql: translatedSql, bound } = translatePgPlaceholders(coalescedSql, params);
 
     try {
       const stmt = this.db.prepare(translatedSql);
@@ -146,32 +148,31 @@ export class TestDbAdapter implements DbAdapter {
       const isPragma = /^\s*pragma/i.test(translatedSql);
       const hasReturning = /returning\s+/i.test(translatedSql);
       if (isSelect || isPragma || hasReturning) {
-        return stmt.all(...safeParams);
+        return stmt.all(...bound) as T[];
       } else {
-        stmt.run(...safeParams);
+        stmt.run(...bound);
         return [];
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error("[TestDbAdapter] Error running SQL query:", sql, params, e);
       throw e;
     }
   }
 
-  async execute(sql: string, params: any[] = []): Promise<{ changes: number }> {
-    const bound = toAnonymousPlaceholders(sql, params);
-    const safeParams = bound.params.map(nullForUndefined);
+  async execute(sql: string, params: unknown[] = []): Promise<{ changes: number }> {
+    const { sql: translatedSql, bound } = translatePgPlaceholders(sql, params);
     try {
-      const stmt = this.db.prepare(bound.sql);
-      const res = stmt.run(...safeParams);
+      const stmt = this.db.prepare(translatedSql);
+      const res = stmt.run(...bound);
       return { changes: Number(res.changes) };
-    } catch (e: any) {
+    } catch (e) {
       console.error("[TestDbAdapter] Error executing SQL query:", sql, params, e);
       throw e;
     }
   }
 
-  async queryOne(sql: string, params: any[] = []): Promise<any | null> {
-    const rows = await this.query(sql, params);
+  async queryOne<T = any>(sql: string, params: unknown[] = []): Promise<T | null> {
+    const rows = await this.query<T>(sql, params);
     return rows[0] ?? null;
   }
 

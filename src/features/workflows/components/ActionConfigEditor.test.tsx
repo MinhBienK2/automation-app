@@ -75,7 +75,7 @@ describe("ActionConfigEditor", () => {
     expect(screen.queryByRole("option", { name: /roles/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /user.name/i })).not.toBeInTheDocument();
     
-    await userEvent.click(screen.getByRole("option", { name: "system.last_error System outputs" }));
+    await userEvent.click(screen.getByRole("option", { name: "system.last_error" }));
 
     expect(screen.getByLabelText("Text")).toHaveValue("{{system.last_error}}");
     const tokens = screen.getAllByText("{{system.last_error}}");
@@ -112,7 +112,7 @@ describe("ActionConfigEditor", () => {
     await userEvent.click(screen.getByRole("button", { name: "Insert variable for Text" }));
 
     expect(
-      screen.getByRole("option", { name: "session.account_id Set Variables" }),
+      screen.getByRole("option", { name: "session.account_id" }),
     ).toBeInTheDocument();
   });
 

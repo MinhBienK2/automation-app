@@ -79,11 +79,6 @@ export async function initializePgPool(dbUrl: string): Promise<pg.Pool> {
   return pool;
 }
 
-export function getPgPool(): pg.Pool | null {
-  return pool;
-}
-
-
 export async function authenticateUser(email: string, passwordPlain: string): Promise<{ token: string; user: User } | null> {
   if (!pool) throw new Error("PostgreSQL pool not initialized");
 

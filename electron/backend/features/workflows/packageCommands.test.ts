@@ -21,7 +21,9 @@ import type {
   WorkflowExport,
 } from "../../../../src/types/workflow";
 import { serializeCommandError } from "../../commands.js";
+import { MIGRATIONS } from "../../graph/migrations/index.js";
 
+const LATEST_GRAPH_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 vi.mock("electron", () => ({
   dialog: {
     showSaveDialog: vi.fn(),
