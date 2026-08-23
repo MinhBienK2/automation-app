@@ -10,45 +10,9 @@ let electronProcess = null;
 let restartingElectron = false;
 let restartTimeout = null;
 
-let distWatcher = null;
-let distWatcherStarted = false;
-let distWatcherTimeout = null;
-
-function startWatchingDist() {
-  if (distWatcherStarted) return;
-  distWatcherStarted = true;
-
-  if (distWatcherTimeout) {
-    clearTimeout(distWatcherTimeout);
-    distWatcherTimeout = null;
-  }
-
-  const distDir = path.join(process.cwd(), "dist-electron");
-  try {
-    distWatcher = fs.watch(distDir, { recursive: true }, (eventType, filename) => {
-      if (filename && (filename.endsWith(".js") || filename.endsWith(".cjs"))) {
-        if (electronProcess) {
-          lastRestartReason = `fs.watch file change: ${filename}`;
-          scheduleElectronRestart();
-        }
-      }
-    });
-  } catch (err) {
-    console.error("Failed to start fs.watch on dist-electron:", err);
-  }
-}
-
-function scheduleStartWatchingDist(delayMs = 1000) {
-  if (distWatcherTimeout) clearTimeout(distWatcherTimeout);
-  distWatcherTimeout = setTimeout(() => {
-    distWatcherTimeout = null;
-    startWatchingDist();
-  }, delayMs);
-}
-
 const electronWatchOutput = createElectronWatchOutputHandler({
   onInitialReady: () => {
-    scheduleStartWatchingDist(1000);
+    // Initial electron build is ready
   },
   onSuccessfulRebuild: () => {
     if (electronProcess) {
@@ -96,15 +60,7 @@ function stopAll() {
     clearTimeout(restartTimeout);
     restartTimeout = null;
   }
-  if (distWatcherTimeout) {
-    clearTimeout(distWatcherTimeout);
-    distWatcherTimeout = null;
-  }
 
-  if (distWatcher) {
-    distWatcher.close();
-    distWatcher = null;
-  }
   for (const child of processes) {
     if (!child.killed) child.kill();
   }
