@@ -31,6 +31,7 @@
     "test:fingerprint": "vitest run electron/backend/browser/sessionManager.test.ts electron/backend/runtime/runner.test.ts",
     "test:smoke": "RUN_CLOAKBROWSER_SMOKE=1 vitest run electron/backend/runtime/runner.smoke.test.ts",
     "test:desktop:smoke": "RUN_DESKTOP_SMOKE=1 vitest run electron/backend/surfaces/desktop/realDriver.smoke.test.ts",
+    "desktop:isolation-check": "node scripts/desktop-isolation-check.mjs",
     "lint": "eslint src/ electron/ --max-warnings=0",
     "lint:fix": "eslint src/ electron/ --fix",
     "agent:validate-routes": "node scripts/agent/validate-routes.mjs",

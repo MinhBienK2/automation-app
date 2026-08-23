@@ -71,6 +71,26 @@ Scroll, drag and clipboard have since graduated out of this list — `scripts/de
 
 It returns the element's text content, trimmed, as a string. Structured extraction — tables, lists — is now `desktop_read_table`: it flattens the subtree under a resolved element into rows of cell strings (a row's children are its cells; a childless row contributes its own text). Deliberately generic rather than UIA-table-aware, because the tree does not reliably carry a table schema and guessing one would produce a contract nobody wants.
 
+## Two isolation classes — measured, not assumed
+
+Input-device isolation is the core requirement (constraint #2), and the fifteen
+actions do **not** all honour it equally. `scripts/desktop-isolation-check.mjs`
+measured this live on Windows 11, and the split is real:
+
+| Class | Actions | Mechanism (measured) | Touches the operator's mouse/keyboard? |
+|---|---|---|---|
+| **Isolated** | `click`, `set_value`, `type_text`, `press_key`, `hotkey`, `read_text`, `read_table`, `invoke_menu`, `wait_for`, `focus_window` | UIA — `click` delivers `delivery.mode: "background"`, `set_value` reports `route: "accessibility"`; `get_cursor_position` is **locked** in the window-scope session the runner uses, so automation cannot even read the pointer | **No.** Safe to run while the operator uses the machine. |
+| **Not isolated** | `scroll`, `drag`, `hover` | Synthetic input — `move_cursor` reported `route: "global_input"` and moved the real pointer by exactly the requested delta ((120,90) in the probe); `scroll` drives a real `SendInput` wheel | **Yes.** They move the real pointer / wheel. |
+
+This is not a defect to fix so much as a property to expose: `cua-driver` offers
+no UIA-pattern scroll or drag, only coordinate synthetic input, so these three
+cannot be isolated the way the UIA family is. They earn their place — a list
+that will not scroll otherwise is worse than a scroll that moves the pointer —
+but a workflow that runs them is briefly taking over the operator's mouse, and
+that belongs in the operator's awareness, not buried. Prefer the isolated family
+wherever it expresses the work; reach for the pointer tools only when nothing
+else can.
+
 ## The clipboard is shared with the operator
 
 `desktop_read_clipboard` and `desktop_set_clipboard` exist, but the hazard that kept them out of v1 is real: a desktop run happens while the operator is using the machine, and their clipboard is live state that belongs to them. A read is side-effect-free. A `set` overwrites whatever they had copied, so it is never implicit — it is an action the workflow author chooses on purpose, and it confirms itself by reading the value back rather than trusting the driver's own answer.
