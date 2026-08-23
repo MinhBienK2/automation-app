@@ -3,6 +3,10 @@ import { validateWorkflowGraph as validateGraph } from "../graph/compiler.js";
 import { BrowserWorkflowRunner } from "../runtime/runner.js";
 import { createScheduleCommandHandlers } from "./scheduling/scheduleCommands.js";
 import { RunManager } from "../runtime/runManager.js";
+import { DesktopTargetRepository } from "./projects/desktopTargetRepository.js";
+import { createDesktopSurfaceOpener } from "../surfaces/desktop/surfaceOpener.js";
+import { createDesktopInspector } from "../surfaces/desktop/inspector.js";
+import type { CapabilityTier } from "../../../src/types/desktopTargets.js";
 import { IdentityRepository } from "./identities/identityRepository.js";
 import { createProjectCommandCascades } from "./projects/projectCommandCascades.js";
 import { ProjectPackageService } from "./projects/projectPackageService.js";
@@ -21,11 +25,16 @@ import {
   resolveDefaultFingerprintFontsDir,
 } from "../diagnostics/cloakBrowserDiagnostics.js";
 
-import type { CommandContext, CommandDeps } from "./types.js";
-import { createFeatureHelpers } from "./featureHelpers.js";
+import type { CommandContext } from "./types.js";
+import { createProjectBootstrapHelpers } from "./projectBootstrapHelpers.js";
+import { createSettingsLifecycleHelpers } from "./settingsLifecycleHelpers.js";
+import { createIdentityRotationHelpers } from "./identityRotationHelpers.js";
+import { createGraphHelpers } from "./graphHelpers.js";
+import { createRunGuardsHelpers } from "./runGuardsHelpers.js";
 
 import { createWorkflowCommands } from "./workflows/workflowCommands.js";
 import { createProjectCommands } from "./projects/projectCommands.js";
+import { createDesktopTargetCommands } from "./projects/desktopTargetCommands.js";
 import { createSubflowCommands } from "./workflows/subflowCommands.js";
 import { createPackageCommands } from "./workflows/packageCommands.js";
 import { createRecordingCommands } from "./recording/recordingCommands.js";
@@ -46,7 +55,39 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     driver: context.recorderDriver,
     usesDefaultDriver: context.recorderUsesDefaultDriver,
   });
-  const runManager = new RunManager({ database: context.database, runner });
+  const desktopTargetRepository = new DesktopTargetRepository(context.database);
+
+  // The composition root is the only place `runtime/` and `surfaces/desktop/`
+  // meet, which is what keeps the runner free of any desktop import (ADR-0001).
+  const recordObservedTier = (targetId: string, tier: CapabilityTier) =>
+    desktopTargetRepository.recordObservedTier(targetId, tier);
+
+  const openDesktopSurfaceFor = createDesktopSurfaceOpener({
+    onTierObserved: recordObservedTier,
+  });
+  const inspectDesktopTargetWindow = createDesktopInspector({
+    onTierObserved: recordObservedTier,
+  });
+
+  const runManager = new RunManager({
+    database: context.database,
+    runner,
+    openDesktopSurface: async ({ workflow, runId, retention, signal }) => {
+      if (workflow.surface !== "desktop") return null;
+      if (!workflow.desktop_target_id) {
+        throw new Error(
+          `"${workflow.name}" is a desktop workflow with no Desktop Target chosen. Pick the application it drives in Workflow Settings.`,
+        );
+      }
+      const target = await desktopTargetRepository.getDesktopTarget(workflow.desktop_target_id);
+      if (!target) {
+        throw new Error(
+          `The Desktop Target "${workflow.desktop_target_id}" no longer exists. Choose another in Workflow Settings.`,
+        );
+      }
+      return openDesktopSurfaceFor({ target, runId, retention, signal });
+    },
+  });
 
   const settingsService = new WorkflowSettingsService({
     directoryReadable,
@@ -54,24 +95,44 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     defaultFingerprintFontsDir: () => resolveDefaultFingerprintFontsDir(context.defaultFingerprintFontsDir),
   });
 
-  // Khởi tạo các helper thông qua Builder
-  const helpers = createFeatureHelpers(context, {
+  // Domain-scoped helper factories
+  const projectBootstrap = createProjectBootstrapHelpers(context, {
     repository,
     runManager,
     settingsService,
+  });
+  const settingsLifecycle = createSettingsLifecycleHelpers({
+    repository,
+    runManager,
+    settingsService,
+  });
+  const identityRotation = createIdentityRotationHelpers({
+    repository,
+    runManager,
+    getSettings: settingsLifecycle.getSettings,
+    saveSettings: settingsLifecycle.saveSettings,
+  });
+  const graphHelpers = createGraphHelpers({
+    repository,
+    requireWorkflow: settingsLifecycle.requireWorkflow,
+  });
+  const runGuards = createRunGuardsHelpers({
+    database: context.database,
+    runManager,
+    getSettings: settingsLifecycle.getSettings,
   });
 
   const identityRepository = new IdentityRepository({
     database: context.database,
     workflows: async () => await repository.listWorkflows(),
-    settingsForWorkflow: async (workflowId) => await helpers.getSettings(workflowId),
+    settingsForWorkflow: async (workflowId) => await settingsLifecycle.getSettings(workflowId),
     diagnostics: async () => {
       const list = await repository.listWorkflows();
       return await buildCloakBrowserDiagnostics({
         appPaths: context.appPaths,
         workflows: list,
-        settingsForWorkflow: helpers.getSettings,
-        lastRunAtForWorkflow: helpers.lastRunAtForWorkflow,
+        settingsForWorkflow: settingsLifecycle.getSettings,
+        lastRunAtForWorkflow: runGuards.lastRunAtForWorkflow,
         retainedProfileNames: runManager.retainedProfileNames(),
       });
     },
@@ -94,7 +155,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
   const recorderSessionManager = new RecorderSessionManager({
     getWorkflow: async (workflowId) => await repository.getWorkflowSummary(workflowId),
-    getWorkflowSettings: async (workflowId) => await helpers.getSettings(workflowId),
+    getWorkflowSettings: async (workflowId) => await settingsLifecycle.getSettings(workflowId),
     createNewWorkflowSettingsDraft({ name, draftWorkflowId, now }) {
       return settingsService.defaultWorkflowSettings(
         {
@@ -117,11 +178,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const recordingDraftCommands = createRecordingDraftCommands({
     database: context.database,
     recorderSessions: recorderSessionManager,
-    createWorkflow: helpers.createWorkflow,
+    createWorkflow: projectBootstrap.createWorkflow,
     saveWorkflowGraph: async (workflowId, graph) => await repository.saveWorkflowGraph(workflowId, graph),
-    saveWorkflowSettings: helpers.saveSettings,
+    saveWorkflowSettings: settingsLifecycle.saveSettings,
     getWorkflowDetail: async (workflowId) => await repository.getWorkflow(workflowId),
-    requireWorkflow: helpers.requireWorkflow,
+    requireWorkflow: settingsLifecycle.requireWorkflow,
   });
 
   const projectCascades = createProjectCommandCascades({
@@ -129,49 +190,119 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     browserProfilesDir: context.appPaths.browserProfilesDir,
     repository,
     projectPackageService,
-    requireProject: helpers.requireProject,
-    requireBrowserProfile: helpers.requireBrowserProfile,
-    ensureDefaultBrowserProfile: helpers.ensureDefaultBrowserProfile,
-    createWorkflow: helpers.createWorkflow,
-    getSettings: helpers.getSettings,
-    saveSettings: helpers.saveSettings,
-    assertWorkflowDeletionAllowed: helpers.assertWorkflowDeletionAllowed,
-    activeRunConflict: helpers.activeRunConflict,
+    requireProject: projectBootstrap.requireProject,
+    requireBrowserProfile: projectBootstrap.requireBrowserProfile,
+    ensureDefaultBrowserProfile: projectBootstrap.ensureDefaultBrowserProfile,
+    createWorkflow: projectBootstrap.createWorkflow,
+    getSettings: settingsLifecycle.getSettings,
+    saveSettings: settingsLifecycle.saveSettings,
+    assertWorkflowDeletionAllowed: runGuards.assertWorkflowDeletionAllowed,
+    activeRunConflict: runGuards.activeRunConflict,
     retainedSessionActiveFor: (workflowId, profileName) =>
       runManager.retainedSessionActiveFor(workflowId, profileName),
-    remapCallSubflowIds: helpers.remapCallSubflowIds,
+    remapCallSubflowIds: graphHelpers.remapCallSubflowIds,
   });
 
-  const deps: CommandDeps = {
+  const workflowCommands = createWorkflowCommands({
     context,
     repository,
-    scheduleRepository,
-    operationsRepository,
-    runner,
-    runManager,
-    identityRepository,
     settingsService,
+    runManager,
+    runner,
+    operationsRepository,
+    requireWorkflow: settingsLifecycle.requireWorkflow,
+    getSettings: settingsLifecycle.getSettings,
+    saveSettings: settingsLifecycle.saveSettings,
+    createWorkflow: projectBootstrap.createWorkflow,
+    getWorkflowGraph: graphHelpers.getWorkflowGraph,
+    activeRunConflict: runGuards.activeRunConflict,
+    assertWorkflowDeletionAllowed: runGuards.assertWorkflowDeletionAllowed,
+    graphContextForWorkflow: graphHelpers.graphContextForWorkflow,
+  });
+
+  const projectCommands = createProjectCommands({
+    context,
+    repository,
+    settingsService,
+    projectCascades,
+    requireProject: projectBootstrap.requireProject,
+    requireBrowserProfile: projectBootstrap.requireBrowserProfile,
+    requireWorkflow: settingsLifecycle.requireWorkflow,
+  });
+
+  const subflowCommands = createSubflowCommands({
+    context,
+    repository,
+    requireProject: projectBootstrap.requireProject,
+  });
+
+  const packageCommands = createPackageCommands({
+    context,
+    repository,
     packageService,
     projectPackageService,
+    projectCascades,
+    requireProject: projectBootstrap.requireProject,
+    ensureDefaultProject: projectBootstrap.ensureDefaultProject,
+    createWorkflow: projectBootstrap.createWorkflow,
+    requireWorkflow: settingsLifecycle.requireWorkflow,
+    getSettings: settingsLifecycle.getSettings,
+    saveSettings: settingsLifecycle.saveSettings,
+    getWorkflowGraph: graphHelpers.getWorkflowGraph,
+    referencedSubflowsForWorkflowGraph: graphHelpers.referencedSubflowsForWorkflowGraph,
+    remapCallSubflowIds: graphHelpers.remapCallSubflowIds,
+    duplicateBrowserProfileLaunch: identityRotation.duplicateBrowserProfileLaunch,
+  });
+
+  const recordingCommands = createRecordingCommands({
     recorderSessionManager,
     recordingDraftCommands,
-    projectCascades,
-    ...helpers,
-  };
+    activeRunConflict: runGuards.activeRunConflict,
+    getSettings: settingsLifecycle.getSettings,
+  });
 
-  const workflowCommands = createWorkflowCommands(deps);
-  const projectCommands = createProjectCommands(deps);
-  const subflowCommands = createSubflowCommands(deps);
-  const packageCommands = createPackageCommands(deps);
-  const recordingCommands = createRecordingCommands(deps);
-  const settingsCommands = createSettingsCommands(deps);
+  const settingsCommands = createSettingsCommands({
+    context,
+    repository,
+    settingsService,
+    runManager,
+    requireWorkflow: settingsLifecycle.requireWorkflow,
+    getSettings: settingsLifecycle.getSettings,
+    saveSettings: settingsLifecycle.saveSettings,
+    rotateBrowserIdentity: identityRotation.rotateBrowserIdentity,
+  });
+
+  const desktopTargetCommands = createDesktopTargetCommands({
+    desktopTargets: desktopTargetRepository,
+    requireProject: projectBootstrap.requireProject,
+    requireWorkflow: settingsLifecycle.requireWorkflow,
+    assignWorkflowDesktopTarget: (workflowId, targetId) =>
+      repository.assignWorkflowDesktopTarget(workflowId, targetId),
+    activeDesktopTargetConflict: (targetId) => runManager.activeDesktopTargetConflict(targetId),
+    inspectDesktopTarget: (target) => inspectDesktopTargetWindow(target),
+  });
   const authCommands = createAuthCommands(context.database);
-  const backupCommands = createBackupCommands(deps);
-  const operationsCommands = createOperationsCommands(deps);
-  const identityCommands = createIdentityCommands(deps);
+
+  const backupCommands = createBackupCommands({ context });
+
+  const operationsCommands = createOperationsCommands({ operationsRepository, runManager });
+
+  const identityCommands = createIdentityCommands({
+    identityRepository,
+    runner,
+    getSettings: settingsLifecycle.getSettings,
+    activeRunConflict: runGuards.activeRunConflict,
+  });
+
+  // Expose internal run entry points under non-underscore names for the scheduler wiring.
+  const {
+    _startWorkflowRun: startWorkflowRun,
+    _validateWorkflowRun: validateWorkflowRun,
+  } = workflowCommands;
 
   return {
     ...projectCommands,
+    ...desktopTargetCommands,
     ...subflowCommands,
     ...workflowCommands,
     ...settingsCommands,
@@ -181,7 +312,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ...backupCommands,
     ...operationsCommands,
     ...identityCommands,
-    ensureProjectModelReady: helpers.ensureProjectModelReady,
+    ensureProjectModelReady: projectBootstrap.ensureProjectModelReady,
     getAppConfig() {
       return loadAppConfig(context.appPaths.rootDir);
     },
@@ -191,10 +322,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
     ...createScheduleCommandHandlers({
       scheduleRepository,
-      requireWorkflow: helpers.requireWorkflow,
-      validateWorkflowRun: workflowCommands._validateWorkflowRun,
-      schedulerConflictReason: helpers.schedulerConflictReason,
-      startWorkflowRun: workflowCommands._startWorkflowRun,
+      requireWorkflow: settingsLifecycle.requireWorkflow,
+      validateWorkflowRun,
+      schedulerConflictReason: runGuards.schedulerConflictReason,
+      startWorkflowRun,
     }),
   };
 }

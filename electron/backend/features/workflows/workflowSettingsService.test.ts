@@ -5,7 +5,7 @@ import {
   deriveFingerprintSeedFromIdentityId,
   WorkflowSettingsService,
 } from "./workflowSettingsService";
-import { personaCatalog } from "../../../../src/lib/personaCatalog";
+import { personaCatalog } from "../../../../src/features/workflows/data/personaCatalog";
 import type { WorkflowSettings } from "../../../../src/types/workflow";
 
 describe("WorkflowSettingsService", () => {

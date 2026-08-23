@@ -1,3 +1,8 @@
+// @vitest-environment node
+//
+// `TestDbAdapter` imports `node:sqlite`, which the jsdom environment's bundler
+// refuses. Without this the file fails to load rather than failing a test, so
+// it reported "0 tests" and read as passing.
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "node:fs/promises";
 import { existsSync } from "node:fs";

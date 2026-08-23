@@ -6,7 +6,36 @@ import type {
   ElementTarget,
   RunState,
 } from "../../../src/types/workflow.js";
-import type { EvidenceCategory } from "../features/evidence/model.js";
+import type { EvidenceCategory } from "../evidence/model.js";
+
+/**
+ * How the surface carried out one step — not what the step found.
+ *
+ * `docs/domain/desktop/evidence-model.md` draws the line: evidence is what the
+ * workflow was asked to collect, trace is what the system did to collect it. A
+ * locator that resolved by ancestry rather than by name is a fact about the run,
+ * and the place it earns its keep is beside the step, six weeks later, when the
+ * same step stops matching and someone needs to know what changed.
+ *
+ * Declared here rather than in `surfaces/desktop/` because ADR-0001 runs the
+ * dependency the other way: the surface imports the runner's shape, never the
+ * reverse. Every field is optional — a web step fills none of it today, and a
+ * pixel-addressed desktop step has no element to describe.
+ *
+ * There is deliberately no `value` field. Carrying one would put a `Document`
+ * element's contents — the whole open file — into the run's steps, which is the
+ * leak #46 found.
+ */
+export type SurfaceStepTrace = {
+  role?: string;
+  label?: string;
+  /** How the element was found, for a step that later stops matching. */
+  matched?: "automation_id" | "name" | "ancestry" | "ordinal" | "pixel";
+  tier?: "element" | "chrome" | "pixel";
+  /** `"unverified"` is not a failure: the driver gave no verdict to believe. */
+  verified?: boolean | "unverified";
+  warnings?: string[];
+};
 
 export type ActionTrace = {
   node_id: string;
@@ -35,6 +64,7 @@ export type ActionTrace = {
   }>;
   evidence_categories?: EvidenceCategory[];
   audit_tags?: string[];
+  surface_trace?: SurfaceStepTrace;
   reason?: string;
 };
 
@@ -371,6 +401,16 @@ function compactSummary(value: string, maxLength = 160) {
   const compact = value.replace(/\s+/g, " ").trim();
   if (compact.length <= maxLength) return compact || null;
   return `${compact.slice(0, maxLength - 3)}...`;
+}
+
+/**
+ * Present only when the surface left one, so a web trace is byte-identical to
+ * what it was before the Desktop Surface existed.
+ */
+export function surfaceTraceField(runtime: {
+  currentSurfaceTrace: SurfaceStepTrace | null;
+}): Pick<ActionTrace, "surface_trace"> {
+  return runtime.currentSurfaceTrace ? { surface_trace: runtime.currentSurfaceTrace } : {};
 }
 
 export function pushActionTrace(

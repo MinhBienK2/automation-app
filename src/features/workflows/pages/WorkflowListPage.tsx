@@ -20,7 +20,13 @@ import {
 } from "../../../components/ui/dropdown-menu";
 import { Select } from "../../../components/ui/select";
 import { Badge } from "../../../components/ui/badge";
-import type { BrowserProfile, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
+import type {
+  BrowserProfile,
+  DesktopTarget,
+  ExecutionSurfaceKind,
+  WorkflowRunSnapshot,
+  WorkflowSummary,
+} from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
 import { Alert } from "../../../components/ui/alert";
@@ -43,12 +49,17 @@ type WorkflowListPageProps = {
   workflowDialogMode: "create" | "edit" | null;
   workflowNameDraft: string;
   browserProfiles: BrowserProfile[];
+  desktopTargets: DesktopTarget[];
   selectedProfileIdDraft: string | null;
+  surfaceDraft: ExecutionSurfaceKind;
+  selectedDesktopTargetIdDraft: string | null;
   appError: string;
   runSnapshots: WorkflowRunSnapshot[];
   startingWorkflowId?: string | null;
   onWorkflowNameDraftChange: (name: string) => void;
   onSelectedProfileIdDraftChange: (id: string | null) => void;
+  onSurfaceDraftChange: (surface: ExecutionSurfaceKind) => void;
+  onSelectedDesktopTargetIdDraftChange: (id: string | null) => void;
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
   onOpenCreateWorkflow: () => void;
   onOpenEditWorkflow: (workflow: WorkflowSummary) => void;
@@ -69,12 +80,17 @@ export function WorkflowListPage({
   workflowDialogMode,
   workflowNameDraft,
   browserProfiles,
+  desktopTargets,
   selectedProfileIdDraft,
+  surfaceDraft,
+  selectedDesktopTargetIdDraft,
   appError,
   runSnapshots,
   startingWorkflowId = null,
   onWorkflowNameDraftChange,
   onSelectedProfileIdDraftChange,
+  onSurfaceDraftChange,
+  onSelectedDesktopTargetIdDraftChange,
   onSubmitWorkflowDialog,
   onOpenCreateWorkflow,
   onOpenEditWorkflow,
@@ -374,22 +390,76 @@ export function WorkflowListPage({
                   />
                 </FormField>
                 {workflowDialogMode === "create" ? (
-                  <FormField label="Browser Profile" htmlFor="workflow-profile">
-                    <Select
-                      id="workflow-profile"
-                      value={selectedProfileIdDraft ?? ""}
-                      onChange={(event) =>
-                        onSelectedProfileIdDraftChange(event.currentTarget.value || null)
-                      }
-                      className="select-sm bg-base-100 border-base-300 w-full"
+                  <>
+                    <FormField
+                      label="Execution Surface"
+                      htmlFor="workflow-surface"
+                      description="Fixed once the workflow is created. A workflow drives a browser or a desktop application, never both."
                     >
-                      {browserProfiles.map((profile) => (
-                        <option key={profile.id} value={profile.id}>
-                          {profile.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
+                      <Select
+                        id="workflow-surface"
+                        value={surfaceDraft}
+                        onChange={(event) =>
+                          onSurfaceDraftChange(
+                            event.currentTarget.value === "desktop" ? "desktop" : "web",
+                          )
+                        }
+                        className="select-sm bg-base-100 border-base-300 w-full"
+                      >
+                        <option value="web">Web — a browser page</option>
+                        <option value="desktop">Desktop — an application window</option>
+                      </Select>
+                    </FormField>
+                    {surfaceDraft === "web" ? (
+                      <FormField label="Browser Profile" htmlFor="workflow-profile">
+                        <Select
+                          id="workflow-profile"
+                          value={selectedProfileIdDraft ?? ""}
+                          onChange={(event) =>
+                            onSelectedProfileIdDraftChange(event.currentTarget.value || null)
+                          }
+                          className="select-sm bg-base-100 border-base-300 w-full"
+                        >
+                          {browserProfiles.map((profile) => (
+                            <option key={profile.id} value={profile.id}>
+                              {profile.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    ) : desktopTargets.length ? (
+                      <FormField
+                        label="Desktop Target"
+                        htmlFor="workflow-desktop-target"
+                        description="The application this workflow drives. Changeable later in Workflow Settings."
+                      >
+                        <Select
+                          id="workflow-desktop-target"
+                          value={selectedDesktopTargetIdDraft ?? ""}
+                          onChange={(event) =>
+                            onSelectedDesktopTargetIdDraftChange(
+                              event.currentTarget.value || null,
+                            )
+                          }
+                          className="select-sm bg-base-100 border-base-300 w-full"
+                        >
+                          {desktopTargets.map((target) => (
+                            <option key={target.id} value={target.id}>
+                              {target.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    ) : (
+                      // Not an error: the workflow is still creatable, and a
+                      // Target can be chosen later. Saying so here is cheaper
+                      // than an empty picker the operator has to interpret.
+                      <Alert variant="warning" className="text-xs p-2.5">
+                        This project has no Desktop Targets yet. Create the workflow, then add
+                        one under Projects → Desktop Targets and pick it in Workflow Settings.
+                      </Alert>
+                    )}
+                  </>
                 ) : null}
                 {appError ? <Alert variant="error" className="text-xs p-2.5 mt-2">{appError}</Alert> : null}
                 <DialogFooter className="flex gap-2 border-t border-base-300 pt-3 mt-2">

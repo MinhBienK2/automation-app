@@ -1,9 +1,9 @@
 import type { GraphNode, ObjectFieldAssignment } from "../../../../../types/workflow";
 import { Label } from "../../../../../components/ui/label";
 import { Select } from "../../../../../components/ui/select";
-import { ActionConfigFieldGroup } from "../../ActionConfigFieldGroup";
-import { CreateObjectManualFields } from "../../VariableConfigFields";
-import { TemplateTextField, TemplateTextareaField, type VariableOption } from "../../TemplateTextField";
+import { ActionConfigFieldGroup } from "../../actionFields/ActionConfigFieldGroup";
+import { CreateObjectManualFields } from "../../variables/VariableConfigFields";
+import { TemplateTextField, TemplateTextareaField, type VariableOption } from "../../variables/TemplateTextField";
 import { objectConfig, stringConfig, arrayConfig, booleanConfig } from "../../../lib/configUtils";
 
 export function ObjectNodeFields({

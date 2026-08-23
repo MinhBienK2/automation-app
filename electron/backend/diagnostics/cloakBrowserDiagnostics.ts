@@ -48,8 +48,9 @@ export function directoryReadable(value: string) {
 export function resolveDefaultFingerprintFontsDir(
   override: string | null | (() => string | null) | undefined,
 ) {
-  if (typeof override === "function") return override();
-  if (override !== undefined) return override;
+  const resolved = typeof override === "function" ? override() : override;
+  if (typeof resolved === "string") return directoryReadable(resolved) ? resolved : null;
+  if (resolved === null) return null;
   const candidate = path.join(process.cwd(), ".local", "cloakbrowser-fonts", "linux");
   return directoryReadable(candidate) ? candidate : null;
 }

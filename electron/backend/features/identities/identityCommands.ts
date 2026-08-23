@@ -3,10 +3,10 @@ import type {
   IdentityLabTarget,
 } from "../../../../src/types/workflow.js";
 import { commandError } from "../../commandHelpers.js";
-import type { CommandDeps } from "../types.js";
-import { browserProfileKey } from "../../runtime/runManager.js";
+import type { IdentityCommandsDeps } from "../types.js";
+import { browserProfileKey } from "../../shared/browserProfileKey.js";
 
-export function createIdentityCommands(deps: CommandDeps) {
+export function createIdentityCommands(deps: IdentityCommandsDeps) {
   const {
     identityRepository,
     runner,

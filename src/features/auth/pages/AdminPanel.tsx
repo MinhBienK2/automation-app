@@ -6,7 +6,7 @@ import { Select } from "../../../components/ui/select";
 import { Label } from "../../../components/ui/label";
 import { Badge } from "../../../components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/table";
-import { listUsers, createUser, deleteUser } from "../../../lib/workflowApi";
+import { listUsers, createUser, deleteUser } from "../../../lib/api/workflowApi";
 
 interface User {
   id: string;

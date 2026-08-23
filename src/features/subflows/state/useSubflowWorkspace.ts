@@ -23,7 +23,7 @@ import {
   exportSubflow,
   importSubflow,
   saveSubflowPackageFile,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
 import { hasEditableGraphChange, type GraphSaveStatus } from "../../../lib/appState";
 

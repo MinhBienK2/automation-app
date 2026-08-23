@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Input } from "../../../components/ui/input";
-import { HelpDisclosure } from "../../workflows/components/HelpDisclosure";
+import { HelpDisclosure } from "../../workflows/components/dialogs/HelpDisclosure";
 
 type XPathRecipe = {
   title: string;

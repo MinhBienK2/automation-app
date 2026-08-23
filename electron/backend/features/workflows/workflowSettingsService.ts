@@ -10,7 +10,7 @@ import type {
   WorkflowRunFromSelectedMode,
   WorkflowSummary,
 } from "../../../../src/types/workflow.js";
-import { personaForId, personaForSeed } from "../../../../src/lib/personaCatalog.js";
+import { personaForId, personaForSeed } from "../../../../src/features/workflows/data/personaCatalog.js";
 
 type WorkflowSettingsServiceDependencies = {
   directoryReadable: (value: string) => boolean;

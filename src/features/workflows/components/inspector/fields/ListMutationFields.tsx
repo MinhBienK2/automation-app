@@ -2,8 +2,8 @@ import type { GraphNode } from "../../../../../types/workflow";
 import { Label } from "../../../../../components/ui/label";
 import { Select } from "../../../../../components/ui/select";
 import { SwitchField } from "../../../../../components/ui/switch";
-import { ActionConfigFieldGroup } from "../../ActionConfigFieldGroup";
-import { TemplateTextField, TemplateTextareaField, type VariableOption } from "../../TemplateTextField";
+import { ActionConfigFieldGroup } from "../../actionFields/ActionConfigFieldGroup";
+import { TemplateTextField, TemplateTextareaField, type VariableOption } from "../../variables/TemplateTextField";
 import { objectConfig, stringConfig, arrayConfig } from "../../../lib/configUtils";
 
 export function ListMutationFields({

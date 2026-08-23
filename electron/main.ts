@@ -56,7 +56,8 @@ function createMainWindow() {
     minWidth: 960,
     minHeight: 640,
     icon: getAppIconPath(),
-    show: false,
+    title: "Automation App",
+    show: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -67,6 +68,7 @@ function createMainWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
+    mainWindow?.focus();
   });
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;

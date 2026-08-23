@@ -18,6 +18,12 @@ const methodNames: BridgeMethodName[] = [
   "importProjectPackage",
   "deleteProject",
   "listBrowserProfiles",
+  "listDesktopTargets",
+  "createDesktopTarget",
+  "updateDesktopTarget",
+  "deleteDesktopTarget",
+  "setWorkflowDesktopTarget",
+  "inspectDesktopTarget",
   "createBrowserProfile",
   "updateBrowserProfile",
   "deleteBrowserProfile",
@@ -32,6 +38,7 @@ const methodNames: BridgeMethodName[] = [
   "duplicateSubflow",
   "deleteSubflow",
   "getSubflowUsage",
+  "listProjectSubflowUsages",
   "listWorkflows",
   "getWorkflow",
   "getWorkflowBrowserConfig",
@@ -143,15 +150,50 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
     if (command === "list_browser_profiles") return defaultBrowserProfiles();
     if (command === "list_subflows") return [];
     if (command === "get_subflow_usage") return [];
+    if (command === "list_project_subflow_usages") return {};
     if (command === "get_operations_overview") return defaultOperationsOverview();
+    if (command === "get_run_state") {
+      return {
+        status: "idle",
+        mode: "none",
+        target_step_id: null,
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: [],
+        outputs: {},
+        retained_session: null,
+        error: null,
+      };
+    }
+    if (command === "list_run_states") return [];
+    if (command === "validate_workflow_graph") return [];
+    if (command === "compile_workflow_graph") {
+      return { steps: [], domain_policy: null, subflows: {} };
+    }
 
     if (command === "get_identity_lab_overview") return defaultIdentityLabOverview();
     if (command === "get_identity_lab_detail") return null;
     if (command === "close_identity_retained_session") return null;
-    if (command === "get_app_config") return { mode: "team" };
-    if (command === "me") return { id: "test-user-uuid", email: "test@example.com", role: "user", created_at: "2026-05-27T00:00:00.000Z" };
+    if (command === "list_schedules") return [];
+    if (command === "list_schedule_events") return [];
+    if (command === "get_cloakbrowser_diagnostics") {
+      return {
+        wrapper_version: null,
+        binary: { version: null, platform: null, installed: true, binary_path: null, cache_dir: null, download_url: null },
+        auto_update_enabled: false,
+        checksum_skip_enabled: false,
+        geoip_available: false,
+        profile_root: "",
+        font_checklist: { status: "not_configured", reason: null, directories: [] },
+        last_smoke_result: { status: "not_recorded", reason: null },
+        headed_display: { available: false, reason: "headless test environment" },
+        profiles: [],
+      };
+    }
     if (command === "list_users") return [];
-    throw new Error(`Unexpected command: ${command}`);
+    if (command === "me") {
+      return { id: "test-user-uuid", email: "test@example.com", role: "user", created_at: "2026-05-27T00:00:00.000Z" };
+    }
   }
 
   const handler = commands[activeCommand];
@@ -310,6 +352,9 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
     resolveCommand(commands, "delete_project", { projectId }),
   );
 
+  // Empty by default: a project with no Desktop Targets is the normal state,
+  // and every test that predates the Desktop Surface describes exactly that.
+  workflowBridgeMock.listDesktopTargets.mockResolvedValue([]);
   workflowBridgeMock.listBrowserProfiles.mockImplementation((projectId: string) =>
     resolveCommand(commands, "list_browser_profiles", { projectId }),
   );
@@ -363,6 +408,11 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.getSubflowUsage.mockImplementation((subflowId: string) =>
     resolveCommand(commands, "get_subflow_usage", { subflowId }),
+  );
+  // Async on purpose: callers attach `.catch` directly, so this one has to
+  // hand back a real promise rather than the raw handler value.
+  workflowBridgeMock.listProjectSubflowUsages.mockImplementation(async (projectId: string) =>
+    resolveCommand(commands, "list_project_subflow_usages", { projectId }),
   );
   workflowBridgeMock.createWorkflow.mockImplementation((name: string, options: unknown) =>
     resolveCommand(commands, "create_workflow", { name, options }),

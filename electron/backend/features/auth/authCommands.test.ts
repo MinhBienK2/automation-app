@@ -10,7 +10,6 @@ vi.mock("../../db/pgSync.js", () => {
     listUsers: vi.fn(),
     createUser: vi.fn(),
     deleteUser: vi.fn(),
-    getPgPool: vi.fn(),
   };
 });
 

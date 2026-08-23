@@ -12,15 +12,15 @@ import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
 import { buildRunIssues } from "../../../lib/workflowUi";
-import { RunMonitorDrawer } from "../components/RunMonitorDrawer";
-import { RunIssuePanel } from "../components/RunIssuePanel";
-import { RunStatusBar } from "../components/RunStatusBar";
-import { getVariablesStateAtStep } from "../components/RunMonitorEnvironment";
-import { RunVariablesDrawer } from "../components/RunVariablesDrawer";
+import { RunMonitorDrawer } from "../components/run/RunMonitorDrawer";
+import { RunIssuePanel } from "../components/run/RunIssuePanel";
+import { RunStatusBar } from "../components/run/RunStatusBar";
+import { getVariablesStateAtStep } from "../lib/runMonitorTree";
+import { RunVariablesDrawer } from "../components/run/RunVariablesDrawer";
 import {
   WorkflowGraphEditor,
   type GraphSelectionRequest,
-} from "../components/WorkflowGraphEditor";
+} from "../components/graph/WorkflowGraphEditor";
 import {
   DropdownMenu,
   DropdownMenuContent,

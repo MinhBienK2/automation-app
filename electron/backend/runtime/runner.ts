@@ -12,6 +12,7 @@ import type {
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import type { AppPaths } from "../db/database.js";
+import { requireWebSurface, type ExecutionSurface } from "./surface.js";
 import {
   BrowserSessionManager,
   browserIdentityEvidence,
@@ -31,6 +32,7 @@ import {
   actionSummaryTraceField,
   actionTraceMode,
   pushActionTrace,
+  surfaceTraceField,
   runtimeErrorDiagnostics,
   snapshotOutputs,
   subflowTraceFields,
@@ -98,6 +100,21 @@ type RunnerOptions = {
   usesDefaultDriver?: boolean;
 };
 
+/**
+ * A surface the runner did not open itself.
+ *
+ * This is how the Desktop Surface reaches the runner without `runtime/`
+ * importing `surfaces/desktop/` — ADR-0001 forbids that, and the ban is what
+ * keeps this module surface-independent. The caller binds a Desktop Target into
+ * a closure; the runner only ever sees a surface and a way to close it.
+ */
+export type OpenedSurface = {
+  surface: ExecutionSurface;
+  /** Shown to the operator before the first action — a degraded tier, say. */
+  warnings?: string[];
+  close(): Promise<void>;
+};
+
 export type RunnerRunRequest = {
   runId?: string | null;
   graph: CompiledWorkflowGraph;
@@ -108,6 +125,12 @@ export type RunnerRunRequest = {
   retainedSessionWorkflowId?: string | null;
   signal?: AbortSignal;
   onProgress?: (state: Partial<RunState>) => void;
+  /**
+   * Supplied for a non-web run. Its presence is what makes this a desktop run:
+   * the browser is never launched, and none of the retained-session machinery
+   * applies, because a desktop application is not ours to retain.
+   */
+  openSurface?: () => Promise<OpenedSurface>;
 };
 
 /**
@@ -115,6 +138,27 @@ export type RunnerRunRequest = {
  * (`RunnerActionRuntime`) plus the fields only the runner itself touches.
  * Declared as an extension rather than a second copy of the shared fields.
  */
+/**
+ * The runner drives the Web Surface today, so it reads through one helper
+ * rather than narrowing at twenty call sites. When a desktop runner arrives it
+ * will be a sibling of this class, not a branch inside it.
+ */
+function webSurfaceOf(runtime: Pick<RunnerActionRuntime, "surface">) {
+  return requireWebSurface(runtime.surface);
+}
+
+/**
+ * The step's own sensitivity flag, or `null` when it does not carry one.
+ *
+ * `null` rather than `false`: "the operator said no" and "the operator said
+ * nothing" are different inputs to the policy, which can infer sensitivity from
+ * a password-typed target when the flag is unset.
+ */
+function sensitivityOf(config: ActionConfig): boolean | null {
+  const inner = (config as { config?: { sensitive?: unknown } }).config;
+  return typeof inner?.sensitive === "boolean" ? inner.sensitive : null;
+}
+
 type Runtime = RunnerActionRuntime & {
   domainPolicy: { allowed_domains: string[] } | null;
   traces: ActionTrace[];
@@ -182,9 +226,7 @@ export class BrowserWorkflowRunner {
   }
 
   async run(request: RunnerRunRequest): Promise<RunState> {
-    const launch = request.reuseRetainedSession
-      ? await this.sessionManager.reuseRetainedSession(request)
-      : await this.sessionManager.launchFreshSession(request);
+    const opened = await this.openSurface(request);
     const retainedWorkflowId = request.retainedSessionWorkflowId ?? null;
     const retainedProfileName = retainedProfileKey(request.settings);
     const outputs: Record<string, unknown> = {};
@@ -208,8 +250,22 @@ export class BrowserWorkflowRunner {
     const runtime: Runtime = {
       runId: request.runId ?? randomUUID(),
       settings: request.settings,
-      context: launch.context,
-      page: launch.page,
+      surface: opened.surface,
+      get context() {
+        return (this as any).surface?.kind === "web" ? (this as any).surface.context : (undefined as any);
+      },
+      get page() {
+        return (this as any).surface?.kind === "web" ? (this as any).surface.page : (undefined as any);
+      },
+      set page(p: any) {
+        if ((this as any).surface?.kind === "web") (this as any).surface.page = p;
+      },
+      get activeFrameXpath() {
+        return (this as any).surface?.kind === "web" ? (this as any).surface.activeFrameXpath : (undefined as any);
+      },
+      set activeFrameXpath(f: any) {
+        if ((this as any).surface?.kind === "web") (this as any).surface.activeFrameXpath = f;
+      },
       domainPolicy: request.graph.domain_policy ?? null,
       outputs,
       elementRefs: new Map(),
@@ -221,18 +277,28 @@ export class BrowserWorkflowRunner {
       currentStepName: null,
       currentActionType: null,
       currentActionSummary: null,
+      currentActionSensitive: null,
+      currentSurfaceTrace: null,
       currentStepMetadata: null,
       liveState: state,
       onProgress: request.onProgress,
       signal: request.signal,
       failedStepInfo: null,
     };
-    runtime.outputs.browser_identity = await browserIdentityEvidence(
-      request.settings,
-      runtime.runId,
-    );
+    if (runtime.surface.kind === "web") {
+      runtime.outputs.browser_identity = await browserIdentityEvidence(
+        request.settings,
+        runtime.runId,
+      );
+    }
+    if (opened.warnings?.length) {
+      // Surfaced as an output rather than a log line: the operator reads the
+      // run, not the console, and a degraded tier explains failures that
+      // otherwise look like a broken locator.
+      runtime.outputs.__surface_warnings = opened.warnings;
+    }
 
-    let closeBrowser = request.settings.run_policy.browser_retention === "close";
+    let closeSurface = request.settings.run_policy.browser_retention === "close";
 
     try {
       await this.applyEnvironment(runtime, request.settings);
@@ -245,6 +311,7 @@ export class BrowserWorkflowRunner {
         runtime.currentStepName = step.label;
         runtime.currentActionType = step.config.type;
         runtime.currentActionSummary = actionConfigSummary(step.config);
+        runtime.currentActionSensitive = sensitivityOf(step.config);
         runtime.currentStepMetadata = step.metadata ?? null;
         state.current_step_id = step.node_id;
         state.current_step_number = stepNumber;
@@ -257,7 +324,7 @@ export class BrowserWorkflowRunner {
       state.status = "success";
     } catch (error) {
       if (error instanceof RunnerStop) {
-        closeBrowser = closeBrowser || error.closeBrowser;
+        closeSurface = closeSurface || error.closeBrowser;
         state.status =
           error.status === "success"
             ? "success"
@@ -301,13 +368,22 @@ export class BrowserWorkflowRunner {
       state.current_step_id = null;
       state.current_step_number = null;
 
-      if (closeBrowser) {
-        await runtime.context.close();
-        this.sessionManager.forgetContext(runtime.context);
+      if (runtime.surface.kind !== "web") {
+        // Always closed, whatever the retention policy says. Retention is about
+        // the *application*, and the opener already applies it — a desktop
+        // session's `close` terminates only what the run launched, and only
+        // when the policy asks. What `close` also does, unconditionally, is
+        // stop the driver host: an Electron utility process that nothing else
+        // holds a handle to. Skipping this call for a retained run leaked one
+        // host process, and one embedded driver, per run.
+        await opened.close();
+      } else if (closeSurface) {
+        await webSurfaceOf(runtime).context.close();
+        this.sessionManager.forgetContext(webSurfaceOf(runtime).context);
       } else {
         this.sessionManager.retainSession(
-          runtime.context,
-          runtime.page,
+          webSurfaceOf(runtime).context,
+          webSurfaceOf(runtime).page,
           retainedWorkflowId,
           retainedProfileName,
         );
@@ -341,12 +417,40 @@ export class BrowserWorkflowRunner {
     return this.sessionManager.getRetainedSessionStates();
   }
 
+  /**
+   * The one place a run acquires something to act on.
+   *
+   * A caller that supplied an opener has already decided what the surface is,
+   * so the browser is never launched — which is what stops a desktop run from
+   * quietly starting a browser it will never use.
+   */
+  private async openSurface(request: RunnerRunRequest): Promise<OpenedSurface> {
+    if (request.openSurface) return request.openSurface();
+
+    const launch = request.reuseRetainedSession
+      ? await this.sessionManager.reuseRetainedSession(request)
+      : await this.sessionManager.launchFreshSession(request);
+
+    return {
+      surface: { kind: "web", context: launch.context, page: launch.page },
+      // Web teardown is the session manager's, and it distinguishes closing
+      // from retaining — a distinction this shape has no room for.
+      close: async () => {
+        await launch.context.close();
+        this.sessionManager.forgetContext(launch.context);
+      },
+    };
+  }
+
   private async applyEnvironment(_runtime: Runtime, _settings: WorkflowSettings) {}
 
   private async executeStep(runtime: Runtime, step: CompiledGraphStep) {
     const startedAt = new Date().toISOString();
     const outputSnapshot = snapshotOutputs(runtime.outputs);
     const evidenceStartIndex = runtime.evidence.length;
+    // Cleared here rather than after the push: a step that throws before it
+    // resolves anything must not inherit the last step's element.
+    runtime.currentSurfaceTrace = null;
     try {
       await this.executeAction(runtime, step.config);
       pushActionTrace(runtime, {
@@ -359,6 +463,7 @@ export class BrowserWorkflowRunner {
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
+        ...surfaceTraceField(runtime),
       });
     } catch (error) {
       pushActionTrace(runtime, {
@@ -373,6 +478,9 @@ export class BrowserWorkflowRunner {
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
+        // A failed step is where this matters most: the locator it did resolve,
+        // and the verdict that came back false, are the whole diagnosis.
+        ...surfaceTraceField(runtime),
         reason: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -546,6 +654,7 @@ export class BrowserWorkflowRunner {
     const nodeId = action.graph_node_id ?? runtime.currentStepId ?? "nested";
     const outputSnapshot = snapshotOutputs(runtime.outputs);
     const evidenceStartIndex = runtime.evidence.length;
+    runtime.currentSurfaceTrace = null;
     try {
       await this.executeAction(runtime, action);
       pushActionTrace(runtime, {
@@ -559,6 +668,7 @@ export class BrowserWorkflowRunner {
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
+        ...surfaceTraceField(runtime),
       });
     } catch (error) {
       pushActionTrace(runtime, {
@@ -574,6 +684,7 @@ export class BrowserWorkflowRunner {
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
+        ...surfaceTraceField(runtime),
         reason: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -607,13 +718,13 @@ export class BrowserWorkflowRunner {
         await this.sleep(action.config.duration_ms ?? 1000, runtime.signal);
         return;
       case "page_load":
-        await runtime.page.waitForLoadState?.("load", {
+        await webSurfaceOf(runtime).page.waitForLoadState?.("load", {
           timeout: action.config.timeout_ms ?? undefined,
         });
         return;
       case "url_contains":
-        await runtime.page.waitForURL?.(
-          (url) => url.href.includes(action.config.url ?? ""),
+        await webSurfaceOf(runtime).page.waitForURL?.(
+          (url: URL) => url.href.includes(action.config.url ?? ""),
           { timeout: action.config.timeout_ms ?? undefined },
         );
         return;
@@ -639,7 +750,7 @@ export class BrowserWorkflowRunner {
       }
       case "text_visible":
         await waitForLocatorState(
-          runtime.page.locator(`text=${action.config.text ?? ""}`),
+          webSurfaceOf(runtime).page.locator(`text=${action.config.text ?? ""}`),
           "visible",
           action.config.timeout_ms,
         );
@@ -757,12 +868,12 @@ export class BrowserWorkflowRunner {
       if (!ref) {
         throw new Error(`Element ref not found: ${refName}`);
       }
-      return locatorForRuntimeElementRef(runtime.page, ref);
+      return locatorForRuntimeElementRef(webSurfaceOf(runtime).page, ref);
     }
 
     if (endpoint === "source") {
       return locatorFor(
-        runtime.page,
+        webSurfaceOf(runtime).page,
         action.config.source_target,
         action.config.source_xpath,
         this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
@@ -770,7 +881,7 @@ export class BrowserWorkflowRunner {
     }
 
     return locatorFor(
-      runtime.page,
+      webSurfaceOf(runtime).page,
       action.config.target_target,
       action.config.target_xpath,
       this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
@@ -790,11 +901,11 @@ export class BrowserWorkflowRunner {
       if (!ref) {
         throw new Error(`Element ref not found: ${action.config.trigger_ref}`);
       }
-      return locatorForRuntimeElementRef(runtime.page, ref);
+      return locatorForRuntimeElementRef(webSurfaceOf(runtime).page, ref);
     }
 
     return locatorFor(
-      runtime.page,
+      webSurfaceOf(runtime).page,
       action.config.trigger_target,
       action.config.trigger_xpath,
       this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
@@ -808,7 +919,7 @@ export class BrowserWorkflowRunner {
     position: DragTargetPosition,
     timeoutMs: number | null | undefined,
   ) {
-    const mouse = runtime.page.mouse;
+    const mouse = webSurfaceOf(runtime).page.mouse;
     if (!mouse?.move || !mouse.down || !mouse.up) {
       throw new Error("drag_and_drop target_position requires driver mouse support");
     }
@@ -866,7 +977,7 @@ export class BrowserWorkflowRunner {
       if (!ref) {
         throw new Error(`Element ref not found: ${config.target_ref}`);
       }
-      const locator = await locatorForRuntimeElementRef(runtime.page, ref);
+      const locator = await locatorForRuntimeElementRef(webSurfaceOf(runtime).page, ref);
       await this.waitForElementReadiness(
         locator,
         config.wait_until ?? null,
@@ -877,7 +988,7 @@ export class BrowserWorkflowRunner {
     }
 
     const locator = await locatorFor(
-      runtime.page,
+      webSurfaceOf(runtime).page,
       config.target,
       config.xpath ?? fallbackXpath,
       this.getEffectiveIframeXpath(runtime, config.iframe_xpath),
@@ -892,7 +1003,7 @@ export class BrowserWorkflowRunner {
   }
 
   private getEffectiveIframeXpath(runtime: Runtime, iframeXpath?: string | null): string | null {
-    return iframeXpath || runtime.activeFrameXpath || null;
+    return iframeXpath || webSurfaceOf(runtime).activeFrameXpath || null;
   }
 
   private async executeFindElement(
@@ -908,7 +1019,7 @@ export class BrowserWorkflowRunner {
     if (!candidates.length) {
       throw new Error("No element locator satisfied target constraints");
     }
-    const selected = await selectRankedElementCandidate(runtime.page, candidates, rank);
+    const selected = await selectRankedElementCandidate(webSurfaceOf(runtime).page, candidates, rank);
     const target = action.config.target ?? {
       locators: [selected.locatorConfig],
       constraints: null,
@@ -944,7 +1055,7 @@ export class BrowserWorkflowRunner {
     do {
       this.throwIfCancelled(runtime.signal);
       const candidates = await rankedCandidatesForTarget(
-        runtime.page,
+        webSurfaceOf(runtime).page,
         config.target,
         config.xpath,
         effectiveIframe,
@@ -954,7 +1065,7 @@ export class BrowserWorkflowRunner {
       await this.sleep(Math.min(100, Math.max(1, deadline - Date.now())), runtime.signal);
     } while (Date.now() < deadline);
     return rankedCandidatesForTarget(
-      runtime.page,
+      webSurfaceOf(runtime).page,
       config.target,
       config.xpath,
       effectiveIframe,

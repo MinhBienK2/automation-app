@@ -1,4 +1,5 @@
 import type { ActionConfig } from "../../../src/types/workflow.js";
+import { TEMPLATE_SKIPPED_KEYS } from "../graph/nestedSteps.js";
 
 export function setVariables(
   outputs: Record<string, unknown>,
@@ -80,23 +81,6 @@ const NUMERIC_KEYS = new Set([
   "longitude",
 ]);
 
-const NESTED_STEP_KEYS = new Set([
-  "steps",
-  "then_steps",
-  "else_steps",
-  "try_steps",
-  "success_steps",
-  "error_steps",
-  "finally_steps",
-  "primary_steps",
-  "fallback_steps",
-  "failed_steps",
-  "timeout_steps",
-  "cases",
-  "choices",
-  "condition",
-]);
-
 export function resolveObjectTemplates(
   val: any,
   outputs: Record<string, unknown>,
@@ -120,7 +104,7 @@ export function resolveObjectTemplates(
   if (typeof val === "object") {
     const result: any = {};
     for (const [key, child] of Object.entries(val)) {
-      if (NESTED_STEP_KEYS.has(key)) {
+      if (TEMPLATE_SKIPPED_KEYS[key]) {
         result[key] = child;
       } else {
         result[key] = resolveObjectTemplates(child, outputs, key);

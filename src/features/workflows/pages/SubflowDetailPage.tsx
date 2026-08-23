@@ -10,8 +10,8 @@ import type {
   SubflowUsage,
   WorkflowGraph,
 } from "../../../types/workflow";
-import { SubflowSettingsDialog } from "../components/SubflowSettingsDialog";
-import { WorkflowGraphEditor } from "../components/WorkflowGraphEditor";
+import { SubflowSettingsDialog } from "../components/dialogs/SubflowSettingsDialog";
+import { WorkflowGraphEditor } from "../components/graph/WorkflowGraphEditor";
 
 type SubflowDetailPageProps = {
   subflow: Subflow | SubflowSummary | null;

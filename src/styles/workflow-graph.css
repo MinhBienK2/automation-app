@@ -1288,3 +1288,111 @@
 }
 
 
+
+/*
+ * The Desktop Surface element picker.
+ *
+ * A tree of up to a few hundred rows inside a dialog, so it scrolls in its own
+ * region rather than growing the dialog past the viewport — DESIGN.md requires
+ * dialogs to stay inside 1024x768. Indentation carries the ancestry, which is
+ * the thing an operator reads the tree for.
+ */
+.desktop-picker-dialog {
+  display: grid;
+  gap: 10px;
+  width: min(720px, 92vw);
+}
+
+.desktop-picker-status {
+  margin: 0;
+  color: var(--fg-secondary);
+  font-size: 13px;
+}
+
+.desktop-picker-tree {
+  max-height: 46vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.desktop-picker-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.desktop-picker-row:hover {
+  background: var(--surface);
+}
+
+.desktop-picker-row-selected,
+.desktop-picker-row-selected:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.desktop-picker-role {
+  color: var(--fg-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+}
+
+.desktop-picker-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Never colour alone: the word says it too. */
+.desktop-picker-fragile {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--attention-bg);
+  color: var(--attention);
+  font-size: 11px;
+}
+
+.desktop-picker-explanation {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.desktop-picker-explanation p {
+  margin: 0;
+  color: var(--fg-secondary);
+}
+
+.desktop-target-summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.desktop-target-summary code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}

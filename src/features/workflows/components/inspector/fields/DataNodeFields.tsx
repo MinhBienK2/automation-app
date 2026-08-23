@@ -3,9 +3,9 @@ import { Label } from "../../../../../components/ui/label";
 import { Input } from "../../../../../components/ui/input";
 import { Select } from "../../../../../components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
-import { ActionConfigFieldGroup } from "../../ActionConfigFieldGroup";
-import { TemplateTextField, type VariableOption } from "../../TemplateTextField";
-import { ElementTargetSourceFields } from "../../ActionConfigElementSharedFields";
+import { ActionConfigFieldGroup } from "../../actionFields/ActionConfigFieldGroup";
+import { TemplateTextField, type VariableOption } from "../../variables/TemplateTextField";
+import { ElementTargetSourceFields } from "../../actionFields/ActionConfigElementSharedFields";
 import { objectConfig, stringConfig } from "../../../lib/configUtils";
 
 export function DataNodeFields({

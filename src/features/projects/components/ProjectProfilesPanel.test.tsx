@@ -55,6 +55,7 @@ const environments: BrowserProfile[] = [
 
 const workflows: WorkflowSummary[] = [
   {
+    surface: "web" as const,
     id: "workflow-1",
     project_id: project.id,
     browser_profile_id: "env-1",

@@ -8,7 +8,7 @@ import {
   listBrowserProfiles,
   resetBrowserProfileIdentity as resetBrowserProfileIdentityCommand,
   updateBrowserProfile as updateBrowserProfileCommand,
-} from "../../lib/workflowApi";
+} from "../../lib/api/workflowApi";
 import { commandMessage } from "../../lib/workflowUi";
 
 type UseBrowserProfileActionsOptions = {

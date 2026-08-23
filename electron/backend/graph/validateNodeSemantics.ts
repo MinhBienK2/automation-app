@@ -9,7 +9,7 @@ import type {
   WorkflowCondition,
   WorkflowGraph,
 } from "../../../src/types/workflow.js";
-import { validateActionConfig } from "../actions/validation.js";
+import { validateActionConfig } from "../actions/validation/index.js";
 import {
   nodeCondition,
   routerGraphConfigOrNull,

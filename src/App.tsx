@@ -4,6 +4,7 @@ import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { SettingsHelpPage } from "./features/settings/pages/SettingsHelpPage";
 import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnostics";
 import { ProjectProfilesPanel } from "./features/projects/components/ProjectProfilesPanel";
+import { ProjectDesktopTargetsPanel } from "./features/projects/components/ProjectDesktopTargetsPanel";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
 import { useOperationsOverviewWorkspace } from "./features/overview/useOperationsOverviewWorkspace";
 import { ProjectSettings } from "./features/projects/components/ProjectSettings";
@@ -26,7 +27,10 @@ import {
   saveWorkflowGraph,
   createSubflow,
   saveSubflowGraph,
-} from "./lib/workflowApi";
+  createDesktopTarget,
+  deleteDesktopTarget,
+  setWorkflowDesktopTarget,
+} from "./lib/api/workflowApi";
 import {
   commandMessage,
   initialRunState,
@@ -35,7 +39,6 @@ import {
   graphSaveStatusLabel,
   idleRunStateWithRetainedSession,
   latestRunForWorkflow,
-  settingsSaveStatuses,
   readGraphAutosaveEnabled,
   writeGraphAutosaveEnabled,
   readGraphAutosaveDelayMs,
@@ -43,24 +46,21 @@ import {
   cloneWorkflowSettings,
   operationsTargetToMissionTarget,
   type GraphSaveStatus,
-  type WorkflowSettingsSaveStatus,
 } from "./lib/appState";
-import { RecordingReviewDialog } from "./features/workflows/components/RecordingReviewDialog";
-import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
+import { RecordingReviewDialog } from "./features/workflows/components/dialogs/RecordingReviewDialog";
+import { WorkflowSettingsDialog } from "./features/workflows/components/dialogs/WorkflowSettingsDialog";
+import { WorkflowSurfaceProvider } from "./features/workflows/state/WorkflowSurfaceContext";
 import { UnsavedChangesDialog } from "./components/ui/unsaved-changes-dialog";
-import { AppPackageDialogs } from "./AppPackageDialogs";
+import { AppPackageDialogs } from "./app/AppPackageDialogs";
 import {
   useAppPackageDialogs,
   workflowPackageSections,
-} from "./lib/useAppPackageDialogs";
+} from "./app/useAppPackageDialogs";
 import type {
   IdentityLabTarget,
   OperationsNavigationTarget,
   RunState,
-  WorkflowGraph,
-  WorkflowSettings,
   WorkflowSettingsSectionId,
-  GraphValidationIssue,
   WorkflowRunSnapshot,
 } from "./types/workflow";
 import "./App.css";
@@ -75,7 +75,7 @@ import { useWorkflowRunState } from "./features/workflows/state/useWorkflowRunSt
 import { useRecordingWorkspace } from "./features/workflows/state/useRecordingWorkspace";
 import { useSubflowWorkspace } from "./features/subflows/state/useSubflowWorkspace";
 import { runFromSelectedState } from "./features/workflows/lib/runFromSelected";
-import { useGraphExitNavigation } from "./lib/useGraphExitNavigation";
+import { useGraphExitNavigation } from "./app/useGraphExitNavigation";
 import { useAuthState } from "./features/auth/state/useAuthState";
 import { LoginScreen } from "./features/auth/pages/LoginScreen";
 import { AdminPanel } from "./features/auth/pages/AdminPanel";
@@ -115,9 +115,7 @@ function AppInner() {
   // --- Appearance preferences (theme / accent / density) ---
   const themePreferences = useThemePreferences();
 
-  // --- States ---
   const [appError, setAppError] = useState("");
-
   const toastApi = useToast();
   const showToast = useCallback(
     (message: string, type: "success" | "error" | "info" = "success") => {
@@ -134,22 +132,8 @@ function AppInner() {
   );
 
   // Shared state references
-  const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
-  const [workflowSettings, setWorkflowSettings] = useState<WorkflowSettings | null>(null);
-  const [workflowSettingsSavedSnapshot, setWorkflowSettingsSavedSnapshot] = useState<WorkflowSettings | null>(null);
-  const [workflowProfileDraftId, setWorkflowProfileDraftId] = useState<string | null>(null);
-  const [workflowProfileSavedId, setWorkflowProfileSavedId] = useState<string | null>(null);
-  const [workflowSettingsDialogOpen, setWorkflowSettingsDialogOpen] = useState(false);
-  const [workflowSettingsActiveSection, setWorkflowSettingsActiveSection] = useState<WorkflowSettingsSectionId>("general");
-  const [workflowSettingsSaveStatuses, setWorkflowSettingsSaveStatuses] = useState<Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>>(settingsSaveStatuses("saved"));
   const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(readGraphAutosaveEnabled);
   const [graphAutosaveDelayMs, setGraphAutosaveDelayMs] = useState(readGraphAutosaveDelayMs);
-  const [graphSaveStatus, setGraphSaveStatus] = useState<GraphSaveStatus>(graphAutosaveEnabled ? "saved" : "off");
-  const [graphRevision, setGraphRevision] = useState(0);
-  const [savedGraphRevision, setSavedGraphRevision] = useState(0);
-  const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
-  const [graphIssuesNeedRecheck, setGraphIssuesNeedRecheck] = useState(false);
-  const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
   const [runState, setRunState] = useState<RunState>(initialRunState);
   const [runSnapshots, setRunSnapshots] = useState<WorkflowRunSnapshot[]>([]);
   const [activeRunWorkflowName, setActiveRunWorkflowName] = useState<string | null>(null);
@@ -186,7 +170,63 @@ function AppInner() {
     cleanupSettingsBrowserProfiles,
   } = useSettingsDiagnostics();
 
+  // --- Graph session state lives inside the workflows feature ---
+  const graphState = useWorkflowGraphState({
+    getDetail: () => workflowsWorkspace.detail,
+    graphAutosaveEnabled,
+    setGraphAutosaveEnabled,
+    setAppError,
+    loadWorkflows: () => workflowsWorkspace.loadWorkflows(),
+  });
+  const {
+    workflowGraph,
+    graphSaveStatus,
+    graphRevision,
+    savedGraphRevision,
+    graphIssues,
+    setWorkflowGraph,
+    setGraphSaveStatus,
+    setGraphRevision,
+    setSavedGraphRevision,
+    setGraphIssues,
+    graphIssuesNeedRecheck,
+    setGraphIssuesNeedRecheck,
+    setSelectedGraphNodeId,
+  } = graphState;
+
   // --- Domain hooks ---
+  const settingsWorkspace = useWorkflowSettingsState({
+    getDetail: () => workflowsWorkspace.detail,
+    setDetail: (detailValue) => workflowsWorkspace.setDetail(detailValue),
+    setWorkflows: (workflowList) => workflowsWorkspace.setWorkflows(workflowList),
+    getBrowserProfiles: () => projectsWorkspace.browserProfiles,
+    setBrowserProfiles: (profiles) => projectsWorkspace.setBrowserProfiles(profiles),
+    setSelectedProjectId: (id) => projectsWorkspace.setSelectedProjectId(id),
+    loadWorkflows: () => workflowsWorkspace.loadWorkflows(),
+    setAppError,
+    showToast,
+    resolveWorkflowProfileId: (profileId, profiles) => {
+      if (profileId && profiles.some((profile) => profile.id === profileId)) {
+        return profileId;
+      }
+      return profiles[0]?.id ?? null;
+    },
+  });
+
+  const {
+    workflowSettings,
+    workflowSettingsDialogOpen,
+    workflowSettingsActiveSection,
+    workflowSettingsSaveStatuses,
+    workflowProfileDraftId,
+    setWorkflowSettings,
+    setWorkflowSettingsSavedSnapshot,
+    setWorkflowSettingsDialogOpen,
+    setWorkflowSettingsSaveStatuses,
+    setWorkflowProfileDraftId,
+    setWorkflowProfileSavedId,
+  } = settingsWorkspace;
+
   const subflowsWorkspace = useSubflowWorkspace({
     setAppError,
     ensureProjectId: () => projectsWorkspace.ensureProjectId(),
@@ -213,6 +253,10 @@ function AppInner() {
     setSelectedProjectId: (id) => projectsWorkspace.setSelectedProjectId(id),
     currentProjectId: () => projectsWorkspace.currentProjectId(),
     browserProfiles: projectsWorkspace.browserProfiles,
+    // Unfiltered on purpose: `selectedDesktopTargets` is derived further down,
+    // after this hook. The hook narrows to the current project itself, in
+    // `defaultDesktopTargetFor` — which is the only place it reads the list.
+    desktopTargets: projectsWorkspace.desktopTargets,
     setBrowserProfiles: (envs) => projectsWorkspace.setBrowserProfiles(envs),
     loadSubflowsForProject: (id) => subflowsWorkspace.loadSubflowsForProject(id),
     graphAutosaveEnabled,
@@ -237,67 +281,13 @@ function AppInner() {
   });
 
 
-  const graphState = useWorkflowGraphState({
-    detail: workflowsWorkspace.detail,
-    workflowGraph,
-    setWorkflowGraph,
-    graphAutosaveEnabled,
-    setGraphAutosaveEnabled,
-    graphSaveStatus,
-    setGraphSaveStatus,
-    graphRevision,
-    setGraphRevision,
-    savedGraphRevision,
-    setSavedGraphRevision,
-    graphIssues,
-    setGraphIssues,
-    selectedGraphNodeId,
-    setSelectedGraphNodeId,
-    setAppError,
-    loadWorkflows: () => workflowsWorkspace.loadWorkflows(),
-    graphIssuesNeedRecheck,
-    setGraphIssuesNeedRecheck,
-  });
 
-  const settingsWorkspace = useWorkflowSettingsState({
-    detail: workflowsWorkspace.detail,
-    setDetail: workflowsWorkspace.setDetail,
-    workflows: workflowsWorkspace.workflows,
-    setWorkflows: workflowsWorkspace.setWorkflows,
-    browserProfiles: projectsWorkspace.browserProfiles,
-    setBrowserProfiles: projectsWorkspace.setBrowserProfiles,
-    setSelectedProjectId: projectsWorkspace.setSelectedProjectId,
-    loadWorkflows: workflowsWorkspace.loadWorkflows,
-    setAppError,
-    showToast,
-    resolveWorkflowProfileId: (profileId, profiles) => {
-      if (profileId && profiles.some((profile) => profile.id === profileId)) {
-        return profileId;
-      }
-      return profiles[0]?.id ?? null;
-    },
-    workflowSettings,
-    setWorkflowSettings,
-    workflowSettingsSavedSnapshot,
-    setWorkflowSettingsSavedSnapshot,
-    workflowSettingsDialogOpen,
-    setWorkflowSettingsDialogOpen,
-    workflowSettingsActiveSection,
-    setWorkflowSettingsActiveSection,
-    workflowSettingsSaveStatuses,
-    setWorkflowSettingsSaveStatuses,
-    workflowProfileDraftId,
-    setWorkflowProfileDraftId,
-    workflowProfileSavedId,
-    setWorkflowProfileSavedId,
-  });
 
   const runWorkspace = useWorkflowRunState({
     detail: workflowsWorkspace.detail,
     workflowGraph,
     selectedGraphNodeId: graphState.selectedGraphNodeId,
     selectedWorkflowId: workflowsWorkspace.selectedWorkflowId,
-    activeRunWorkflowName,
     setAppError,
     loadOperationsOverview,
     persistCurrentGraph: () => graphState.persistCurrentGraph(),
@@ -305,6 +295,7 @@ function AppInner() {
     setGraphIssues: graphState.setGraphIssues,
     setGraphIssuesNeedRecheck,
     runState,
+    activeRunWorkflowName,
     setRunState,
     runSnapshots,
     setRunSnapshots,
@@ -609,7 +600,6 @@ function AppInner() {
     }
   }, [
     nav.screen,
-    setRunSnapshots,
     workflowsWorkspace,
     setWorkflowGraph,
     setWorkflowSettings,
@@ -740,6 +730,31 @@ function AppInner() {
       )
     : projectsWorkspace.browserProfiles;
 
+  const selectedDesktopTargets = selectedProject
+    ? projectsWorkspace.desktopTargets.filter(
+        (target) => target.project_id === selectedProject.id,
+      )
+    : projectsWorkspace.desktopTargets;
+
+  // The element picker has to launch the application to read a tree out of it,
+  // so the inspector needs the workflow's Desktop Target, not only its surface.
+  const openWorkflowDesktopTargetId =
+    workflowsWorkspace.detail?.workflow.desktop_target_id ?? null;
+  const openWorkflowSurface = useMemo(
+    () => ({
+      kind: workflowsWorkspace.detail?.workflow.surface ?? ("web" as const),
+      desktopTargetId: openWorkflowDesktopTargetId,
+      desktopTargetName: selectedDesktopTargets.find(
+        (target) => target.id === openWorkflowDesktopTargetId,
+      )?.name,
+    }),
+    [
+      workflowsWorkspace.detail?.workflow.surface,
+      openWorkflowDesktopTargetId,
+      selectedDesktopTargets,
+    ],
+  );
+
   const projectStats = useMemo(() => {
     const stats: Record<string, { workflows: number; subflows: number; profiles: number }> = {};
     for (const project of projectsWorkspace.projects) {
@@ -828,6 +843,7 @@ function AppInner() {
       onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
       screen={nav.screen}
     >
+      <WorkflowSurfaceProvider value={openWorkflowSurface}>
       {nav.screen === "overview" ? (
         <OperationsOverviewPage
           overview={operationsOverview}
@@ -957,6 +973,30 @@ function AppInner() {
                 await deleteBrowserProfile(profileId, selectedProject?.id);
               }}
             />
+          ) : projectsWorkspace.projectCollection === "desktop-targets" ? (
+            <ProjectDesktopTargetsPanel
+              project={selectedProject}
+              desktopTargets={selectedDesktopTargets}
+              error={appError}
+              onCreateDesktopTarget={async (projectId, input) => {
+                try {
+                  await createDesktopTarget(projectId, input);
+                  await projectsWorkspace.loadDesktopTargets(projectId);
+                  setAppError("");
+                } catch (error) {
+                  setAppError(commandMessage(error));
+                }
+              }}
+              onDeleteDesktopTarget={async (targetId) => {
+                try {
+                  await deleteDesktopTarget(targetId);
+                  await projectsWorkspace.loadDesktopTargets(selectedProject?.id ?? null);
+                  setAppError("");
+                } catch (error) {
+                  setAppError(commandMessage(error));
+                }
+              }}
+            />
           ) : projectsWorkspace.projectCollection === "settings" ? (
             <ProjectSettings
               project={selectedProject}
@@ -972,12 +1012,19 @@ function AppInner() {
               workflowDialogMode={workflowsWorkspace.workflowDialogMode}
               workflowNameDraft={workflowsWorkspace.workflowNameDraft}
               browserProfiles={selectedBrowserProfiles}
+              desktopTargets={selectedDesktopTargets}
               selectedProfileIdDraft={workflowsWorkspace.selectedProfileIdDraft}
+              surfaceDraft={workflowsWorkspace.surfaceDraft}
+              selectedDesktopTargetIdDraft={workflowsWorkspace.selectedDesktopTargetIdDraft}
               appError={appError}
               runSnapshots={runSnapshots}
               startingWorkflowId={runWorkspace.startingWorkflowId}
               onWorkflowNameDraftChange={workflowsWorkspace.setWorkflowNameDraft}
               onSelectedProfileIdDraftChange={workflowsWorkspace.setSelectedProfileIdDraft}
+              onSurfaceDraftChange={workflowsWorkspace.setSurfaceDraft}
+              onSelectedDesktopTargetIdDraftChange={
+                workflowsWorkspace.setSelectedDesktopTargetIdDraft
+              }
               onSubmitWorkflowDialog={workflowsWorkspace.submitWorkflowDialog}
               onOpenCreateWorkflow={workflowsWorkspace.openCreateWorkflowDialog}
               onOpenEditWorkflow={(workflow) => {
@@ -1137,6 +1184,9 @@ function AppInner() {
         activeSection={workflowSettingsActiveSection}
         browserProfiles={selectedBrowserProfiles}
         selectedBrowserProfileId={workflowProfileDraftId}
+        surface={workflowsWorkspace.detail?.workflow.surface ?? "web"}
+        desktopTargets={selectedDesktopTargets}
+        selectedDesktopTargetId={workflowsWorkspace.detail?.workflow.desktop_target_id ?? null}
         error={appError}
         hasUnsavedChanges={Object.values(workflowSettingsSaveStatuses).some(
           (status) => status === "unsaved",
@@ -1149,20 +1199,38 @@ function AppInner() {
           settingsWorkspace.closeWorkflowSettingsDialog();
         }}
         onActiveSectionChange={settingsWorkspace.setWorkflowSettingsActiveSection}
+        onDesktopTargetChange={(targetId) => {
+          const workflowId = workflowsWorkspace.detail?.workflow.id;
+          if (!workflowId) return;
+          void (async () => {
+            try {
+              await setWorkflowDesktopTarget(workflowId, targetId);
+              // Reloaded rather than patched locally: the command is what
+              // enforces that the Target belongs to this workflow's project,
+              // and a local patch would show a state the backend refused.
+              await workflowsWorkspace.performOpenWorkflow(workflowId);
+              setAppError("");
+            } catch (error) {
+              setAppError(commandMessage(error));
+            }
+          })();
+        }}
         onBrowserProfileChange={(profileId) => {
           setWorkflowProfileDraftId(profileId);
-          setWorkflowSettings((current) => {
-            const selectedProfile = selectedBrowserProfiles.find(
-              (profile) => profile.id === profileId,
-            );
-            return current && selectedProfile
-              ? { ...current, browser_launch: selectedProfile.browser_launch }
-              : current;
-          });
-          setWorkflowSettingsSaveStatuses((current) => ({
-            ...current,
+          const current = workflowSettings;
+          const selectedProfile = selectedBrowserProfiles.find(
+            (profile) => profile.id === profileId,
+          );
+          if (current && selectedProfile) {
+            settingsWorkspace.changeWorkflowSettings({
+              ...current,
+              browser_launch: selectedProfile.browser_launch,
+            });
+          }
+          setWorkflowSettingsSaveStatuses({
+            ...workflowSettingsSaveStatuses,
             browser_launch: "unsaved",
-          }));
+          });
         }}
         onSettingsChange={settingsWorkspace.changeWorkflowSettings}
         onSaveSettings={async () => {
@@ -1210,6 +1278,7 @@ function AppInner() {
         isPackageActionBusy={isPackageActionBusy}
         workflowDialogBusy={workflowsWorkspace.workflowDialogBusy}
       />
+      </WorkflowSurfaceProvider>
      </AppShell>
     </>
   );

@@ -10,11 +10,6 @@ import type {
 } from "../../../src/types/workflow.js";
 import { getMongoCollection } from "../db/mongo.js";
 
-export function browserProfileKey(settings: WorkflowSettings) {
-  if (settings.browser_launch.session_mode !== "persistent_profile") return null;
-  return settings.browser_launch.profile_dir?.trim() || settings.browser_launch.profile_name?.trim() || null;
-}
-
 export async function beginRun(
   database: DbAdapter,
   workflowId: string,
@@ -171,6 +166,9 @@ export function fallbackWorkflowSummary(id: string, name: string): WorkflowSumma
   return {
     id,
     name,
+    // A stand-in for a workflow that could not be read. It says web because
+    // that is what a workflow is unless its row says otherwise.
+    surface: "web",
     step_count: 0,
     created_at: timestamp,
     updated_at: timestamp,

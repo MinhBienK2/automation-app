@@ -1,5 +1,5 @@
 import type { WorkflowSettings } from "../../../types/workflow";
-import { personaForSeed } from "../../../lib/personaCatalog";
+import { personaForSeed } from "../data/personaCatalog";
 
 export function createDefaultBrowserProfileName(seed = randomProfileSeed()) {
   const safeSeed = seed

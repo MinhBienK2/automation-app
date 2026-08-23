@@ -5,18 +5,10 @@ import type { RunnerCommandPort } from "../runtime/runManager.js";
 import type {
   WorkflowPackage,
   ProjectPackage,
-  WorkflowSummary,
-  Project,
-  WorkflowSettings,
-  WorkflowGraph,
-  Workflow,
-  WorkflowCreateOptions,
-  BrowserProfile,
   SubflowExport,
 } from "../../../src/types/workflow.js";
 import { WorkflowRepository } from "./workflows/workflowRepository.js";
 import { OperationsRepository } from "./operations/operationsRepository.js";
-import { WorkflowScheduleRepository } from "./scheduling/workflowScheduleRepository.js";
 import { RunManager } from "../runtime/runManager.js";
 import { IdentityRepository } from "./identities/identityRepository.js";
 import { WorkflowSettingsService } from "./workflows/workflowSettingsService.js";
@@ -39,44 +31,67 @@ export type CommandContext = {
   defaultFingerprintFontsDir?: string | null | (() => string | null);
 };
 
-export type CommandDeps = {
-  context: CommandContext;
+import type { ProjectBootstrapHelpers } from "./projectBootstrapHelpers.js";
+import type { SettingsLifecycleHelpers } from "./settingsLifecycleHelpers.js";
+import type { IdentityRotationHelpers } from "./identityRotationHelpers.js";
+import type { GraphHelpers } from "./graphHelpers.js";
+import type { RunGuardsHelpers } from "./runGuardsHelpers.js";
+
+
+export type WorkflowCommandsDeps = { context: CommandContext } & {
   repository: WorkflowRepository;
-  scheduleRepository: WorkflowScheduleRepository;
-  operationsRepository: OperationsRepository;
-  runner: RunnerCommandPort;
-  runManager: RunManager;
-  identityRepository: IdentityRepository;
   settingsService: WorkflowSettingsService;
+  runManager: RunManager;
+  runner: RunnerCommandPort;
+  operationsRepository: OperationsRepository;
+} & Pick<SettingsLifecycleHelpers, "requireWorkflow" | "getSettings" | "saveSettings"> &
+  Pick<ProjectBootstrapHelpers, "createWorkflow"> &
+  Pick<GraphHelpers, "getWorkflowGraph" | "graphContextForWorkflow"> &
+  Pick<RunGuardsHelpers, "activeRunConflict" | "assertWorkflowDeletionAllowed">;
+
+export type ProjectCommandsDeps = { context: CommandContext } & {
+  repository: WorkflowRepository;
+  settingsService: WorkflowSettingsService;
+  projectCascades: ReturnType<typeof createProjectCommandCascades>;
+} & Pick<ProjectBootstrapHelpers, "requireProject" | "requireBrowserProfile"> &
+  Pick<SettingsLifecycleHelpers, "requireWorkflow">;
+
+export type SubflowCommandsDeps = { context: CommandContext } & {
+  repository: WorkflowRepository;
+} & Pick<ProjectBootstrapHelpers, "requireProject">;
+
+export type PackageCommandsDeps = { context: CommandContext } & {
+  repository: WorkflowRepository;
   packageService: WorkflowPackageService;
   projectPackageService: ProjectPackageService;
-  recorderSessionManager: RecorderSessionManager;
-  recordingDraftCommands: ReturnType<typeof createRecordingDraftCommands>;
   projectCascades: ReturnType<typeof createProjectCommandCascades>;
+} & Pick<ProjectBootstrapHelpers, "requireProject" | "ensureDefaultProject" | "createWorkflow"> &
+  Pick<SettingsLifecycleHelpers, "requireWorkflow" | "getSettings" | "saveSettings"> &
+  Pick<GraphHelpers, "getWorkflowGraph" | "referencedSubflowsForWorkflowGraph" | "remapCallSubflowIds"> &
+  Pick<IdentityRotationHelpers, "duplicateBrowserProfileLaunch">;
 
-  // Common helper functions shared from orchestrator
-  requireProject: (projectId: string) => Promise<Project>;
-  ensureDefaultProject: () => Promise<Project>;
-  requireBrowserProfile: (browserProfileId: string) => Promise<BrowserProfile>;
-  ensureDefaultBrowserProfile: (project: Project) => Promise<BrowserProfile>;
-  requireWorkflow: (workflowId: string) => Promise<WorkflowSummary>;
-  getSettings: (workflowId: string) => Promise<WorkflowSettings>;
-  saveSettings: (workflowId: string, settings: WorkflowSettings) => Promise<WorkflowSettings>;
-  createWorkflow: (name: string, options?: WorkflowCreateOptions) => Promise<Workflow>;
-  getWorkflowGraph: (workflowId: string) => Promise<WorkflowGraph>;
-  activeRunConflict: (workflowId: string, settings: WorkflowSettings) => { message: string; field: string } | null;
-  schedulerConflictReason: (workflowId: string) => Promise<string | null>;
-  assertWorkflowDeletionAllowed: (workflowId: string, settings: WorkflowSettings) => Promise<void>;
-  rotateBrowserIdentity: (workflowId: string) => Promise<WorkflowSettings>;
-  duplicateBrowserProfileLaunch: (
-    browserLaunch: WorkflowSettings["browser_launch"],
-    exceptWorkflowId?: string,
-  ) => Promise<WorkflowSettings["browser_launch"]>;
-  remapCallSubflowIds: (graph: WorkflowGraph, subflowIdMap: Map<string, string>) => WorkflowGraph;
-  referencedSubflowsForWorkflowGraph: (workflow: WorkflowSummary, graph: WorkflowGraph) => Promise<any[]>;
-  graphContextForWorkflow: (workflow: WorkflowSummary, graph?: WorkflowGraph) => Promise<{
-    projectId: string | null;
-    workflowLabel: string;
-    resolveSubflow: (subflowId: string) => any;
-  }>;
+export type RecordingCommandsDeps = Pick<SettingsLifecycleHelpers, "getSettings"> &
+  Pick<RunGuardsHelpers, "activeRunConflict"> & {
+    recorderSessionManager: RecorderSessionManager;
+    recordingDraftCommands: ReturnType<typeof createRecordingDraftCommands>;
+  };
+
+export type SettingsCommandsDeps = { context: CommandContext } & {
+  repository: WorkflowRepository;
+  settingsService: WorkflowSettingsService;
+  runManager: RunManager;
+} & Pick<SettingsLifecycleHelpers, "requireWorkflow" | "getSettings" | "saveSettings"> &
+  Pick<IdentityRotationHelpers, "rotateBrowserIdentity">;
+
+export type BackupCommandsDeps = { context: CommandContext };
+
+export type OperationsCommandsDeps = {
+  operationsRepository: OperationsRepository;
+  runManager: RunManager;
 };
+
+export type IdentityCommandsDeps = Pick<SettingsLifecycleHelpers, "getSettings"> &
+  Pick<RunGuardsHelpers, "activeRunConflict"> & {
+    identityRepository: IdentityRepository;
+    runner: RunnerCommandPort;
+  };

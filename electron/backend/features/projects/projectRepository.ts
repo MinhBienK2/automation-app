@@ -28,6 +28,7 @@ type BrowserProfileRow = {
 
 type WorkflowRow = {
   id: string;
+  surface?: string | null;
   project_id: string | null;
   browser_profile_id: string | null;
   browser_profile_name?: string | null;
@@ -258,6 +259,7 @@ export class ProjectRepository {
               workflows.browser_profile_id,
               browser_profiles.name AS browser_profile_name,
               workflows.name,
+              workflows.surface,
               workflows.created_at,
               workflows.updated_at
        FROM workflows
@@ -298,6 +300,7 @@ function rowToSummary(row: WorkflowRow): WorkflowSummary {
   return {
     id: row.id,
     name: row.name,
+    surface: row.surface === "desktop" ? "desktop" : "web",
     project_id: row.project_id,
     browser_profile_id: row.browser_profile_id,
     created_at: row.created_at,

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import type {
   WorkflowGraphStateAPI,
 } from "../../../shared/types/workspaceContracts";
@@ -10,54 +10,34 @@ import type {
 import {
   saveWorkflowGraph,
   validateWorkflowGraph,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
 import { hasEditableGraphChange, type GraphSaveStatus } from "../../../lib/appState";
 
 export interface WorkflowGraphStateDeps {
-  detail: WorkflowDetail | null;
-  workflowGraph: WorkflowGraph | null;
-  setWorkflowGraph: (graph: WorkflowGraph | null) => void;
+  getDetail: () => WorkflowDetail | null;
   graphAutosaveEnabled: boolean;
   setGraphAutosaveEnabled: (enabled: boolean) => void;
-  graphSaveStatus: GraphSaveStatus;
-  setGraphSaveStatus: (status: GraphSaveStatus) => void;
-  graphRevision: number;
-  setGraphRevision: React.Dispatch<React.SetStateAction<number>>;
-  savedGraphRevision: number;
-  setSavedGraphRevision: React.Dispatch<React.SetStateAction<number>>;
-  graphIssues: GraphValidationIssue[];
-  setGraphIssues: (issues: GraphValidationIssue[]) => void;
-  selectedGraphNodeId: string | null;
-  setSelectedGraphNodeId: (nodeId: string | null) => void;
   setAppError: (error: string) => void;
   loadWorkflows: () => Promise<void>;
-  graphIssuesNeedRecheck: boolean;
-  setGraphIssuesNeedRecheck: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGraphStateAPI {
   const {
-    detail,
-    workflowGraph,
-    setWorkflowGraph,
+    getDetail,
     graphAutosaveEnabled,
     setGraphAutosaveEnabled,
-    graphSaveStatus,
-    setGraphSaveStatus,
-    graphRevision,
-    setGraphRevision,
-    savedGraphRevision,
-    setSavedGraphRevision,
-    graphIssues,
-    setGraphIssues,
-    selectedGraphNodeId,
-    setSelectedGraphNodeId,
     setAppError,
     loadWorkflows,
-    graphIssuesNeedRecheck: _graphIssuesNeedRecheck,
-    setGraphIssuesNeedRecheck,
   } = deps;
+
+  const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
+  const [graphSaveStatus, setGraphSaveStatus] = useState<GraphSaveStatus>(graphAutosaveEnabled ? "saved" : "off");
+  const [graphRevision, setGraphRevision] = useState(0);
+  const [savedGraphRevision, setSavedGraphRevision] = useState(0);
+  const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
+  const [graphIssuesNeedRecheck, setGraphIssuesNeedRecheck] = useState(false);
+  const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
 
   const graphRevisionRef = useRef(graphRevision);
   const savedGraphRevisionRef = useRef(savedGraphRevision);
@@ -94,7 +74,7 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
   }, [graphAutosaveEnabled, setWorkflowGraph, setGraphIssuesNeedRecheck, setGraphRevision, setGraphSaveStatus]);
 
   const persistCurrentGraph = useCallback(async (options?: { comment?: string; tag?: string }) => {
-    if (!detail || !workflowGraph) return false;
+    if (!getDetail() || !workflowGraph) return false;
     if (graphRevisionRef.current === savedGraphRevisionRef.current && !options?.comment && !options?.tag) {
       return true;
     }
@@ -102,7 +82,7 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
     setGraphSaveStatus("saving");
 
     try {
-      await saveWorkflowGraph(detail.workflow.id, workflowGraph, options);
+      await saveWorkflowGraph(getDetail()!.workflow.id, workflowGraph, options);
       setSavedGraphRevision(graphRevisionRef.current);
       savedGraphRevisionRef.current = graphRevisionRef.current;
       setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
@@ -113,7 +93,7 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
       setAppError(commandMessage(error));
       return false;
     }
-  }, [detail, workflowGraph, graphAutosaveEnabled, loadWorkflows, setSavedGraphRevision, setGraphSaveStatus, setAppError]);
+  }, [getDetail, workflowGraph, graphAutosaveEnabled, loadWorkflows, setSavedGraphRevision, setGraphSaveStatus, setAppError]);
 
   const validateGraph = useCallback(async () => {
     if (!workflowGraph) return;
@@ -138,6 +118,7 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
     graphRevision,
     savedGraphRevision,
     graphIssues,
+    graphIssuesNeedRecheck,
     selectedGraphNodeId,
     setWorkflowGraph,
     setGraphAutosaveEnabled,
@@ -145,6 +126,7 @@ export function useWorkflowGraphState(deps: WorkflowGraphStateDeps): WorkflowGra
     setGraphRevision,
     setSavedGraphRevision,
     setGraphIssues,
+    setGraphIssuesNeedRecheck: setGraphIssuesNeedRecheck as (value: boolean | ((current: boolean) => boolean)) => void,
     setSelectedGraphNodeId,
     changeWorkflowGraph,
     persistCurrentGraph,

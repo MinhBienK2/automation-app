@@ -18,7 +18,8 @@ import { SearchInput } from "../../../components/ui/search-input";
 import { ConfirmDialog } from "../../../components/ui/confirm-dialog";
 import { FormField } from "../../../components/ui/form-field";
 
-export type ProjectCollection = "workflows" | "subflows" | "profiles" | "settings";
+export type { ProjectCollection } from "../../../shared/types/workspaceContracts";
+import type { ProjectCollection } from "../../../shared/types/workspaceContracts";
 
 export type ProjectStats = {
   workflows: number;
@@ -51,6 +52,7 @@ const projectCollections: Array<{
   { id: "workflows", label: "Workflows", stat: "workflows" },
   { id: "subflows", label: "Subflows", stat: "subflows" },
   { id: "profiles", label: "Profiles", stat: "profiles" },
+  { id: "desktop-targets", label: "Desktop Targets" },
   { id: "settings", label: "Settings" },
 ];
 

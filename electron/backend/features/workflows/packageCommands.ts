@@ -11,10 +11,10 @@ import type {
   Subflow,
 } from "../../../../src/types/workflow.js";
 import { commandError, summaryToWorkflow } from "../../commandHelpers.js";
-import type { CommandDeps } from "../types.js";
+import type { PackageCommandsDeps } from "../types.js";
 import { migrateWorkflowGraph } from "../../graph/migration.js";
 
-export function createPackageCommands(deps: CommandDeps) {
+export function createPackageCommands(deps: PackageCommandsDeps) {
   const {
     repository,
     projectPackageService,

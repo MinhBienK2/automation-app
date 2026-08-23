@@ -193,4 +193,22 @@ export type ActionType =
   | "date_time_operation"
   | "crypto_operation"
   | "switch_frame"
-  | "switch_to_parent_frame";
+  | "switch_to_parent_frame"
+  // Desktop Surface. Prefixed because both families sit side by side in the
+  // registry, the schema directory and every stack trace.
+  | "desktop_click"
+  | "desktop_set_value"
+  | "desktop_type_text"
+  | "desktop_press_key"
+  | "desktop_hotkey"
+  | "desktop_read_text"
+  | "desktop_wait_for"
+  | "desktop_screenshot"
+  | "desktop_focus_window"
+  | "desktop_invoke_menu"
+  | "desktop_scroll"
+  | "desktop_drag"
+  | "desktop_read_clipboard"
+  | "desktop_set_clipboard"
+  | "desktop_read_table"
+  | "desktop_hover";

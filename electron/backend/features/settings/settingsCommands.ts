@@ -6,12 +6,12 @@ import type {
   CloakBrowserDiagnostics,
   BrowserProfileCleanupResult,
 } from "../../../../src/types/workflow.js";
-import type { CommandDeps } from "../types.js";
+import type { SettingsCommandsDeps } from "../types.js";
 import { buildCloakBrowserDiagnostics, loadCloakBrowserDiagnosticsModule } from "../../diagnostics/cloakBrowserDiagnostics.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-export function createSettingsCommands(deps: CommandDeps) {
+export function createSettingsCommands(deps: SettingsCommandsDeps) {
   const {
     repository,
     settingsService,

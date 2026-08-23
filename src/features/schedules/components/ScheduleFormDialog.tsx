@@ -72,6 +72,7 @@ export function ScheduleFormDialog({
   onClose,
 }: ScheduleFormDialogProps) {
   const [form, setForm] = useState<ScheduleFormState>(() => defaultForm(workflows));
+  const selectedWorkflow = workflows.find((workflow) => workflow.id === form.workflowId);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -146,6 +147,19 @@ export function ScheduleFormDialog({
               ))}
             </Select>
           </div>
+
+          {selectedWorkflow?.surface === "desktop" ? (
+            // Stated at the moment the operator commits to a time, because
+            // "runs in the background" is much weaker on this surface: input
+            // devices stay theirs, but the window still appears, can take
+            // focus, and covers what they were looking at.
+            <Alert variant="warning" className="text-xs p-2.5">
+              This is a desktop workflow. Each run opens{" "}
+              {selectedWorkflow.desktop_target_name ?? "its application"} on your screen — your
+              mouse and keyboard stay yours, but the window will appear over whatever you are
+              doing. A locked screen is fine; a signed-out or restarted machine is not.
+            </Alert>
+          ) : null}
 
           <div className="flex flex-col gap-1 w-full">
             <Label htmlFor="schedule-name">Schedule name</Label>
@@ -348,6 +362,7 @@ function defaultForm(workflows: WorkflowSummary[]): ScheduleFormState {
 function formFromSchedule(schedule: WorkflowSchedule): ScheduleFormState {
   const base = defaultForm([
     {
+      surface: "web" as const,
       id: schedule.workflow_id,
       name: schedule.workflow_name,
       step_count: 0,

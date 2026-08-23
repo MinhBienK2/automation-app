@@ -2,11 +2,12 @@ import { useState } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { AppPackageDialogs } from "../../../AppPackageDialogs";
+import { AppPackageDialogs } from "../../../app/AppPackageDialogs";
 import type { WorkflowSettingsSectionId, WorkflowSummary } from "../../../types/workflow";
 import { WorkflowListPage } from "./WorkflowListPage";
 
 const workflow: WorkflowSummary = {
+  surface: "web" as const,
   id: "workflow-1",
   project_id: "project-1",
   name: "Login flow",
@@ -39,6 +40,11 @@ function WorkflowDeleteCancelHarness() {
         workflowNameDraft=""
         browserProfiles={[]}
         selectedProfileIdDraft={null}
+        desktopTargets={[]}
+        surfaceDraft="web"
+        selectedDesktopTargetIdDraft={null}
+        onSurfaceDraftChange={() => {}}
+        onSelectedDesktopTargetIdDraftChange={() => {}}
         appError=""
         runSnapshots={[]}
         onWorkflowNameDraftChange={vi.fn()}

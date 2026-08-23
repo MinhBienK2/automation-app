@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -51,7 +49,7 @@ export function parseRoutes(markdownContent) {
           const cleanPath = p.replace(/\s*\(.*\)$/, '').replace(/`/g, '').trim();
           // If not starting with docs/ and not existing at root, assume under docs/
           if (fs.existsSync(cleanPath)) return cleanPath;
-          const docsPath = path.join('docs', cleanPath);
+          const docsPath = path.join('docs', cleanPath).split(path.sep).join('/');
           if (fs.existsSync(docsPath)) return docsPath;
           return cleanPath;
         });

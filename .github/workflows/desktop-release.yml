@@ -30,6 +30,11 @@ jobs:
   quality:
     name: Quality gates
     runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -47,6 +52,8 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Run tests
+        env:
+          MONGODB_URI: mongodb://localhost:27017/automation_logs
         run: npm test
 
       - name: Build Electron main and preload

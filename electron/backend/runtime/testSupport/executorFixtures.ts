@@ -2,6 +2,7 @@ import type {
   RunnerActionExecutorDependencies,
   RunnerActionRuntime,
 } from "../runnerActionExecutors.js";
+import type { WebSurface } from "../surface.js";
 
 /**
  * Shared fixtures for testing action executors.
@@ -17,28 +18,32 @@ import type {
  * executors actually receive is worse than no fixture.
  */
 
+/**
+ * `page` and `context` stay first-class overrides even though the runtime now
+ * carries a surface: a test that wants a spy page should say so, not assemble
+ * a surface literal around it.
+ */
 export function minimalRuntime(
-  overrides: Partial<RunnerActionRuntime> = {},
+  overrides: Partial<RunnerActionRuntime> & {
+    page?: WebSurface["page"];
+    context?: WebSurface["context"];
+  } = {},
 ): RunnerActionRuntime {
-  const page = overrides.page ?? ({
+  const { page: pageOverride, context: contextOverride, ...rest } = overrides;
+  const overriddenSurface = rest.surface?.kind === "web" ? rest.surface : undefined;
+  const page = pageOverride ?? overriddenSurface?.page ?? ({
     goto: async () => undefined,
     locator: () => {
       throw new Error("not used");
     },
     evaluate: async () => "",
-  } as unknown as RunnerActionRuntime["page"]);
+  } as unknown as WebSurface["page"]);
 
   return {
     runId: "run-1",
     settings: {
       run_policy: { execute_js_enabled: true },
     } as RunnerActionRuntime["settings"],
-    context: {
-      pages: () => [page],
-      newPage: async () => page,
-      close: async () => undefined,
-    } as unknown as RunnerActionRuntime["context"],
-    page,
     outputs: {},
     elementRefs: new Map(),
     clipboard: "",
@@ -47,9 +52,31 @@ export function minimalRuntime(
     currentStepName: null,
     currentActionType: null,
     currentActionSummary: null,
+    currentActionSensitive: null,
+    currentSurfaceTrace: null,
     currentStepMetadata: null,
-    signal: undefined,
-    ...overrides,
+    ...rest,
+    context:
+      contextOverride ??
+      overriddenSurface?.context ??
+      ({
+        pages: () => [page],
+        newPage: async () => page,
+        close: async () => undefined,
+      } as unknown as WebSurface["context"]),
+    page,
+    surface: rest.surface ?? {
+      kind: "web",
+      context:
+        contextOverride ??
+        overriddenSurface?.context ??
+        ({
+          pages: () => [page],
+          newPage: async () => page,
+          close: async () => undefined,
+        } as unknown as WebSurface["context"]),
+      page,
+    },
   };
 }
 

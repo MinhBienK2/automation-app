@@ -82,6 +82,7 @@ describe("setupFonts", () => {
           repoRoot: tempDir,
           runner,
           log: () => {},
+          commandAvailable: async () => true,
         });
 
         // Verify runner called for download, extract, and fc-cache

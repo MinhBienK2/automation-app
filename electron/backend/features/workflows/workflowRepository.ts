@@ -11,6 +11,7 @@ import type {
   WorkflowGraph,
   WorkflowSettings,
   WorkflowSummary,
+  ExecutionSurfaceKind,
 } from "../../../../src/types/workflow.js";
 import { processGraphOnLoad } from "../../graph/graphLoader.js";
 import { writeGraphToNormalizedTables } from "../../db/migrations/backfillGraphTables.js";
@@ -21,8 +22,11 @@ import { SubflowRepository } from "./subflowRepository.js";
 
 type WorkflowRow = {
   id: string;
+  surface?: string | null;
   project_id: string | null;
   browser_profile_id: string | null;
+  desktop_target_id?: string | null;
+  desktop_target_name?: string | null;
   browser_profile_name?: string | null;
   name: string;
   description: string;
@@ -116,11 +120,16 @@ export class WorkflowRepository {
     name: string,
     graph: WorkflowGraph,
     now = new Date(),
-    ownership: { projectId?: string | null; browserProfileId?: string | null } = {},
+    ownership: {
+      projectId?: string | null;
+      browserProfileId?: string | null;
+      surface?: ExecutionSurfaceKind;
+    } = {},
   ): Promise<Workflow> {
     const timestamp = now.toISOString();
     const id = crypto.randomUUID();
     const profileId = ownership.browserProfileId ?? null;
+    const surface: ExecutionSurfaceKind = ownership.surface ?? "web";
     await this.database.execute(
       `INSERT INTO workflows (
         id,
@@ -130,15 +139,17 @@ export class WorkflowRepository {
         description,
         tags_json,
         settings_json,
+        surface,
         created_at,
         updated_at,
         owner_id
-      ) VALUES ($1, $2, $3, $4, '', '[]', NULL, $5, $6, $7)`,
+      ) VALUES ($1, $2, $3, $4, '', '[]', NULL, $5, $6, $7, $8)`,
       [
         id,
         ownership.projectId ?? null,
         profileId,
         name,
+        surface,
         timestamp,
         timestamp,
         this.database.ownerId,
@@ -148,6 +159,7 @@ export class WorkflowRepository {
     return {
       id,
       name,
+      surface,
       project_id: ownership.projectId ?? null,
       browser_profile_id: profileId,
       created_at: timestamp,
@@ -161,11 +173,15 @@ export class WorkflowRepository {
               workflows.project_id,
               workflows.browser_profile_id,
               browser_profiles.name AS browser_profile_name,
+              workflows.desktop_target_id,
+              desktop_targets.name AS desktop_target_name,
               workflows.name,
+              workflows.surface,
               workflows.created_at,
               workflows.updated_at
        FROM workflows
        LEFT JOIN browser_profiles ON browser_profiles.id = workflows.browser_profile_id
+       LEFT JOIN desktop_targets ON desktop_targets.id = workflows.desktop_target_id
        WHERE workflows.owner_id = $1
        ORDER BY workflows.updated_at DESC, workflows.name ASC`,
       [this.database.ownerId],
@@ -204,6 +220,28 @@ export class WorkflowRepository {
       "UPDATE workflows SET project_id = $1, browser_profile_id = NULL, updated_at = $2 WHERE id = $3 AND owner_id = $4",
       [projectId, now.toISOString(), id, this.database.ownerId],
     );
+  }
+
+  /**
+   * Points a desktop workflow at the application it drives.
+   *
+   * Separate from `assignWorkflowBrowserProfile` rather than a shared "assign
+   * the thing this surface uses": the two are only superficially alike, and one
+   * function taking whichever id happens to fit is how a web workflow ends up
+   * with a Desktop Target.
+   */
+  async assignWorkflowDesktopTarget(
+    id: string,
+    targetId: string | null,
+    now = new Date(),
+  ): Promise<Workflow | null> {
+    const workflowDetail = await this.getWorkflow(id);
+    if (!workflowDetail?.workflow) return null;
+    await this.database.execute(
+      "UPDATE workflows SET desktop_target_id = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+      [targetId, now.toISOString(), id, this.database.ownerId],
+    );
+    return (await this.getWorkflow(id))?.workflow ?? null;
   }
 
   async assignWorkflowBrowserProfile(
@@ -291,6 +329,9 @@ export class WorkflowRepository {
                 workflows.project_id,
                 workflows.browser_profile_id,
                 browser_profiles.name AS browser_profile_name,
+                workflows.desktop_target_id,
+                desktop_targets.name AS desktop_target_name,
+                workflows.surface,
                 workflows.name,
                 workflows.description,
                 workflows.tags_json,
@@ -299,6 +340,7 @@ export class WorkflowRepository {
                 workflows.updated_at
          FROM workflows
          LEFT JOIN browser_profiles ON browser_profiles.id = workflows.browser_profile_id
+         LEFT JOIN desktop_targets ON desktop_targets.id = workflows.desktop_target_id
          WHERE workflows.id = $1 AND workflows.owner_id = $2`,
         [id, this.database.ownerId],
       ) as WorkflowRow | null) ?? null
@@ -310,8 +352,12 @@ function rowToWorkflow(row: WorkflowRow): Workflow {
   return {
     id: row.id,
     name: row.name,
+    // A row written before the column existed is a browser workflow; that is
+    // what every workflow was.
+    surface: row.surface === "desktop" ? "desktop" : "web",
     project_id: row.project_id,
     browser_profile_id: row.browser_profile_id,
+    desktop_target_id: row.desktop_target_id ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -322,6 +368,7 @@ function rowToSummary(row: WorkflowRow): WorkflowSummary {
     ...rowToWorkflow(row),
     step_count: 0,
     browser_profile_name: row.browser_profile_name ?? null,
+    desktop_target_name: row.desktop_target_name ?? null,
   };
 }
 

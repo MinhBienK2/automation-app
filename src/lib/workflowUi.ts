@@ -5,7 +5,7 @@ import type {
   RunState,
   WorkflowRunSnapshot,
 } from "../types/workflow";
-import { allActionTypes, isActionVisibleInPrimaryPalette } from "./actionCapabilities";
+import { allActionTypes, isActionVisibleInPrimaryPalette } from "../features/workflows/data/actionCapabilities";
 
 export const actionLabels: Record<ActionType, string> = {
   navigate: "Navigate",
@@ -195,9 +195,25 @@ export const actionLabels: Record<ActionType, string> = {
   crypto_operation: "Crypto Hashing & Base64",
   switch_frame: "Switch Frame Context",
   switch_to_parent_frame: "Switch to Parent Frame",
+  desktop_click: "Desktop: Click",
+  desktop_set_value: "Desktop: Set Value",
+  desktop_type_text: "Desktop: Type Text",
+  desktop_press_key: "Desktop: Press Key",
+  desktop_hotkey: "Desktop: Hotkey",
+  desktop_read_text: "Desktop: Read Text",
+  desktop_wait_for: "Desktop: Wait For",
+  desktop_screenshot: "Desktop: Screenshot",
+  desktop_focus_window: "Desktop: Focus Window",
+  desktop_invoke_menu: "Desktop: Invoke Menu",
+  desktop_scroll: "Desktop: Scroll",
+  desktop_drag: "Desktop: Drag",
+  desktop_read_clipboard: "Desktop: Read Clipboard",
+  desktop_set_clipboard: "Desktop: Set Clipboard",
+  desktop_read_table: "Desktop: Read Table",
+  desktop_hover: "Desktop: Hover",
 };
 
-const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
+export const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Navigation",
     actions: [
@@ -258,6 +274,42 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Capture Data",
     actions: [
+      "extract_text",
+      "extract_text_content",
+      "extract_inner_html",
+      "extract_outer_html",
+      "extract_attribute",
+      "extract_all_attributes",
+      "extract_data_attributes",
+      "extract_class_list",
+      "extract_descendant_attributes",
+      "extract_computed_style",
+      "extract_select_value",
+      "extract_select_options",
+      "extract_checkbox_state",
+      "extract_form_data",
+      "extract_input_value",
+      "extract_table",
+      "extract_table_headers",
+      "extract_table_row",
+      "extract_table_column",
+      "extract_table_cell",
+      "extract_list",
+      "extract_list_attributes",
+      "extract_structured_list",
+      "extract_regex_matches",
+      "extract_numbers",
+      "extract_urls",
+      "extract_emails",
+      "extract_page_links",
+      "extract_dimensions",
+      "extract_visibility",
+      "extract_element_state",
+      "count_elements",
+      "check_element_exists",
+      "get_current_url",
+      "get_page_title",
+      "get_meta_content",
       "take_screenshot",
       "write_text_file",
       "wait_for_download",
@@ -324,13 +376,43 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
     label: "Advanced",
     actions: ["execute_js"],
   },
+  {
+    label: "Desktop",
+    actions: [
+      "desktop_click",
+      "desktop_set_value",
+      "desktop_type_text",
+      "desktop_press_key",
+      "desktop_hotkey",
+      "desktop_read_text",
+      "desktop_wait_for",
+      "desktop_screenshot",
+      "desktop_focus_window",
+      "desktop_invoke_menu",
+      "desktop_scroll",
+      "desktop_drag",
+      "desktop_read_clipboard",
+      "desktop_set_clipboard",
+      "desktop_read_table",
+      "desktop_hover",
+    ],
+  },
 ];
 
+/**
+ * The catalog minus anything not offered in a palette at all.
+ *
+ * Desktop actions survive this filter — they are offered, just on the other
+ * surface — and `actionPickerGroupsForSurface` is what decides which family a
+ * given workflow sees.
+ */
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> =
   actionGroupCatalog
     .map((group) => ({
       ...group,
-      actions: group.actions.filter(isActionVisibleInPrimaryPalette),
+      actions: group.actions.filter((actionType) =>
+        isActionVisibleInPrimaryPalette(actionType),
+      ),
     }))
     .filter((group) => group.actions.length > 0);
 

@@ -33,6 +33,7 @@ export function summaryToWorkflow(summary: WorkflowSummary): Workflow {
   return {
     id: summary.id,
     name: summary.name,
+    surface: summary.surface,
     created_at: summary.created_at,
     updated_at: summary.updated_at,
   };

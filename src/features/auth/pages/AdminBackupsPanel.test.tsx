@@ -9,9 +9,9 @@ import {
   deleteBackup,
   getBackupConfig,
   saveBackupConfig,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 
-vi.mock("../../../lib/workflowApi", () => ({
+vi.mock("../../../lib/api/workflowApi", () => ({
   listBackups: vi.fn(),
   createBackup: vi.fn(),
   deleteBackup: vi.fn(),

@@ -12,7 +12,7 @@ import type {
   ProfileEnvironment,
 } from "../../../../src/types/workflow.js";
 import { commandError } from "../../commandHelpers.js";
-import type { CommandDeps } from "../types.js";
+import type { WorkflowCommandsDeps } from "../types.js";
 import { migrateWorkflowGraph } from "../../graph/migration.js";
 import {
   compileWorkflowGraphFromNode,
@@ -21,7 +21,7 @@ import {
   validateActionConfig,
   validateWorkflowGraph as validateGraph,
 } from "../../graph/compiler.js";
-import { browserProfileKey } from "../../runtime/runManager.js";
+import { browserProfileKey } from "../../shared/browserProfileKey.js";
 import { runBatchWorkflowRows } from "../../runtime/batchWorkflowRun.js";
 import {
   listRevisions,
@@ -50,7 +50,7 @@ function assertNoUnsupportedGraphDiscriminants(graph: WorkflowGraph) {
   throw commandError(issue.message, "workflow.graph");
 }
 
-export function createWorkflowCommands(deps: CommandDeps) {
+export function createWorkflowCommands(deps: WorkflowCommandsDeps) {
   const {
     repository,
     settingsService,
@@ -70,6 +70,10 @@ export function createWorkflowCommands(deps: CommandDeps) {
     const workflow = await requireWorkflow(workflowId);
     const graph = await getWorkflowGraph(workflowId);
     const settings = await getSettings(workflowId);
+    const rawSettingsIssues = settingsService.validateSettings(settings);
+    const settingsIssues = workflow.surface === "desktop"
+      ? rawSettingsIssues.filter((issue) => issue.section !== "browser_launch")
+      : rawSettingsIssues;
     return [
       ...validateGraph(graph, await graphContextForWorkflow(workflow, graph)).map((issue) => ({
         source: "graph" as const,
@@ -79,7 +83,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
         message: issue.message,
         level: issue.level,
       })),
-      ...settingsService.validateSettings(settings).map((issue: any) => ({
+      ...settingsIssues.map((issue) => ({
         source: "settings" as const,
         field: issue.field ?? null,
         node_id: null,
@@ -96,7 +100,10 @@ export function createWorkflowCommands(deps: CommandDeps) {
   ): Promise<WorkflowRunSnapshot> {
     const workflow = await requireWorkflow(workflowId);
     const settings = await getSettings(workflowId);
-    const conflict = activeRunConflict(workflowId, settings);
+    // The Desktop Target is part of the conflict, not an afterthought: without
+    // it two manual runs against one application both start and interleave
+    // keystrokes into its windows.
+    const conflict = activeRunConflict(workflowId, settings, workflow.desktop_target_id);
     if (conflict) {
       throw commandError(conflict.message, conflict.field);
     }
@@ -226,7 +233,7 @@ export function createWorkflowCommands(deps: CommandDeps) {
     ): Promise<WorkflowRunSnapshot> {
       const workflow = await requireWorkflow(workflowId);
       const settings = await getSettings(workflowId);
-      const conflict = activeRunConflict(workflowId, settings);
+      const conflict = activeRunConflict(workflowId, settings, workflow.desktop_target_id);
       if (conflict) {
         throw commandError(conflict.message, conflict.field);
       }

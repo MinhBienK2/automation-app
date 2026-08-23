@@ -14,5 +14,5 @@
     "types": ["node", "electron"]
   },
   "include": ["electron/**/*.ts", "electron/**/*.cts"],
-  "exclude": ["electron/**/*.test.ts"]
+  "exclude": ["electron/**/*.test.ts", "electron/backend/db/testDbAdapter.ts", "electron/backend/commands.testHelpers.ts", "electron/backend/runtime/testSupport/**"]
 }

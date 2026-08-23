@@ -91,12 +91,12 @@ describe("interactionActions", () => {
 
     await executeScrollAction(
       {
-        page,
+        surface: { kind: "web", page },
         settings: {
           browser_launch: { human_preset: "careful" },
         },
         signal: undefined,
-      },
+      } as unknown as Parameters<typeof executeScrollAction>[0],
       {
         type: "scroll",
         config: {

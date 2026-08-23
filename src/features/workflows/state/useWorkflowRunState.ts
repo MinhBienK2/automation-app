@@ -17,7 +17,7 @@ import {
   listRunStates,
   getRunState,
   validateWorkflowGraph,
-} from "../../../lib/workflowApi";
+} from "../../../lib/api/workflowApi";
 import { commandMessage } from "../../../lib/workflowUi";
 import {
   normalizeRunSnapshot,

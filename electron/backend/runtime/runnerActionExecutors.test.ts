@@ -5,7 +5,6 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { executeRegisteredAction } from "../actions/execution.js";
-import type { BrowserDriverPage } from "../browser/sessionManager.js";
 import {
   createRunnerActionExecutors,
   type RunnerActionExecutorDependencies,
@@ -15,23 +14,20 @@ import {
   minimalDependencies,
   minimalRuntime,
 } from "./testSupport/executorFixtures.js";
+// The shared fake, not a stub per test. Seven of these tests used to hand-roll
+// a one-method `page` object that ran `args.scriptText` through `new Function`
+// — which is exactly what `FakePage.evaluate` already does when it is handed a
+// function, because the executor's page function is self-contained.
+import { FakePage } from "./testSupport/inMemoryBrowserDriver.js";
 
 describe("runnerActionExecutors", () => {
   test("renders navigation templates and delegates allowlist enforcement before goto", async () => {
-    const calls: string[] = [];
-    const page = {
-      goto: async (url: string, options?: Record<string, unknown>) => {
-        calls.push(`goto:${url}:${options?.waitUntil}`);
-      },
-      locator: () => {
-        throw new Error("not used");
-      },
-      evaluate: async () => "",
-    } satisfies BrowserDriverPage;
+    const policyCalls: string[] = [];
+    const page = new FakePage();
     const runtime = minimalRuntime({ page, outputs: { host: "owned.test" } });
     const executors = createRunnerActionExecutors(runtime, minimalDependencies({
       enforceNavigationPolicy: async (_runtime, url) => {
-        calls.push(`policy:${url}`);
+        policyCalls.push(url);
       },
     }));
 
@@ -43,9 +39,14 @@ describe("runnerActionExecutors", () => {
       },
     });
 
-    expect(calls).toEqual([
-      "policy:https://owned.test/dashboard",
-      "goto:https://owned.test/dashboard:domcontentloaded",
+    // The policy runs first and sees the rendered URL: a template resolved
+    // after the allowlist check would be an allowlist that checks nothing.
+    expect(policyCalls).toEqual(["https://owned.test/dashboard"]);
+    expect(page.gotoCalls).toEqual([
+      {
+        url: "https://owned.test/dashboard",
+        options: { waitUntil: "domcontentloaded", timeout: undefined },
+      },
     ]);
   });
 
@@ -295,14 +296,7 @@ describe("runnerActionExecutors", () => {
     expect(runtime.outputs.stringified).toBe('{"name":"bob","age":25}');
 
     // execute_object_script
-    let passedArgs: any = null;
-    const page = {
-      evaluate: async (fn: any, args: any) => {
-        passedArgs = args;
-        const parsedFn = new Function("obj", `return (${args.scriptText});`);
-        return parsedFn(args.obj);
-      },
-    } as any;
+    const page = new FakePage();
     const runtimeWithPage = minimalRuntime({ page, outputs: { myObj: { age: 25 } } });
     const executorsWithPage = createRunnerActionExecutors(runtimeWithPage, minimalDependencies());
     await executeRegisteredAction(executorsWithPage, {
@@ -310,7 +304,7 @@ describe("runnerActionExecutors", () => {
       config: { source: "myObj", script: "({ ...obj, age: obj.age + 1 })", output_name: "script_out" },
     } as any);
     expect(runtimeWithPage.outputs.script_out).toEqual({ age: 26 });
-    expect(passedArgs).toEqual({
+    expect(page.evaluateCalls.at(-1)).toEqual({
       scriptText: "({ ...obj, age: obj.age + 1 })",
       obj: { age: 25 },
     });
@@ -504,14 +498,7 @@ describe("runnerActionExecutors", () => {
   });
 
   test("evaluates logic in JS script mode", async () => {
-    let scriptPassedArgs: any = null;
-    const page = {
-      evaluate: async (fn: any, args: any) => {
-        scriptPassedArgs = args;
-        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
-        return parsedFn(args.outputs);
-      },
-    } as any;
+    const page = new FakePage();
     const runtime = minimalRuntime({ page, outputs: { counter: 10, status: "active" } });
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
@@ -525,19 +512,14 @@ describe("runnerActionExecutors", () => {
     });
 
     expect(runtime.outputs.result).toBe(true);
-    expect(scriptPassedArgs).toEqual({
+    expect(page.evaluateCalls.at(-1)).toEqual({
       scriptText: "outputs.counter > 5 && outputs.status === 'active'",
       outputs: { counter: 10, status: "active", result: true },
     });
   });
 
   test("evaluates logic in JS script mode with pre-resolved template tokens", async () => {
-    const page = {
-      evaluate: async (fn: any, args: any) => {
-        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
-        return parsedFn(args.outputs);
-      },
-    } as any;
+    const page = new FakePage();
     const runtime = minimalRuntime({ page, outputs: { counter: 10, status: "active" } });
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
@@ -586,14 +568,7 @@ describe("runnerActionExecutors", () => {
   });
 
   test("registers dynamic check_conditions resolver and evaluates lazily when referenced", async () => {
-    let scriptCallCount = 0;
-    const page = {
-      evaluate: async (fn: any, args: any) => {
-        scriptCallCount++;
-        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
-        return parsedFn(args.outputs);
-      },
-    } as any;
+    const page = new FakePage();
     
     const outputs: Record<string, unknown> = { counter: 10 };
     const resolvers = new Map<string, any>();
@@ -616,18 +591,18 @@ describe("runnerActionExecutors", () => {
       },
     });
 
-    expect(scriptCallCount).toBe(0);
+    expect(page.evaluateCalls).toHaveLength(0);
     expect(resolvers.has("result")).toBe(true);
 
     const { resolveDynamicOutputs } = await import("./variables");
     await resolveDynamicOutputs(runtime.outputs, "{{result}}");
 
-    expect(scriptCallCount).toBe(1);
+    expect(page.evaluateCalls).toHaveLength(1);
     expect(runtime.outputs.result).toBe(true);
 
     runtime.outputs.counter = 3;
     await resolveDynamicOutputs(runtime.outputs, "{{result}}");
-    expect(scriptCallCount).toBe(2);
+    expect(page.evaluateCalls).toHaveLength(2);
     expect(runtime.outputs.result).toBe(false);
   });
 
@@ -673,12 +648,7 @@ describe("runnerActionExecutors", () => {
   });
 
   test("evaluates expression statically and returns raw calculation result", async () => {
-    const page = {
-      evaluate: async (fn: any, args: any) => {
-        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
-        return parsedFn(args.outputs);
-      },
-    } as any;
+    const page = new FakePage();
     const runtime = minimalRuntime({ page, outputs: { A: 10, B: 5 } });
     const executors = createRunnerActionExecutors(runtime, minimalDependencies());
 
@@ -695,14 +665,7 @@ describe("runnerActionExecutors", () => {
   });
 
   test("registers dynamic calculate_value resolver and evaluates raw values lazily", async () => {
-    let scriptCallCount = 0;
-    const page = {
-      evaluate: async (fn: any, args: any) => {
-        scriptCallCount++;
-        const parsedFn = new Function("outputs", `return (${args.scriptText});`);
-        return parsedFn(args.outputs);
-      },
-    } as any;
+    const page = new FakePage();
     
     const outputs: Record<string, unknown> = { A: 10, B: 5 };
     const resolvers = new Map<string, any>();
@@ -724,18 +687,18 @@ describe("runnerActionExecutors", () => {
       },
     } as any);
 
-    expect(scriptCallCount).toBe(0);
+    expect(page.evaluateCalls).toHaveLength(0);
     expect(resolvers.has("result")).toBe(true);
 
     const { resolveDynamicOutputs } = await import("./variables");
     await resolveDynamicOutputs(runtime.outputs, "{{result}}");
 
-    expect(scriptCallCount).toBe(1);
+    expect(page.evaluateCalls).toHaveLength(1);
     expect(runtime.outputs.result).toBe(15);
 
     runtime.outputs.A = 20;
     await resolveDynamicOutputs(runtime.outputs, "{{result}}");
-    expect(scriptCallCount).toBe(2);
+    expect(page.evaluateCalls).toHaveLength(2);
     expect(runtime.outputs.result).toBe(25);
   });
 
@@ -942,13 +905,7 @@ describe("runnerActionExecutors", () => {
   });
 
   test("new list actions - List: Process", async () => {
-    const page = {
-      evaluate: async (fn: any, args: any) => {
-        const { scriptText, list } = args;
-        const parsedFn = new Function("list", `return (${scriptText});`);
-        return parsedFn(list);
-      },
-    } as any;
+    const page = new FakePage();
 
     const runtime = minimalRuntime({
       page,
@@ -1329,9 +1286,11 @@ describe("runnerActionExecutors", () => {
     const runtime = minimalRuntime();
     const mockLocator = {
       textContent: async () => "Plain text",
-      innerHTML: async () => "<span>HTML</span>",
+      // `BrowserDriverLocator` exposes no innerHTML method, so the executors
+      // read both HTML properties off the element inside `evaluate`.
       evaluate: async (fn: any, arg?: any) => {
         const mockEl = {
+          innerHTML: "<span>HTML</span>",
           outerHTML: "<div>Outer</div>",
           attributes: [
             { name: "class", value: "test-class" },

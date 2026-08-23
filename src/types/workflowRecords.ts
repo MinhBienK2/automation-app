@@ -10,13 +10,24 @@ export type Project = {
   updated_at: string;
 };
 
+/**
+ * Which kind of thing a workflow drives. Chosen at creation and fixed: a
+ * workflow cannot mix surfaces, and every workflow that predates the Desktop
+ * Surface is `web`. See `CONTEXT.md` and ADR-0001.
+ */
+export type ExecutionSurfaceKind = "web" | "desktop";
+
 export type WorkflowSummary = {
   id: string;
   name: string;
+  surface: ExecutionSurfaceKind;
   step_count: number;
   project_id?: string | null;
   browser_profile_id?: string | null;
   browser_profile_name?: string | null;
+  /** Set only on a desktop workflow, and only once one has been chosen. */
+  desktop_target_id?: string | null;
+  desktop_target_name?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -24,8 +35,10 @@ export type WorkflowSummary = {
 export type Workflow = {
   id: string;
   name: string;
+  surface: ExecutionSurfaceKind;
   project_id?: string | null;
   browser_profile_id?: string | null;
+  desktop_target_id?: string | null;
   created_at: string;
   updated_at: string;
 };
