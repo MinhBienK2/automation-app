@@ -173,3 +173,8 @@ export const desktopReadTableSchema = z.object({
     max_rows: z.number().nullable().optional(),
   }),
 });
+
+export const desktopHoverSchema = z.object({
+  type: z.literal("desktop_hover"),
+  config: z.object({ ...stepConfig }),
+});

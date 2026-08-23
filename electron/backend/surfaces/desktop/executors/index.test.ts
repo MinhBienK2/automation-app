@@ -605,3 +605,31 @@ describe("desktop_read_table", () => {
     expect(runtime.outputs.rows).toEqual([["one"]]);
   });
 });
+
+describe("desktop_hover", () => {
+  test("moves the cursor to the element's frame centre, then verifies only what was asked", async () => {
+    const { surface, calls } = surfaceWith({
+      get_window_state: { structuredJson: FRAMED },
+      verify_state: { structuredJson: { status: "satisfied" } },
+    });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, {
+      type: "desktop_hover",
+      config: { target: LOAD_MORE, expect: [{ kind: "element_present", locator: { role: "ToolTip" } }] },
+    });
+
+    expect(calls.map((c) => c.tool)).toEqual(["get_window_state", "move_cursor", "verify_state"]);
+    expect(calls[1].args).toMatchObject({ x: 30, y: 35, scope: 0 });
+    expect(runtime.currentSurfaceTrace).toMatchObject({ verified: true });
+  });
+
+  test("with nothing stated, a hover reads as unverified rather than as success", async () => {
+    const { surface } = surfaceWith({ get_window_state: { structuredJson: FRAMED } });
+    const runtime = runtimeFor(surface);
+
+    await run(runtime, { type: "desktop_hover", config: { target: LOAD_MORE } });
+
+    expect(runtime.currentSurfaceTrace).toMatchObject({ verified: "unverified" });
+  });
+});

@@ -341,6 +341,7 @@ export const actionDescriptions: Record<ActionType, string> = {
   desktop_read_clipboard: "Read the system clipboard into an output",
   desktop_set_clipboard: "Write text to the system clipboard",
   desktop_read_table: "Read a table's rows into an output",
+  desktop_hover: "Move the cursor onto a desktop element",
 };
 
 export function ActionNodePalette({

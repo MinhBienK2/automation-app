@@ -1419,6 +1419,10 @@ export type ActionConfig =
       config: DesktopStepConfig & { output_name: string; max_rows?: number | null };
     }
   | {
+      type: "desktop_hover";
+      config: DesktopStepConfig;
+    }
+  | {
       type: "quarantined";
       config: {
         original_type: string | null;

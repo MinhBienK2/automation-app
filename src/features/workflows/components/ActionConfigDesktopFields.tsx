@@ -50,6 +50,7 @@ const DESKTOP_TARGETED = new Set([
   "desktop_scroll",
   "desktop_drag",
   "desktop_read_table",
+  "desktop_hover",
 ]);
 
 export function DesktopActionFields({

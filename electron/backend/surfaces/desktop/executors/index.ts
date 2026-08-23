@@ -195,7 +195,28 @@ export function createDesktopActionExecutors<Runtime extends DesktopRuntime>(
     desktop_set_clipboard: async (action) => setClipboard(desktop, runtime, action.config),
 
     desktop_read_table: async (action) => readTable(desktop, runtime, action.config),
+
+    desktop_hover: async (action) => hoverOver(desktop, runtime, action.config),
   } satisfies Partial<ActionExecutorMap>;
+}
+
+/**
+ * Move the cursor onto a target and then check only what the author asked for.
+ *
+ * Mirrors `desktop_click`: the driver's move is the act, and success is decided
+ * by `verify` — a hover with no stated expectation reads as unverified rather
+ * than claiming the application reacted. That is the honest contract, because
+ * whether a move produces a `:hover` state is the application's to decide, not
+ * the driver's.
+ */
+async function hoverOver(
+  desktop: DesktopSurface,
+  runtime: StepScope & { signal?: AbortSignal },
+  config: StepConfig,
+): Promise<void> {
+  const point = await resolvePoint(desktop, config.target, runtime, "desktop_hover");
+  await desktop.driver.moveCursor(desktop.binding, { x: point.x, y: point.y }, runtime.signal);
+  await verify(desktop, config, runtime);
 }
 
 async function scrollAt(

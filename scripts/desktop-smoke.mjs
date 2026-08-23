@@ -3,7 +3,7 @@
  *
  * Standalone, throwaway verification. It touches NO app source. It proves the
  * embedded same-process driver actually works for the tools we are about to
- * wrap: launch + get_window_state, clipboard round-trip, scroll, drag.
+ * wrap: launch + get_window_state, clipboard round-trip, scroll, drag, move_cursor.
  *
  * Every step is isolated in try/catch and prints one PASS/FAIL line. A missing
  * required field panics the Rust host, so inputs are built with the generated
@@ -78,6 +78,7 @@ async function main() {
     ClipboardWriteInput,
     ScrollInput,
     DragInput,
+    MoveCursorInput,
     ScrollDirection,
     DesktopScope,
     CaptureScope,
@@ -273,6 +274,23 @@ async function main() {
       record("drag (400,400 -> 450,450)", true, `isError=${r?.isError} ${summariseToolResult(r)}`);
     } catch (err) {
       record("drag (400,400 -> 450,450)", false, String(err?.stack || err));
+    }
+  }
+
+  // ---- move_cursor (the primitive under desktop_hover) -----------------
+  if (sessionStarted) {
+    try {
+      const r = await driver.moveCursor(
+        MoveCursorInput.new({
+          x: 420,
+          y: 300,
+          scope: DesktopScope.Desktop,
+          session: SESSION,
+        }),
+      );
+      record("moveCursor (420,300)", true, `isError=${r?.isError} ${summariseToolResult(r)}`);
+    } catch (err) {
+      record("moveCursor (420,300)", false, String(err?.stack || err));
     }
   }
 

@@ -14,6 +14,7 @@ import {
   desktopReadClipboardSchema,
   desktopSetClipboardSchema,
   desktopReadTableSchema,
+  desktopHoverSchema,
 } from "./desktop/index.js";
 import type { z } from "zod";
 import type { ActionConfig, GraphNode } from "../../../../src/types/workflow.js";
@@ -430,6 +431,7 @@ export const actionSchemas: Partial<Record<ActionType, z.ZodSchema>> = {
   desktop_read_clipboard: desktopReadClipboardSchema,
   desktop_set_clipboard: desktopSetClipboardSchema,
   desktop_read_table: desktopReadTableSchema,
+  desktop_hover: desktopHoverSchema,
 };
 
 export type ValidationResult<T> =

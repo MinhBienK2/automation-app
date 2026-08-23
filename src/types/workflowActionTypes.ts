@@ -210,4 +210,5 @@ export type ActionType =
   | "desktop_drag"
   | "desktop_read_clipboard"
   | "desktop_set_clipboard"
-  | "desktop_read_table";
+  | "desktop_read_table"
+  | "desktop_hover";

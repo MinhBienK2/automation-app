@@ -274,6 +274,7 @@ export const actionDefinitions = [
   definition("desktop_read_clipboard", "capture"),
   definition("desktop_set_clipboard", "form"),
   definition("desktop_read_table", "capture"),
+  definition("desktop_hover", "element_interaction"),
 ] satisfies readonly ActionDefinition[];
 
 /**

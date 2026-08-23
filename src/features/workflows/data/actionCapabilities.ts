@@ -214,6 +214,7 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   desktop_read_clipboard: "desktop_surface",
   desktop_set_clipboard: "desktop_surface",
   desktop_read_table: "desktop_surface",
+  desktop_hover: "desktop_surface",
 };
 
 export const allActionTypes = Object.keys(actionCapabilities) as ActionType[];

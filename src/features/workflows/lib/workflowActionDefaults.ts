@@ -845,6 +845,8 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return { type: actionType, config: { text: "" } };
     case "desktop_read_table":
       return { type: actionType, config: { target: emptyDesktopTarget(), output_name: "" } };
+    case "desktop_hover":
+      return { type: actionType, config: { target: emptyDesktopTarget() } };
   }
 }
 

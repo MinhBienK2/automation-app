@@ -483,6 +483,29 @@ export class DesktopDriverClient {
   }
 
   /**
+   * Move the cursor to a window-relative point, the primitive under
+   * `desktop_hover`.
+   *
+   * Whether the target application then renders a hover state is the
+   * application's business, not the driver's — so the executor verifies only
+   * what the author states (a tooltip appearing, say), never the move itself.
+   * `scope` is `DesktopScope.Desktop`, as every input-synthesis tool carries it.
+   */
+  async moveCursor(
+    binding: WindowBinding,
+    request: { x: number; y: number },
+    signal?: AbortSignal,
+  ): Promise<DriverAck> {
+    return (
+      await this.call(
+        "move_cursor",
+        { ...scopeOf(binding), scope: DESKTOP_SCOPE, ...pixelArgs(request) },
+        signal,
+      )
+    ).ack;
+  }
+
+  /**
    * Read the operator's clipboard as text.
    *
    * `include_text` is required — without it the driver returns the available

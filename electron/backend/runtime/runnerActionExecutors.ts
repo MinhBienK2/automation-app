@@ -54,6 +54,7 @@ function createDesktopActionExecutorsLazily<Runtime extends RunnerActionRuntime>
     desktop_read_clipboard: (action: any) => get().desktop_read_clipboard(action),
     desktop_set_clipboard: (action: any) => get().desktop_set_clipboard(action),
     desktop_read_table: (action: any) => get().desktop_read_table(action),
+    desktop_hover: (action: any) => get().desktop_hover(action),
   };
 }
 

@@ -72,6 +72,7 @@ export const desktopValidators = {
   desktop_scroll: (config: any) => validateDesktopStep(config),
   desktop_drag: (config: any) => validateDesktopDrag(config),
   desktop_read_table: (config: any) => validateDesktopStep(config),
+  desktop_hover: (config: any) => validateDesktopStep(config),
   // No target: the clipboard is a machine-global surface, not a window element.
   desktop_read_clipboard: (config: any) =>
     requiredActionString(config?.config?.output_name, "output_name", "Name the output to read into"),

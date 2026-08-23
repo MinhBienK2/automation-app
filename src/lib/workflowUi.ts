@@ -210,6 +210,7 @@ export const actionLabels: Record<ActionType, string> = {
   desktop_read_clipboard: "Desktop: Read Clipboard",
   desktop_set_clipboard: "Desktop: Set Clipboard",
   desktop_read_table: "Desktop: Read Table",
+  desktop_hover: "Desktop: Hover",
 };
 
 export const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
@@ -393,6 +394,7 @@ export const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }>
       "desktop_read_clipboard",
       "desktop_set_clipboard",
       "desktop_read_table",
+      "desktop_hover",
     ],
   },
 ];
