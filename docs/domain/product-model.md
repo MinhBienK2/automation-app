@@ -55,7 +55,7 @@ See `docs/architecture/overview.md` for the full layer map. Quick reference:
 | Runner | `electron/backend/runtime/runner.ts`, `runManager.ts` |
 | Compiler | `electron/backend/graph/compiler.ts`, `validateGraph.ts` |
 | Persistence | `electron/backend/persistence/workflowRepository.ts` |
-| Sessions | `electron/backend/browser/sessionManager.ts` |
+| Sessions | `electron/backend/surfaces/web/sessionManager.ts` |
 | Recording | `electron/backend/recording/recorderSessionManager.ts` |
 | Settings | `electron/backend/services/workflowSettingsService.ts` |
 
