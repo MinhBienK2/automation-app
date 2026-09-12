@@ -1,7 +1,8 @@
 import type { ActionExecutorMap } from "../../actions/execution.js";
-import type { RunnerActionExecutorDependencies, RunnerActionRuntime } from "./types.js";
+import type { RunnerActionExecutorDependencies, RunnerActionRuntime } from "../executors/types.js";
 import { assertRuntimeEnumValue, weightedRandomChoice } from "../runtimeHelpers.js";
 import { currentPageHostname, hostnameAllowed } from "../domainPolicy.js";
+import { requireWebSurface } from "../surface.js";
 import { renderTemplate, writeVariableValue } from "../variables.js";
 import { withLoopScope } from "../loopScope.js";
 
@@ -203,7 +204,8 @@ assert_output: async (action) => {
       }
     },
 domain_allowlist: async (action) => {
-      const hostname = await currentPageHostname(runtime.page);
+      const page = requireWebSurface(runtime.surface).page;
+      const hostname = await currentPageHostname(page);
       if (!hostname || !hostnameAllowed(hostname, action.config.domains)) {
         throw new Error(
           `Current domain ${hostname ?? "unknown"} is not in the allowlist`,

@@ -14,13 +14,14 @@ import { buildKeyboardExecutors } from "./executors/keyboard.js";
 import { buildExtractionExecutors } from "./executors/extraction.js";
 import { buildFilesExecutors } from "./executors/files.js";
 import { buildAssertionsExecutors } from "./executors/assertions.js";
-import { buildVariablesExecutors } from "./executors/variables.js";
 import { buildVariableNumberExecutors } from "./executors/variableNumber.js";
 import { buildVariableTextExecutors } from "./executors/variableText.js";
 import { buildVariableBooleanExecutors } from "./executors/variableBoolean.js";
 import { buildVariableListExecutors } from "./executors/variableList.js";
 import { buildVariableObjectExecutors } from "./executors/variableObject.js";
-import { buildFlowControlExecutors } from "./executors/flowControl.js";
+// Control-Action family lives outside the surface executors (candidate 2).
+import { buildVariablesExecutors } from "./control/variables.js";
+import { buildFlowControlExecutors } from "./control/flowControl.js";
 import { buildNetworkExecutors } from "./executors/network.js";
 import { createDesktopActionExecutors } from "../surfaces/desktop/executors/index.js";
 
