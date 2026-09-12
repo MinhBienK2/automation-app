@@ -2,12 +2,12 @@ import type { ActionExecutorMap } from "../../actions/execution.js";
 import type { RunnerActionExecutorDependencies, RunnerActionRuntime } from "./types.js";
 import { parseVariableValue, renderTemplate, writeVariableValue } from "../variables.js";
 
-export function buildVariableData1Executors<Runtime extends RunnerActionRuntime>(
+export function buildVariableNumberExecutors<Runtime extends RunnerActionRuntime>(
   runtime: Runtime,
   deps: RunnerActionExecutorDependencies<Runtime>,
 ): Partial<ActionExecutorMap> {
   return {
-update_number_variable: async (action) => {
+    update_number_variable: async (action) => {
       const { name, operation, value } = action.config;
       if (!name) return;
 
@@ -32,13 +32,13 @@ update_number_variable: async (action) => {
 
       writeVariableValue(runtime.outputs, name, newVal);
     },
-set_number_variable: async (action) => {
+    set_number_variable: async (action) => {
       const { output_name, value } = action.config;
       if (!output_name) return;
       const num = Number(parseVariableValue("number", value, runtime.outputs));
       writeVariableValue(runtime.outputs, output_name, Number.isNaN(num) ? 0 : num);
     },
-generate_random_number: async (action) => {
+    generate_random_number: async (action) => {
       const { output_name, min, max, integer } = action.config;
       if (!output_name) return;
       const minVal = Number(parseVariableValue("number", min, runtime.outputs));
@@ -53,7 +53,7 @@ generate_random_number: async (action) => {
       }
       writeVariableValue(runtime.outputs, output_name, result);
     },
-parse_text_to_number: async (action) => {
+    parse_text_to_number: async (action) => {
       const { source, fallback, output_name } = action.config;
       if (!output_name) return;
       const text = renderTemplate(source, runtime.outputs);
@@ -67,7 +67,7 @@ parse_text_to_number: async (action) => {
       }
       writeVariableValue(runtime.outputs, output_name, num);
     },
-math_operation: async (action) => {
+    math_operation: async (action) => {
       const { operand1, operation, operand2, output_name } = action.config;
       if (!output_name) return;
       const op1 = Number(parseVariableValue("number", operand1, runtime.outputs));
@@ -93,7 +93,7 @@ math_operation: async (action) => {
       }
       writeVariableValue(runtime.outputs, output_name, result);
     },
-round_number: async (action) => {
+    round_number: async (action) => {
       const { source, mode, decimals, output_name } = action.config;
       if (!output_name) return;
       const num = Number(parseVariableValue("number", source, runtime.outputs));
@@ -108,7 +108,7 @@ round_number: async (action) => {
       else if (mode === "ceil") result = Math.ceil(num * factor) / factor;
       writeVariableValue(runtime.outputs, output_name, result);
     },
-format_number: async (action) => {
+    format_number: async (action) => {
       const { source, format, decimals, currency_code, locale, output_name } = action.config;
       if (!output_name) return;
       const num = Number(parseVariableValue("number", source, runtime.outputs));
@@ -129,11 +129,11 @@ format_number: async (action) => {
       } else if (format === "percent") {
         options.style = "percent";
       }
-      
+
       const formatted = new Intl.NumberFormat(l, options).format(num);
       writeVariableValue(runtime.outputs, output_name, formatted);
     },
-compare_numbers: async (action) => {
+    compare_numbers: async (action) => {
       const { operand1, operator, operand2, output_name } = action.config;
       if (!output_name) return;
       const op1 = Number(parseVariableValue("number", operand1, runtime.outputs));
@@ -150,7 +150,7 @@ compare_numbers: async (action) => {
       else if (operator === "neq") result = op1 !== op2;
       writeVariableValue(runtime.outputs, output_name, result);
     },
-check_number_range: async (action) => {
+    check_number_range: async (action) => {
       const { value, min, max, inclusive, output_name } = action.config;
       if (!output_name) return;
       const val = Number(parseVariableValue("number", value, runtime.outputs));
@@ -164,7 +164,7 @@ check_number_range: async (action) => {
         : val > minVal && val < maxVal;
       writeVariableValue(runtime.outputs, output_name, result);
     },
-check_number_property: async (action) => {
+    check_number_property: async (action) => {
       const { value, property, output_name } = action.config;
       if (!output_name) return;
       const val = Number(parseVariableValue("number", value, runtime.outputs));
@@ -176,100 +176,6 @@ check_number_property: async (action) => {
       else if (property === "positive") result = val > 0;
       else if (property === "negative") result = val < 0;
       writeVariableValue(runtime.outputs, output_name, result);
-    },
-update_text_variable: async (action) => {
-      const { name, operation, value, search_pattern } = action.config;
-      if (!name) return;
-
-      const existing = String(runtime.outputs[name] ?? "");
-      let newVal = existing;
-
-      if (operation === "append") {
-        newVal = existing + renderTemplate(value ?? "", runtime.outputs);
-      } else if (operation === "prepend") {
-        newVal = renderTemplate(value ?? "", runtime.outputs) + existing;
-      } else if (operation === "replace") {
-        const search = renderTemplate(search_pattern ?? "", runtime.outputs);
-        const replaceVal = renderTemplate(value ?? "", runtime.outputs);
-        let searchRegex: RegExp | string = search;
-        const match = search.match(/^\/(.*?)\/([gimy]*)$/);
-        if (match) {
-          try {
-            searchRegex = new RegExp(match[1], match[2]);
-          } catch {
-            // fallback
-          }
-        }
-        if (typeof searchRegex === "string") {
-          newVal = existing.replaceAll(searchRegex, replaceVal);
-        } else {
-          newVal = existing.replace(searchRegex, replaceVal);
-        }
-      } else if (operation === "uppercase") {
-        newVal = existing.toUpperCase();
-      } else if (operation === "lowercase") {
-        newVal = existing.toLowerCase();
-      } else if (operation === "trim") {
-        newVal = existing.trim();
-      }
-
-      writeVariableValue(runtime.outputs, name, newVal);
-    },
-set_text_variable: async (action) => {
-      const { output_name, value } = action.config;
-      if (!output_name) return;
-      const evaluated = renderTemplate(value ?? "", runtime.outputs);
-      writeVariableValue(runtime.outputs, output_name, evaluated);
-    },
-append_text: async (action) => {
-      const { name, value } = action.config;
-      if (!name) return;
-      const existing = String(runtime.outputs[name] ?? "");
-      const newVal = existing + renderTemplate(value ?? "", runtime.outputs);
-      writeVariableValue(runtime.outputs, name, newVal);
-    },
-prepend_text: async (action) => {
-      const { name, value } = action.config;
-      if (!name) return;
-      const existing = String(runtime.outputs[name] ?? "");
-      const newVal = renderTemplate(value ?? "", runtime.outputs) + existing;
-      writeVariableValue(runtime.outputs, name, newVal);
-    },
-replace_text: async (action) => {
-      const { name, search_pattern, replacement } = action.config;
-      if (!name) return;
-      const existing = String(runtime.outputs[name] ?? "");
-      const search = renderTemplate(search_pattern ?? "", runtime.outputs);
-      const replaceVal = renderTemplate(replacement ?? "", runtime.outputs);
-      let searchRegex: RegExp | string = search;
-      const match = search.match(/^\/(.*?)\/([gimy]*)$/);
-      if (match) {
-        try {
-          searchRegex = new RegExp(match[1], match[2]);
-        } catch {
-          // fallback
-        }
-      }
-      let newVal = existing;
-      if (typeof searchRegex === "string") {
-        newVal = existing.replaceAll(searchRegex, replaceVal);
-      } else {
-        newVal = existing.replace(searchRegex, replaceVal);
-      }
-      writeVariableValue(runtime.outputs, name, newVal);
-    },
-trim_text: async (action) => {
-      const { name } = action.config;
-      if (!name) return;
-      const existing = String(runtime.outputs[name] ?? "");
-      writeVariableValue(runtime.outputs, name, existing.trim());
-    },
-change_text_case: async (action) => {
-      const { name, to_case } = action.config;
-      if (!name) return;
-      const existing = String(runtime.outputs[name] ?? "");
-      const newVal = to_case === "upper" ? existing.toUpperCase() : existing.toLowerCase();
-      writeVariableValue(runtime.outputs, name, newVal);
     },
   };
 }
