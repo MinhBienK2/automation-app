@@ -13,12 +13,12 @@ import { buildElementInteractionExecutors } from "./executors/elementInteraction
 import { buildKeyboardExecutors } from "./executors/keyboard.js";
 import { buildCapture1Executors } from "./executors/capture1.js";
 import { buildCapture2Executors } from "./executors/capture2.js";
-import { buildVariablesExecutors } from "./executors/variables.js";
+import { buildVariablesExecutors } from "./control/variables.js";
 import { buildVariableData1Executors } from "./executors/variableData1.js";
 import { buildVariableData2Executors } from "./executors/variableData2.js";
 import { buildVariableData3Executors } from "./executors/variableData3.js";
 import { buildVariableData4Executors } from "./executors/variableData4.js";
-import { buildFlowControlExecutors } from "./executors/flowControl.js";
+import { buildFlowControlExecutors } from "./control/flowControl.js";
 import { buildNetworkExecutors } from "./executors/network.js";
 import { createDesktopActionExecutors } from "../surfaces/desktop/executors/index.js";
 

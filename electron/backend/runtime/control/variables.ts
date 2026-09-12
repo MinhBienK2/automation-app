@@ -1,8 +1,9 @@
 import type { ActionExecutorMap } from "../../actions/execution.js";
-import type { RunnerActionExecutorDependencies, RunnerActionRuntime } from "./types.js";
-import { evaluateRuleGroup } from "./internal.js";
-import { formatDateTime } from "./dataFormat.js";
+import type { RunnerActionExecutorDependencies, RunnerActionRuntime } from "../executors/types.js";
+import { evaluateRuleGroup } from "../executors/internal.js";
+import { formatDateTime } from "../executors/dataFormat.js";
 import { isPlainRecord } from "../../shared/records.js";
+import { requireWebSurface } from "../surface.js";
 import { renderTemplate, setVariables, writeVariableValue } from "../variables.js";
 
 export function buildVariablesExecutors<Runtime extends RunnerActionRuntime>(
@@ -36,7 +37,8 @@ check_conditions: async (action) => {
           resolve: async () => {
             if (mode === "script") {
               if (!script) throw new Error("Script is required in script mode");
-              const result = await runtime.page.evaluate((args) => {
+              const page = requireWebSurface(runtime.surface).page;
+              const result = await page.evaluate((args) => {
                 if (!args) throw new Error("Arguments are required");
                 const { scriptText, outputs } = args;
                 try {
@@ -59,7 +61,8 @@ check_conditions: async (action) => {
         }
         if (mode === "script") {
           if (!script) throw new Error("Script is required in script mode");
-          const result = await runtime.page.evaluate((args) => {
+          const page = requireWebSurface(runtime.surface).page;
+          const result = await page.evaluate((args) => {
             if (!args) throw new Error("Arguments are required");
             const { scriptText, outputs } = args;
             try {
@@ -88,7 +91,8 @@ calculate_value: async (action) => {
           dependencies: Array.from(refs),
           resolve: async () => {
             if (!expression) throw new Error("Expression is required");
-            const result = await runtime.page.evaluate((args) => {
+            const page = requireWebSurface(runtime.surface).page;
+            const result = await page.evaluate((args) => {
               if (!args) throw new Error("Arguments are required");
               const { scriptText, outputs } = args;
               try {
@@ -107,7 +111,8 @@ calculate_value: async (action) => {
           resolvers.delete(output_name);
         }
         if (!expression) throw new Error("Expression is required");
-        const result = await runtime.page.evaluate((args) => {
+        const page = requireWebSurface(runtime.surface).page;
+        const result = await page.evaluate((args) => {
           if (!args) throw new Error("Arguments are required");
           const { scriptText, outputs } = args;
           try {
