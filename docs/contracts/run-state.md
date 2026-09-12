@@ -10,7 +10,7 @@
 - Run Monitor drawer: `src/features/workflows/components/RunMonitorDrawer.tsx`
 - Status bar: `src/features/workflows/components/RunStatusBar.tsx`
 - Electron runner: `electron/backend/runtime/runner.ts`
-- Browser session manager: `electron/backend/browser/sessionManager.ts`
+- Browser session manager: `electron/backend/surfaces/web/sessionManager.ts`
 - Electron command handlers: `electron/backend/commands.ts`
 - Electron run lifecycle manager: `electron/backend/runtime/runManager.ts`
 

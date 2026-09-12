@@ -81,6 +81,7 @@ Avoid "platform" and "engine" for this concept. *Platform* means the operating s
 
 ## Pointers
 
+- Where each surface lives: Web Surface Driver + opener seam in `electron/backend/surfaces/web/`, Desktop Surface in `electron/backend/surfaces/desktop/`; surface-independent Control Actions in `electron/backend/runtime/control/`. Layout & pending steps: `docs/architecture/desktop-runner.md`.
 - Product model & lifecycle: `docs/domain/product-model.md`, `docs/domain/workflow-lifecycle.md`
 - Execution semantics & invariants: `docs/domain/execution-semantics.md`, `docs/domain/user-visible-invariants.md`
 - Architecture layers: `docs/architecture/overview.md`

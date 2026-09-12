@@ -15,11 +15,22 @@
  */
 
 import type {
+  BrowserDriver,
   BrowserDriverContext,
   BrowserDriverPage,
-} from "../browser/sessionManager.js";
+  BrowserDriverLocator,
+  BrowserDriverFrameLocator,
+} from "../surfaces/web/sessionManager.js";
 import type { DesktopDriverClient } from "../surfaces/desktop/driverClient.js";
 import type { WindowBinding } from "../surfaces/desktop/types.js";
+
+export type {
+  BrowserDriver,
+  BrowserDriverContext,
+  BrowserDriverPage,
+  BrowserDriverLocator,
+  BrowserDriverFrameLocator,
+};
 
 export type WebSurface = {
   kind: "web";

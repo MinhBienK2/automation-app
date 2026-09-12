@@ -91,21 +91,24 @@ This is an availability boundary, not a security one. The driver has the operato
 
 ## Code layout
 
-The current tree puts the browser driver in `browser/` and mixes surface-independent control flow with browser dispatch inside `runtime/`. With two surfaces that stops being legible, so surfaces become explicit siblings:
+The browser driver used to live in `browser/`, mixing surface-independent control
+flow with browser dispatch inside `runtime/`. With two surfaces that stopped being
+legible, so surfaces are now explicit siblings. Delivered tree:
 
 ```
 electron/backend/
-  runtime/                    surface-independent ONLY
+  runtime/                    surface-neutral core + shared executor impls
     runner.ts                 dispatch loop, cancellation, tracing
     runManager.ts             run lifecycle, locks, timeouts, persistence
     surface.ts                the ExecutionSurface union
-    controlFlow/              loops, branches, routers, retries, variables
+    control/                  surface-independent: loops, branches, variables
+    executors/                action executors grouped by owner (+ shared types.ts)
   surfaces/
     web/                      everything Playwright-shaped
       sessionManager.ts       (moved from backend/browser/)
       fonts.ts
       localEnvironment.ts
-      executors/              web action executors
+      surfaceOpener.ts        web opener seam (runtime never imports web/*)
     desktop/
       types.ts                driver shapes and domain shapes, kept apart
       payloads.ts             leak-safe descriptions of driver payloads
@@ -119,11 +122,23 @@ electron/backend/
   actions/
     registry.ts               both families, one registry
     execution.ts
-    validation.ts
-    schemas/
-      web/                    the existing 108 schemas, moved
-      desktop/                new
+    validation/               grouped by owner; desktop.ts kept apart
+    schemas/                  top-level = web/control; desktop/ subfolder
+      desktop/
 ```
+
+**Status (2026-09).** Delivered: the web Surface Driver now lives in `surfaces/web/`
+with its own `surfaceOpener` seam; the Control-Action family (flow control +
+`variables`) moved to `runtime/control/` and no longer reads `runtime.page`; the
+capture/variableData drawers are re-cut by concept (`extraction`, `files`,
+`assertions`, `variable{Number,Text,Boolean,List,Object}`).
+
+Pending — the last step to make `runtime/` surface-independent *only*: web action
+executors still sit in `runtime/executors/`, grouped by owner. Relocating them under
+`surfaces/web/executors/` is deferred rather than mechanical, because a few "data"
+actions — `execute_object_script`, `execute_list_script` — deliberately use the
+browser page as a JS sandbox (isolation from the Node process), so they must move as
+web actions rather than be forced Node-side. Treat that split as its own change.
 
 Rules that keep the split honest:
 

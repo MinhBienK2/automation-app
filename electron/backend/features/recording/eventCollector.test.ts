@@ -2,7 +2,7 @@
 
 import vm from "node:vm";
 import { describe, expect, test } from "vitest";
-import type { BrowserDriverPage } from "../../browser/sessionManager";
+import type { BrowserDriverPage } from "../../surfaces/web/sessionManager.js";
 import { RecordingEventCollector } from "./eventCollector";
 import { normalizeRecordingEvents } from "./timelineNormalizer";
 

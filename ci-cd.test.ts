@@ -350,7 +350,7 @@ describe("desktop CI/CD", () => {
       "commands.ts",
     ]);
     expect(topLevelDirectories).toEqual(
-      expect.arrayContaining(["actions", "browser", "config", "db", "features", "graph", "runtime", "shared"]),
+      expect.arrayContaining(["actions", "surfaces", "config", "db", "features", "graph", "runtime", "shared"]),
     );
   });
 

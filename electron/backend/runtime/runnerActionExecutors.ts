@@ -11,14 +11,17 @@ import { buildBrowserContextExecutors } from "./executors/browserContext.js";
 import { buildFormExecutors } from "./executors/form.js";
 import { buildElementInteractionExecutors } from "./executors/elementInteraction.js";
 import { buildKeyboardExecutors } from "./executors/keyboard.js";
-import { buildCapture1Executors } from "./executors/capture1.js";
-import { buildCapture2Executors } from "./executors/capture2.js";
-import { buildVariablesExecutors } from "./executors/variables.js";
-import { buildVariableData1Executors } from "./executors/variableData1.js";
-import { buildVariableData2Executors } from "./executors/variableData2.js";
-import { buildVariableData3Executors } from "./executors/variableData3.js";
-import { buildVariableData4Executors } from "./executors/variableData4.js";
-import { buildFlowControlExecutors } from "./executors/flowControl.js";
+import { buildExtractionExecutors } from "./executors/extraction.js";
+import { buildFilesExecutors } from "./executors/files.js";
+import { buildAssertionsExecutors } from "./executors/assertions.js";
+import { buildVariableNumberExecutors } from "./executors/variableNumber.js";
+import { buildVariableTextExecutors } from "./executors/variableText.js";
+import { buildVariableBooleanExecutors } from "./executors/variableBoolean.js";
+import { buildVariableListExecutors } from "./executors/variableList.js";
+import { buildVariableObjectExecutors } from "./executors/variableObject.js";
+// Control-Action family lives outside the surface executors (candidate 2).
+import { buildVariablesExecutors } from "./control/variables.js";
+import { buildFlowControlExecutors } from "./control/flowControl.js";
 import { buildNetworkExecutors } from "./executors/network.js";
 import { createDesktopActionExecutors } from "../surfaces/desktop/executors/index.js";
 
@@ -76,13 +79,15 @@ export function createRunnerActionExecutors<Runtime extends RunnerActionRuntime>
     ...buildFormExecutors(runtime as any, deps as any),
     ...buildElementInteractionExecutors(runtime as any, deps as any),
     ...buildKeyboardExecutors(runtime as any, deps as any),
-    ...buildCapture1Executors(runtime as any, deps as any),
-    ...buildCapture2Executors(runtime as any, deps as any),
+    ...buildExtractionExecutors(runtime as any, deps as any),
+    ...buildFilesExecutors(runtime as any, deps as any),
+    ...buildAssertionsExecutors(runtime as any, deps as any),
     ...buildVariablesExecutors(runtime as any, deps as any),
-    ...buildVariableData1Executors(runtime as any, deps as any),
-    ...buildVariableData2Executors(runtime as any, deps as any),
-    ...buildVariableData3Executors(runtime as any, deps as any),
-    ...buildVariableData4Executors(runtime as any, deps as any),
+    ...buildVariableNumberExecutors(runtime as any, deps as any),
+    ...buildVariableTextExecutors(runtime as any, deps as any),
+    ...buildVariableBooleanExecutors(runtime as any, deps as any),
+    ...buildVariableListExecutors(runtime as any, deps as any),
+    ...buildVariableObjectExecutors(runtime as any, deps as any),
     ...buildFlowControlExecutors(runtime as any, deps as any),
     ...buildNetworkExecutors(runtime as any, deps as any),
   } as any);

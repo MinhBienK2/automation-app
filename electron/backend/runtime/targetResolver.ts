@@ -7,7 +7,7 @@ import type {
   BrowserDriverFrameLocator,
   BrowserDriverLocator,
   BrowserDriverPage,
-} from "../browser/sessionManager.js";
+} from "./surface.js";
 
 export type RuntimeElementRef = {
   refId: string;

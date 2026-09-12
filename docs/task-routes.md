@@ -86,7 +86,7 @@ Invariants are split by area under `domain/invariants/`. Read only the relevant 
 
 ### Change Runner Behavior
 - **Read**: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`
-- **Verify**: `electron/backend/runtime/runner.ts`, `electron/backend/browser/sessionManager.ts`, `electron/backend/runtime/runManager.ts`, `electron/backend/graph/compiler.ts`
+- **Verify**: `electron/backend/runtime/runner.ts`, `electron/backend/surfaces/web/sessionManager.ts`, `electron/backend/runtime/runManager.ts`, `electron/backend/graph/compiler.ts`
 - **Checks**: focused runner/compiler tests, `npm run build:electron`; `npm run test:fingerprint` for identity evidence; `npm run test:smoke` for CloakBrowser smoke
 
 ### Change Run Status Or Monitoring

@@ -1,6 +1,6 @@
 import type { DbAdapter } from "../db/dbAdapter.js";
 import type { AppPaths } from "../db/database.js";
-import type { BrowserDriver } from "../browser/sessionManager.js";
+import type { BrowserDriver } from "../surfaces/web/sessionManager.js";
 import type { RunnerCommandPort } from "../runtime/runManager.js";
 import type {
   WorkflowPackage,

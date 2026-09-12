@@ -4,7 +4,7 @@ import type {
 import type {
   BrowserDriverLocator,
   BrowserDriverPage,
-} from "../browser/sessionManager.js";
+} from "./surface.js";
 import {
   PAGE_SCROLL_PULSE_PAUSE_MAX_MS,
   PAGE_SCROLL_PULSE_PAUSE_MIN_MS,

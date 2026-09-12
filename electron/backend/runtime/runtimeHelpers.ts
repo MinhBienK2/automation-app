@@ -1,4 +1,4 @@
-import type { BrowserDriverLocator, BrowserDriverPage } from "../browser/sessionManager.js";
+import type { BrowserDriverLocator, BrowserDriverPage } from "./surface.js";
 
 export function assertRuntimeEnumValue(
   value: unknown,

@@ -5,7 +5,7 @@ import { WorkflowRepository } from "../../features/workflows/workflowRepository.
 import { migrateAllGraphs } from "./migrateAllGraphs.js";
 import { CURRENT_WORKFLOW_GRAPH_VERSION } from "../../graph/migration.js";
 import { writeGraphToNormalizedTables } from "./backfillGraphTables.js";
-import type { WorkflowGraph } from "../../../src/types/workflow.js";
+import type { WorkflowGraph } from "../../../../src/types/workflow.js";
 import { TestDbAdapter } from "../testDbAdapter.js";
 import { MIGRATIONS } from "../../graph/migrations/index.js";
 

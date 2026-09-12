@@ -21,7 +21,7 @@ import type {
   BrowserDriverContext,
   BrowserDriverLocator,
   BrowserDriverPage,
-} from "./browser/sessionManager.js";
+} from "./surfaces/web/sessionManager.js";
 
 export type ProjectWorkflow = {
   id: string;

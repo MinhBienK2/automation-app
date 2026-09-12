@@ -23,7 +23,7 @@ Electron main
 Node/TypeScript backend
   -> electron/backend/commands.ts command handlers
   -> electron/backend/runtime/runManager.ts run lifecycle manager
-  -> electron/backend/browser/sessionManager.ts browser session manager
+  -> electron/backend/surfaces/web/sessionManager.ts browser session manager
   -> electron/backend/services/workflowSettingsService.ts workflow settings service
   -> electron/backend/services/workflowPackageService.ts package service
   -> electron/backend/services/projectPackageService.ts project package service

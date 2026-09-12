@@ -8,7 +8,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 
 - Core runner: `electron/backend/runtime/` (`runner.ts`, `runManager.ts`, `batchWorkflowRun.ts`, `runnerActionExecutors.ts`, `dataActionExecutors.ts`)
 - Runtime shapes: `electron/backend/runtime/actionRuntime.ts` (the one place the run state and the executor dependencies are declared)
-- Browser context: `electron/backend/browser/sessionManager.ts`
+- Browser context: `electron/backend/surfaces/web/sessionManager.ts`
 - Action execution: `electron/backend/actions/` (`registry.ts`, `execution.ts`, `validation.ts`)
 - Evidence and artifacts: `electron/backend/evidence/` (`artifacts.ts`, `model.ts`)
 - Helper modules: `electron/backend/runtime/` (`actionTrace`, `targetResolver`, `interactionPrimitives`, `interactionActions`, `runtimeHelpers`, `conditions`, `runnerEvidence`, `domainPolicy`, `variables`)

@@ -4,7 +4,7 @@
 
 - Runs execute compiled action configs from `electron/backend/graph/compiler.ts`.
 - Default engine: CloakBrowser (`npm cloakbrowser`). Alt: `AUTOMATION_BROWSER_ENGINE=camoufox` for Firefox lab runs.
-- Session management: `electron/backend/browser/sessionManager.ts`.
+- Session management: `electron/backend/surfaces/web/sessionManager.ts`.
 - Graph edge delays → synthetic wait steps (duration-only, not page-state).
 - Unknown action/condition discriminants → validation errors before save/import/run.
 - Graphs with no executable compiled steps → rejected before runner starts.
