@@ -8,7 +8,7 @@ import type {
   BrowserDriverContext,
   BrowserDriverLocator,
   BrowserDriverPage,
-} from "../../browser/sessionManager.js";
+} from "../../surfaces/web/sessionManager.js";
 import type { AppPaths } from "../../db/database.js";
 import type { RuntimeElementRef } from "../targetResolver.js";
 import type { ExecutionSurface } from "../surface.js";

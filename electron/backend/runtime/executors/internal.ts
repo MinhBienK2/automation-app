@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { BrowserDriverPage } from "../../browser/sessionManager.js";
+import type { BrowserDriverPage } from "../../surfaces/web/sessionManager.js";
 import { isPlainRecord } from "../../shared/records.js";
 import { locatorFor, locatorForRuntimeElementRef } from "../targetResolver.js";
 import { renderTemplate } from "../variables.js";
