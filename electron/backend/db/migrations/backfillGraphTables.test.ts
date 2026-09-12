@@ -3,7 +3,7 @@
 import { describe, expect, test } from "vitest";
 import { WorkflowRepository } from "../../features/workflows/workflowRepository.js";
 import { assembleGraphFromTables, assembleSubflowGraphFromTables } from "../../features/workflows/normalizedGraphRepository.js";
-import type { WorkflowGraph } from "../../../src/types/workflow.js";
+import type { WorkflowGraph } from "../../../../src/types/workflow.js";
 import { TestDbAdapter } from "../testDbAdapter.js";
 
 function sampleGraph(): WorkflowGraph {

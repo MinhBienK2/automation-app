@@ -21,7 +21,7 @@ import {
   actionCapabilities,
   allActionTypes,
   isActionVisibleInPrimaryPalette,
-} from "../../src/lib/actionCapabilities";
+} from "../../src/features/workflows/data/actionCapabilities";
 import type { ActionType, GraphNodeType } from "../../src/types/workflow";
 
 const allGraphNodeTypes: GraphNodeType[] = [

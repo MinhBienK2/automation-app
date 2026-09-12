@@ -10,7 +10,7 @@ import type { DriverTransport } from "../driverClient.js";
 import { createDesktopActionExecutors } from "./index.js";
 import type { VariableScope } from "../../../runtime/actionRuntime.js";
 import type { SurfaceStepTrace } from "../../../runtime/actionTrace.js";
-import type { ActionConfig } from "../../../../src/types/workflow.js";
+import type { ActionConfig } from "../../../../../src/types/workflow.js";
 
 /**
  * Driven through a fake transport, so these run on any machine: the driver's
