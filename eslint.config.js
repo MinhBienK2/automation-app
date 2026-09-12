@@ -49,11 +49,12 @@ export default [
       "src/App.tsx",
       "src/app/AppPackageDialogs.tsx",
       "src/app/useAppPackageDialogs.ts",
-      "src/app/useGraphExitNavigation.ts",,
+      "src/app/useGraphExitNavigation.ts",
       "src/features/evidence/useEvidenceWorkspace.ts",
       "src/layouts/AppSidebar.tsx",
       // Backend files exempt
       "electron/backend/actions/**/*.{ts,tsx}",
+      "electron/backend/surfaces/**/*.{ts,tsx}",
       "electron/backend/browser/**/*.{ts,tsx}",
       "electron/backend/diagnostics/**/*.{ts,tsx}",
       "electron/backend/evidence/**/*.{ts,tsx}",

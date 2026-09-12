@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import type {
   BrowserDriverLocator,
   BrowserDriverPage,
-} from "../browser/sessionManager.js";
+} from "./surface.js";
 import {
   locatorFor,
   rankedCandidatesForTarget,

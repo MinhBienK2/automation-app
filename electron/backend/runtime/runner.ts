@@ -12,15 +12,12 @@ import type {
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import type { AppPaths } from "../db/database.js";
-import { requireWebSurface, type ExecutionSurface } from "./surface.js";
 import {
-  BrowserSessionManager,
-  browserIdentityEvidence,
-  retainedProfileKey,
+  requireWebSurface,
+  type ExecutionSurface,
   type BrowserDriver,
   type BrowserDriverLocator,
-  type RetainedSession,
-} from "../browser/sessionManager.js";
+} from "./surface.js";
 import { collectNestedNodeIds } from "./nestedExecutionHelpers.js";
 import {
   executeRegisteredAction,
@@ -81,13 +78,21 @@ import { resolveObjectTemplates } from "./variables.js";
 import { withLoopScope } from "./loopScope.js";
 
 
-export {
-  createCloakBrowserDriver,
-  type BrowserDriver,
-  type BrowserDriverLocator,
-  type BrowserLaunchOptions,
-} from "../browser/sessionManager.js";
-export type { BrowserDriverFrameLocator } from "../browser/sessionManager.js";
+export type {
+  BrowserDriver,
+  BrowserDriverLocator,
+  BrowserDriverFrameLocator,
+} from "./surface.js";
+export type BrowserLaunchOptions = Record<string, unknown>;
+
+export type SessionManagerPort = {
+  closeRetainedContext?(): Promise<void>;
+  closeRetainedSession?(workflowId: string | null, profileName: string | null): Promise<void>;
+  hasReusableRetainedSession?(workflowId: string, profileName?: string | null): boolean;
+  getRetainedSessionState?(workflowId?: string | null, profileName?: string | null): RunState["retained_session"];
+  getRetainedSessionStates?(): NonNullable<RunState["retained_session"]>[];
+  createIsolatedManager?(): SessionManagerPort;
+};
 
 type RunnerOptions = {
   appPaths: AppPaths;
@@ -95,24 +100,27 @@ type RunnerOptions = {
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   random?: () => number;
   cloakHumanScroll?: CloakHumanScrollAdapter;
-  sessionManager?: BrowserSessionManager;
-  retainedSessions?: Map<string, RetainedSession>;
+  openSurface?: (request: RunnerRunRequest) => Promise<OpenedSurface>;
+  sessionManager?: SessionManagerPort;
+  retainedSessions?: Map<string, any>;
   usesDefaultDriver?: boolean;
 };
 
 /**
  * A surface the runner did not open itself.
  *
- * This is how the Desktop Surface reaches the runner without `runtime/`
- * importing `surfaces/desktop/` — ADR-0001 forbids that, and the ban is what
- * keeps this module surface-independent. The caller binds a Desktop Target into
- * a closure; the runner only ever sees a surface and a way to close it.
+ * This is how Execution Surfaces reach the runner without `runtime/`
+ * importing driver implementations directly — ADR-0001 forbids that, and the
+ * ban is what keeps this module surface-independent. The caller binds a surface
+ * into an opener closure; the runner only ever sees a surface and a way to close it.
  */
 export type OpenedSurface = {
   surface: ExecutionSurface;
   /** Shown to the operator before the first action — a degraded tier, say. */
   warnings?: string[];
-  close(): Promise<void>;
+  outputs?: Record<string, unknown>;
+  retainedSessionState?: () => RunState["retained_session"];
+  close(options?: { status?: RunState["status"]; forceClose?: boolean }): Promise<void>;
 };
 
 export type RunnerRunRequest = {
@@ -201,34 +209,50 @@ export class BrowserWorkflowRunner {
   private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   private readonly random: () => number;
   private readonly cloakHumanScroll: CloakHumanScrollAdapter;
-  private readonly sessionManager: BrowserSessionManager;
+  private readonly options: RunnerOptions;
+  private fallbackSessionManager?: SessionManagerPort;
 
   constructor(options: RunnerOptions) {
+    this.options = options;
     this.appPaths = options.appPaths;
     this.sleep = options.sleep ?? sleep;
     this.random = options.random ?? Math.random;
     this.cloakHumanScroll = options.cloakHumanScroll ?? cloakBrowserHumanScrollLocatorIntoView;
-    this.sessionManager = options.sessionManager ?? new BrowserSessionManager({
-      appPaths: options.appPaths,
-      driver: options.driver,
-      retainedSessions: options.retainedSessions,
-      usesDefaultDriver: options.usesDefaultDriver,
-    });
+  }
+
+  private async getOrCreateSessionManager(): Promise<SessionManagerPort> {
+    if (this.options.sessionManager) {
+      return this.options.sessionManager;
+    }
+    if (!this.fallbackSessionManager) {
+      const { BrowserSessionManager } = await import("../surfaces/web/sessionManager.js");
+      this.fallbackSessionManager = new BrowserSessionManager({
+        appPaths: this.appPaths,
+        driver: this.options.driver,
+        retainedSessions: this.options.retainedSessions,
+        usesDefaultDriver: this.options.usesDefaultDriver,
+      });
+    }
+    return this.fallbackSessionManager;
+  }
+
+  private get activeSessionManager(): SessionManagerPort | undefined {
+    return this.options.sessionManager ?? this.fallbackSessionManager;
   }
 
   createIsolatedRunRunner() {
     return new BrowserWorkflowRunner({
+      ...this.options,
       appPaths: this.appPaths,
       sleep: this.sleep,
       random: this.random,
-      sessionManager: this.sessionManager.createIsolatedManager(),
+      sessionManager: this.activeSessionManager?.createIsolatedManager?.(),
     });
   }
 
   async run(request: RunnerRunRequest): Promise<RunState> {
     const opened = await this.openSurface(request);
     const retainedWorkflowId = request.retainedSessionWorkflowId ?? null;
-    const retainedProfileName = retainedProfileKey(request.settings);
     const outputs: Record<string, unknown> = {};
     Object.defineProperty(outputs, "__dynamicResolvers", {
       value: new Map(),
@@ -244,7 +268,13 @@ export class BrowserWorkflowRunner {
       current_step_number: null,
       completed_step_ids: [],
       outputs,
-      retained_session: this.sessionManager.getRetainedSessionState(retainedWorkflowId, retainedProfileName),
+      retained_session:
+        opened.retainedSessionState?.() ??
+        this.activeSessionManager?.getRetainedSessionState?.(
+          retainedWorkflowId,
+          request.settings.browser_launch?.profile_dir ?? null,
+        ) ??
+        null,
       error: null,
     };
     const runtime: Runtime = {
@@ -285,7 +315,10 @@ export class BrowserWorkflowRunner {
       signal: request.signal,
       failedStepInfo: null,
     };
-    if (runtime.surface.kind === "web") {
+    if (opened.outputs) {
+      Object.assign(runtime.outputs, opened.outputs);
+    } else if (runtime.surface.kind === "web") {
+      const { browserIdentityEvidence } = await import("../surfaces/web/sessionManager.js");
       runtime.outputs.browser_identity = await browserIdentityEvidence(
         request.settings,
         runtime.runId,
@@ -368,53 +401,40 @@ export class BrowserWorkflowRunner {
       state.current_step_id = null;
       state.current_step_number = null;
 
-      if (runtime.surface.kind !== "web") {
-        // Always closed, whatever the retention policy says. Retention is about
-        // the *application*, and the opener already applies it — a desktop
-        // session's `close` terminates only what the run launched, and only
-        // when the policy asks. What `close` also does, unconditionally, is
-        // stop the driver host: an Electron utility process that nothing else
-        // holds a handle to. Skipping this call for a retained run leaked one
-        // host process, and one embedded driver, per run.
-        await opened.close();
-      } else if (closeSurface) {
-        await webSurfaceOf(runtime).context.close();
-        this.sessionManager.forgetContext(webSurfaceOf(runtime).context);
-      } else {
-        this.sessionManager.retainSession(
-          webSurfaceOf(runtime).context,
-          webSurfaceOf(runtime).page,
+      // Closed through the opener closure, which encapsulates surface-specific
+      // retention policies: desktop decides whether to kill the target app,
+      // and web decides whether to retain or close the browser context.
+      await opened.close({ status: state.status, forceClose: closeSurface });
+      state.retained_session =
+        opened.retainedSessionState?.() ??
+        this.activeSessionManager?.getRetainedSessionState?.(
           retainedWorkflowId,
-          retainedProfileName,
-        );
-      }
-      state.retained_session = this.sessionManager.getRetainedSessionState(
-        retainedWorkflowId,
-        retainedProfileName,
-      );
+          request.settings.browser_launch?.profile_dir ?? null,
+        ) ??
+        null;
     }
 
     return state;
   }
 
-  async closeRetainedContext() {
-    await this.sessionManager.closeRetainedContext();
+  async closeRetainedContext(): Promise<void> {
+    await this.activeSessionManager?.closeRetainedContext?.();
   }
 
-  async closeRetainedSession(workflowId: string | null, profileName: string | null) {
-    await this.sessionManager.closeRetainedSession(workflowId, profileName);
+  async closeRetainedSession(workflowId: string | null, profileName: string | null): Promise<void> {
+    await this.activeSessionManager?.closeRetainedSession?.(workflowId, profileName);
   }
 
-  hasReusableRetainedSession(workflowId: string, profileName?: string | null) {
-    return this.sessionManager.hasReusableRetainedSession(workflowId, profileName);
+  hasReusableRetainedSession(workflowId: string, profileName?: string | null): boolean {
+    return this.activeSessionManager?.hasReusableRetainedSession?.(workflowId, profileName) ?? false;
   }
 
-  getRetainedSessionState(workflowId?: string | null, profileName?: string | null) {
-    return this.sessionManager.getRetainedSessionState(workflowId, profileName);
+  getRetainedSessionState(workflowId?: string | null, profileName?: string | null): RunState["retained_session"] {
+    return this.activeSessionManager?.getRetainedSessionState?.(workflowId, profileName) ?? null;
   }
 
-  getRetainedSessionStates() {
-    return this.sessionManager.getRetainedSessionStates();
+  getRetainedSessionStates(): NonNullable<RunState["retained_session"]>[] {
+    return this.activeSessionManager?.getRetainedSessionStates?.() ?? [];
   }
 
   /**
@@ -426,20 +446,22 @@ export class BrowserWorkflowRunner {
    */
   private async openSurface(request: RunnerRunRequest): Promise<OpenedSurface> {
     if (request.openSurface) return request.openSurface();
+    if (this.options.openSurface) return this.options.openSurface(request);
 
-    const launch = request.reuseRetainedSession
-      ? await this.sessionManager.reuseRetainedSession(request)
-      : await this.sessionManager.launchFreshSession(request);
-
-    return {
-      surface: { kind: "web", context: launch.context, page: launch.page },
-      // Web teardown is the session manager's, and it distinguishes closing
-      // from retaining — a distinction this shape has no room for.
-      close: async () => {
-        await launch.context.close();
-        this.sessionManager.forgetContext(launch.context);
-      },
-    };
+    // Fallback when runner is used standalone without an external opener injected (e.g. runner unit tests)
+    const sessionManager = await this.getOrCreateSessionManager();
+    const { createWebSurfaceOpener } = await import("../surfaces/web/surfaceOpener.js");
+    const openWebSurface = createWebSurfaceOpener({
+      sessionManager: sessionManager as any,
+    });
+    return openWebSurface({
+      settings: request.settings,
+      runId: request.runId,
+      retention: request.settings.run_policy?.browser_retention === "close" ? "close" : "retain",
+      reuseRetainedSession: request.reuseRetainedSession,
+      retainedSessionWorkflowId: request.retainedSessionWorkflowId,
+      signal: request.signal,
+    })();
   }
 
   private async applyEnvironment(_runtime: Runtime, _settings: WorkflowSettings) {}

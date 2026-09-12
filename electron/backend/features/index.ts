@@ -15,7 +15,7 @@ import { WorkflowRepository } from "./workflows/workflowRepository.js";
 import { WorkflowScheduleRepository } from "./scheduling/workflowScheduleRepository.js";
 import { OperationsRepository } from "./operations/operationsRepository.js";
 import { WorkflowSettingsService } from "./workflows/workflowSettingsService.js";
-import { BrowserSessionManager } from "../browser/sessionManager.js";
+import { BrowserSessionManager } from "../surfaces/web/sessionManager.js";
 import { RecorderSessionManager } from "./recording/recorderSessionManager.js";
 import { createRecordingDraftCommands } from "./recording/recordingDraftCommands.js";
 import {

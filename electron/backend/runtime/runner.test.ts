@@ -13,12 +13,12 @@ import type {
 } from "../../../src/types/workflow";
 import { defaultWorkflowSettings } from "../features/workflows/workflowSettingsService";
 import { createAppPaths } from "../db/database";
+import { BrowserWorkflowRunner } from "./runner";
 import {
-  BrowserWorkflowRunner,
   createCloakBrowserDriver,
   type BrowserDriverContext,
   type BrowserDriverPage,
-} from "./runner";
+} from "../surfaces/web/sessionManager.js";
 import {
   createFakeDriver,
   FakeContext,

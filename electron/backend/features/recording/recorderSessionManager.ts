@@ -11,7 +11,7 @@ import type {
 import type {
   BrowserDriverContext,
   BrowserDriverPage,
-} from "../../browser/sessionManager.js";
+} from "../../surfaces/web/sessionManager.js";
 import { RecordingEventCollector } from "./eventCollector.js";
 
 type RecorderSessionManagerDependencies = {

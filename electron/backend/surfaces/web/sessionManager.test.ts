@@ -4,9 +4,9 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import type { WorkflowSettings } from "../../../src/types/workflow";
-import { defaultWorkflowSettings } from "../features/workflows/workflowSettingsService";
-import { createAppPaths } from "../db/database";
+import type { WorkflowSettings } from "../../../../src/types/workflow";
+import { defaultWorkflowSettings } from "../../features/workflows/workflowSettingsService";
+import { createAppPaths } from "../../db/database";
 import {
   BrowserSessionManager,
   browserIdentityEvidence,

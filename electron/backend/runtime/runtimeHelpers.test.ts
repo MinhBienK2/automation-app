@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import type { BrowserDriverLocator } from "../browser/sessionManager.js";
+import type { BrowserDriverLocator } from "./surface.js";
 import {
   extractListLike,
   waitUntil,

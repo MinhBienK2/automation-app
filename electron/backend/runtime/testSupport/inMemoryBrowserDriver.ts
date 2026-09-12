@@ -14,7 +14,7 @@ import type {
   BrowserDriver,
   BrowserDriverContext,
   BrowserDriverPage,
-} from "../../browser/sessionManager.js";
+} from "../surface.js";
 
 export function createFakeDriver(context: FakeContext) {
   const driver: BrowserDriver & {

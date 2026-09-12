@@ -27,12 +27,12 @@ import type {
   CompiledStepMetadata,
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
+import type { SurfaceStepTrace } from "./actionTrace.js";
 import type {
+  ExecutionSurface,
   BrowserDriverLocator,
   BrowserDriverPage,
-} from "../browser/sessionManager.js";
-import type { SurfaceStepTrace } from "./actionTrace.js";
-import type { ExecutionSurface } from "./surface.js";
+} from "./surface.js";
 import type { AppPaths } from "../db/database.js";
 import type { RuntimeElementRef } from "./targetResolver.js";
 

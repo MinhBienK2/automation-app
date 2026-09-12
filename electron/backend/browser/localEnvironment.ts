@@ -1,7 +1,2 @@
-export function localBrowserTimezone() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-}
-
-export function localBrowserLocale() {
-  return Intl.DateTimeFormat().resolvedOptions().locale || "en-US";
-}
+// Compatibility re-export for concurrent workers
+export * from "../surfaces/web/localEnvironment.js";
