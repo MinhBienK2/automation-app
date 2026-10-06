@@ -13,6 +13,7 @@ import type { AppPaths } from "../../db/database.js";
 import type { RuntimeElementRef } from "../targetResolver.js";
 import type { ExecutionSurface } from "../surface.js";
 import type { SurfaceStepTrace } from "../actionTrace.js";
+import type { WebInteractionEngine } from "../webInteractionEngine.js";
 
 /**
  * What an action executor is given.
@@ -55,6 +56,7 @@ export type RunnerActionExecutorDependencies<
   appPaths: AppPaths;
   random: () => number;
   sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
+  webEngine?: WebInteractionEngine;
   enforceNavigationPolicy: (runtime: Runtime, url: string) => Promise<void>;
   executeWait: (
     runtime: Runtime,

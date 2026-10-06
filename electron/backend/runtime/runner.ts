@@ -2,27 +2,19 @@ import { randomUUID } from "node:crypto";
 import type {
   ActionConfig,
   CompiledGraphStep,
-  CompiledNestedAction,
-  CompiledStepMetadata,
   CompiledWorkflowGraph,
-  DragTargetPosition,
-  ElementTarget,
   RunMode,
   RunState,
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import type { AppPaths } from "../db/database.js";
 import {
-  requireWebSurface,
   type ExecutionSurface,
   type BrowserDriver,
-  type BrowserDriverLocator,
 } from "./surface.js";
-import { collectNestedNodeIds } from "./nestedExecutionHelpers.js";
 import {
   executeRegisteredAction,
 } from "../actions/execution.js";
-import { hostnameAllowed } from "./domainPolicy.js";
 import {
   actionConfigSummary,
   actionEvidenceModel,
@@ -37,31 +29,31 @@ import {
   type ActionTrace,
 } from "./actionTrace.js";
 import {
-  locatorFor,
-  locatorForRuntimeElementRef,
-  rankedCandidatesForTarget,
-  selectRankedElementCandidate,
-  type RuntimeElementRef,
-} from "./targetResolver.js";
-import {
-  centerPoint,
-  dragTargetPoint,
-  type PointerBox,
-} from "./interactionPrimitives.js";
-import {
   cloakBrowserHumanScrollLocatorIntoView,
-  executePasteClipboardAction,
-  executeScrollAction,
-  nativePointerLocatorIntoView,
-  pressHotkeyHuman,
-  pressKeyHuman,
-  registerDialogHandler,
   type CloakHumanScrollAdapter,
 } from "./interactionActions.js";
 import {
   sleep,
-  waitForLocatorState,
 } from "./runtimeHelpers.js";
+import {
+  WebInteractionEngine,
+} from "./webInteractionEngine.js";
+import {
+  NestedStepExecutor,
+} from "./nestedStepExecutor.js";
+import {
+  type BrowserLaunchOptions,
+  type SessionManagerPort,
+  type RunnerOptions,
+  type OpenedSurface,
+  type RunnerRunRequest,
+  type Runtime,
+  RunnerStop,
+  LoopControl,
+  webSurfaceOf,
+  sensitivityOf,
+  isAbortError,
+} from "./runnerTypes.js";
 import {
   createRunnerActionExecutors,
   type RunnerActionRuntime,
@@ -71,145 +63,29 @@ import {
   captureFailureScreenshot,
   collectRunnerOutputs,
   recordRunnerEvidence,
-  waitForRunnerDownload,
-  type RunEvidenceArtifact,
 } from "./runnerEvidence.js";
 import { resolveObjectTemplates } from "./variables.js";
-import { withLoopScope } from "./loopScope.js";
-
 
 export type {
   BrowserDriver,
   BrowserDriverLocator,
   BrowserDriverFrameLocator,
 } from "./surface.js";
-export type BrowserLaunchOptions = Record<string, unknown>;
-
-export type SessionManagerPort = {
-  closeRetainedContext?(): Promise<void>;
-  closeRetainedSession?(workflowId: string | null, profileName: string | null): Promise<void>;
-  hasReusableRetainedSession?(workflowId: string, profileName?: string | null): boolean;
-  getRetainedSessionState?(workflowId?: string | null, profileName?: string | null): RunState["retained_session"];
-  getRetainedSessionStates?(): NonNullable<RunState["retained_session"]>[];
-  createIsolatedManager?(): SessionManagerPort;
-};
-
-type RunnerOptions = {
-  appPaths: AppPaths;
-  driver?: BrowserDriver;
-  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
-  random?: () => number;
-  cloakHumanScroll?: CloakHumanScrollAdapter;
-  openSurface?: (request: RunnerRunRequest) => Promise<OpenedSurface>;
-  sessionManager?: SessionManagerPort;
-  retainedSessions?: Map<string, any>;
-  usesDefaultDriver?: boolean;
-};
-
-/**
- * A surface the runner did not open itself.
- *
- * This is how Execution Surfaces reach the runner without `runtime/`
- * importing driver implementations directly — ADR-0001 forbids that, and the
- * ban is what keeps this module surface-independent. The caller binds a surface
- * into an opener closure; the runner only ever sees a surface and a way to close it.
- */
-export type OpenedSurface = {
-  surface: ExecutionSurface;
-  /** Shown to the operator before the first action — a degraded tier, say. */
-  warnings?: string[];
-  outputs?: Record<string, unknown>;
-  retainedSessionState?: () => RunState["retained_session"];
-  close(options?: { status?: RunState["status"]; forceClose?: boolean }): Promise<void>;
-};
-
-export type RunnerRunRequest = {
-  runId?: string | null;
-  graph: CompiledWorkflowGraph;
-  settings: WorkflowSettings;
-  mode: RunMode;
-  targetStepId?: string | null;
-  reuseRetainedSession?: boolean;
-  retainedSessionWorkflowId?: string | null;
-  signal?: AbortSignal;
-  onProgress?: (state: Partial<RunState>) => void;
-  /**
-   * Supplied for a non-web run. Its presence is what makes this a desktop run:
-   * the browser is never launched, and none of the retained-session machinery
-   * applies, because a desktop application is not ours to retain.
-   */
-  openSurface?: () => Promise<OpenedSurface>;
-};
-
-/**
- * The runner's full run state: everything an executor can read
- * (`RunnerActionRuntime`) plus the fields only the runner itself touches.
- * Declared as an extension rather than a second copy of the shared fields.
- */
-/**
- * The runner drives the Web Surface today, so it reads through one helper
- * rather than narrowing at twenty call sites. When a desktop runner arrives it
- * will be a sibling of this class, not a branch inside it.
- */
-function webSurfaceOf(runtime: Pick<RunnerActionRuntime, "surface">) {
-  return requireWebSurface(runtime.surface);
-}
-
-/**
- * The step's own sensitivity flag, or `null` when it does not carry one.
- *
- * `null` rather than `false`: "the operator said no" and "the operator said
- * nothing" are different inputs to the policy, which can infer sensitivity from
- * a password-typed target when the flag is unset.
- */
-function sensitivityOf(config: ActionConfig): boolean | null {
-  const inner = (config as { config?: { sensitive?: unknown } }).config;
-  return typeof inner?.sensitive === "boolean" ? inner.sensitive : null;
-}
-
-type Runtime = RunnerActionRuntime & {
-  domainPolicy: { allowed_domains: string[] } | null;
-  traces: ActionTrace[];
-  evidence: RunEvidenceArtifact[];
-  liveState: RunState;
-  onProgress?: (state: Partial<RunState>) => void;
-  failedStepInfo?: {
-    step_id: string;
-    step_name: string;
-    action_type: string;
-    action_summary: string | null;
-    metadata: CompiledStepMetadata | null;
-    parent_step_id?: string | null;
-    parent_step_ids?: string[] | null;
-  } | null;
-};
-
-class RunnerStop extends Error {
-  status: "success" | "failure" | "stopped";
-  closeBrowser: boolean;
-
-  constructor(status: "success" | "failure" | "stopped", message: string, closeBrowser = false) {
-    super(message);
-    this.status = status;
-    this.closeBrowser = closeBrowser;
-  }
-}
-
-class LoopControl extends Error {
-  kind: "break" | "continue";
-
-  constructor(kind: "break" | "continue") {
-    super(`${kind}_loop`);
-    this.kind = kind;
-  }
-}
-
+export type {
+  BrowserLaunchOptions,
+  SessionManagerPort,
+  RunnerOptions,
+  OpenedSurface,
+  RunnerRunRequest,
+} from "./runnerTypes.js";
 export class BrowserWorkflowRunner {
   private readonly appPaths: AppPaths;
   private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   private readonly random: () => number;
   private readonly cloakHumanScroll: CloakHumanScrollAdapter;
   private readonly options: RunnerOptions;
+  private readonly webEngine: WebInteractionEngine;
+  private readonly nestedExecutor: NestedStepExecutor;
   private fallbackSessionManager?: SessionManagerPort;
 
   constructor(options: RunnerOptions) {
@@ -218,6 +94,18 @@ export class BrowserWorkflowRunner {
     this.sleep = options.sleep ?? sleep;
     this.random = options.random ?? Math.random;
     this.cloakHumanScroll = options.cloakHumanScroll ?? cloakBrowserHumanScrollLocatorIntoView;
+    this.webEngine = new WebInteractionEngine({
+      appPaths: this.appPaths,
+      sleep: this.sleep,
+      random: this.random,
+      cloakHumanScroll: this.cloakHumanScroll,
+    });
+    this.nestedExecutor = new NestedStepExecutor({
+      executeAction: (rt, action) => this.executeAction(rt, action),
+      reportProgress: (rt) => this.reportProgress(rt),
+      sleep: this.sleep,
+      throwIfCancelled: (sig) => this.throwIfCancelled(sig),
+    });
   }
 
   private async getOrCreateSessionManager(): Promise<SessionManagerPort> {
@@ -568,619 +456,34 @@ export class BrowserWorkflowRunner {
       appPaths: this.appPaths,
       random: this.random,
       sleep: this.sleep,
-      enforceNavigationPolicy: (runtimeValue, url) => this.enforceNavigationPolicy(runtimeValue, url),
-      executeWait: (runtimeValue, action) => this.executeWait(runtimeValue, action),
+      webEngine: this.webEngine,
+      enforceNavigationPolicy: (runtimeValue, url) => this.webEngine.enforceNavigationPolicy(runtimeValue, url),
+      executeWait: (runtimeValue, action) => this.webEngine.executeWait(runtimeValue, action),
       locatorForAction: (runtimeValue, config, fallbackXpath) =>
-        this.locatorForAction(runtimeValue, config, fallbackXpath),
-      executeFindElement: (runtimeValue, action) => this.executeFindElement(runtimeValue, action),
-      executeDragAndDrop: (runtimeValue, action) => this.executeDragAndDrop(runtimeValue, action),
-      executeScroll: (runtimeValue, action) =>
-        executeScrollAction(runtimeValue, action, {
-          locatorForAction: (_scrollRuntime, config, fallbackXpath) =>
-            this.locatorForAction(runtimeValue, config, fallbackXpath),
-          cloakHumanScroll: this.cloakHumanScroll,
-          sleep: this.sleep,
-          random: this.random,
-        }),
-      pressKeyHuman: (page, key, signal) => pressKeyHuman(page, key, this.sleep, this.random, signal),
-      pressHotkeyHuman: (page, keys, signal) => pressHotkeyHuman(page, keys, this.sleep, this.random, signal),
-      executePasteClipboard: (runtimeValue, action) =>
-        executePasteClipboardAction(runtimeValue, action, {
-          locatorForAction: (_pasteRuntime, config) => this.locatorForAction(runtimeValue, config),
-        }),
+        this.webEngine.locatorForAction(runtimeValue, config, fallbackXpath),
+      executeFindElement: (runtimeValue, action) => this.webEngine.executeFindElement(runtimeValue, action),
+      executeDragAndDrop: (runtimeValue, action) => this.webEngine.executeDragAndDrop(runtimeValue, action),
+      executeScroll: (runtimeValue, action) => this.webEngine.executeScroll(runtimeValue, action),
+      pressKeyHuman: (page, key, signal) => this.webEngine.pressKeyHuman(page, key, signal),
+      pressHotkeyHuman: (page, keys, signal) => this.webEngine.pressHotkeyHuman(page, keys, signal),
+      executePasteClipboard: (runtimeValue, action) => this.webEngine.executePasteClipboard(runtimeValue, action),
       locatorForCustomSelectTrigger: (runtimeValue, action) =>
-        this.locatorForCustomSelectTrigger(runtimeValue, action),
+        this.webEngine.locatorForCustomSelectTrigger(runtimeValue, action),
       registerDialogHandler: (runtimeValue, behavior, promptText) =>
-        registerDialogHandler(runtimeValue, behavior, promptText),
+        this.webEngine.registerDialogHandler(runtimeValue, behavior, promptText),
       waitForDownload: (runtimeValue, outputName, timeoutMs) =>
-        waitForRunnerDownload(this.appPaths, runtimeValue, outputName, timeoutMs),
-      executeActions: (runtimeValue, actions) => this.executeActions(runtimeValue, actions),
-      executeLoopBody: (runtimeValue, steps) => this.executeLoopBody(runtimeValue, steps),
+        this.webEngine.waitForDownload(runtimeValue, outputName, timeoutMs),
+      executeActions: (runtimeValue, actions) => this.nestedExecutor.executeActions(runtimeValue, actions),
+      executeLoopBody: (runtimeValue, steps) => this.nestedExecutor.executeLoopBody(runtimeValue, steps),
       executeRetry: (runtimeValue, attempts, delayMs, steps, failedSteps) =>
-        this.executeRetry(runtimeValue, attempts, delayMs, steps, failedSteps),
+        this.nestedExecutor.executeRetry(runtimeValue, attempts, delayMs, steps, failedSteps),
       executeLoop: (runtimeValue, steps, maxAttempts, predicate, timeoutMs) =>
-        this.executeLoop(runtimeValue, steps, maxAttempts, predicate, timeoutMs),
+        this.nestedExecutor.executeLoop(runtimeValue, steps, maxAttempts, predicate, timeoutMs),
       conditionMatches,
       recordEvidence: recordRunnerEvidence,
       createLoopControl: (kind) => new LoopControl(kind),
       createRunnerStop: (status, message, closeBrowser) =>
         new RunnerStop(status, message, closeBrowser),
-    });
-  }
-
-  private async executeActions(runtime: Runtime, actions: CompiledNestedAction[]) {
-    for (const action of actions) {
-      this.throwIfCancelled(runtime.signal);
-      if (!action.graph_node_id) {
-        await this.executeAction(runtime, action);
-        continue;
-      }
-      const previous = {
-        runtimeStepId: runtime.currentStepId,
-        runtimeActionType: runtime.currentActionType,
-        runtimeActionSummary: runtime.currentActionSummary,
-        runtimeStepMetadata: runtime.currentStepMetadata,
-        runtimeStepName: runtime.currentStepName,
-        stateStepId: runtime.liveState.current_step_id,
-      };
-      runtime.currentStepId = action.graph_node_id;
-      runtime.currentActionType = action.type;
-      runtime.currentActionSummary = actionConfigSummary(action);
-      runtime.currentStepMetadata = action.graph_metadata ?? null;
-      runtime.currentStepName = action.graph_label ?? action.graph_node_id;
-      runtime.liveState.current_step_id = action.graph_node_id;
-      try {
-        this.reportProgress(runtime);
-        await this.executeNestedAction(runtime, action, previous.runtimeStepId);
-        runtime.liveState.completed_step_ids.push(action.graph_node_id);
-        this.reportProgress(runtime);
-      } catch (error) {
-        if (!(error instanceof LoopControl)) {
-          if (!runtime.failedStepInfo) {
-            runtime.failedStepInfo = {
-              step_id: action.graph_node_id,
-              step_name: action.graph_label ?? action.graph_node_id,
-              action_type: action.type,
-              action_summary: actionConfigSummary(action),
-              metadata: action.graph_metadata ?? null,
-              parent_step_id: previous.runtimeStepId,
-              parent_step_ids: previous.runtimeStepId ? [previous.runtimeStepId] : [],
-            };
-          } else if (previous.runtimeStepId) {
-            if (!runtime.failedStepInfo.parent_step_ids) {
-              runtime.failedStepInfo.parent_step_ids = [];
-            }
-            if (!runtime.failedStepInfo.parent_step_ids.includes(previous.runtimeStepId)) {
-              runtime.failedStepInfo.parent_step_ids.unshift(previous.runtimeStepId);
-            }
-          }
-        }
-        throw error;
-      } finally {
-        runtime.currentStepId = previous.runtimeStepId;
-        runtime.currentActionType = previous.runtimeActionType;
-        runtime.currentActionSummary = previous.runtimeActionSummary;
-        runtime.currentStepMetadata = previous.runtimeStepMetadata;
-        runtime.currentStepName = previous.runtimeStepName;
-        runtime.liveState.current_step_id = previous.stateStepId;
-      }
-    }
-  }
-
-  private async executeNestedAction(
-    runtime: Runtime,
-    action: CompiledNestedAction,
-    parentNodeId: string | null,
-  ) {
-    const startedAt = new Date().toISOString();
-    const nodeId = action.graph_node_id ?? runtime.currentStepId ?? "nested";
-    const outputSnapshot = snapshotOutputs(runtime.outputs);
-    const evidenceStartIndex = runtime.evidence.length;
-    runtime.currentSurfaceTrace = null;
-    try {
-      await this.executeAction(runtime, action);
-      pushActionTrace(runtime, {
-        node_id: nodeId,
-        label: action.graph_label ?? nodeId,
-        action_type: action.type,
-        parent_node_id: parentNodeId,
-        status: "success",
-        mode: actionTraceMode(action),
-        ...actionEvidenceModel(action),
-        started_at: startedAt,
-        finished_at: new Date().toISOString(),
-        ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
-        ...surfaceTraceField(runtime),
-      });
-    } catch (error) {
-      pushActionTrace(runtime, {
-        node_id: nodeId,
-        label: action.graph_label ?? nodeId,
-        action_type: action.type,
-        ...actionSummaryTraceField(action),
-        ...subflowTraceFields(action.graph_metadata),
-        parent_node_id: parentNodeId,
-        status: isAbortError(error) ? "stopped" : "failed",
-        mode: actionTraceMode(action),
-        ...actionEvidenceModel(action),
-        started_at: startedAt,
-        finished_at: new Date().toISOString(),
-        ...summarizeActionEffects(runtime, outputSnapshot, evidenceStartIndex),
-        ...surfaceTraceField(runtime),
-        reason: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
-  }
-
-  private async executeLoopBody(
-    runtime: Runtime,
-    steps: CompiledNestedAction[],
-  ): Promise<"completed" | "break" | "continue"> {
-    const nestedIds = collectNestedNodeIds(steps);
-    if (nestedIds.length > 0) {
-      const nestedSet = new Set(nestedIds);
-      runtime.liveState.completed_step_ids = runtime.liveState.completed_step_ids.filter(
-        (id) => !nestedSet.has(id),
-      );
-      this.reportProgress(runtime);
-    }
-    try {
-      await this.executeActions(runtime, steps);
-      return "completed";
-    } catch (error) {
-      if (error instanceof LoopControl) return error.kind;
-      throw error;
-    }
-  }
-
-  private async executeWait(runtime: Runtime, action: Extract<ActionConfig, { type: "wait" }>) {
-    switch (action.config.condition) {
-      case "duration":
-        await this.sleep(action.config.duration_ms ?? 1000, runtime.signal);
-        return;
-      case "page_load":
-        await webSurfaceOf(runtime).page.waitForLoadState?.("load", {
-          timeout: action.config.timeout_ms ?? undefined,
-        });
-        return;
-      case "url_contains":
-        await webSurfaceOf(runtime).page.waitForURL?.(
-          (url: URL) => url.href.includes(action.config.url ?? ""),
-          { timeout: action.config.timeout_ms ?? undefined },
-        );
-        return;
-      case "element_visible":
-        await waitForLocatorState(
-          await this.locatorForAction(runtime, action.config, "body"),
-          "visible",
-          action.config.timeout_ms,
-        );
-        return;
-      case "element_attached":
-        await waitForLocatorState(
-          await this.locatorForAction(runtime, action.config, "body"),
-          "attached",
-          action.config.timeout_ms,
-        );
-        return;
-      case "element_enabled": {
-        const locator = await this.locatorForAction(runtime, action.config, "body");
-        await waitForLocatorState(locator, "visible", action.config.timeout_ms);
-        await this.waitForLocatorEnabled(locator, true, action.config.timeout_ms, runtime.signal);
-        return;
-      }
-      case "text_visible":
-        await waitForLocatorState(
-          webSurfaceOf(runtime).page.locator(`text=${action.config.text ?? ""}`),
-          "visible",
-          action.config.timeout_ms,
-        );
-        return;
-      case "element_hidden":
-        await waitForLocatorState(
-          await this.locatorForAction(runtime, action.config, "body"),
-          "hidden",
-          action.config.timeout_ms,
-        );
-        return;
-      case "element_detached":
-        await waitForLocatorState(
-          await this.locatorForAction(runtime, action.config, "body"),
-          "detached",
-          action.config.timeout_ms,
-        );
-        return;
-      case "element_disabled":
-        await this.waitForLocatorEnabled(
-          await this.locatorForAction(runtime, action.config, "body"),
-          false,
-          action.config.timeout_ms,
-          runtime.signal,
-        );
-        return;
-    }
-  }
-
-  private async waitForLocatorEnabled(
-    locator: BrowserDriverLocator,
-    enabled: boolean,
-    timeoutMs: number | null | undefined,
-    signal?: AbortSignal,
-    retryIntervalMs = 100,
-  ) {
-    const deadline = Date.now() + (timeoutMs ?? 30_000);
-    while (Date.now() <= deadline) {
-      this.throwIfCancelled(signal);
-      const current = await locator.isEnabled?.();
-      if (current === enabled) return;
-      await this.sleep(
-        Math.min(retryIntervalMs, Math.max(1, deadline - Date.now())),
-        signal,
-      );
-    }
-    throw new Error(`Element did not become ${enabled ? "enabled" : "disabled"}`);
-  }
-
-  private async enforceNavigationPolicy(runtime: Runtime, url: string) {
-    const allowedDomains = runtime.domainPolicy?.allowed_domains ?? [];
-    if (allowedDomains.length === 0) return;
-
-    let hostname: string;
-    try {
-      hostname = new URL(url).hostname.toLowerCase();
-    } catch {
-      throw new Error(`Navigation URL is invalid for domain allowlist: ${url}`);
-    }
-
-    if (hostnameAllowed(hostname, allowedDomains)) return;
-    throw new Error(
-      `Navigation to ${hostname} is not in the allowlist (${allowedDomains.join(", ")})`,
-    );
-  }
-
-  private async executeDragAndDrop(
-    runtime: Runtime,
-    action: Extract<ActionConfig, { type: "drag_and_drop" }>,
-  ) {
-    const source = await this.locatorForDragEndpoint(runtime, action, "source");
-    const target = await this.locatorForDragEndpoint(runtime, action, "target");
-    await this.waitForElementReadiness(
-      source,
-      action.config.wait_until ?? null,
-      action.config.timeout_ms,
-      runtime.signal,
-      undefined,
-    );
-    await this.waitForElementReadiness(
-      target,
-      action.config.wait_until ?? null,
-      action.config.timeout_ms,
-      runtime.signal,
-      undefined,
-    );
-
-    const targetPosition = action.config.target_position;
-    if (targetPosition && targetPosition.mode !== "center") {
-      await this.executePositionedDragAndDrop(
-        runtime,
-        source,
-        target,
-        targetPosition,
-        action.config.timeout_ms,
-      );
-      return;
-    }
-
-    if (!source.dragTo) {
-      throw new Error("drag_and_drop requires driver dragTo support");
-    }
-    await source.dragTo(target, { timeout: action.config.timeout_ms ?? undefined });
-  }
-
-  private async locatorForDragEndpoint(
-    runtime: Runtime,
-    action: Extract<ActionConfig, { type: "drag_and_drop" }>,
-    endpoint: "source" | "target",
-  ): Promise<BrowserDriverLocator> {
-    const refName = endpoint === "source" ? action.config.source_ref : action.config.target_ref;
-    if (refName?.trim()) {
-      const trimmedRefName = refName.trim();
-      const ref = runtime.elementRefs.get(trimmedRefName);
-      if (!ref) {
-        throw new Error(`Element ref not found: ${refName}`);
-      }
-      return locatorForRuntimeElementRef(webSurfaceOf(runtime).page, ref);
-    }
-
-    if (endpoint === "source") {
-      return locatorFor(
-        webSurfaceOf(runtime).page,
-        action.config.source_target,
-        action.config.source_xpath,
-        this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
-      );
-    }
-
-    return locatorFor(
-      webSurfaceOf(runtime).page,
-      action.config.target_target,
-      action.config.target_xpath,
-      this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
-    );
-  }
-
-  private async locatorForCustomSelectTrigger(
-    runtime: Runtime,
-    action: Extract<ActionConfig, { type: "select_custom_option" }>,
-  ) {
-    if (action.config.trigger_ref != null) {
-      const refName = action.config.trigger_ref.trim();
-      if (!refName) {
-        throw new Error("Trigger ref is required");
-      }
-      const ref = runtime.elementRefs.get(refName);
-      if (!ref) {
-        throw new Error(`Element ref not found: ${action.config.trigger_ref}`);
-      }
-      return locatorForRuntimeElementRef(webSurfaceOf(runtime).page, ref);
-    }
-
-    return locatorFor(
-      webSurfaceOf(runtime).page,
-      action.config.trigger_target,
-      action.config.trigger_xpath,
-      this.getEffectiveIframeXpath(runtime, action.config.iframe_xpath),
-    );
-  }
-
-  private async executePositionedDragAndDrop(
-    runtime: Runtime,
-    source: BrowserDriverLocator,
-    target: BrowserDriverLocator,
-    position: DragTargetPosition,
-    timeoutMs: number | null | undefined,
-  ) {
-    const mouse = webSurfaceOf(runtime).page.mouse;
-    if (!mouse?.move || !mouse.down || !mouse.up) {
-      throw new Error("drag_and_drop target_position requires driver mouse support");
-    }
-
-    await nativePointerLocatorIntoView(source, timeoutMs);
-    await nativePointerLocatorIntoView(target, timeoutMs);
-    this.throwIfCancelled(runtime.signal);
-
-    const sourceBox = await this.locatorBoundingBox(source, "source");
-    const targetBox = await this.locatorBoundingBox(target, "target");
-    const sourcePoint = centerPoint(sourceBox);
-    const targetPoint = dragTargetPoint(targetBox, position);
-
-    this.throwIfCancelled(runtime.signal);
-    await mouse.move(sourcePoint.x, sourcePoint.y);
-    this.throwIfCancelled(runtime.signal);
-    await mouse.down({ button: "left" });
-    try {
-      this.throwIfCancelled(runtime.signal);
-      await mouse.move(targetPoint.x, targetPoint.y);
-      this.throwIfCancelled(runtime.signal);
-    } finally {
-      await mouse.up({ button: "left" });
-    }
-  }
-
-  private async locatorBoundingBox(
-    locator: BrowserDriverLocator,
-    role: "source" | "target",
-  ): Promise<PointerBox> {
-    if (!locator.boundingBox) {
-      throw new Error(`drag_and_drop ${role} requires driver boundingBox support`);
-    }
-    const box = await locator.boundingBox();
-    if (!box || !Number.isFinite(box.width) || !Number.isFinite(box.height)) {
-      throw new Error(`Drag ${role} element has no visible bounding box`);
-    }
-    return box;
-  }
-
-  private async locatorForAction(
-    runtime: Runtime,
-    config: {
-      target?: ElementTarget | null;
-      target_ref?: string | null;
-      xpath?: string | null;
-      iframe_xpath?: string | null;
-      wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
-      timeout_ms?: number | null;
-    },
-    fallbackXpath = "body",
-  ) {
-    if (config.target_ref?.trim()) {
-      const ref = runtime.elementRefs.get(config.target_ref.trim());
-      if (!ref) {
-        throw new Error(`Element ref not found: ${config.target_ref}`);
-      }
-      const locator = await locatorForRuntimeElementRef(webSurfaceOf(runtime).page, ref);
-      await this.waitForElementReadiness(
-        locator,
-        config.wait_until ?? null,
-        config.timeout_ms,
-        runtime.signal,
-      );
-      return locator;
-    }
-
-    const locator = await locatorFor(
-      webSurfaceOf(runtime).page,
-      config.target,
-      config.xpath ?? fallbackXpath,
-      this.getEffectiveIframeXpath(runtime, config.iframe_xpath),
-    );
-    await this.waitForElementReadiness(
-      locator,
-      config.wait_until ?? null,
-      config.timeout_ms,
-      runtime.signal,
-    );
-    return locator;
-  }
-
-  private getEffectiveIframeXpath(runtime: Runtime, iframeXpath?: string | null): string | null {
-    return iframeXpath || webSurfaceOf(runtime).activeFrameXpath || null;
-  }
-
-  private async executeFindElement(
-    runtime: Runtime,
-    action: Extract<ActionConfig, { type: "find_element" }>,
-  ) {
-    const outputName = action.config.output_name.trim();
-    const rank = action.config.rank ?? "nearest_viewport_center";
-    const candidates = await this.waitForFindElementCandidates(
-      runtime,
-      action.config,
-    );
-    if (!candidates.length) {
-      throw new Error("No element locator satisfied target constraints");
-    }
-    const selected = await selectRankedElementCandidate(webSurfaceOf(runtime).page, candidates, rank);
-    const target = action.config.target ?? {
-      locators: [selected.locatorConfig],
-      constraints: null,
-      iframe: null,
-    };
-    const ref: RuntimeElementRef = {
-      refId: randomUUID(),
-      target,
-      locator: selected.locatorConfig,
-      index: selected.index,
-      outputName,
-      rank,
-    };
-    runtime.elementRefs.set(outputName, ref);
-    runtime.outputs[outputName] = {
-      kind: "element_ref",
-      ref_id: ref.refId,
-      locator: selected.locatorConfig.value,
-      locator_kind: selected.locatorConfig.kind,
-      index: selected.index,
-      rank,
-      box: selected.box,
-    };
-  }
-
-  private async waitForFindElementCandidates(
-    runtime: Runtime,
-    config: Extract<ActionConfig, { type: "find_element" }>["config"],
-  ) {
-    const timeoutMs = config.timeout_ms ?? 0;
-    const deadline = Date.now() + timeoutMs;
-    const effectiveIframe = this.getEffectiveIframeXpath(runtime, config.iframe_xpath);
-    do {
-      this.throwIfCancelled(runtime.signal);
-      const candidates = await rankedCandidatesForTarget(
-        webSurfaceOf(runtime).page,
-        config.target,
-        config.xpath,
-        effectiveIframe,
-        Boolean(config.filter?.in_viewport),
-      );
-      if (candidates.length || timeoutMs <= 0) return candidates;
-      await this.sleep(Math.min(100, Math.max(1, deadline - Date.now())), runtime.signal);
-    } while (Date.now() < deadline);
-    return rankedCandidatesForTarget(
-      webSurfaceOf(runtime).page,
-      config.target,
-      config.xpath,
-      effectiveIframe,
-      Boolean(config.filter?.in_viewport),
-    );
-  }
-
-  private async waitForElementReadiness(
-    locator: BrowserDriverLocator,
-    waitUntil: unknown,
-    timeoutMs: number | null | undefined,
-    signal?: AbortSignal,
-    retryIntervalMs?: number | null,
-  ) {
-    switch (waitUntil) {
-      case "attached":
-        await waitForLocatorState(locator, "attached", timeoutMs);
-        return;
-      case "visible":
-        await waitForLocatorState(locator, "visible", timeoutMs);
-        return;
-      case "enabled":
-      case "clickable":
-        await waitForLocatorState(locator, "visible", timeoutMs);
-        await this.waitForLocatorEnabled(
-          locator,
-          true,
-          timeoutMs,
-          signal,
-          retryIntervalMs ?? undefined,
-        );
-        return;
-      case null:
-        return;
-      default:
-        throw new Error("Wait until must be attached, visible, enabled, or clickable");
-    }
-  }
-
-  private async executeRetry(
-    runtime: Runtime,
-    attempts: number,
-    delayMs: number,
-    steps: CompiledNestedAction[],
-    failedSteps: CompiledNestedAction[],
-  ) {
-    let lastError: unknown;
-    for (let attempt = 0; attempt < attempts; attempt += 1) {
-      const nestedIds = collectNestedNodeIds(steps);
-      if (nestedIds.length > 0) {
-        const nestedSet = new Set(nestedIds);
-        runtime.liveState.completed_step_ids = runtime.liveState.completed_step_ids.filter(
-          (id) => !nestedSet.has(id),
-        );
-        this.reportProgress(runtime);
-      }
-      try {
-        await this.executeActions(runtime, steps);
-        return;
-      } catch (error) {
-        lastError = error;
-        if (attempt + 1 < attempts && delayMs > 0) {
-          await this.sleep(delayMs, runtime.signal);
-        }
-      }
-    }
-    if (failedSteps.length > 0) {
-      await this.executeActions(runtime, failedSteps);
-      return;
-    }
-    throw lastError;
-  }
-
-  private async executeLoop(
-    runtime: Runtime,
-    steps: CompiledNestedAction[],
-    maxAttempts: number,
-    predicate: () => Promise<boolean>,
-    timeoutMs?: number | null,
-  ): Promise<"predicate_false" | "max_attempts" | "timeout" | "break"> {
-    return withLoopScope(runtime.outputs, async (iteration) => {
-      let attempts = 0;
-      const startedAt = Date.now();
-      while (await predicate()) {
-        if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
-        if (attempts >= maxAttempts) return "max_attempts";
-        iteration(attempts);
-        attempts += 1;
-        const control = await this.executeLoopBody(runtime, steps);
-        if (control === "break") return "break";
-        if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
-      }
-      return "predicate_false";
     });
   }
 
@@ -1191,10 +494,3 @@ export class BrowserWorkflowRunner {
   }
 }
 
-function isAbortError(error: unknown) {
-  return (
-    error instanceof RunnerStop && error.status === "stopped"
-  ) || (
-    error instanceof DOMException && error.name === "AbortError"
-  );
-}
