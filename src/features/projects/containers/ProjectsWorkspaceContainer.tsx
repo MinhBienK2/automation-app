@@ -221,7 +221,7 @@ export function ProjectsWorkspaceContainer(props: ProjectsWorkspaceContainerProp
             onCreateSubflow={subflowsWorkspace.createProjectSubflow}
             onUpdateSubflow={subflowsWorkspace.updateProjectSubflow}
             onDuplicateSubflow={subflowsWorkspace.duplicateProjectSubflow}
-            onDeleteSubflow={subflowsWorkspace.deleteProjectSubflow}
+            onDeleteSubflow={(subflow) => subflowsWorkspace.deleteProjectSubflow(typeof subflow === "string" ? subflow : subflow.id)}
             onOpenSubflow={(subflowId) => {
               void subflowsWorkspace.openSubflowDetail(subflowId, { type: "subflows" });
             }}

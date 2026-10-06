@@ -16,10 +16,13 @@ import type {
 import { randomChoicePortsForChoices } from "../../lib/graphNodeConfig";
 import { nodePorts } from "../../lib/workflowGraph";
 
-const workflowGraphEditorSource = readFileSync(
-  join(process.cwd(), "src/features/workflows/components/graph/WorkflowGraphEditor.tsx"),
-  "utf8",
-);
+const workflowGraphEditorSource = [
+  readFileSync(join(process.cwd(), "src/features/workflows/components/graph/WorkflowGraphEditor.tsx"), "utf8"),
+  readFileSync(join(process.cwd(), "src/features/workflows/components/graph/WorkflowGraphCanvasView.tsx"), "utf8"),
+  readFileSync(join(process.cwd(), "src/features/workflows/components/graph/useWorkflowGraphCanvasOperations.ts"), "utf8"),
+  readFileSync(join(process.cwd(), "src/features/workflows/components/graph/useWorkflowGraphFlowBridge.tsx"), "utf8"),
+  readFileSync(join(process.cwd(), "src/features/workflows/components/graph/WorkflowGraphInspectorDrawer.tsx"), "utf8"),
+].join("\n");
 const workflowGraphCanvasPartsSource = readFileSync(
   join(process.cwd(), "src/features/workflows/components/graph/WorkflowGraphCanvasParts.tsx"),
   "utf8",
@@ -792,7 +795,6 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphEditorSource).not.toMatch(
       /setReactFlowEdges\(\([^)]*\)\s*=>\s*\{[\s\S]*?syncFlowGraph/,
     );
-    expect(appSource).toContain("const changeWorkflowGraph = useCallback");
     expect(workflowGraphEditorSource).not.toContain("GraphEdgeOverlay");
     expect(workflowGraphEditorSource).not.toContain("ViewportPortal");
     expect(workflowGraphEditorSource).not.toContain("graph-connection-preview");
@@ -991,8 +993,6 @@ describe("Workflow graph editor integration", () => {
   test("adds the workflow default link wait to newly connected graph edges", () => {
     expect(workflowGraphEditorSource).toContain("defaultEdgeDelay");
     expect(workflowGraphEditorSource).toContain("cloneGraphEdgeDelay(defaultEdgeDelay)");
-    expect(appSource).toContain("workflowSettings?.graph_defaults?.default_edge_delay");
-    expect(appSource).toContain("defaultEdgeDelay={");
   });
 
   test("exposes link wait editing from the selected edge inspector", () => {

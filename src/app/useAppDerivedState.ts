@@ -122,7 +122,7 @@ export function useAppDerivedState(props: UseAppDerivedStateProps) {
 
   const profileVariables = ((): VariableAssignment[] => {
     const profile = selectedBrowserProfiles.find((p) => p.id === workflowProfileDraftId);
-    return profile?.initial_variables ?? [];
+    return (profile?.environment?.variables as VariableAssignment[]) ?? [];
   })();
 
   const projectStats = ((): Record<string, { workflows: number; subflows: number; profiles: number }> => {
