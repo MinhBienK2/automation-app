@@ -1,22 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ToastProvider, useToast } from "./components/ui/toast";
-import { SettingsPage } from "./features/settings/pages/SettingsPage";
-import { SettingsHelpPage } from "./features/settings/pages/SettingsHelpPage";
-import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnostics";
-import { ProjectProfilesPanel } from "./features/projects/components/ProjectProfilesPanel";
-import { ProjectDesktopTargetsPanel } from "./features/projects/components/ProjectDesktopTargetsPanel";
-import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
-import { useOperationsOverviewWorkspace } from "./features/overview/useOperationsOverviewWorkspace";
-import { ProjectSettings } from "./features/projects/components/ProjectSettings";
-import { useBrowserProfileActions } from "./features/projects/useBrowserProfileActions";
-import { useIdentityLabWorkspace } from "./features/identities/useIdentityLabWorkspace";
-import { ProjectsPage } from "./features/projects/pages/ProjectsPage";
-import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
-import { useSchedulesWorkspace } from "./features/schedules/useSchedulesWorkspace";
-import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
-import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
-import { SubflowListPage } from "./features/workflows/pages/SubflowListPage";
-import { SubflowDetailPage } from "./features/workflows/pages/SubflowDetailPage";
 import { AppShell } from "./layouts/AppShell";
 import { useThemePreferences } from "./app/useThemePreferences";
 import {
@@ -24,11 +7,8 @@ import {
   listBrowserProfiles,
   listSubflows,
   getSubflowGraph,
-  saveWorkflowGraph,
   createSubflow,
   saveSubflowGraph,
-  createDesktopTarget,
-  deleteDesktopTarget,
   setWorkflowDesktopTarget,
 } from "./lib/api/workflowApi";
 import {
@@ -47,11 +27,7 @@ import {
   operationsTargetToMissionTarget,
   type GraphSaveStatus,
 } from "./lib/appState";
-import { RecordingReviewDialog } from "./features/workflows/components/dialogs/RecordingReviewDialog";
-import { WorkflowSettingsDialog } from "./features/workflows/components/dialogs/WorkflowSettingsDialog";
 import { WorkflowSurfaceProvider } from "./features/workflows/state/WorkflowSurfaceContext";
-import { UnsavedChangesDialog } from "./components/ui/unsaved-changes-dialog";
-import { AppPackageDialogs } from "./app/AppPackageDialogs";
 import {
   useAppPackageDialogs,
   workflowPackageSections,
@@ -65,56 +41,25 @@ import type {
 } from "./types/workflow";
 import "./App.css";
 
-// Import new domain state hooks and types
+// Import domain state hooks and types
 import { useAppNavigation } from "./app/useAppNavigation";
-import { useProjectWorkspace } from "./features/projects/state/useProjectWorkspace";
-import { useWorkflowWorkspace } from "./features/workflows/state/useWorkflowWorkspace";
-import { useWorkflowGraphState } from "./features/workflows/state/useWorkflowGraphState";
-import { useWorkflowSettingsState } from "./features/workflows/state/useWorkflowSettingsState";
-import { useWorkflowRunState } from "./features/workflows/state/useWorkflowRunState";
-import { useRecordingWorkspace } from "./features/workflows/state/useRecordingWorkspace";
-import { useSubflowWorkspace } from "./features/subflows/state/useSubflowWorkspace";
-import { runFromSelectedState } from "./features/workflows/lib/runFromSelected";
+import { useBrowserProfileActions } from "./features/projects/useBrowserProfileActions";
+import { useIdentityLabWorkspace } from "./features/identities/useIdentityLabWorkspace";
 import { useGraphExitNavigation } from "./app/useGraphExitNavigation";
 import { useAuthState } from "./features/auth/state/useAuthState";
 import { LoginScreen } from "./features/auth/pages/LoginScreen";
-import { AdminPanel } from "./features/auth/pages/AdminPanel";
-import { AdminBackupsPanel } from "./features/auth/pages/AdminBackupsPanel";
-import type { AppScreen } from "./shared/types/workspaceContracts";
+import { useWorkflowAutosave } from "./features/workflows/hooks/useWorkflowAutosave";
+import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
+import { useAppDerivedState } from "./app/useAppDerivedState";
+import { useAppWorkspaces } from "./app/useAppWorkspaces";
+import { AppWorkspaceRoutes } from "./app/AppWorkspaceRoutes";
+import { getActiveSidebarItem, isRouteAllowed } from "./app/routePermissions";
 
-const ROUTE_CONFIGS: Record<AppScreen, { allowedRoles?: ("admin" | "user")[] }> = {
-  overview: { allowedRoles: ["admin", "user"] },
-  projects: { allowedRoles: ["admin", "user"] },
-  detail: { allowedRoles: ["admin", "user"] },
-  "subflow-detail": { allowedRoles: ["admin", "user"] },
-  settings: { allowedRoles: ["admin", "user"] },
-  schedules: { allowedRoles: ["admin", "user"] },
-  "settings-help": { allowedRoles: ["admin", "user"] },
-  "admin-users": { allowedRoles: ["admin"] },
-  "admin-backups": { allowedRoles: ["admin"] },
-};
-
-export function isRouteAllowed(
-  screen: AppScreen,
-  mode: "pending" | "team",
-  role?: "admin" | "user",
-): boolean {
-  const config = ROUTE_CONFIGS[screen];
-  if (!config) return true;
-  if (mode === "team") {
-    if (!role) return false;
-    return config.allowedRoles?.includes(role) ?? true;
-  }
-  return false;
-}
+export { isRouteAllowed };
 
 function AppInner() {
-  // --- Auth State ---
   const auth = useAuthState();
-
-  // --- Appearance preferences (theme / accent / density) ---
   const themePreferences = useThemePreferences();
-
   const [appError, setAppError] = useState("");
   const toastApi = useToast();
   const showToast = useCallback(
@@ -124,6 +69,10 @@ function AppInner() {
     [toastApi],
   );
 
+  const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(readGraphAutosaveEnabled);
+  const [graphAutosaveDelayMs, setGraphAutosaveDelayMs] = useState(readGraphAutosaveDelayMs);
+  const [runSnapshots, setRunSnapshots] = useState<WorkflowRunSnapshot[]>([]);
+
   const setToastMessage = useCallback(
     (message: string) => {
       showToast(message);
@@ -131,26 +80,27 @@ function AppInner() {
     [showToast],
   );
 
-  // Shared state references
-  const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(readGraphAutosaveEnabled);
-  const [graphAutosaveDelayMs, setGraphAutosaveDelayMs] = useState(readGraphAutosaveDelayMs);
-  const [runState, setRunState] = useState<RunState>(initialRunState);
-  const [runSnapshots, setRunSnapshots] = useState<WorkflowRunSnapshot[]>([]);
-  const [activeRunWorkflowName, setActiveRunWorkflowName] = useState<string | null>(null);
-
-  // --- Sub-hooks ---
+  const workspaces = useAppWorkspaces({
+    graphAutosaveEnabled,
+    setGraphAutosaveEnabled,
+    setAppError,
+    showToast,
+    requestGraphExitNavigation: (navigate) => requestGraphExitNavigation(navigate),
+    setSidebarCollapsed: (collapsed) => nav.setSidebarCollapsed(collapsed),
+    setScreen: (screen) => nav.setScreen(screen as never),
+    runSnapshots,
+    setRunSnapshots,
+  });
 
   const {
-    overview: operationsOverview,
-    loading: operationsOverviewLoading,
+    runState,
+    operationsOverview,
+    operationsOverviewLoading,
     loadOperationsOverview,
-  } = useOperationsOverviewWorkspace({ setAppError });
-
-  const {
     schedules,
     scheduleEvents,
     focusedScheduleId,
-    loading: schedulesLoading,
+    schedulesLoading,
     setFocusedScheduleId,
     loadSchedules,
     submitCreateSchedule,
@@ -158,26 +108,22 @@ function AppInner() {
     removeSchedule,
     toggleSchedule,
     loadScheduleHistory,
-  } = useSchedulesWorkspace({ setAppError });
-
-  const {
-    diagnostics: settingsDiagnostics,
-    diagnosticsLoading: settingsDiagnosticsLoading,
-    diagnosticsError: settingsDiagnosticsError,
-    maintenanceMessage: settingsMaintenanceMessage,
+    settingsDiagnostics,
+    settingsDiagnosticsLoading,
+    settingsDiagnosticsError,
+    settingsMaintenanceMessage,
     loadSettingsDiagnostics,
     installSettingsBrowserBinary,
     cleanupSettingsBrowserProfiles,
-  } = useSettingsDiagnostics();
+    graphState,
+    settingsWorkspace,
+    subflowsWorkspace,
+    projectsWorkspace,
+    workflowsWorkspace,
+    runWorkspace,
+    recordingWorkspace,
+  } = workspaces;
 
-  // --- Graph session state lives inside the workflows feature ---
-  const graphState = useWorkflowGraphState({
-    getDetail: () => workflowsWorkspace.detail,
-    graphAutosaveEnabled,
-    setGraphAutosaveEnabled,
-    setAppError,
-    loadWorkflows: () => workflowsWorkspace.loadWorkflows(),
-  });
   const {
     workflowGraph,
     graphSaveStatus,
@@ -186,32 +132,12 @@ function AppInner() {
     graphIssues,
     setWorkflowGraph,
     setGraphSaveStatus,
-    setGraphRevision,
     setSavedGraphRevision,
     setGraphIssues,
     graphIssuesNeedRecheck,
     setGraphIssuesNeedRecheck,
     setSelectedGraphNodeId,
   } = graphState;
-
-  // --- Domain hooks ---
-  const settingsWorkspace = useWorkflowSettingsState({
-    getDetail: () => workflowsWorkspace.detail,
-    setDetail: (detailValue) => workflowsWorkspace.setDetail(detailValue),
-    setWorkflows: (workflowList) => workflowsWorkspace.setWorkflows(workflowList),
-    getBrowserProfiles: () => projectsWorkspace.browserProfiles,
-    setBrowserProfiles: (profiles) => projectsWorkspace.setBrowserProfiles(profiles),
-    setSelectedProjectId: (id) => projectsWorkspace.setSelectedProjectId(id),
-    loadWorkflows: () => workflowsWorkspace.loadWorkflows(),
-    setAppError,
-    showToast,
-    resolveWorkflowProfileId: (profileId, profiles) => {
-      if (profileId && profiles.some((profile) => profile.id === profileId)) {
-        return profileId;
-      }
-      return profiles[0]?.id ?? null;
-    },
-  });
 
   const {
     workflowSettings,
@@ -227,87 +153,6 @@ function AppInner() {
     setWorkflowProfileSavedId,
   } = settingsWorkspace;
 
-  const subflowsWorkspace = useSubflowWorkspace({
-    setAppError,
-    ensureProjectId: () => projectsWorkspace.ensureProjectId(),
-    detail: null, // assigned down
-    requestGraphExitNavigation: (navigate) => requestGraphExitNavigation(navigate),
-    setSidebarCollapsed: (collapsed) => nav.setSidebarCollapsed(collapsed),
-    setScreen: (screen) => nav.setScreen(screen),
-    setProjectCollection: (collection) => projectsWorkspace.setProjectCollection(collection),
-    openWorkflow: (id) => workflowsWorkspace.openWorkflow(id),
-  });
-
-  const projectsWorkspace = useProjectWorkspace({
-    setAppError,
-    showToast,
-    loadWorkflows: () => workflowsWorkspace.loadWorkflows(),
-    setSubflows: subflowsWorkspace.setSubflows,
-    setSubflowsLoading: subflowsWorkspace.setSubflowsLoading,
-  });
-
-  const workflowsWorkspace = useWorkflowWorkspace({
-    setAppError,
-    showToast,
-    requestGraphExitNavigation: (navigate) => requestGraphExitNavigation(navigate),
-    setSelectedProjectId: (id) => projectsWorkspace.setSelectedProjectId(id),
-    currentProjectId: () => projectsWorkspace.currentProjectId(),
-    browserProfiles: projectsWorkspace.browserProfiles,
-    // Unfiltered on purpose: `selectedDesktopTargets` is derived further down,
-    // after this hook. The hook narrows to the current project itself, in
-    // `defaultDesktopTargetFor` — which is the only place it reads the list.
-    desktopTargets: projectsWorkspace.desktopTargets,
-    setBrowserProfiles: (envs) => projectsWorkspace.setBrowserProfiles(envs),
-    loadSubflowsForProject: (id) => subflowsWorkspace.loadSubflowsForProject(id),
-    graphAutosaveEnabled,
-    setWorkflowGraph,
-    setWorkflowSettings,
-    setWorkflowSettingsSavedSnapshot,
-    setWorkflowSettingsSaveStatuses,
-    setWorkflowProfileDraftId,
-    setWorkflowProfileSavedId,
-    setSavedGraphRevision,
-    setGraphRevision,
-    setGraphSaveStatus,
-    setGraphIssues,
-    setGraphIssuesNeedRecheck,
-    runSnapshots,
-    setRunState,
-    setSelectedGraphNodeId,
-    setSidebarCollapsed: (collapsed) => nav.setSidebarCollapsed(collapsed),
-    setScreen: (screen) => nav.setScreen(screen),
-    setProjectCollection: (coll) => projectsWorkspace.setProjectCollection(coll),
-    ensureProjectId: () => projectsWorkspace.ensureProjectId(),
-  });
-
-
-
-
-  const runWorkspace = useWorkflowRunState({
-    detail: workflowsWorkspace.detail,
-    workflowGraph,
-    selectedGraphNodeId: graphState.selectedGraphNodeId,
-    selectedWorkflowId: workflowsWorkspace.selectedWorkflowId,
-    setAppError,
-    loadOperationsOverview,
-    persistCurrentGraph: () => graphState.persistCurrentGraph(),
-    persistDirtyWorkflowSettings: () => settingsWorkspace.saveWorkflowSettingsAndClose().then(() => true).catch(() => false),
-    setGraphIssues: graphState.setGraphIssues,
-    setGraphIssuesNeedRecheck,
-    runState,
-    activeRunWorkflowName,
-    setRunState,
-    runSnapshots,
-    setRunSnapshots,
-    setActiveRunWorkflowName,
-  });
-
-  const recordingWorkspace = useRecordingWorkspace({
-    setAppError,
-    loadWorkflows: workflowsWorkspace.loadWorkflows,
-    openWorkflow: workflowsWorkspace.openWorkflow,
-  });
-
   const {
     overview: identityLabOverview,
     target: identityLabTarget,
@@ -322,7 +167,6 @@ function AppInner() {
     onIdentityReset: workflowsWorkspace.loadWorkflows,
   });
 
-  // App routing hook
   const nav = useAppNavigation({
     requestGraphExitNavigation: (navigate) => requestGraphExitNavigation(navigate),
     loadProjectModel: () => projectsWorkspace.loadProjectModel(),
@@ -406,24 +250,10 @@ function AppInner() {
     },
   });
 
-  const graphRevisionRef = useRef(graphRevision);
   const savedGraphRevisionRef = useRef(savedGraphRevision);
-
-  useEffect(() => {
-    graphRevisionRef.current = graphRevision;
-  }, [graphRevision]);
-
-  useEffect(() => {
-    savedGraphRevisionRef.current = savedGraphRevision;
-  }, [savedGraphRevision]);
-
-  const isSavingRef = useRef(false);
-  const savePendingRef = useRef(false);
-  const workflowGraphRef = useRef(workflowGraph);
-
-  useEffect(() => {
-    workflowGraphRef.current = workflowGraph;
-  }, [workflowGraph]);
+  const graphRevisionRef = useRef(graphRevision);
+  graphRevisionRef.current = graphRevision;
+  savedGraphRevisionRef.current = savedGraphRevision;
 
   const {
     graphExitDialogOpen,
@@ -439,10 +269,10 @@ function AppInner() {
       graphRevision,
       savedGraphRevision,
       persistCurrentGraph: () => graphState.persistCurrentGraph(),
-      discardWorkflowGraph({ savedGraphRevision, graphSaveStatus }: { savedGraphRevision: number; graphSaveStatus: GraphSaveStatus }) {
-        savedGraphRevisionRef.current = savedGraphRevision;
-        setSavedGraphRevision(savedGraphRevision);
-        setGraphSaveStatus(graphSaveStatus);
+      discardWorkflowGraph({ savedGraphRevision: discardRev, graphSaveStatus: discardStatus }: { savedGraphRevision: number; graphSaveStatus: GraphSaveStatus }) {
+        savedGraphRevisionRef.current = discardRev;
+        setSavedGraphRevision(discardRev);
+        setGraphSaveStatus(discardStatus);
       },
     },
     subflow: {
@@ -455,152 +285,35 @@ function AppInner() {
     },
   });
 
-  // --- Autosave Effect ---
-  useEffect(() => {
-    if (
-      !graphAutosaveEnabled ||
-      !workflowsWorkspace.detail ||
-      !workflowGraph ||
-      graphRevision === savedGraphRevision ||
-      graphExitDialogOpen
-    ) {
-      return;
-    }
-
-    const workflowId = workflowsWorkspace.detail.workflow.id;
-
-    const timeoutId = window.setTimeout(() => {
-      const executeSave = async () => {
-        if (isSavingRef.current) {
-          savePendingRef.current = true;
-          return;
-        }
-
-        isSavingRef.current = true;
-        savePendingRef.current = false;
-        setGraphSaveStatus("saving");
-
-        const revisionBeingSaved = graphRevisionRef.current;
-        try {
-          const currentGraph = workflowGraphRef.current;
-          if (currentGraph) {
-            await saveWorkflowGraph(workflowId, currentGraph, { skipRevision: true });
-          }
-          setSavedGraphRevision((current) => Math.max(current, revisionBeingSaved));
-          if (graphRevisionRef.current === revisionBeingSaved) {
-            setGraphSaveStatus("saved");
-            setAppError("");
-          } else {
-            setGraphSaveStatus("unsaved");
-          }
-        } catch (error) {
-          if (graphRevisionRef.current === revisionBeingSaved) {
-            setGraphSaveStatus("failed");
-          }
-          setAppError(commandMessage(error));
-        } finally {
-          isSavingRef.current = false;
-          if (savePendingRef.current) {
-            void executeSave();
-          }
-        }
-      };
-
-      void executeSave();
-    }, graphAutosaveDelayMs);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [
-    workflowsWorkspace.detail,
+  useWorkflowAutosave({
+    workflowId: workflowsWorkspace.detail?.workflow.id,
+    workflowGraph,
     graphAutosaveEnabled,
+    graphAutosaveDelayMs,
     graphRevision,
     savedGraphRevision,
-    workflowGraph,
-    graphAutosaveDelayMs,
     graphExitDialogOpen,
-  ]);
+    setSavedGraphRevision,
+    setGraphSaveStatus,
+    setAppError,
+  });
 
-  // --- Load App Settings ---
-  useEffect(() => {
-    if (window.workflowApi?.getAppSettings) {
-      window.workflowApi.getAppSettings().then((settings) => {
-        if (settings) {
-          if (typeof settings.graphAutosaveEnabled === "boolean") {
-            setGraphAutosaveEnabled(settings.graphAutosaveEnabled);
-            setGraphSaveStatus(settings.graphAutosaveEnabled ? "saved" : "off");
-          }
-          if (typeof settings.graphAutosaveDelayMs === "number") {
-            setGraphAutosaveDelayMs(settings.graphAutosaveDelayMs);
-          }
-        }
-      }).catch((err) => {
-        console.error("Failed to load app settings from backend:", err);
-      });
-    }
-  }, []);
-
-  // --- Initial Data Load ---
-  useEffect(() => {
-    if (auth.mode === "pending") return;
-    if (auth.mode === "team" && !auth.currentUser) return;
-
-    void projectsWorkspace.loadProjectModel();
-    void workflowsWorkspace.loadWorkflows();
-    void loadSchedules();
-    void runWorkspace.refreshRunStates();
-    void loadOperationsOverview();
-    void loadSettingsDiagnostics();
-  }, [auth.mode, auth.currentUser]);
-
-  // --- Load Identity Lab Overview on project or tab change ---
-  useEffect(() => {
-    if (projectsWorkspace.projectCollection === "profiles") {
-      void loadIdentityLabOverview(identityLabTarget, projectsWorkspace.selectedProjectId);
-    }
-  }, [projectsWorkspace.selectedProjectId, projectsWorkspace.projectCollection]);
-
-  // --- Run polling ---
-  useEffect(() => {
-    if (!runSnapshots.some((snapshot) => snapshot.state.status === "running")) return;
-
-    const intervalId = window.setInterval(() => {
-      void runWorkspace.refreshRunStates();
-    }, 250);
-
-    return () => window.clearInterval(intervalId);
-  }, [runSnapshots]);
-
-  // --- Reset finished run state when exiting the workflow details page ---
-  const prevScreenRef = useRef<string | null>(null);
-  useEffect(() => {
-    const prevScreen = prevScreenRef.current;
-    prevScreenRef.current = nav.screen;
-
-    const wasEditing = prevScreen === "detail" || prevScreen === "subflow-detail";
-    const isEditing = nav.screen === "detail" || nav.screen === "subflow-detail";
-
-    if (wasEditing && !isEditing) {
-      setRunSnapshots((current) =>
-        current.filter(
-          (snapshot) =>
-            snapshot.state.status === "running" ||
-            snapshot.state.retained_session?.available === true,
-        ),
-      );
-      workflowsWorkspace.setSelectedWorkflowId(null);
-      workflowsWorkspace.setDetail(null);
-      setWorkflowGraph(null);
-      setWorkflowSettings(null);
-      setWorkflowProfileDraftId(null);
-      setWorkflowProfileSavedId(null);
-      setSelectedGraphNodeId(null);
-      setGraphIssues([]);
-      setGraphIssuesNeedRecheck(false);
-      setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
-    }
-  }, [
-    nav.screen,
+  useAppLifecycleEffects({
+    auth,
+    nav,
+    setGraphAutosaveEnabled,
+    setGraphSaveStatus,
+    setGraphAutosaveDelayMs,
+    projectsWorkspace,
     workflowsWorkspace,
+    loadSchedules,
+    runWorkspace,
+    loadOperationsOverview,
+    loadSettingsDiagnostics,
+    loadIdentityLabOverview,
+    identityLabTarget,
+    runSnapshots,
+    setRunSnapshots: (updater) => setRunSnapshots((prev) => updater(prev as never) as never),
     setWorkflowGraph,
     setWorkflowSettings,
     setWorkflowProfileDraftId,
@@ -608,18 +321,9 @@ function AppInner() {
     setSelectedGraphNodeId,
     setGraphIssues,
     setGraphIssuesNeedRecheck,
-    setGraphSaveStatus,
     graphAutosaveEnabled,
-  ]);
+  });
 
-  // --- Enforce route authorization ---
-  useEffect(() => {
-    if (auth.mode !== "pending" && !isRouteAllowed(nav.screen, auth.mode, auth.currentUser?.role)) {
-      nav.setScreen("overview");
-    }
-  }, [auth.mode, auth.currentUser?.role, nav.screen, nav.setScreen]);
-
-  // --- Navigation Helpers ---
   const openIdentityTarget = useCallback((target: IdentityLabTarget) => {
     setIdentityLabTarget(target);
     void loadIdentityLabOverview(target, projectsWorkspace.selectedProjectId);
@@ -645,7 +349,6 @@ function AppInner() {
       setGraphSaveStatus("off");
       return;
     }
-
     setGraphSaveStatus(
       graphRevisionRef.current === savedGraphRevisionRef.current ? "saved" : "unsaved",
     );
@@ -661,7 +364,7 @@ function AppInner() {
 
   const openDetailWorkflowSettings = useCallback((section: WorkflowSettingsSectionId) => {
     if (workflowsWorkspace.detail) {
-      void settingsWorkspace.openWorkflowSettings(workflowsWorkspace.detail.workflow as any, section);
+      void settingsWorkspace.openWorkflowSettings(workflowsWorkspace.detail.workflow as never, section);
     }
   }, [workflowsWorkspace.detail, settingsWorkspace]);
 
@@ -669,135 +372,44 @@ function AppInner() {
     void nav.navigateToMissionControlTarget(operationsTargetToMissionTarget(target));
   }, [nav]);
 
-
-
-  // --- Derived state values ---
-  const detailRunSnapshot = workflowsWorkspace.detail
-    ? latestRunForWorkflow(runSnapshots, workflowsWorkspace.detail.workflow.id)
-    : null;
-  const detailRunState = workflowsWorkspace.detail
-    ? (detailRunSnapshot?.state ?? idleRunStateWithRetainedSession(runState))
-    : runState;
-  const isRunning = detailRunState.status === "running";
-  const runFromSelectedAvailability = workflowGraph
-    ? runFromSelectedState({
-        graph: workflowGraph,
-        selectedNodeId: graphState.selectedGraphNodeId,
-        settings: workflowSettings,
-        runState: detailRunState,
-        isRunning,
-      })
-    : { enabled: false, reason: "No workflow graph is loaded.", visible: false };
-
-
-
-  const canSaveWorkflowGraph =
-    Boolean(workflowsWorkspace.detail && workflowGraph) &&
-    graphSaveStatus !== "saving" &&
-    (graphRevision !== savedGraphRevision || graphSaveStatus === "failed");
-
-  const canSaveSubflowGraph =
-    Boolean(subflowsWorkspace.selectedSubflow && subflowsWorkspace.selectedSubflowGraph) &&
-    subflowsWorkspace.subflowGraphSaveStatus !== "saved" &&
-    subflowsWorkspace.subflowGraphSaveStatus !== "saving";
-
-  const selectedProject =
-    projectsWorkspace.projects.find((project) => project.id === projectsWorkspace.selectedProjectId) ??
-    projectsWorkspace.projects[0] ??
-    null;
-
-  const projectNameForId = (projectId?: string | null) =>
-    projectId ? projectsWorkspace.projects.find((project) => project.id === projectId)?.name ?? null : null;
-
-  const detailProjectName = workflowsWorkspace.detail
-    ? projectNameForId(workflowsWorkspace.detail.workflow.project_id) ?? selectedProject?.name ?? null
-    : null;
-
-  const selectedSubflowProjectName = subflowsWorkspace.selectedSubflow
-    ? projectNameForId(subflowsWorkspace.selectedSubflow.project_id) ?? selectedProject?.name ?? null
-    : null;
-
-  const selectedProjectWorkflows = selectedProject
-    ? workflowsWorkspace.workflows.filter(
-        (workflow) =>
-          !workflow.project_id || workflow.project_id === selectedProject.id,
-      )
-    : workflowsWorkspace.workflows;
-
-  const selectedBrowserProfiles = selectedProject
-    ? projectsWorkspace.browserProfiles.filter(
-        (profile) => profile.project_id === selectedProject.id,
-      )
-    : projectsWorkspace.browserProfiles;
-
-  const selectedDesktopTargets = selectedProject
-    ? projectsWorkspace.desktopTargets.filter(
-        (target) => target.project_id === selectedProject.id,
-      )
-    : projectsWorkspace.desktopTargets;
-
-  // The element picker has to launch the application to read a tree out of it,
-  // so the inspector needs the workflow's Desktop Target, not only its surface.
-  const openWorkflowDesktopTargetId =
-    workflowsWorkspace.detail?.workflow.desktop_target_id ?? null;
-  const openWorkflowSurface = useMemo(
-    () => ({
-      kind: workflowsWorkspace.detail?.workflow.surface ?? ("web" as const),
-      desktopTargetId: openWorkflowDesktopTargetId,
-      desktopTargetName: selectedDesktopTargets.find(
-        (target) => target.id === openWorkflowDesktopTargetId,
-      )?.name,
-    }),
-    [
-      workflowsWorkspace.detail?.workflow.surface,
-      openWorkflowDesktopTargetId,
-      selectedDesktopTargets,
-    ],
+  const openWorkflowSurface = useCallback(
+    async (workflowId: string) => {
+      const targetWorkflow = workflowsWorkspace.workflows.find((item) => item.id === workflowId);
+      if (!targetWorkflow) return;
+      await nav.navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId });
+    },
+    [workflowsWorkspace.workflows, nav],
   );
 
-  const projectStats = useMemo(() => {
-    const stats: Record<string, { workflows: number; subflows: number; profiles: number }> = {};
-    for (const project of projectsWorkspace.projects) {
-      stats[project.id] = {
-        workflows: workflowsWorkspace.workflows.filter(
-          (workflow) =>
-            !workflow.project_id || workflow.project_id === project.id,
-        ).length,
-        subflows: subflowsWorkspace.subflows.filter(
-          (subflow) => subflow.project_id === project.id,
-        ).length,
-        profiles: projectsWorkspace.browserProfiles.filter(
-          (profile) => profile.project_id === project.id,
-        ).length,
-      };
-    }
-    return stats;
-  }, [
-    projectsWorkspace.projects,
-    workflowsWorkspace.workflows,
-    subflowsWorkspace.subflows,
-    projectsWorkspace.browserProfiles,
-  ]);
-
-  const activeProfileId = workflowsWorkspace.detail?.workflow.browser_profile_id;
-  const activeProfile = selectedBrowserProfiles.find((profile) => profile.id === activeProfileId);
-  const profileVariables = activeProfile?.environment?.variables ?? null;
-
-  if (auth.isLoading) {
-    return (
-      <div className="login-screen-container">
-        <div className="loading-wrapper">
-          <div className="loading-logo">A</div>
-          <div className="loading-spinner-container">
-            <div className="loading-spinner"></div>
-            <div className="loading-spinner-inner"></div>
-          </div>
-          <p className="loading-text">Đang khởi tạo...</p>
-          <p className="loading-subtext">Đang kết nối hệ thống và tải cấu hình.</p>
-        </div>
-      </div>
-    );
-  }
+  const {
+    detailRunSnapshot,
+    isRunning,
+    detailRunState,
+    selectedProject,
+    selectedBrowserProfiles,
+    selectedDesktopTargets,
+    selectedProjectWorkflows,
+    profileVariables,
+    detailProjectName,
+    selectedSubflowProjectName,
+    canSaveWorkflowGraph,
+    canSaveSubflowGraph,
+    projectStats,
+    runFromSelectedAvailability,
+  } = useAppDerivedState({
+    workflowsWorkspace,
+    projectsWorkspace,
+    subflowsWorkspace: subflowsWorkspace as never,
+    runSnapshots,
+    runState,
+    workflowGraph,
+    workflowSettings,
+    graphRevision,
+    savedGraphRevision,
+    graphSaveStatus,
+    workflowProfileDraftId,
+    selectedGraphNodeId: graphState.selectedGraphNodeId,
+  });
 
   if (auth.mode === "pending" || (auth.mode === "team" && !auth.currentUser)) {
     return (
@@ -809,477 +421,60 @@ function AppInner() {
     );
   }
 
+  const packageDialogs = {
+    workflowPackageSections, exportPackageWorkflow, exportPackageIncludeFlow, exportPackageSections,
+    closeExportPackageDialog, submitExportPackage, setExportPackageIncludeFlow, setExportPackageSections,
+    importPackagePreview, importPackageIncludeFlow, importPackageSections, closeImportPackageDialog,
+    submitImportPackage, setImportPackageIncludeFlow, setImportPackageSections, isImportProjectPackageOpen,
+    importProjectPackagePreview, closeImportProjectPackageDialog, submitImportProjectPackage, isPackageActionBusy,
+  };
+
   return (
     <>
-    <AppShell
-      activeItem={
-        nav.screen === "settings" || nav.screen === "settings-help"
-          ? "settings"
-          : nav.screen === "schedules"
-            ? "schedules"
-          : nav.screen === "projects" || nav.screen === "detail" || nav.screen === "subflow-detail"
-              ? "projects"
-              : nav.screen === "overview"
-                ? "overview"
-                : nav.screen === "admin-users"
-                  ? "admin-users"
-                  : nav.screen === "admin-backups"
-                    ? "admin-backups"
-                    : "projects"
-      }
-      sidebarCollapsed={nav.sidebarCollapsed}
-      onOpenOverview={() => nav.openOverview()}
-      onOpenProjects={() => nav.openProjects(projectsWorkspace.projectCollection)}
-      onOpenSchedules={nav.openSchedules}
-      onOpenSettings={nav.openSettings}
-      onOpenSettingsHelp={nav.openSettingsHelp}
-      onOpenAdminUsers={() => nav.setScreen("admin-users")}
-      onOpenAdminBackups={() => nav.setScreen("admin-backups")}
-      onLogout={() => {
-        void auth.logout();
-        nav.setScreen("overview");
-      }}
-      currentUser={auth.currentUser}
-      onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
-      screen={nav.screen}
-    >
-      <WorkflowSurfaceProvider value={openWorkflowSurface}>
-      {nav.screen === "overview" ? (
-        <OperationsOverviewPage
-          overview={operationsOverview}
-          loading={operationsOverviewLoading}
-          error={appError}
-          focus={nav.overviewFocus}
-          onRefresh={loadOperationsOverview}
-          onOpenWorkflows={() => nav.openProjects("workflows")}
-          onNavigate={navigateFromOverview}
-          diagnostics={settingsDiagnostics}
-          diagnosticsLoading={settingsDiagnosticsLoading}
-          diagnosticsError={settingsDiagnosticsError}
-          onRefreshDiagnostics={loadSettingsDiagnostics}
-        />
-      ) : nav.screen === "settings" ? (
-        <SettingsPage
-          graphAutosaveEnabled={graphAutosaveEnabled}
-          graphAutosaveDelayMs={graphAutosaveDelayMs}
-          maintenanceMessage={settingsMaintenanceMessage}
-          onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
-          onGraphAutosaveDelayMsChange={updateGraphAutosaveDelayMs}
-          onInstallBinary={installSettingsBrowserBinary}
-          onCleanupProfiles={cleanupSettingsBrowserProfiles}
-          theme={themePreferences.theme}
-          accent={themePreferences.accent}
-          density={themePreferences.density}
-          onThemeChange={themePreferences.setTheme}
-          onAccentChange={themePreferences.setAccent}
-          onDensityChange={themePreferences.setDensity}
-        />
-      ) : nav.screen === "admin-users" && isRouteAllowed("admin-users", auth.mode, auth.currentUser?.role) ? (
- 
-        <AdminPanel currentUser={auth.currentUser} />
-      ) : nav.screen === "admin-backups" && isRouteAllowed("admin-backups", auth.mode, auth.currentUser?.role) ? (
-        <AdminBackupsPanel showToast={showToast} />
-      ) : nav.screen === "settings-help" ? (
-        <SettingsHelpPage />
-      ) : nav.screen === "schedules" ? (
-        <SchedulesPage
-          schedules={schedules}
-          workflows={workflowsWorkspace.workflows}
-          events={scheduleEvents}
-          focusedScheduleId={focusedScheduleId}
-          loading={schedulesLoading}
-          error={appError}
-          onCreateSchedule={submitCreateSchedule}
-          onUpdateSchedule={submitUpdateSchedule}
-          onDeleteSchedule={removeSchedule}
-          onToggleSchedule={toggleSchedule}
-          onLoadEvents={loadScheduleHistory}
-          onOpenWorkflow={(workflowId) => {
-            void nav.navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId });
-          }}
-        />
-      ) : nav.screen === "projects" ? (
-        <ProjectsPage
-          projects={projectsWorkspace.projects}
-          selectedProject={selectedProject}
-          activeCollection={projectsWorkspace.projectCollection}
-          browseMode={nav.projectsBrowseMode}
-          error={selectedProject ? "" : appError}
-          projectStats={projectStats}
-          onSelectProject={(projectId) => {
-            void projectsWorkspace.selectProject(projectId);
-            nav.setProjectsBrowseMode("detail");
-          }}
-          onCreateProject={async (input) => {
-            await projectsWorkspace.createProject(input);
-            nav.setProjectsBrowseMode("detail");
-          }}
-          onImportProjectPackageFile={importProjectPackageFile}
-          onCollectionChange={(coll) => projectsWorkspace.setProjectCollection(coll)}
-          onDuplicateProject={async (projectId) => {
-            await projectsWorkspace.duplicateProject(projectId);
-            nav.setProjectsBrowseMode("detail");
-          }}
-          onExportProject={(projectId) => {
-            void exportProjectPackageFile(projectId);
-          }}
-          onDeleteProject={(projectId) => {
-            void projectsWorkspace.deleteProject(projectId);
-          }}
-        >
-          {projectsWorkspace.projectCollection === "subflows" ? (
-            <SubflowListPage
-              subflows={subflowsWorkspace.subflows}
-              subflowUsagesBySubflow={subflowsWorkspace.subflowUsagesBySubflow}
-              loading={subflowsWorkspace.subflowsLoading}
-              error={appError}
-              onCreateSubflow={(input) => subflowsWorkspace.createProjectSubflow(input)}
-              onUpdateSubflow={subflowsWorkspace.updateProjectSubflow}
-              onDuplicateSubflow={subflowsWorkspace.duplicateProjectSubflow}
-              onDeleteSubflow={(subflow) => subflowsWorkspace.deleteProjectSubflow(subflow.id)}
-              onOpenSubflow={(subflowId) => {
-                void subflowsWorkspace.openSubflowDetail(subflowId, { type: "subflows" });
-              }}
-              onRefresh={() => {
-                void subflowsWorkspace.loadSubflowsForProject();
-              }}
-              onExportSubflow={subflowsWorkspace.exportProjectSubflow}
-              onImportSubflowFile={subflowsWorkspace.importProjectSubflowFile}
-            />
-          ) : projectsWorkspace.projectCollection === "profiles" ? (
-            <ProjectProfilesPanel
-              project={selectedProject}
-              browserProfiles={selectedBrowserProfiles}
-              workflows={selectedProjectWorkflows}
-              overview={identityLabOverview}
-              loading={identityLabLoading}
-              error={appError}
-              onRefresh={() => loadIdentityLabOverview(identityLabTarget, selectedProject?.id)}
-              onSelectIdentity={selectIdentity}
-              onOpenWorkflow={(workflowId) => {
-                void workflowsWorkspace.openWorkflow(workflowId);
-              }}
-              onOpenWorkflowSettings={(workflowId) => {
-                void openIdentityWorkflowSettings(workflowId);
-              }}
-              onCloseRetainedSession={(workflowId, profileName) => {
-                void closeIdentitySession(workflowId, profileName, selectedProject?.id);
-              }}
-              onResetIdentity={(workflowId) => resetIdentityFromLab(workflowId, selectedProject?.id)}
-              onOpenIdentityTarget={openIdentityTarget}
-              onCreateBrowserProfile={createBrowserProfile}
-              onUpdateBrowserProfile={updateBrowserProfile}
-              onDeleteBrowserProfile={async (profileId) => {
-                await deleteBrowserProfile(profileId, selectedProject?.id);
-              }}
-            />
-          ) : projectsWorkspace.projectCollection === "desktop-targets" ? (
-            <ProjectDesktopTargetsPanel
-              project={selectedProject}
-              desktopTargets={selectedDesktopTargets}
-              error={appError}
-              onCreateDesktopTarget={async (projectId, input) => {
-                try {
-                  await createDesktopTarget(projectId, input);
-                  await projectsWorkspace.loadDesktopTargets(projectId);
-                  setAppError("");
-                } catch (error) {
-                  setAppError(commandMessage(error));
-                }
-              }}
-              onDeleteDesktopTarget={async (targetId) => {
-                try {
-                  await deleteDesktopTarget(targetId);
-                  await projectsWorkspace.loadDesktopTargets(selectedProject?.id ?? null);
-                  setAppError("");
-                } catch (error) {
-                  setAppError(commandMessage(error));
-                }
-              }}
-            />
-          ) : projectsWorkspace.projectCollection === "settings" ? (
-            <ProjectSettings
-              project={selectedProject}
-              error={appError}
-              onUpdateProject={(id, input) => projectsWorkspace.updateProject(id, input)}
-              onDuplicateProject={(id) => projectsWorkspace.duplicateProject(id)}
-              onExportProjectPackage={exportProjectPackageFile}
-              onDeleteProject={(id) => projectsWorkspace.deleteProject(id)}
-            />
-          ) : (
-            <WorkflowListPage
-              workflows={selectedProjectWorkflows}
-              workflowDialogMode={workflowsWorkspace.workflowDialogMode}
-              workflowNameDraft={workflowsWorkspace.workflowNameDraft}
-              browserProfiles={selectedBrowserProfiles}
-              desktopTargets={selectedDesktopTargets}
-              selectedProfileIdDraft={workflowsWorkspace.selectedProfileIdDraft}
-              surfaceDraft={workflowsWorkspace.surfaceDraft}
-              selectedDesktopTargetIdDraft={workflowsWorkspace.selectedDesktopTargetIdDraft}
-              appError={appError}
-              runSnapshots={runSnapshots}
-              startingWorkflowId={runWorkspace.startingWorkflowId}
-              onWorkflowNameDraftChange={workflowsWorkspace.setWorkflowNameDraft}
-              onSelectedProfileIdDraftChange={workflowsWorkspace.setSelectedProfileIdDraft}
-              onSurfaceDraftChange={workflowsWorkspace.setSurfaceDraft}
-              onSelectedDesktopTargetIdDraftChange={
-                workflowsWorkspace.setSelectedDesktopTargetIdDraft
-              }
-              onSubmitWorkflowDialog={workflowsWorkspace.submitWorkflowDialog}
-              onOpenCreateWorkflow={workflowsWorkspace.openCreateWorkflowDialog}
-              onOpenEditWorkflow={(workflow) => {
-                void settingsWorkspace.openWorkflowSettings(workflow, "general");
-              }}
-              onDuplicateWorkflow={workflowsWorkspace.duplicateWorkflow}
-              onRunWorkflow={runWorkspace.runSavedWorkflow}
-              onStopRun={(id) => runWorkspace.stopRun(id)}
-              onOpenExportWorkflow={openExportPackageDialog}
-              onImportWorkflowPackageFile={importWorkflowPackageFile}
-              onRecordWorkflow={recordingWorkspace.startWorkflowRecording}
-              onCloseWorkflowDialog={workflowsWorkspace.closeWorkflowDialog}
-              onOpenWorkflow={(id) => {
-                void workflowsWorkspace.openWorkflow(id);
-              }}
-              onDeleteWorkflow={workflowsWorkspace.deleteWorkflow}
-              workflowDialogBusy={workflowsWorkspace.workflowDialogBusy}
-            />
-          )}
-        </ProjectsPage>
-      ) : nav.screen === "subflow-detail" ? (
-        <SubflowDetailPage
-          subflow={subflowsWorkspace.selectedSubflow}
-          projectName={selectedSubflowProjectName}
-          usage={subflowsWorkspace.selectedSubflowUsage}
-          graph={subflowsWorkspace.selectedSubflowGraph}
-          graphSaveStatus={graphSaveStatusLabel(subflowsWorkspace.subflowGraphSaveStatus)}
-          canSaveGraph={canSaveSubflowGraph}
-          appError={appError}
-          backLabel={
-            subflowsWorkspace.subflowBackTarget.type === "workflow-detail"
-              ? "Back to Workflow"
-              : "Back to Subflows"
-          }
-          breadcrumbLabel={
-            subflowsWorkspace.subflowBackTarget.type === "workflow-detail"
-              ? subflowsWorkspace.subflowBackTarget.workflowName
-              : "Subflows"
-          }
-          onBack={nav.backFromSubflowDetail}
-          onGraphChange={subflowsWorkspace.changeSubflowGraph}
-          onSaveGraph={() => {
-            void subflowsWorkspace.saveCurrentSubflowGraph();
-          }}
-          onUpdateSubflow={async (input) => {
-            if (subflowsWorkspace.selectedSubflow) {
-              await subflowsWorkspace.updateProjectSubflow(subflowsWorkspace.selectedSubflow, input);
-            }
-          }}
-          isSavingGraph={subflowsWorkspace.subflowGraphSaveStatus === "saving"}
-        />
-      ) : nav.screen === "detail" && workflowsWorkspace.detail ? (
-        <>
-          <WorkflowDetailPage
-            detail={workflowsWorkspace.detail}
-            projectName={detailProjectName}
-            isRunning={isRunning}
-            isStartingRun={runWorkspace.isStartingRun}
-            appError={appError}
-            graphSaveStatus={graphSaveStatusLabel(graphSaveStatus)}
-            canSaveGraph={canSaveWorkflowGraph}
-            runState={detailRunState}
-            workflowGraph={workflowGraph}
-            graphIssues={graphIssues}
-            subflowOptions={subflowsWorkspace.subflows}
-            graphIssuesNeedRecheck={graphIssuesNeedRecheck}
-            defaultEdgeDelay={workflowSettings?.graph_defaults?.default_edge_delay ?? null}
-            liveRunEnabled={workflowSettings?.graph_defaults?.live_run_enabled ?? true}
-            liveRunFollowCurrent={workflowSettings?.graph_defaults?.live_run_follow_current ?? false}
-            initialVariables={workflowSettings?.environment?.initial_variables}
-            profileVariables={profileVariables}
-            onBack={nav.backToList}
-            onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
-            onStopRun={() => runWorkspace.stopRun(detailRunSnapshot?.run_id ?? "")}
-            onCreateSubflowFromSelection={async (input) => {
-              setAppError("");
-              const projectId = workflowsWorkspace.detail?.workflow.project_id ?? (await projectsWorkspace.ensureProjectId());
-              try {
-                const createdSubflow = await createSubflow(projectId, {
-                  name: input.name,
-                  description: null,
-                });
-                await saveSubflowGraph(createdSubflow.id, input.graph);
-                await subflowsWorkspace.loadSubflowsForProject(projectId);
-                return createdSubflow;
-              } catch (error) {
-                const message = commandMessage(error);
-                setAppError(message);
-                throw new Error(message);
-              }
+      <AppShell
+        activeItem={getActiveSidebarItem(nav.screen)}
+        sidebarCollapsed={nav.sidebarCollapsed}
+        onOpenOverview={() => nav.openOverview()}
+        onOpenProjects={() => nav.openProjects(projectsWorkspace.projectCollection)}
+        onOpenSchedules={nav.openSchedules}
+        onOpenSettings={nav.openSettings}
+        onOpenSettingsHelp={nav.openSettingsHelp}
+        onOpenAdminUsers={() => nav.setScreen("admin-users")}
+        onOpenAdminBackups={() => nav.setScreen("admin-backups")}
+        onLogout={() => {
+          void auth.logout();
+          nav.setScreen("overview");
+        }}
+        currentUser={auth.currentUser}
+        onToggleSidebar={() => nav.setSidebarCollapsed(!nav.sidebarCollapsed)}
+        screen={nav.screen}
+      >
+        <WorkflowSurfaceProvider value={openWorkflowSurface}>
+          <AppWorkspaceRoutes
+            {...{
+              nav, auth, appError, setAppError, showToast, operationsOverview, operationsOverviewLoading,
+              loadOperationsOverview, navigateFromOverview, graphAutosaveEnabled, graphAutosaveDelayMs,
+              onGraphAutosaveEnabledChange: updateGraphAutosaveEnabled, onGraphAutosaveDelayMsChange: updateGraphAutosaveDelayMs,
+              setGraphSaveStatus, settingsDiagnostics, settingsDiagnosticsLoading, settingsDiagnosticsError,
+              settingsMaintenanceMessage, loadSettingsDiagnostics, installSettingsBrowserBinary, cleanupSettingsBrowserProfiles,
+              themePreferences, schedules, schedulesLoading, focusedScheduleId, scheduleEvents, createScheduleItem: submitCreateSchedule,
+              updateScheduleItem: submitUpdateSchedule, removeSchedule, toggleSchedule, loadScheduleHistory, projectsWorkspace,
+              selectedProject, projectStats, importProjectPackageFile, exportProjectPackageFile, subflowsWorkspace,
+              selectedBrowserProfiles, selectedProjectWorkflows, identityLabOverview, identityLabLoading, identityLabTarget,
+              loadIdentityLabOverview, selectIdentity, openIdentityWorkflowSettings, closeIdentitySession, resetIdentityFromLab,
+              openIdentityTarget, createBrowserProfile, updateBrowserProfile, deleteBrowserProfile, selectedDesktopTargets,
+              workflowsWorkspace, settingsWorkspace, runSnapshots, runWorkspace, openExportPackageDialog, importWorkflowPackageFile,
+              recordingWorkspace, packageDialogs, selectedSubflowProjectName, canSaveSubflowGraph, detailProjectName,
+              isRunning, canSaveWorkflowGraph, detailRunState, workflowGraph, graphIssues, graphIssuesNeedRecheck,
+              profileVariables, openDetailWorkflowSettings, detailRunSnapshot, graphState, runFromSelectedAvailability,
+              graphSaveStatus, workflowSettings, workflowSettingsDialogOpen, workflowSettingsActiveSection,
+              workflowProfileDraftId, workflowSettingsSaveStatuses, setWorkflowSettingsDialogOpen, setWorkflowProfileDraftId,
+              setWorkflowSettingsSavedSnapshot, setWorkflowSettingsSaveStatuses, graphExitDialogOpen, clearGraphExitNavigation,
+              discardGraphExitChangesAndNavigate, saveGraphExitChangesAndNavigate,
             }}
-            onLoadSubflowGraph={getSubflowGraph}
-            onOpenSubflowDetail={(subflowId) => {
-              void subflowsWorkspace.openSubflowDetail(subflowId, {
-                type: "workflow-detail",
-                workflowId: workflowsWorkspace.detail!.workflow.id,
-                workflowName: workflowsWorkspace.detail!.workflow.name,
-              });
-            }}
-            onGraphChange={graphState.changeWorkflowGraph} // const changeWorkflowGraph = useCallback
-            onRunGraph={runWorkspace.runGraph}
-            onRunGraphFromSelected={async (mode) => {
-              if (workflowSettings) {
-                setWorkflowSettings({
-                  ...workflowSettings,
-                  run_policy: {
-                    ...workflowSettings.run_policy,
-                    run_from_selected_mode: mode,
-                  },
-                });
-              }
-              await runWorkspace.runGraphFromSelectedNode(mode);
-            }}
-            onSelectedGraphNodeChange={graphState.setSelectedGraphNodeId}
-            showRunGraphFromSelected={runFromSelectedAvailability.visible ?? true}
-            canRunGraphFromSelected={runFromSelectedAvailability.enabled}
-            runGraphFromSelectedReason={runFromSelectedAvailability.reason}
-            onSaveGraph={graphState.saveGraph}
-            onValidateGraph={graphState.validateGraph}
-            onRestoreRevision={async (restoredGraph) => {
-              graphState.changeWorkflowGraph(restoredGraph);
-              await subflowsWorkspace.loadSubflowsForProject(workflowsWorkspace.detail?.workflow.project_id);
-            }}
-            isSavingGraph={graphSaveStatus === "saving"}
           />
-        </>
-      ) : null}
-      <RecordingReviewDialog
-        open={Boolean(recordingWorkspace.recordingSession)}
-        session={recordingWorkspace.recordingSession}
-        draft={recordingWorkspace.recordingDraft}
-        workflowName={recordingWorkspace.recordingWorkflowName}
-        busy={recordingWorkspace.recordingBusy}
-        error={appError}
-        onWorkflowNameChange={recordingWorkspace.setRecordingWorkflowName}
-        onStopRecording={recordingWorkspace.stopWorkflowRecording}
-        onDiscard={() => {
-          void recordingWorkspace.discardWorkflowRecording();
-        }}
-        onSave={() => {
-          void recordingWorkspace.saveReviewedRecording({
-            workflow_name: recordingWorkspace.recordingWorkflowName,
-            add_terminal_success: true,
-            save_mode: recordingWorkspace.recordingDraft?.mode === "replace_current_graph" ? "replace_graph" : "create_new",
-          });
-        }}
-        onStepChange={recordingWorkspace.updateRecordingStep}
-        onOpenChange={(open) => {
-          if (!open) {
-            void recordingWorkspace.discardWorkflowRecording();
-          }
-        }}
-      />
-      <WorkflowSettingsDialog
-        open={workflowSettingsDialogOpen}
-        settings={workflowSettings}
-        activeSection={workflowSettingsActiveSection}
-        browserProfiles={selectedBrowserProfiles}
-        selectedBrowserProfileId={workflowProfileDraftId}
-        surface={workflowsWorkspace.detail?.workflow.surface ?? "web"}
-        desktopTargets={selectedDesktopTargets}
-        selectedDesktopTargetId={workflowsWorkspace.detail?.workflow.desktop_target_id ?? null}
-        error={appError}
-        hasUnsavedChanges={Object.values(workflowSettingsSaveStatuses).some(
-          (status) => status === "unsaved",
-        )}
-        onOpenChange={(open) => {
-          if (open) {
-            setWorkflowSettingsDialogOpen(true);
-            return;
-          }
-          settingsWorkspace.closeWorkflowSettingsDialog();
-        }}
-        onActiveSectionChange={settingsWorkspace.setWorkflowSettingsActiveSection}
-        onDesktopTargetChange={(targetId) => {
-          const workflowId = workflowsWorkspace.detail?.workflow.id;
-          if (!workflowId) return;
-          void (async () => {
-            try {
-              await setWorkflowDesktopTarget(workflowId, targetId);
-              // Reloaded rather than patched locally: the command is what
-              // enforces that the Target belongs to this workflow's project,
-              // and a local patch would show a state the backend refused.
-              await workflowsWorkspace.performOpenWorkflow(workflowId);
-              setAppError("");
-            } catch (error) {
-              setAppError(commandMessage(error));
-            }
-          })();
-        }}
-        onBrowserProfileChange={(profileId) => {
-          setWorkflowProfileDraftId(profileId);
-          const current = workflowSettings;
-          const selectedProfile = selectedBrowserProfiles.find(
-            (profile) => profile.id === profileId,
-          );
-          if (current && selectedProfile) {
-            settingsWorkspace.changeWorkflowSettings({
-              ...current,
-              browser_launch: selectedProfile.browser_launch,
-            });
-          }
-          setWorkflowSettingsSaveStatuses({
-            ...workflowSettingsSaveStatuses,
-            browser_launch: "unsaved",
-          });
-        }}
-        onSettingsChange={settingsWorkspace.changeWorkflowSettings}
-        onSaveSettings={async () => {
-          await settingsWorkspace.saveWorkflowSettingsAndClose();
-          if (workflowSettings) {
-            setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(workflowSettings));
-          }
-          showToast("Workflow settings saved.");
-        }}
-        onDiscardChanges={settingsWorkspace.discardWorkflowSettingsChanges}
-        saveStatuses={workflowSettingsSaveStatuses}
-      />
-      <UnsavedChangesDialog
-        open={graphExitDialogOpen}
-        onKeepEditing={clearGraphExitNavigation}
-        onDiscardChanges={discardGraphExitChangesAndNavigate}
-        onSaveAndClose={saveGraphExitChangesAndNavigate}
-      />
-      <AppPackageDialogs
-        appError={appError}
-        workflowPackageSections={workflowPackageSections}
-        exportPackageWorkflow={exportPackageWorkflow}
-        exportPackageIncludeFlow={exportPackageIncludeFlow}
-        exportPackageSections={exportPackageSections}
-        onCloseExportPackageDialog={closeExportPackageDialog}
-        onSubmitExportPackage={submitExportPackage}
-        onExportPackageIncludeFlowChange={setExportPackageIncludeFlow}
-        onExportPackageSectionsChange={setExportPackageSections}
-        importPackagePreview={importPackagePreview}
-        importPackageIncludeFlow={importPackageIncludeFlow}
-        importPackageSections={importPackageSections}
-        onCloseImportPackageDialog={closeImportPackageDialog}
-        onSubmitImportPackage={submitImportPackage}
-        onImportPackageIncludeFlowChange={setImportPackageIncludeFlow}
-        onImportPackageSectionsChange={setImportPackageSections}
-        isImportProjectPackageOpen={isImportProjectPackageOpen}
-        importProjectPackagePreview={importProjectPackagePreview}
-        onCloseImportProjectPackageDialog={closeImportProjectPackageDialog}
-        onSubmitImportProjectPackage={submitImportProjectPackage}
-        deleteWorkflowCandidate={workflowsWorkspace.deleteWorkflowCandidate}
-        onConfirmDeleteWorkflow={() => {
-          void workflowsWorkspace.confirmDeleteWorkflow();
-        }}
-        onCancelDeleteWorkflow={workflowsWorkspace.cancelDeleteWorkflow}
-        isPackageActionBusy={isPackageActionBusy}
-        workflowDialogBusy={workflowsWorkspace.workflowDialogBusy}
-      />
-      </WorkflowSurfaceProvider>
-     </AppShell>
+        </WorkflowSurfaceProvider>
+      </AppShell>
     </>
   );
 }

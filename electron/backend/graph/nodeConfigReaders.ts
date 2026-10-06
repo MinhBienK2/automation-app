@@ -125,3 +125,83 @@ export function setVariableActionConfig(
     },
   };
 }
+
+export function routerGraphConfig(node: GraphNode): RouterGraphConfig {
+  const router = routerGraphConfigOrNull(node);
+  if (!router || router.cases.length === 0) {
+    throw validationError("cases", "Router cases are required");
+  }
+  return router;
+}
+
+export type RandomChoiceGraphConfig = {
+  choices: Array<{ id: string; label: string; weight: number }>;
+  output_name: string | null;
+};
+
+export function randomChoiceGraphConfigOrNull(node: GraphNode): { choices: Array<{ id: string; label: string; weight: number }> } | null {
+  const record = asRecord(node.config);
+  const rawChoices = Array.isArray(record.choices) ? record.choices : [];
+  const choices = rawChoices.map((item) => {
+    const choice = asRecord(item);
+    return {
+      id: stringField(choice, "id") ?? "",
+      label: stringField(choice, "label") ?? "",
+      weight: typeof choice.weight === "number" ? choice.weight : 0,
+    };
+  });
+  return { choices };
+}
+
+export function randomChoiceGraphConfig(node: GraphNode): RandomChoiceGraphConfig {
+  const record = asRecord(node.config);
+  const rawChoices = Array.isArray(record.choices) ? record.choices : [];
+  const choices = rawChoices.map((item) => {
+    const choice = asRecord(item);
+    return {
+      id: stringField(choice, "id") ?? "",
+      label: stringField(choice, "label") ?? "",
+      weight: typeof choice.weight === "number" ? choice.weight : 0,
+    };
+  });
+  if (choices.length === 0) throw validationError("cases", "Random choices are required");
+  return {
+    choices,
+    output_name: stringField(record, "output_name"),
+  };
+}
+
+export function requiredString(config: unknown, field: string, message: string): string {
+  const value = stringField(config, field);
+  if (!value) throw validationError(field, message);
+  return value;
+}
+
+export function positiveInteger(config: unknown, field: string, message: string): number {
+  const record = asRecord(config);
+  const value = typeof record[field] === "number" ? record[field] : null;
+  if (value == null || value <= 0 || !Number.isFinite(value)) {
+    throw validationError(field, message);
+  }
+  return Math.trunc(value);
+}
+
+export function optionalPositiveInteger(config: unknown, field: string): number | null {
+  const record = asRecord(config);
+  const value = typeof record[field] === "number" ? record[field] : null;
+  if (value == null) return null;
+  if (value <= 0 || !Number.isFinite(value)) {
+    throw validationError(field, "Value must be greater than 0");
+  }
+  return Math.trunc(value);
+}
+
+export function stringArray(config: unknown, field: string, message: string): string[] {
+  const values = stringArrayOrNull(config, field);
+  if (!values) throw validationError(field, message);
+  return values;
+}
+
+export function closeBrowserConfig(config: unknown): boolean {
+  return asRecord(config).close_browser === true;
+}

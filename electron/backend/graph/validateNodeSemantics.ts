@@ -1,3 +1,4 @@
+import { validateWorkflowCondition } from "./validateCondition.js";
 import type {
   ActionConfig,
   ActionType,
@@ -26,146 +27,17 @@ import {
 } from "../shared/validationMessages.js";
 import { validateWorkflowGraph, type WorkflowGraphValidationOptions } from "./validateGraph.js";
 import { graphHasExecutableSteps } from "./graphTopology.js";
+import { pushActionNodeSemanticIssues } from "./validateActionNodeSemantics.js";
+import { hasOutgoing, pushStaleSwitchCaseIssues } from "./validateBranchContinuation.js";
 import {
   asRecord,
   stringField,
   validationError,
   type ValidationErrorLike,
 } from "../shared/records.js";
-
+import { supportedGraphNodeTypes } from "./supportedNodeTypes.js";
 type ValidationError = ValidationErrorLike;
 
-const supportedGraphNodeTypes = new Set<string>([
-  "start",
-  "end_success",
-  "end_failure",
-  "action",
-  "call_subflow",
-  "merge",
-  "router",
-  "random_choice",
-  "if",
-  "switch",
-  "repeat_times",
-  "repeat_for_each",
-  "repeat_until",
-  "while",
-  "retry",
-  "try_catch",
-  "fallback",
-  "break_loop",
-  "continue_loop",
-  "stop_workflow",
-  "set_variable",
-  "set_json_variables",
-  "check_conditions",
-  "calculate_value",
-  "update_number_variable",
-  "set_number_variable",
-  "generate_random_number",
-  "parse_text_to_number",
-  "math_operation",
-  "round_number",
-  "format_number",
-  "compare_numbers",
-  "check_number_range",
-  "check_number_property",
-  "update_text_variable",
-  "set_text_variable",
-  "append_text",
-  "prepend_text",
-  "replace_text",
-  "trim_text",
-  "change_text_case",
-  "slice_text",
-  "regex_extract",
-  "get_text_length",
-  "check_text_empty",
-  "check_text_contains",
-  "check_text_regex_matches",
-  "update_flag_variable",
-  "set_boolean_variable",
-  "generate_random_boolean",
-  "parse_to_boolean",
-  "boolean_logical_op",
-  "compare_booleans",
-  "check_boolean_property",
-  "update_list_variable",
-  "create_empty_list",
-  "create_list_manual",
-  "split_text_to_list",
-  "generate_number_range",
-  "add_to_list",
-  "remove_from_list_by_index",
-  "remove_from_list_by_value",
-  "merge_lists",
-  "get_list_item",
-  "get_list_length",
-  "slice_list",
-  "join_list",
-  "filter_list",
-  "map_list_property",
-  "sort_reverse_list",
-  "execute_list_script",
-  "check_list_empty",
-  "check_list_contains",
-  "check_list_any_match",
-  "check_list_all_match",
-  "create_empty_object",
-  "create_object_manual",
-  "parse_json_to_object",
-  "set_object_property",
-  "remove_object_property",
-  "merge_objects",
-  "rename_object_property",
-  "get_object_property",
-  "get_object_keys",
-  "get_object_values",
-  "stringify_object",
-  "execute_object_script",
-  "check_object_key_exists",
-  "check_object_empty",
-  "transform_variable",
-  "assert_output",
-  "domain_allowlist",
-  "extract_text",
-  "extract_attribute",
-  "extract_input_value",
-  "extract_table",
-  "extract_list",
-  "count_elements",
-  "extract_regex_matches",
-  "extract_text_content",
-  "extract_inner_html",
-  "extract_outer_html",
-  "extract_computed_style",
-  "extract_all_attributes",
-  "extract_data_attributes",
-  "extract_class_list",
-  "extract_descendant_attributes",
-  "extract_select_value",
-  "extract_select_options",
-  "extract_checkbox_state",
-  "extract_form_data",
-  "extract_table_headers",
-  "extract_table_row",
-  "extract_table_column",
-  "extract_table_cell",
-  "extract_list_attributes",
-  "extract_structured_list",
-  "extract_dimensions",
-  "extract_visibility",
-  "extract_element_state",
-  "check_element_exists",
-  "get_page_title",
-  "get_meta_content",
-  "extract_page_links",
-  "extract_numbers",
-  "extract_urls",
-  "extract_emails",
-  "get_current_url",
-  "quarantined",
-]);
 
 export function pushNodeSemanticIssues(
   graph: WorkflowGraph,
@@ -177,6 +49,8 @@ export function pushNodeSemanticIssues(
     issues.push(error(node.id, null, unsupportedGraphNodeTypeMessage(node.node_type)));
     return;
   }
+
+  if (pushActionNodeSemanticIssues(graph, node, issues, options)) return;
 
   switch (node.node_type) {
     case "start":
@@ -199,56 +73,6 @@ export function pushNodeSemanticIssues(
         }
       }
       break;
-    case "extract_text":
-    case "extract_attribute":
-    case "extract_input_value":
-    case "extract_table":
-    case "extract_list":
-    case "count_elements":
-    case "extract_regex_matches":
-    case "extract_text_content":
-    case "extract_inner_html":
-    case "extract_outer_html":
-    case "extract_computed_style":
-    case "extract_all_attributes":
-    case "extract_data_attributes":
-    case "extract_class_list":
-    case "extract_descendant_attributes":
-    case "extract_select_value":
-    case "extract_select_options":
-    case "extract_checkbox_state":
-    case "extract_form_data":
-    case "extract_table_headers":
-    case "extract_table_row":
-    case "extract_table_column":
-    case "extract_table_cell":
-    case "extract_list_attributes":
-    case "extract_structured_list":
-    case "extract_dimensions":
-    case "extract_visibility":
-    case "extract_element_state":
-    case "check_element_exists":
-    case "get_page_title":
-    case "get_meta_content":
-    case "extract_page_links":
-    case "extract_numbers":
-    case "extract_urls":
-    case "extract_emails":
-    case "get_current_url": {
-      if (node.config == null) {
-        issues.push(error(node.id, null, `Configure ${node.label} before running this node`));
-      } else {
-        const dummyActionConfig = {
-          type: node.node_type as ActionType,
-          config: node.config,
-        } as ActionConfig;
-        const validation = validateActionConfig(dummyActionConfig);
-        if (validation) {
-          issues.push(error(node.id, null, `Node ${node.label} has invalid config: ${validation.message}`));
-        }
-      }
-      break;
-    }
     case "call_subflow":
       pushCallSubflowIssues(node, issues, options);
       warnMissingContinuation(graph, node, "out", "Call Subflow out is unconnected; workflow ends successfully here", issues);
@@ -344,183 +168,6 @@ export function pushNodeSemanticIssues(
         issues.push(error(node.id, null, "Stop workflow status must be success or failure"));
       }
       break;
-    case "set_variable": {
-      const validation = validateActionConfig(setVariableActionConfig(node, () => stringField(node.config, "name") ?? ""));
-      if (validation) issues.push(error(node.id, null, validation.message));
-      break;
-    }
-    case "set_json_variables": {
-      const json = stringField(node.config, "json");
-      if (!json) {
-        issues.push(error(node.id, null, "JSON variables are required"));
-      } else {
-        const validation = validateActionConfig({ type: "set_json_variables", config: { json } });
-        if (validation) issues.push(error(node.id, null, validation.message));
-      }
-      break;
-    }
-    case "check_conditions": {
-      const output_name = stringField(node.config, "output_name");
-      if (!output_name) {
-        issues.push(error(node.id, null, outputVariableNameRequired));
-      } else {
-        const validation = validateActionConfig({
-          type: "check_conditions",
-          config: {
-            output_name,
-            mode: stringField(node.config, "mode") === "script" ? "script" : "visual",
-            script: stringField(node.config, "script"),
-            rules_group: asRecord(node.config).rules_group,
-          },
-        } as any);
-        if (validation) issues.push(error(node.id, null, validation.message));
-      }
-      break;
-    }
-    case "calculate_value": {
-      const output_name = stringField(node.config, "output_name");
-      if (!output_name) {
-        issues.push(error(node.id, null, outputVariableNameRequired));
-      } else {
-        const validation = validateActionConfig({
-          type: "calculate_value",
-          config: {
-            output_name,
-            expression: stringField(node.config, "expression"),
-            evaluation_type: stringField(node.config, "evaluation_type") as any,
-          },
-        } as any);
-        if (validation) issues.push(error(node.id, null, validation.message));
-      }
-      break;
-    }
-    case "update_number_variable": {
-      const name = stringField(node.config, "name") ?? "";
-      const operation = stringField(node.config, "operation") ?? "";
-      const value = stringField(node.config, "value") ?? "";
-      const validation = validateActionConfig({
-        type: "update_number_variable",
-        config: { name, operation: operation as any, value },
-      });
-      if (validation) issues.push(error(node.id, null, validation.message));
-      break;
-    }
-    case "update_text_variable": {
-      const name = stringField(node.config, "name") ?? "";
-      const operation = stringField(node.config, "operation") ?? "";
-      const value = stringField(node.config, "value") ?? "";
-      const search_pattern = stringField(node.config, "search_pattern") ?? "";
-      const validation = validateActionConfig({
-        type: "update_text_variable",
-        config: { name, operation: operation as any, value, search_pattern },
-      });
-      if (validation) issues.push(error(node.id, null, validation.message));
-      break;
-    }
-    case "update_flag_variable": {
-      const name = stringField(node.config, "name") ?? "";
-      const operation = stringField(node.config, "operation") ?? "";
-      const validation = validateActionConfig({
-        type: "update_flag_variable",
-        config: { name, operation: operation as any },
-      });
-      if (validation) issues.push(error(node.id, null, validation.message));
-      break;
-    }
-    case "update_list_variable": {
-      const name = stringField(node.config, "name") ?? "";
-      const operation = stringField(node.config, "operation") ?? "";
-      const value = stringField(node.config, "value") ?? "";
-      const value_type = stringField(node.config, "value_type") ?? "";
-      const index = stringField(node.config, "index") ?? (typeof asRecord(node.config).index === "number" ? asRecord(node.config).index : null) as any;
-      const validation = validateActionConfig({
-        type: "update_list_variable",
-        config: { name, operation: operation as any, value, value_type: value_type as any, index },
-      });
-      if (validation) issues.push(error(node.id, null, validation.message));
-      break;
-    }
-    case "set_text_variable":
-    case "set_boolean_variable":
-    case "generate_random_boolean":
-    case "parse_to_boolean":
-    case "boolean_logical_op":
-    case "compare_booleans":
-    case "check_boolean_property":
-    case "set_number_variable":
-    case "generate_random_number":
-    case "parse_text_to_number":
-    case "math_operation":
-    case "round_number":
-    case "format_number":
-    case "compare_numbers":
-    case "check_number_range":
-    case "check_number_property":
-    case "append_text":
-    case "prepend_text":
-    case "replace_text":
-    case "trim_text":
-    case "change_text_case":
-    case "slice_text":
-    case "regex_extract":
-    case "get_text_length":
-    case "check_text_empty":
-    case "check_text_contains":
-    case "check_text_regex_matches":
-    case "create_empty_list":
-    case "create_list_manual":
-    case "split_text_to_list":
-    case "generate_number_range":
-    case "add_to_list":
-    case "remove_from_list_by_index":
-    case "remove_from_list_by_value":
-    case "merge_lists":
-    case "get_list_item":
-    case "get_list_length":
-    case "slice_list":
-    case "join_list":
-    case "filter_list":
-    case "map_list_property":
-    case "sort_reverse_list":
-    case "execute_list_script":
-    case "check_list_empty":
-    case "check_list_contains":
-    case "check_list_any_match":
-    case "check_list_all_match":
-    case "create_empty_object":
-    case "create_object_manual":
-    case "parse_json_to_object":
-    case "set_object_property":
-    case "remove_object_property":
-    case "merge_objects":
-    case "rename_object_property":
-    case "get_object_property":
-    case "get_object_keys":
-    case "get_object_values":
-    case "stringify_object":
-    case "execute_object_script":
-    case "check_object_key_exists":
-    case "check_object_empty": {
-      const validation = validateActionConfig({
-        type: node.node_type as any,
-        config: asRecord(node.config) as any,
-      });
-      if (validation) issues.push(error(node.id, null, validation.message));
-      break;
-    }
-    case "transform_variable":
-      if (!stringField(node.config, "source_name")) issues.push(error(node.id, null, sourceOutputRequired));
-      if (!stringField(node.config, "target_name")) issues.push(error(node.id, null, "Target output is required"));
-      break;
-    case "assert_output":
-      if (!stringField(node.config, "name")) issues.push(error(node.id, null, outputNameRequired));
-      if (!stringField(node.config, "value")) issues.push(error(node.id, null, "Expected output value is required"));
-      break;
-    case "domain_allowlist":
-      if (stringArrayOrNull(node.config, "domains") == null) {
-        issues.push(error(node.id, null, "Allowed domains are required"));
-      }
-      break;
     case "quarantined": {
       const config = node.config as { config?: { original_type?: string | null; reason?: string; message?: string } } | null;
       const inner = config?.config;
@@ -536,104 +183,7 @@ export function pushNodeSemanticIssues(
   }
 }
 
-export function pushBranchContinuationIssues(
-  graph: WorkflowGraph,
-  nodeById: Map<string, GraphNode>,
-  issues: GraphValidationIssue[],
-) {
-  for (const node of graph.nodes) {
-    const semantics = branchContinuationSemantics(node);
-    if (!semantics) continue;
-
-    const branchReachable = reachableFromPorts(graph, nodeById, node.id, semantics.branchPorts);
-    const continuationReachable = reachableFromPorts(graph, nodeById, node.id, semantics.continuationPorts);
-    for (const nodeId of branchReachable) {
-      if (!continuationReachable.has(nodeId)) continue;
-      const shared = nodeById.get(nodeId);
-      if (shared?.node_type === "merge") continue;
-      issues.push(error(
-        nodeId,
-        null,
-        `Node ${shared?.label ?? nodeId} is reachable from both a branch path and an explicit continuation path`,
-      ));
-    }
-  }
-}
-
-function branchContinuationSemantics(node: GraphNode): {
-  branchPorts: string[];
-  continuationPorts: string[];
-} | null {
-  switch (node.node_type) {
-    case "if":
-      return { branchPorts: ["true", "false"], continuationPorts: ["done"] };
-    case "switch": {
-      const switchNodeConfig = switchGraphConfigOrNull(node);
-      const casePorts = switchNodeConfig?.cases.map((c) => `case_${c.id}`) ?? [];
-      return { branchPorts: [...casePorts, "default"], continuationPorts: ["done"] };
-    }
-    case "router": {
-      const router = routerGraphConfigOrNull(node);
-      const casePorts = router?.cases.map((caseValue) => `case_${caseValue.id}`) ?? [];
-      return { branchPorts: [...casePorts, "default"], continuationPorts: ["done"] };
-    }
-    case "random_choice": {
-      const choice = randomChoiceGraphConfigOrNull(node);
-      const choicePorts = choice?.choices.map((choiceValue) => `choice_${choiceValue.id}`) ?? [];
-      return { branchPorts: choicePorts, continuationPorts: ["done"] };
-    }
-    case "repeat_times":
-    case "repeat_for_each":
-    case "while":
-      return { branchPorts: ["loop"], continuationPorts: ["done"] };
-    case "repeat_until":
-      return { branchPorts: ["loop", "timeout"], continuationPorts: ["done"] };
-    case "retry":
-      return { branchPorts: ["try", "failed"], continuationPorts: ["success"] };
-    case "try_catch":
-      return { branchPorts: ["try", "success", "error", "finally"], continuationPorts: ["done"] };
-    case "fallback":
-      return { branchPorts: ["primary", "fallback"], continuationPorts: ["done"] };
-    default:
-      return null;
-  }
-}
-
-function reachableFromPorts(
-  graph: WorkflowGraph,
-  nodeById: Map<string, GraphNode>,
-  nodeId: string,
-  sourcePorts: string[],
-) {
-  const reachable = new Set<string>();
-  const stack = graph.edges
-    .filter((edge) => edge.source_node_id === nodeId && sourcePorts.includes(edge.source_port))
-    .map((edge) => edge.target_node_id);
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current || reachable.has(current)) continue;
-    reachable.add(current);
-
-    const currentNode = nodeById.get(current);
-    if (currentNode && isTerminalBranchBoundary(currentNode.node_type)) {
-      continue;
-    }
-
-    for (const edge of graph.edges.filter((edgeValue) => edgeValue.source_node_id === current)) {
-      stack.push(edge.target_node_id);
-    }
-  }
-  return reachable;
-}
-
-function isTerminalBranchBoundary(nodeType: GraphNodeType): boolean {
-  return ["end_success", "end_failure", "break_loop", "continue_loop", "stop_workflow"].includes(nodeType);
-}
-
-export function hasOutgoing(graph: WorkflowGraph, sourceNodeId: string, sourcePort: string): boolean {
-  return graph.edges.some((edge) => edge.source_node_id === sourceNodeId && edge.source_port === sourcePort);
-}
-
+export { pushBranchContinuationIssues, hasPort, expectedPorts } from "./validateBranchContinuation.js";
 function pushCallSubflowIssues(
   node: GraphNode,
   issues: GraphValidationIssue[],
@@ -671,117 +221,6 @@ function pushCallSubflowIssues(
     issues.push(error(node.id, null, "Referenced subflow has no executable steps"));
   }
 }
-
-export function expectedPorts(node: GraphNode): GraphPort[] {
-  switch (node.node_type) {
-    case "start":
-      return [outputPort("out", "Out")];
-    case "end_success":
-    case "end_failure":
-    case "break_loop":
-    case "continue_loop":
-    case "stop_workflow":
-      return [inputPort("in", "In")];
-    case "call_subflow":
-      return [inputPort("in", "In"), outputPort("out", "Out")];
-    case "merge":
-      return [inputPort("in", "In"), outputPort("out", "Out")];
-    case "router": {
-      const router = routerGraphConfigOrNull(node);
-      const cases = router?.cases.length
-        ? router.cases
-        : [{ id: "1", label: "Case 1", condition: { kind: "output_equals", name: "name", value: "" } as const }];
-      return [
-        inputPort("in", "In"),
-        ...cases.map((caseValue) => outputPort(`case_${caseValue.id}`, caseValue.label)),
-        outputPort("default", router?.default_label || "Default"),
-        outputPort("done", "Done"),
-      ];
-    }
-    case "random_choice": {
-      const choices = randomChoiceGraphConfigOrNull(node);
-      const choiceValues = choices?.choices.length
-        ? choices.choices
-        : [
-            { id: "1", label: "Choice 1", weight: 1 },
-            { id: "2", label: "Choice 2", weight: 1 },
-          ];
-      return [
-        inputPort("in", "In"),
-        ...choiceValues.map((choice) => outputPort(`choice_${choice.id}`, choice.label)),
-        outputPort("done", "Done"),
-      ];
-    }
-    case "if":
-      return [inputPort("in", "In"), outputPort("true", "True"), outputPort("false", "False"), outputPort("done", "Done")];
-    case "switch": {
-      const switchNodeConfig = switchGraphConfigOrNull(node);
-      const cases = switchNodeConfig?.cases ?? [];
-      const ports = cases.map((c) => outputPort(`case_${c.id}`, c.value || `Case ${c.id}`));
-      const existingPorts = node.ports
-        .filter((port) => port.direction === "output" && port.id.startsWith("case_"))
-        .map((port) => outputPort(port.id, port.label));
-      const mergedPortsMap = new Map<string, GraphPort>();
-      for (const p of [...ports, ...existingPorts]) {
-        mergedPortsMap.set(p.id, p);
-      }
-      return [
-        inputPort("in", "In"),
-        ...Array.from(mergedPortsMap.values()),
-        outputPort("default", "Default"),
-        outputPort("done", "Done"),
-      ];
-    }
-    case "repeat_times":
-    case "repeat_for_each":
-    case "while":
-      return [inputPort("in", "In"), outputPort("loop", "Loop"), outputPort("done", "Done")];
-    case "repeat_until":
-      return [inputPort("in", "In"), outputPort("loop", "Loop"), outputPort("done", "Done"), outputPort("timeout", "Timeout")];
-    case "retry":
-      return [inputPort("in", "In"), outputPort("try", "Try"), outputPort("success", "Success"), outputPort("failed", "Failed")];
-    case "try_catch":
-      return [inputPort("in", "In"), outputPort("try", "Try"), outputPort("success", "Success"), outputPort("error", "Error"), outputPort("finally", "Finally"), outputPort("done", "Done")];
-    case "fallback":
-      return [inputPort("in", "In"), outputPort("primary", "Primary"), outputPort("fallback", "Fallback"), outputPort("done", "Done")];
-    default:
-      return [inputPort("in", "In"), outputPort("out", "Out")];
-  }
-}
-
-export function hasPort(node: GraphNode, portId: string, direction: GraphPortDirection): boolean {
-  return expectedPorts(node).some((port) => port.id === portId && port.direction === direction);
-}
-
-
-function inputPort(id: string, label: string): GraphPort {
-  return { id, label, direction: "input" };
-}
-
-function outputPort(id: string, label: string): GraphPort {
-  return { id, label, direction: "output" };
-}
-
-function pushStaleSwitchCaseIssues(
-  graph: WorkflowGraph,
-  node: GraphNode,
-  issues: GraphValidationIssue[],
-) {
-  const switchNodeConfig = switchGraphConfig(node);
-  const caseIds = new Set(switchNodeConfig.cases.map(c => c.id));
-  for (const edgeValue of graph.edges.filter((edgeItem) => edgeItem.source_node_id === node.id)) {
-    const match = /^case_(.+)$/.exec(edgeValue.source_port);
-    if (!match) continue;
-    const caseId = match[1];
-    if (caseIds.has(caseId)) continue;
-    issues.push(error(
-      node.id,
-      edgeValue.id,
-      `Switch ${edgeValue.source_port} no longer matches a configured case`,
-    ));
-  }
-}
-
 function pushRouterSemanticIssues(
   graph: WorkflowGraph,
   node: GraphNode,
@@ -903,7 +342,7 @@ function warnMissingBranch(
   if (!hasOutgoing(graph, node.id, sourcePort)) issues.push(warning(node.id, null, message));
 }
 
-function warnMissingContinuation(
+export function warnMissingContinuation(
   graph: WorkflowGraph,
   node: GraphNode,
   sourcePort: string,
@@ -922,44 +361,6 @@ function pushConditionIssue(node: GraphNode, issues: GraphValidationIssue[]) {
 }
 
 
-function validateWorkflowCondition(condition: WorkflowCondition) {
-  const conditionRecord = condition as { kind?: unknown; target_ref?: unknown };
-  switch (condition.kind) {
-    case "variable_is_true":
-      if (!condition.name.trim()) throw validationError("name", "Condition variable name is required");
-      break;
-    case "text_visible":
-      if (!condition.text.trim()) throw validationError("text", "Condition text is required");
-      break;
-    case "url_contains":
-      if (!condition.value.trim()) throw validationError("value", "Condition value is required");
-      break;
-    case "element_visible":
-      if (
-        Object.prototype.hasOwnProperty.call(conditionRecord, "target_ref") &&
-        conditionRecord.target_ref != null
-      ) {
-        if (typeof conditionRecord.target_ref !== "string" || !conditionRecord.target_ref.trim()) {
-          throw validationError("target_ref", "Target ref is required");
-        }
-      } else if (!condition.target && !condition.xpath?.trim()) {
-        throw validationError("xpath", "Condition XPath is required");
-      }
-      break;
-    default:
-      throw validationError(
-        "kind",
-        `Unsupported condition kind: ${conditionKindLabel(conditionRecord.kind)}`,
-      );
-  }
-}
-
-
-function conditionKindLabel(kind: unknown) {
-  return typeof kind === "string" && kind ? kind : "unknown";
-}
-
-
 function numberField(config: unknown, field: string): number | null {
   const value = asRecord(config)[field];
   return typeof value === "number" ? value : null;
@@ -975,7 +376,7 @@ function positive(value: number | null | undefined) {
   return value != null && value > 0;
 }
 
-function error(
+export function error(
   node_id: string | null,
   edge_id: string | null,
   message: string,
