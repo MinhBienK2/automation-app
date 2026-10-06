@@ -45,14 +45,12 @@ export default [
       "src/features/*/state/*.ts", // exempt all feature states
       "src/features/workflows/lib/**/*.{ts,tsx}",
       "src/lib/**/*.{ts,tsx}",
-      "src/app/useAppNavigation.ts",
+      "src/app/**/*.{ts,tsx}",
+      "src/features/*/containers/**/*.{ts,tsx}",
+      "src/features/*/hooks/**/*.{ts,tsx}",
       "src/App.tsx",
-      "src/app/AppPackageDialogs.tsx",
-      "src/app/useAppPackageDialogs.ts",
-      "src/app/useGraphExitNavigation.ts",
       "src/features/evidence/useEvidenceWorkspace.ts",
       "src/layouts/AppSidebar.tsx",
-      // Backend files exempt
       "electron/backend/actions/**/*.{ts,tsx}",
       "electron/backend/surfaces/**/*.{ts,tsx}",
       "electron/backend/browser/**/*.{ts,tsx}",
